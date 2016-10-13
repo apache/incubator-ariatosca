@@ -13,24 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from blinker import signal
-
-from ..tools.plugin import plugin_installer
+import importlib
 
 
-# workflow engine task signals:
-start_task_signal = signal('start_task_signal')
-on_success_task_signal = signal('success_task_signal')
-on_failure_task_signal = signal('failure_task_signal')
-
-# workflow engine workflow signals:
-start_workflow_signal = signal('start_workflow_signal')
-on_success_workflow_signal = signal('on_success_workflow_signal')
-on_failure_workflow_signal = signal('on_failure_workflow_signal')
-
-plugin_installer(
-    path=os.path.dirname(os.path.realpath(__file__)),
-    plugin_suffix='_event_handler',
-    package=__package__)
+def load_attribute(attribute_path):
+    module_name, attribute_name = attribute_path.rsplit('.', 1)
+    try:
+        module = importlib.import_module(module_name)
+        return getattr(module, attribute_name)
+    except ImportError:
+        # TODO: handle
+        raise
+    except AttributeError:
+        # TODO: handle
+        raise

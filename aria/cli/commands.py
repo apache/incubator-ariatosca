@@ -26,8 +26,8 @@ from aria.logger import LoggerMixin
 from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
 from aria.tools.application import StorageManager
 from aria.contexts import WorkflowContext
-from aria.workflows.engine.engine import Engine
-from aria.workflows.engine.executor import LocalThreadExecutor
+from aria.workflows.core.engine import Engine
+from aria.workflows.core.executor import ThreadExecutor
 
 from .storage import (
     local_resource_storage,
@@ -225,7 +225,7 @@ class ExecuteCommand(BaseCommand):
         )
         workflow_function = self._load_workflow_handler(workflow['operation'])
         tasks_graph = workflow_function(workflow_context, **workflow_context.parameters)
-        executor = LocalThreadExecutor()
+        executor = ThreadExecutor()
         workflow_engine = Engine(executor=executor,
                                  workflow_context=workflow_context,
                                  tasks_graph=tasks_graph)
