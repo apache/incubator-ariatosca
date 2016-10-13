@@ -29,6 +29,11 @@ from aria.events import (
 )
 from aria.logger import LoggerMixin
 
+from .translation import build_execution_graph
+
+
+from ...storage import Model
+
 
 class Engine(LoggerMixin):
 
@@ -38,10 +43,9 @@ class Engine(LoggerMixin):
         self._tasks_graph = tasks_graph
         self._execution_graph = DiGraph()
         self._executor = executor
-        self._build_execution_graph(self._workflow_context, self._tasks_graph)
-
-    def _build_execution_graph(self, workflow_context, graph):
-        pass
+        build_execution_graph(task_graph=self._tasks_graph,
+                              workflow_context=workflow_context,
+                              execution_graph=self._execution_graph)
 
     def execute(self):
         execution_id = self._workflow_context.execution_id
@@ -160,26 +164,3 @@ class Engine(LoggerMixin):
             start_task_signal.disconnect(self._task_started_receiver)
             on_success_task_signal.disconnect(self._task_succeeded_receiver)
             on_failure_task_signal.disconnect(self._task_failed_receiver)
-
-
-class Task(object):
-
-    def __init__(self, operation_context):
-        self.operation_context = operation_context
-        self._create_operation_in_storage()
-
-    def _create_operation_in_storage(self):
-        Operation = self.operation_context.storage.operation.model_cls
-        operation = Operation(
-            id=self.operation_context.id,
-            execution_id=self.operation_context.execution_id,
-            max_retries=self.operation_context.parameters.get('max_retries', 1),
-            status=Operation.PENDING,
-        )
-        self.operation_context.operation = operation
-
-    def __getattr__(self, attr):
-        try:
-            return getattr(self.operation_context, attr)
-        except AttributeError:
-            return super(Task, self).__getattribute__(attr)
