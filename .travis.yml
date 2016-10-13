@@ -1,0 +1,14 @@
+sudo: false
+language: python
+python:
+    - "2.7"
+env:
+    - TOX_ENV=pylint_package
+    - TOX_ENV=pylint_tests
+    - TOX_ENV=py26
+    - TOX_ENV=py27
+install:
+    - pip install tox==1.6.1
+script:
+    - tox -e $TOX_ENV
+
