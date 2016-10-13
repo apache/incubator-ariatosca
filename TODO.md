@@ -1,0 +1,8 @@
+- aria/parser/extension_tools.py:66:    #  todo: maybe add replace action and check in add that we don't replace...
+- aria/parser/framework/elements/policies.py:128:    #  TODO: policies should be implemented according to TOSCA as generic types
+- aria/parser/framework/elements/node_templates.py:42:    #  TODO: Capabilities should be implemented according to TOSCA as generic types
+- aria/parser/framework/functions.py:25:    #  TODO: ugly huck for now..., sort the imports when you have time
+- aria/parser/framework/parser.py:258:    #  TODO: need to clean up
+- tests/parser/test_parser_api.py:430:    #  TODO: assert node-type's default and description values once
+- tests/parser/test_parser_api.py:450:    #  TODO: assert type's default and description values once 'type' is
+- tests/parser/test_parser_api.py:472:    #  TODO: assert type's default and description values once 'type' is
