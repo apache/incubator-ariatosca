@@ -191,10 +191,11 @@ class Execution(Model):
     deployment_id = Field(type=basestring)
     workflow_id = Field(type=basestring)
     blueprint_id = Field(type=basestring)
-    created_at = Field(type=datetime)
-    error = Field()
+    started_at = Field(type=datetime)
+    ended_at = Field(type=datetime, default=None)
+    error = Field(type=basestring, default=None)
     parameters = Field()
-    is_system_workflow = Field(type=bool)
+    is_system_workflow = Field(type=bool, default=False)
 
 
 class Operation(Model):

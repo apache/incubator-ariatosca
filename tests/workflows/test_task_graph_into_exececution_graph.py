@@ -18,7 +18,7 @@ from networkx import topological_sort, DiGraph
 
 from aria import contexts
 from aria.workflows.api import tasks_graph
-from aria.workflows.engine import tasks, translation
+from aria.workflows.core import tasks, translation
 
 
 @pytest.fixture(autouse=True)

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from aria import workflow
-from aria.workflows.engine.engine import Engine
+from aria.workflows.core.engine import Engine
 from .install import install
 from .uninstall import uninstall
 

@@ -14,61 +14,47 @@
 # limitations under the License.
 
 from . import (
-    start_operation_signal,
-    end_operation_signal,
-    on_success_operation_signal,
-    on_failure_operation_signal,
+    start_task_signal,
+    on_success_task_signal,
+    on_failure_task_signal,
     start_workflow_signal,
-    end_workflow_signal,
-    start_sub_workflow_signal,
-    end_sub_workflow_signal,
+    on_success_workflow_signal,
+    on_failure_workflow_signal
 )
 
 
-@start_operation_signal.connect
-def start_operation_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - starting operation: {sender.task_name}'.format(sender=sender))
+@start_task_signal.connect
+def start_task_handler(task, **kwargs):
+    task.logger.debug(
+        'Event: Starting task: {task.name}'.format(task=task))
 
 
-@end_operation_signal.connect
-def end_operation_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - finished operation: {sender.task_name}'.format(sender=sender))
+@on_success_task_signal.connect
+def success_task_handler(task, **kwargs):
+    task.logger.debug(
+        'Event: Task success: {task.name}'.format(task=task))
 
 
-@on_success_operation_signal.connect
-def success_operation_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - operation success: {sender.task_name}'.format(sender=sender))
-
-
-@on_failure_operation_signal.connect
-def failure_operation_handler(sender, **kwargs):
-    sender.context.logger.error(
-        'Event - operation failure: {sender.task_name}'.format(sender=sender),
+@on_failure_task_signal.connect
+def failure_operation_handler(task, **kwargs):
+    task.logger.error(
+        'Event: Task failure: {task.name}'.format(task=task),
         exc_info=kwargs.get('exception', True))
 
 
 @start_workflow_signal.connect
-def start_workflow_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - starting workflow: {sender.task_name}'.format(sender=sender))
+def start_workflow_handler(context, **kwargs):
+    context.logger.debug(
+        'Event: Starting workflow: {context.name}'.format(context=context))
 
 
-@end_workflow_signal.connect
-def end_workflow_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - finished workflow: {sender.task_name}'.format(sender=sender))
+@on_failure_workflow_signal.connect
+def failure_workflow_handler(context, **kwargs):
+    context.logger.debug(
+        'Event: Workflow failure: {context.name}'.format(context=context))
 
 
-@start_sub_workflow_signal.connect
-def start_sub_workflow_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - starting sub workflow: {sender.task_name}'.format(sender=sender))
-
-
-@end_sub_workflow_signal.connect
-def end_sub_workflow_handler(sender, **kwargs):
-    sender.context.logger.debug(
-        'Event - finished sub workflow: {sender.task_name}'.format(sender=sender))
+@on_success_workflow_signal.connect
+def success_workflow_handler(context, **kwargs):
+    context.logger.debug(
+        'Event: Workflow success: {context.name}'.format(context=context))
