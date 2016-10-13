@@ -4,3 +4,4 @@ tox==1.6.1
 pylint==1.5.5
 pytest==3.0.2
 pytest-cov==2.3.1
+pytest-mock==1.2
