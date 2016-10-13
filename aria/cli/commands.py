@@ -27,7 +27,7 @@ from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
 from aria.tools.application import StorageManager
 from aria.contexts import WorkflowContext
 from aria.workflows.engine.engine import Engine
-from aria.workflows.engine.executor import LocalExecutor
+from aria.workflows.engine.executor import LocalThreadExecutor
 
 from .storage import (
     local_resource_storage,
@@ -225,10 +225,12 @@ class ExecuteCommand(BaseCommand):
         )
         workflow_function = self._load_workflow_handler(workflow['operation'])
         tasks_graph = workflow_function(workflow_context, **workflow_context.parameters)
-        workflow_engine = Engine(executor=LocalExecutor(),
+        executor = LocalThreadExecutor()
+        workflow_engine = Engine(executor=executor,
                                  workflow_context=workflow_context,
                                  tasks_graph=tasks_graph)
         workflow_engine.execute()
+        executor.close()
 
     def _merge_and_validate_execution_parameters(
             self,
