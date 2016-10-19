@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Argument parsing configuration and functions
+"""
+
 import argparse
 from functools import partial
 
@@ -20,6 +24,9 @@ NO_VERBOSE = 0
 
 
 class SmartFormatter(argparse.HelpFormatter):
+    """
+    TODO: what is this?
+    """
     def _split_lines(self, text, width):
         if text.startswith('R|'):
             return text[2:].splitlines()
@@ -27,10 +34,13 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 def sub_parser_decorator(func=None, **parser_settings):
+    """
+    Decorated for sub_parser argument definitions
+    """
     if not func:
         return partial(sub_parser_decorator, **parser_settings)
 
-    def wrapper(parser):
+    def _wrapper(parser):
         sub_parser = parser.add_parser(**parser_settings)
         sub_parser.add_argument(
             '-v', '--verbose',
@@ -44,10 +54,13 @@ def sub_parser_decorator(func=None, **parser_settings):
             help='A unique ID for the deployment')
         func(sub_parser)
         return sub_parser
-    return wrapper
+    return _wrapper
 
 
 def config_parser(parser=None):
+    """
+    Top level argparse configuration
+    """
     parser = parser or argparse.ArgumentParser(
         prog='Aria',
         description="Aria's Command Line Interface",
@@ -64,6 +77,9 @@ def config_parser(parser=None):
     help='Initialize environment',
     formatter_class=SmartFormatter)
 def add_init_parser(init):
+    """
+    ``init`` command parser configuration
+    """
     init.add_argument(
         '-p', '--blueprint-path',
         dest='blueprint_path',
@@ -90,6 +106,9 @@ def add_init_parser(init):
     help='Execute a workflow',
     formatter_class=SmartFormatter)
 def add_execute_parser(execute):
+    """
+    ``execute`` command parser configuration
+    """
     execute.add_argument(
         '-w', '--workflow',
         dest='workflow_id',

@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI Entry point
+"""
+
 import logging
 
 from aria.logger import (
@@ -31,6 +35,9 @@ __version__ = '0.1.0'
 
 
 class AriaCli(LoggerMixin):
+    """
+    Context manager based class that enables proper top level error handling
+    """
 
     def __init__(self, *args, **kwargs):
         super(AriaCli, self).__init__(*args, **kwargs)
@@ -56,6 +63,9 @@ class AriaCli(LoggerMixin):
         pass
 
     def run(self):
+        """
+        Parses user arguments and run the appropriate command
+        """
         parser = config_parser()
         args = parser.parse_args()
 
@@ -66,6 +76,9 @@ class AriaCli(LoggerMixin):
 
 
 def main():
+    """
+    CLI entry point
+    """
     create_logger(
         handlers=[
             create_console_log_handler(),
