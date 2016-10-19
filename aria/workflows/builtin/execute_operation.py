@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Builtin execute_operation workflow
+"""
+
 from aria import workflow
 
 from .workflows import execute_operation_on_instance
@@ -30,6 +34,21 @@ def execute_operation(
         node_ids,
         node_instance_ids,
         **kwargs):
+    """
+    The execute_operation workflow
+
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the graph which will describe the workflow.
+    :param basestring operation: the operation name to execute
+    :param dict operation_kwargs:
+    :param bool allow_kwargs_override:
+    :param bool run_by_dependency_order:
+    :param type_names:
+    :param node_ids:
+    :param node_instance_ids:
+    :param kwargs:
+    :return:
+    """
     subgraphs = {}
     # filtering node instances
     filtered_node_instances = list(_filter_node_instances(
@@ -70,8 +89,17 @@ def execute_operation(
 
 
 def _filter_node_instances(context, node_ids=(), node_instance_ids=(), type_names=()):
+    def _is_node_by_id(node_id):
+        return not node_ids or node_id in node_ids
+
+    def _is_node_instance_by_id(node_instance_id):
+        return not node_instance_ids or node_instance_id in node_instance_ids
+
+    def _is_node_by_type(node_type_hierarchy):
+        return not type_names or node_type_hierarchy in type_names
+
     for node_instance in context.node_instances:
-        if ((not node_instance_ids or node_instance.id in node_instance_ids) and
-                (not node_ids or node_instance.node.id in node_ids) and
-                (not type_names or node_instance.node.type_hierarchy in type_names)):
+        if all((_is_node_by_id(node_instance.node.id),
+                _is_node_instance_by_id(node_instance.id),
+                _is_node_by_type(node_instance.node.type_hierarchy))):
             yield node_instance

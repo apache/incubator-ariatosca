@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Builtin heal workflow
+"""
+
 from aria import workflow
 
 from .uninstall import uninstall
@@ -22,6 +26,14 @@ from .workflows import relationship_tasks
 
 @workflow
 def heal(context, graph, node_instance_id):
+    """
+    The heal workflow
+
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the graph which will describe the workflow.
+    :param node_instance_id: the id of the node instance to heal
+    :return:
+    """
     failing_node = context.storage.node_instance.get(node_instance_id)
     host_node = context.storage.node_instance.get(failing_node.host_id)
     failed_node_instance_subgraph = _get_contained_subgraph(context, host_node)
@@ -48,6 +60,15 @@ def heal(context, graph, node_instance_id):
 
 @workflow(suffix_template='{failing_node_instances}')
 def heal_uninstall(context, graph, failing_node_instances, targeted_node_instances):
+    """
+    the uninstall part of the heal mechanism
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the task graph to edit.
+    :param failing_node_instances: the failing nodes to heal.
+    :param targeted_node_instances: the targets of the relationships where the failing node are
+    source
+    :return:
+    """
     node_instance_sub_workflows = {}
 
     # Create install stub workflow for each unaffected node instance
@@ -89,6 +110,15 @@ def heal_uninstall(context, graph, failing_node_instances, targeted_node_instanc
 
 @workflow(suffix_template='{failing_node_instances}')
 def heal_install(context, graph, failing_node_instances, targeted_node_instances):
+    """
+    the install part of the heal mechanism
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the task graph to edit.
+    :param failing_node_instances: the failing nodes to heal.
+    :param targeted_node_instances: the targets of the relationships where the failing node are
+    source
+    :return:
+    """
     node_instance_sub_workflows = {}
 
     # Create install sub workflow for each unaffected
@@ -123,7 +153,7 @@ def heal_install(context, graph, failing_node_instances, targeted_node_instances
                     relationship_instance=relationship_instance,
                     context=context,
                     operation_name='aria.interfaces.relationship_lifecycle.establish')]
-                
+
             if after_tasks:
                 graph.dependency(source_task=node_instance_sub_workflow, after=after_tasks)
 
@@ -143,5 +173,3 @@ def _get_contained_subgraph(context, host_node_instance):
         result.update(_get_contained_subgraph(context, node_instance))
 
     return result
-
-
