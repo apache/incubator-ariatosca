@@ -90,7 +90,7 @@ def _get_tasks_from_dependencies(execution_graph, dependencies, default=()):
     Returns task list from dependencies.
     """
     return [execution_graph.node[dependency.id if _is_operation(dependency)
-    else _end_graph_suffix(dependency.id)]['task']
+                                 else _end_graph_suffix(dependency.id)]['task']
             for dependency in dependencies] or default
 
 
