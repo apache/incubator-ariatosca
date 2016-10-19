@@ -25,6 +25,7 @@ from collections import OrderedDict
 
 
 class _LRUCache(object):
+
     def __init__(self, input_func, max_size, timeout):
         self._input_func = input_func
         self._max_size = max_size
@@ -38,13 +39,17 @@ class _LRUCache(object):
         # in case called from a regular function - the caller is None.
         self._caches_dict = {}
 
-    def _prepare_key(self, *args, **kwargs):
+    @staticmethod
+    def _prepare_key(*args, **kwargs):
         kwargs_key = "".join(
             imap(lambda x: str(x) + str(type(kwargs[x])) + str(kwargs[x]),
                  sorted(kwargs)))
         return "".join(imap(lambda x: str(type(x)) + str(x), args)) + kwargs_key
 
     def cache_clear(self, caller=None):
+        """
+        Clears the cache, optionally, only for a specific caller
+        """
         # Remove the cache for the caller, only if exists:
         if caller in self._caches_dict:
             del self._caches_dict[caller]

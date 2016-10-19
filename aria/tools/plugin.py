@@ -13,18 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Contains utility methods that enable dynamic python code loading
+# TODO: merge with tools.module
+"""
+
 import os
 from importlib import import_module
 
 
 def plugin_installer(path, plugin_suffix, package=None, callback=None):
     """
-
-    :param path:
-    :param plugin_suffix:
-    :param package:
-    :param callback:
-    :return:
+    Load each module under ``path`` that ends with ``plugin_suffix``. If ``callback`` is supplied,
+    call it with each loaded module.
     """
     assert callback is None or callable(callback)
     plugin_suffix = '{0}.py'.format(plugin_suffix)
