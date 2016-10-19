@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Executors for workflow tasks
+"""
+
 import threading
 import multiprocessing
 import Queue
@@ -24,14 +28,24 @@ from aria.tools import module
 
 
 class BaseExecutor(object):
+    """
+    Base class for executors for running tasks
+    """
 
     def __init__(self, *args, **kwargs):
         pass
 
     def execute(self, task):
+        """
+        Execute a task
+        :param task: task to execute
+        """
         raise NotImplementedError
 
     def close(self):
+        """
+        Close the executor
+        """
         pass
 
     @staticmethod
@@ -48,6 +62,9 @@ class BaseExecutor(object):
 
 
 class CurrentThreadBlockingExecutor(BaseExecutor):
+    """
+    Executor which runs tasks in the current thread (blocking)
+    """
 
     def execute(self, task):
         self._task_started(task)
@@ -61,6 +78,9 @@ class CurrentThreadBlockingExecutor(BaseExecutor):
 
 
 class ThreadExecutor(BaseExecutor):
+    """
+    Executor which runs tasks in a separate thread
+    """
 
     def __init__(self, pool_size=1, *args, **kwargs):
         super(ThreadExecutor, self).__init__(*args, **kwargs)
@@ -96,11 +116,14 @@ class ThreadExecutor(BaseExecutor):
                 except BaseException as e:
                     self._task_failed(task, exception=e)
             # Daemon threads
-            except:
+            except BaseException:
                 pass
 
 
 class MultiprocessExecutor(BaseExecutor):
+    """
+    Executor which runs tasks in a multiprocess environment
+    """
 
     def __init__(self, pool_size=1, *args, **kwargs):
         super(MultiprocessExecutor, self).__init__(*args, **kwargs)
@@ -108,9 +131,9 @@ class MultiprocessExecutor(BaseExecutor):
         self._manager = multiprocessing.Manager()
         self._queue = self._manager.Queue()
         self._tasks = {}
-        self._listener = threading.Thread(target=self._listener)
-        self._listener.daemon = True
-        self._listener.start()
+        self._listener_thread = threading.Thread(target=self._listener)
+        self._listener_thread.daemon = True
+        self._listener_thread.start()
         self._pool = multiprocessing.Pool(processes=pool_size,
                                           maxtasksperchild=1)
 
@@ -126,7 +149,7 @@ class MultiprocessExecutor(BaseExecutor):
         self._pool.close()
         self._stopped = True
         self._pool.join()
-        self._listener.join()
+        self._listener_thread.join()
 
     def _listener(self):
         while not self._stopped:
@@ -143,7 +166,7 @@ class MultiprocessExecutor(BaseExecutor):
                     # TODO: something
                     raise RuntimeError()
             # Daemon threads
-            except:
+            except BaseException:
                 pass
 
     def _remove_task(self, task_id):

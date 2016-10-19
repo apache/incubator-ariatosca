@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+The workflow engine. Executes workflows
+"""
+
 import time
 
 import networkx
@@ -23,6 +27,9 @@ from . import translation
 
 
 class Engine(logger.LoggerMixin):
+    """
+    The workflow engine. Executes workflows
+    """
 
     def __init__(self, executor, workflow_context, tasks_graph, **kwargs):
         super(Engine, self).__init__(**kwargs)
@@ -35,6 +42,9 @@ class Engine(logger.LoggerMixin):
                                           execution_graph=self._execution_graph)
 
     def execute(self):
+        """
+        execute the workflow
+        """
         try:
             events.start_workflow_signal.send(self._workflow_context)
             while True:
@@ -65,7 +75,7 @@ class Engine(logger.LoggerMixin):
         return len(self._execution_graph.succ.get(task.id, {})) > 0
 
     def _all_tasks_consumed(self):
-        len(self._execution_graph.node) == 0
+        return len(self._execution_graph.node) == 0
 
     def _tasks_iter(self):
         return (data['task'] for _, data in self._execution_graph.nodes_iter(data=True))
