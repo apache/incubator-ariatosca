@@ -65,6 +65,9 @@ ENTITY_TYPES = ()
 
 
 class Blueprint(Model):
+    """
+    A Model which represents a blueprint
+    """
     plan = Field(type=dict)
     id = Field(type=basestring, default=uuid_generator)
     description = Field(type=(basestring, NoneType))
@@ -74,6 +77,9 @@ class Blueprint(Model):
 
 
 class Snapshot(Model):
+    """
+    A Model which represents a snapshot
+    """
     CREATED = 'created'
     FAILED = 'failed'
     CREATING = 'creating'
@@ -87,13 +93,15 @@ class Snapshot(Model):
 
 
 class Deployment(Model):
+    """
+    A Model which represents a deployment
+    """
     id = Field(type=basestring, default=uuid_generator)
     description = Field(type=(basestring, NoneType))
     created_at = Field(type=datetime)
     updated_at = Field(type=datetime)
     blueprint_id = Field(type=basestring)
     workflows = Field(type=dict)
-    permalink = Field(default=None)  # TODO: check if needed... (old todo: implement)
     inputs = Field(type=dict, default=lambda: {})
     policy_types = Field(type=dict, default=lambda: {})
     policy_triggers = Field(type=dict, default=lambda: {})
@@ -103,6 +111,9 @@ class Deployment(Model):
 
 
 class DeploymentUpdateStep(Model):
+    """
+    A Model which represents a deployment update step
+    """
     id = Field(type=basestring, default=uuid_generator)
     action = Field(type=basestring, choices=ACTION_TYPES)
     entity_type = Field(type=basestring, choices=ENTITY_TYPES)
@@ -123,11 +134,12 @@ class DeploymentUpdateStep(Model):
 
         if self.action != other.action:
             if self.action == 'remove':
-                return True
+                return_value = True
             elif self.action == 'add':
-                return False
+                return_value = False
             else:
-                return other.action == 'add'
+                return_value = other.action == 'add'
+            return return_value
 
         if self.action == 'add':
             return self.entity_type == 'node' and other.entity_type == 'relationship'
@@ -137,6 +149,9 @@ class DeploymentUpdateStep(Model):
 
 
 class DeploymentUpdate(Model):
+    """
+    A Model which represents a deployment update
+    """
     INITIALIZING = 'initializing'
     SUCCESSFUL = 'successful'
     UPDATING = 'updating'
@@ -167,6 +182,9 @@ class DeploymentUpdate(Model):
 
 
 class Execution(Model):
+    """
+    A Model which represents an execution
+    """
     TERMINATED = 'terminated'
     FAILED = 'failed'
     CANCELLED = 'cancelled'
@@ -199,6 +217,9 @@ class Execution(Model):
 
 
 class Operation(Model):
+    """
+    A Model which represents an operation
+    """
     PENDING = 'pending'
     STARTED = 'started'
     SUCCESS = 'success'
@@ -222,6 +243,9 @@ class Operation(Model):
 
 
 class Relationship(Model):
+    """
+    A Model which represents a relationship
+    """
     id = Field(type=basestring, default=uuid_generator)
     target_id = Field(type=basestring)
     source_interfaces = Field(type=dict)
@@ -234,6 +258,9 @@ class Relationship(Model):
 
 
 class Node(Model):
+    """
+    A Model which represents a node
+    """
     id = Field(type=basestring, default=uuid_generator)
     blueprint_id = Field(type=basestring)
     type = Field(type=basestring)
@@ -251,6 +278,11 @@ class Node(Model):
     max_number_of_instances = Field(type=int)
 
     def relationships_by_target(self, target_id):
+        """
+        Retreives all of the relationship by target.
+        :param target_id: the node id of the target  of the relationship
+        :yields: a relationship which target and node with the specified target_id
+        """
         for relationship in self.relationships:
             if relationship.target_id == target_id:
                 yield relationship
@@ -258,6 +290,9 @@ class Node(Model):
 
 
 class RelationshipInstance(Model):
+    """
+    A Model which represents a relationship instance
+    """
     id = Field(type=basestring, default=uuid_generator)
     target_id = Field(type=basestring)
     target_name = Field(type=basestring)
@@ -266,6 +301,9 @@ class RelationshipInstance(Model):
 
 
 class NodeInstance(Model):
+    """
+    A Model which represents a node instance
+    """
     # todo: add statuses
     UNINITIALIZED = 'uninitialized'
     INITIALIZING = 'initializing'
@@ -297,6 +335,11 @@ class NodeInstance(Model):
     scaling_groups = Field(default=())
 
     def relationships_by_target(self, target_id):
+        """
+        Retreives all of the relationship by target.
+        :param target_id: the instance id of the target of the relationship
+        :yields: a relationship instance which target and node with the specified target_id
+        """
         for relationship_instance in self.relationship_instances:
             if relationship_instance.target_id == target_id:
                 yield relationship_instance
@@ -304,6 +347,9 @@ class NodeInstance(Model):
 
 
 class DeploymentModification(Model):
+    """
+    A Model which represents a deployment modification
+    """
     STARTED = 'started'
     FINISHED = 'finished'
     ROLLEDBACK = 'rolledback'
@@ -324,12 +370,18 @@ class DeploymentModification(Model):
 
 
 class ProviderContext(Model):
+    """
+    A Model which represents a provider context
+    """
     id = Field(type=basestring, default=uuid_generator)
     context = Field(type=dict)
     name = Field(type=basestring)
 
 
 class Plugin(Model):
+    """
+    A Model which represents a plugin
+    """
     id = Field(type=basestring, default=uuid_generator)
     package_name = Field(type=basestring)
     archive_name = Field(type=basestring)

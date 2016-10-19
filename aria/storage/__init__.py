@@ -72,6 +72,9 @@ __all__ = (
 
 
 class ModelStorage(Storage):
+    """
+    Managing the models storage.
+    """
     def __init__(self, driver, models=(), **kwargs):
         """
         Simple storage client api for Aria applications.
@@ -99,12 +102,15 @@ class ModelStorage(Storage):
         return super(ModelStorage, self).__getattr__(table)
 
     def register(self, model_cls):
-        # todo: add documentation
+        """
+        Registers the model type in the resource storage manager.
+        :param model_cls: the model to register.
+        """
         model_name = generate_lower_name(model_cls)
         model_api = _ModelApi(model_name, self.driver, model_cls)
         self.registered[model_name] = model_api
 
-        for pointer, pointer_schema_register in model_api.pointer_mapping.items():
+        for pointer_schema_register in model_api.pointer_mapping.values():
             model_cls = pointer_schema_register.model_cls
             self.register(model_cls)
 
@@ -256,6 +262,12 @@ class _ModelApi(object):
 
 
 class ResourceApi(object):
+    """
+    Managing the resource in the storage, using the driver.
+
+    :param basestring name: the name of the resource.
+    :param ResourceDriver driver: the driver which supports this resource in the storage.
+    """
     def __init__(self, driver, resource_name):
         """
         Managing the resources in the storage, using the driver.
@@ -341,6 +353,9 @@ def generate_lower_name(model_cls):
 
 
 class ResourceStorage(Storage):
+    """
+    Managing the resource storage.
+    """
     def __init__(self, driver, resources=(), **kwargs):
         """
         Simple storage client api for Aria applications.
@@ -353,6 +368,10 @@ class ResourceStorage(Storage):
         super(ResourceStorage, self).__init__(driver, resources, **kwargs)
 
     def register(self, resource):
+        """
+        Registers the resource type in the resource storage manager.
+        :param resource: the resource to register.
+        """
         self.registered[resource] = ResourceApi(self.driver, resource_name=resource)
 
     def __getattr__(self, resource):
