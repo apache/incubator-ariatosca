@@ -13,17 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI various exception classes
+"""
+
 
 class AriaCliError(Exception):
+    """
+    General CLI Exception class
+    """
     pass
 
 
 class AriaCliFormatInputsError(AriaCliError):
+    """
+    Raised when provided inputs are malformed.
+    """
+
     def __init__(self, message, inputs):
         self.inputs = inputs
         super(AriaCliFormatInputsError, self).__init__(message)
 
     def user_message(self):
+        """
+        Describes the format error in detail.
+        """
         return (
             'Invalid input format: {0}, '
             'the expected format is: '
@@ -31,11 +45,21 @@ class AriaCliFormatInputsError(AriaCliError):
 
 
 class AriaCliYAMLInputsError(AriaCliError):
+    """
+    Raised when an invalid yaml file is provided
+    """
     pass
 
 
 class AriaCliInvalidInputsError(AriaCliFormatInputsError):
+    """
+    Raised when provided inputs are invalid.
+    """
+
     def user_message(self):
+        """
+        Describes the error in detail.
+        """
         return (
             'Invalid input: {0}. input must represent a dictionary.\n'
             'Valid values can be one of:\n'
