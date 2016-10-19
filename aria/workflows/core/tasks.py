@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Workflow tasks. These tasks are meant to be used with the task_graph's API for executing workflows.
+Workflow tasks
 """
 
 
