@@ -48,6 +48,9 @@ __all__ = (
 
 
 def uuid_generator():
+    """
+    wrapper function which generates ids
+    """
     return str(uuid4())
 
 
@@ -132,6 +135,9 @@ class Field(ValidatorMixin):
 
 
 class IterField(Field):
+    """
+    Represents an iterable field.
+    """
     def __init__(self, **kwargs):
         """
         Simple iterable field manager.
@@ -174,6 +180,11 @@ class IterPointerField(IterField, PointerField):
 
 
 class Model(object):
+    """
+    Base class for all of the storage models.
+    """
+    id = None
+
     def __init__(self, **fields):
         """
         Abstract class for any model in the storage.
@@ -206,6 +217,10 @@ class Model(object):
 
     @property
     def fields(self):
+        """
+        Iterates over the fields of the model.
+        :yields: the class's field name
+        """
         for name, field in vars(self.__class__).items():
             if isinstance(field, Field):
                 yield name
@@ -254,6 +269,9 @@ class Model(object):
 
 
 class Storage(LoggerMixin):
+    """
+    Represents the storage
+    """
     def __init__(self, driver, items=(), **kwargs):
         super(Storage, self).__init__(**kwargs)
         self.driver = driver

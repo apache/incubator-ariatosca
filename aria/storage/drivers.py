@@ -29,7 +29,8 @@ classes:
 
 import os
 import shutil
-import distutils.dir_util
+# pylint has an issue with distutils and virtualenvs: https://github.com/PyCQA/pylint/issues/73
+import distutils.dir_util                                                                           # pylint: disable=no-name-in-module, import-error
 from functools import partial
 from multiprocessing import RLock
 
@@ -216,6 +217,9 @@ class ResourceDriver(Driver):
 
 
 class BaseFileSystemDriver(Driver):
+    """
+    Base class which handles storage on the file system.
+    """
     def __init__(self, *args, **kwargs):
         super(BaseFileSystemDriver, self).__init__(*args, **kwargs)
         self._lock = RLock()
@@ -324,6 +328,7 @@ class FileSystemModelDriver(ModelDriver, BaseFileSystemDriver):
         entry_dict.update(**kwargs)
         self.store(name, entry_id, entry_dict)
 
+
 class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
     """
     FileSystemResourceDriver context manager.
@@ -386,7 +391,7 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         if os.path.isfile(resource):
             shutil.copy2(resource, destination)
         else:
-            distutils.dir_util.copy_tree(resource, destination)
+            distutils.dir_util.copy_tree(resource, destination)                                     # pylint: disable=no-member
 
     def upload(self, entry_type, entry_id, source, path=None):
         """
@@ -404,4 +409,4 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         if os.path.isfile(source):
             shutil.copy2(source, destination)
         else:
-            distutils.dir_util.copy_tree(source, destination)
+            distutils.dir_util.copy_tree(source, destination)                                       # pylint: disable=no-member
