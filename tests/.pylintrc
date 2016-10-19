@@ -404,5 +404,4 @@ overgeneral-exceptions=Exception
 
 
 [pre-commit-hook]
-params=--reports=no
 limit=9.5
