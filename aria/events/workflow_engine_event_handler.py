@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""
+Aria's events Sub-Package
+Path: aria.events.storage_event_handler
+
+Implementation of logger handlers for workflow and operation events.
+"""
+
 from . import (
     start_task_signal,
     on_success_task_signal,
@@ -24,37 +32,37 @@ from . import (
 
 
 @start_task_signal.connect
-def start_task_handler(task, **kwargs):
+def _start_task_handler(task, **kwargs):
     task.logger.debug(
         'Event: Starting task: {task.name}'.format(task=task))
 
 
 @on_success_task_signal.connect
-def success_task_handler(task, **kwargs):
+def _success_task_handler(task, **kwargs):
     task.logger.debug(
         'Event: Task success: {task.name}'.format(task=task))
 
 
 @on_failure_task_signal.connect
-def failure_operation_handler(task, **kwargs):
+def _failure_operation_handler(task, **kwargs):
     task.logger.error(
         'Event: Task failure: {task.name}'.format(task=task),
         exc_info=kwargs.get('exception', True))
 
 
 @start_workflow_signal.connect
-def start_workflow_handler(context, **kwargs):
+def _start_workflow_handler(context, **kwargs):
     context.logger.debug(
         'Event: Starting workflow: {context.name}'.format(context=context))
 
 
 @on_failure_workflow_signal.connect
-def failure_workflow_handler(context, **kwargs):
+def _failure_workflow_handler(context, **kwargs):
     context.logger.debug(
         'Event: Workflow failure: {context.name}'.format(context=context))
 
 
 @on_success_workflow_signal.connect
-def success_workflow_handler(context, **kwargs):
+def _success_workflow_handler(context, **kwargs):
     context.logger.debug(
         'Event: Workflow success: {context.name}'.format(context=context))

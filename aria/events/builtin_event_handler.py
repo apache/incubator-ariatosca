@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Aria's events Sub-Package
+Path: aria.events.storage_event_handler
+
+Implementation of storage handlers for workflow and operation events.
+"""
+
+
 from datetime import datetime
 
 from . import (
@@ -54,13 +62,13 @@ def _task_succeeded(task, *args, **kwargs):
 
 @start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
-    Execution = workflow_context.storage.execution.model_cls
-    execution = Execution(
+    execution_cls = workflow_context.storage.execution.model_cls
+    execution = execution_cls(
         id=workflow_context.execution_id,
         deployment_id=workflow_context.deployment_id,
         workflow_id=workflow_context.workflow_id,
         blueprint_id=workflow_context.blueprint_id,
-        status=Execution.PENDING,
+        status=execution_cls.PENDING,
         started_at=datetime.utcnow(),
         parameters=workflow_context.parameters,
     )

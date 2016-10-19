@@ -13,12 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+ARIA's events Sub-Package
+Path: aria.events
+
+Events package provides events mechanism for different executions in aria.
+
+
+1. storage_event_handler: implementation of storage handlers for workflow and operation events.
+2. logger_event_handler: implementation of logger handlers for workflow and operation events.
+
+API:
+    * start_task_signal
+    * on_success_task_signal
+    * on_failure_task_signal
+    * start_workflow_signal
+    * on_success_workflow_signal
+    * on_failure_workflow_signal
+"""
+
 import os
 
 from blinker import signal
 
 from ..tools.plugin import plugin_installer
-
 
 # workflow engine task signals:
 start_task_signal = signal('start_task_signal')
