@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Builtin uninstall workflow
+"""
+
 from aria import workflow
 
 from .workflows import uninstall_node_instance
@@ -20,7 +24,15 @@ from .workflows import uninstall_node_instance
 
 @workflow
 def uninstall(context, graph, node_instances=(), node_instance_sub_workflows=None):
-
+    """
+    The uninstall workflow
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the graph which will describe the workflow.
+    :param node_instances: the node instances on which to run the workflow
+    :param dict node_instance_sub_workflows: a dictionary of subworkflows  with id as key and
+    TaskGraph (or OperationContext) as value
+    :return:
+    """
     node_instance_sub_workflows = node_instance_sub_workflows or {}
     node_instances = node_instances or list(context.node_instances)
 
