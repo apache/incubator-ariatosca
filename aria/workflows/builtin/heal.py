@@ -81,7 +81,7 @@ def heal_uninstall(context, graph, failing_node_instances, targeted_node_instanc
                     node_instance=node_instance,
                     relationship_instance=relationship_instance,
                     context=context,
-                    operation_name='cloudify.interfaces.relationship_lifecycle.unlink')]
+                    operation_name='aria.interfaces.relationship_lifecycle.unlink')]
 
             if after_tasks:
                 graph.dependency(source_task=node_instance_sub_workflow, after=after_tasks)
@@ -122,7 +122,7 @@ def heal_install(context, graph, failing_node_instances, targeted_node_instances
                     node_instance=node_instance,
                     relationship_instance=relationship_instance,
                     context=context,
-                    operation_name='cloudify.interfaces.relationship_lifecycle.establish')]
+                    operation_name='aria.interfaces.relationship_lifecycle.establish')]
                 
             if after_tasks:
                 graph.dependency(source_task=node_instance_sub_workflow, after=after_tasks)

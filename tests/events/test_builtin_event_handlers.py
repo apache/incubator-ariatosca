@@ -22,11 +22,11 @@ from aria.events.builtin_event_handlers import (_OperationToNodeInstanceState,
 
 
 OPERATIONS = [
-    'cloudify.interfaces.lifecycle.create',
-    'cloudify.interfaces.lifecycle.configure',
-    'cloudify.interfaces.lifecycle.start',
-    'cloudify.interfaces.lifecycle.stop',
-    'cloudify.interfaces.lifecycle.delete',
+    'aria.interfaces.lifecycle.create',
+    'aria.interfaces.lifecycle.configure',
+    'aria.interfaces.lifecycle.start',
+    'aria.interfaces.lifecycle.stop',
+    'aria.interfaces.lifecycle.delete',
 ]
 
 

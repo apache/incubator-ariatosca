@@ -36,21 +36,21 @@ __all__ = [
 @workflow(suffix_template='{node_instance.id}')
 def install_node_instance(context, graph, node_instance):
     create_node_instance = context.operation(
-        name='cloudify.interfaces.lifecycle.create.{0}'.format(node_instance.id),
+        name='aria.interfaces.lifecycle.create.{0}'.format(node_instance.id),
         operation_details=node_instance.node.operations[
-            'cloudify.interfaces.lifecycle.create'],
+            'aria.interfaces.lifecycle.create'],
         node_instance=node_instance
     )
     configure_node_instance = context.operation(
-            name='cloudify.interfaces.lifecycle.configure.{0}'.format(node_instance.id),
+            name='aria.interfaces.lifecycle.configure.{0}'.format(node_instance.id),
             operation_details=node_instance.node.operations[
-                'cloudify.interfaces.lifecycle.configure'],
+                'aria.interfaces.lifecycle.configure'],
             node_instance=node_instance
         )
     start_node_instance = context.operation(
-        name='cloudify.interfaces.lifecycle.start.{0}'.format(node_instance.id),
+        name='aria.interfaces.lifecycle.start.{0}'.format(node_instance.id),
         operation_details=node_instance.node.operations[
-            'cloudify.interfaces.lifecycle.start'],
+            'aria.interfaces.lifecycle.start'],
         node_instance=node_instance
     )
     graph.chain(tasks=[
@@ -66,7 +66,7 @@ def install_node_instance(context, graph, node_instance):
 @workflow(suffix_template='{node_instance.id}')
 def preconfigure_relationship(context, graph, node_instance):
     graph.chain(tasks=relationships_tasks(
-        operation_name='cloudify.interfaces.relationship_lifecycle.preconfigure',
+        operation_name='aria.interfaces.relationship_lifecycle.preconfigure',
         context=context,
         node_instance=node_instance))
 
@@ -74,7 +74,7 @@ def preconfigure_relationship(context, graph, node_instance):
 @workflow(suffix_template='{node_instance.id}')
 def postconfigure_relationship(context, graph, node_instance):
     graph.chain(tasks=relationships_tasks(
-        operation_name='cloudify.interfaces.relationship_lifecycle.postconfigure',
+        operation_name='aria.interfaces.relationship_lifecycle.postconfigure',
         context=context,
         node_instance=node_instance))
 
@@ -82,7 +82,7 @@ def postconfigure_relationship(context, graph, node_instance):
 @workflow(suffix_template='{node_instance.id}')
 def establish_relationship(context, graph, node_instance):
     graph.chain(tasks=relationships_tasks(
-        operation_name='cloudify.interfaces.relationship_lifecycle.establish',
+        operation_name='aria.interfaces.relationship_lifecycle.establish',
         context=context,
         node_instance=node_instance))
 
@@ -92,15 +92,15 @@ def establish_relationship(context, graph, node_instance):
 @workflow(suffix_template='{node_instance.id}')
 def uninstall_node_instance(graph, context, node_instance):
     stop_node_instance = context.operation(
-        name='cloudify.interfaces.lifecycle.stop.{0}'.format(node_instance.id),
+        name='aria.interfaces.lifecycle.stop.{0}'.format(node_instance.id),
         operation_details=node_instance.node.operations[
-            'cloudify.interfaces.lifecycle.stop'],
+            'aria.interfaces.lifecycle.stop'],
         node_instance=node_instance
     )
     delete_node_instance = context.operation(
-        name='cloudify.interfaces.lifecycle.delete.{0}'.format(node_instance.id),
+        name='aria.interfaces.lifecycle.delete.{0}'.format(node_instance.id),
         operation_details=node_instance.node.operations[
-            'cloudify.interfaces.lifecycle.delete'],
+            'aria.interfaces.lifecycle.delete'],
         node_instance=node_instance
     )
 
@@ -114,7 +114,7 @@ def uninstall_node_instance(graph, context, node_instance):
 @workflow(suffix_template='{node_instance.id}')
 def unlink_relationship(context, graph, node_instance):
     tasks=relationships_tasks(
-        operation_name='cloudify.interfaces.relationship_lifecycle.unlink',
+        operation_name='aria.interfaces.relationship_lifecycle.unlink',
         context=context,
         node_instance=node_instance
     )
