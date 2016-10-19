@@ -13,14 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Contains validation related utilities
+"""
+
 
 class ValidatorMixin(object):
+    """
+    A mixin that should be added to classes that require validating user input
+    """
+
     _ARGUMENT_TYPE_MESSAGE = '{name} argument must be {type} based, got {arg!r}'
     _ACTION_MESSAGE = 'action arg options: {actions}, got {action}'
     _ARGUMENT_CHOICE_MESSAGE = '{name} argument must be in {choices}, got {arg!r}'
 
     @classmethod
     def validate_actions(cls, action):
+        """
+        Validate action is defined in the class ``ACTIONS`` attribute
+        """
         # todo: remove this and use validate choice
         if action not in cls.ACTIONS:
             raise TypeError(cls._ACTION_MESSAGE.format(
@@ -28,33 +39,50 @@ class ValidatorMixin(object):
 
     @classmethod
     def validate_in_choice(cls, name, argument, choices):
+        """
+        Validate ``argument`` is in ``choices``
+        """
         if argument not in choices:
             raise TypeError(cls._ARGUMENT_CHOICE_MESSAGE.format(
                 name=name, choices=choices, arg=argument))
 
     @classmethod
     def validate_type(cls, argument_name, argument, expected_type):
+        """
+        Validate ``argument`` is a subclass of ``expected_type``
+        """
         if not issubclass(argument, expected_type):
             raise TypeError(cls._ARGUMENT_TYPE_MESSAGE.format(
                 name=argument_name, type=expected_type, arg=argument))
 
     @classmethod
     def validate_instance(cls, argument_name, argument, expected_type):
+        """
+        Validate ``argument`` is a instance of ``expected_type``
+        """
         if not isinstance(argument, expected_type):
             raise TypeError(cls._ARGUMENT_TYPE_MESSAGE.format(
                 name=argument_name, type=expected_type, arg=argument))
 
     @classmethod
     def validate_callable(cls, argument_name, argument):
+        """
+        Validate ``argument`` is callable
+        """
         if not callable(argument):
             raise TypeError(cls._ARGUMENT_TYPE_MESSAGE.format(
                 name=argument_name, type='callable', arg=argument))
 
 
 def validate_function_arguments(func, func_kwargs):
-    _KWARGS_FLAG = 8
+    """
+    Validates all required arguments are supplied to ``func`` and that no additional arguments are
+    supplied
+    """
 
-    has_kwargs = func.func_code.co_flags & _KWARGS_FLAG != 0
+    _kwargs_flags = 8
+
+    has_kwargs = func.func_code.co_flags & _kwargs_flags != 0
     args_count = func.func_code.co_argcount
 
     # all args without the ones with default values
