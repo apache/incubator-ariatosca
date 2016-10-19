@@ -13,43 +13,87 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Workflow tasks
+"""
+
 
 class BaseTask(object):
+    """
+    Base class for Task objects
+    """
 
     def __init__(self, id, name, context):
-        self.id = id
-        self.name = name
-        self.context = context
+        self._id = id
+        self._name = name
+        self._context = context
+
+    @property
+    def id(self):
+        """
+        :return: the task's id
+        """
+        return self._id
+
+    @property
+    def name(self):
+        """
+        :return: the task's name
+        """
+        return self._name
+
+    @property
+    def context(self):
+        """
+        :return: the task's context
+        """
+        return self._context
 
 
 class StartWorkflowTask(BaseTask):
+    """
+    Tasks marking a workflow start
+    """
     pass
 
 
 class EndWorkflowTask(BaseTask):
+    """
+    Tasks marking a workflow end
+    """
     pass
 
 
 class StartSubWorkflowTask(BaseTask):
+    """
+    Tasks marking a subworkflow start
+    """
     pass
 
 
 class EndSubWorkflowTask(BaseTask):
+    """
+    Tasks marking a subworkflow end
+    """
     pass
 
 
 class OperationTask(BaseTask):
+    """
+    Operation tasks
+    """
+
     def __init__(self, *args, **kwargs):
         super(OperationTask, self).__init__(*args, **kwargs)
         self._create_operation_in_storage()
 
     def _create_operation_in_storage(self):
-        Operation = self.context.storage.operation.model_cls
-        operation = Operation(
+        operation_cls = self.context.storage.operation.model_cls
+        operation = operation_cls(
             id=self.context.id,
             execution_id=self.context.execution_id,
             max_retries=self.context.parameters.get('max_retries', 1),
-            status=Operation.PENDING,
+            status=operation_cls.PENDING,
         )
         self.context.operation = operation
 
@@ -58,4 +102,3 @@ class OperationTask(BaseTask):
             return getattr(self.context, attr)
         except AttributeError:
             return super(OperationTask, self).__getattribute__(attr)
-
