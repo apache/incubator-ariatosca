@@ -23,7 +23,8 @@ from aria.workflows.core import tasks, translation
 
 @pytest.fixture(autouse=True)
 def no_storage(monkeypatch):
-    monkeypatch.setattr(tasks.OperationTask, '_create_operation_in_storage', value=lambda *args, **kwargs: None)
+    monkeypatch.setattr(tasks.OperationTask, '_create_operation_in_storage',
+                        value=lambda *args, **kwargs: None)
 
 
 def test_task_graph_into_execution_graph():
@@ -43,7 +44,9 @@ def test_task_graph_into_execution_graph():
 
     # Direct check
     execution_graph = DiGraph()
-    translation.build_execution_graph(task_graph=task_graph, workflow_context=None, execution_graph=execution_graph)
+    translation.build_execution_graph(task_graph=task_graph,
+                                      workflow_context=None,
+                                      execution_graph=execution_graph)
     execution_tasks = topological_sort(execution_graph)
 
     assert len(execution_tasks) == 7
@@ -60,11 +63,14 @@ def test_task_graph_into_execution_graph():
 
     assert expected_tasks_names == execution_tasks
 
-    assert isinstance(_get_task_by_name(execution_tasks[0], execution_graph), tasks.StartWorkflowTask)
+    assert isinstance(_get_task_by_name(execution_tasks[0], execution_graph),
+                      tasks.StartWorkflowTask)
     assert simple_before_task == _get_task_by_name(execution_tasks[1], execution_graph).context
-    assert isinstance(_get_task_by_name(execution_tasks[2], execution_graph), tasks.StartSubWorkflowTask)
+    assert isinstance(_get_task_by_name(execution_tasks[2], execution_graph),
+                      tasks.StartSubWorkflowTask)
     assert inner_task == _get_task_by_name(execution_tasks[3], execution_graph).context
-    assert isinstance(_get_task_by_name(execution_tasks[4], execution_graph), tasks.EndSubWorkflowTask)
+    assert isinstance(_get_task_by_name(execution_tasks[4], execution_graph), tasks.
+                      EndSubWorkflowTask)
     assert simple_after_task == _get_task_by_name(execution_tasks[5], execution_graph).context
     assert isinstance(_get_task_by_name(execution_tasks[6], execution_graph), tasks.EndWorkflowTask)
 
