@@ -13,10 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utility methods for dynamically loading python code
+"""
+
 import importlib
 
 
 def load_attribute(attribute_path):
+    """
+    Dynamically load an attribute based on the path to it.
+    e.g. some_package.some_module.some_attribute, will load the some_attribute from the
+    some_package.some_module module
+    """
     module_name, attribute_name = attribute_path.rsplit('.', 1)
     try:
         module = importlib.import_module(module_name)

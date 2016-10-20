@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Convenience storage related tools.
+# TODO rename module name
+"""
+
 import os
 import json
 import shutil
@@ -25,6 +30,10 @@ from aria.exceptions import StorageError
 
 
 class StorageManager(LoggerMixin):
+    """
+    Convenience wrapper to simplify work with the lower level storage mechanism
+    """
+
     def __init__(
             self,
             model_storage,
@@ -51,11 +60,14 @@ class StorageManager(LoggerMixin):
             resource_storage,
             deployment_id,
             deployment_plan):
+        """
+        Create a StorageManager from a deployment
+        """
         return cls(
-            model_storage,
-            resource_storage,
-            deployment_id,
-            deployment_plan,
+            model_storage=model_storage,
+            resource_storage=resource_storage,
+            deployment_id=deployment_id,
+            deployment_plan=deployment_plan,
             blueprint_path=None,
             blueprint_plan=None,
             blueprint_id=None
@@ -69,6 +81,9 @@ class StorageManager(LoggerMixin):
             blueprint_path,
             blueprint_id,
             blueprint_plan):
+        """
+        Create a StorageManager from a blueprint
+        """
         return cls(
             model_storage,
             resource_storage,
@@ -248,32 +263,32 @@ class StorageManager(LoggerMixin):
 
 
 def _load_plugin_from_archive(tar_source):
-        if not tarfile.is_tarfile(tar_source):
-            # TODO: go over the exceptions
-            raise StorageError(
-                'the provided tar archive can not be read.')
+    if not tarfile.is_tarfile(tar_source):
+        # TODO: go over the exceptions
+        raise StorageError(
+            'the provided tar archive can not be read.')
 
-        with tarfile.open(tar_source) as tar:
-            tar_members = tar.getmembers()
-            # a wheel plugin will contain exactly one sub directory
-            if not tar_members:
-                raise StorageError(
-                    'archive file structure malformed. expecting exactly one '
-                    'sub directory; got none.')
-            package_json_path = os.path.join(tar_members[0].name,
-                                             'package.json')
-            try:
-                package_member = tar.getmember(package_json_path)
-            except KeyError:
-                raise StorageError("'package.json' was not found under {0}"
-                                   .format(package_json_path))
-            try:
-                package_json = tar.extractfile(package_member)
-            except tarfile.ExtractError as e:
-                raise StorageError(str(e))
-            try:
-                return json.load(package_json)
-            except ValueError as e:
-                raise StorageError("'package.json' is not a valid json: "
-                                   "{json_str}. error is {error}"
-                                   .format(json_str=package_json.read(), error=str(e)))
+    with tarfile.open(tar_source) as tar:
+        tar_members = tar.getmembers()
+        # a wheel plugin will contain exactly one sub directory
+        if not tar_members:
+            raise StorageError(
+                'archive file structure malformed. expecting exactly one '
+                'sub directory; got none.')
+        package_json_path = os.path.join(tar_members[0].name,
+                                         'package.json')
+        try:
+            package_member = tar.getmember(package_json_path)
+        except KeyError:
+            raise StorageError("'package.json' was not found under {0}"
+                               .format(package_json_path))
+        try:
+            package_json = tar.extractfile(package_member)
+        except tarfile.ExtractError as e:
+            raise StorageError(str(e))
+        try:
+            return json.load(package_json)
+        except ValueError as e:
+            raise StorageError("'package.json' is not a valid json: "
+                               "{json_str}. error is {error}"
+                               .format(json_str=package_json.read(), error=str(e)))
