@@ -54,7 +54,6 @@ class TestExecutor(object):
         assertion()
 
     def setup_method(self):
-        self.executor = None
         events.start_task_signal.connect(start_handler)
         events.on_success_task_signal.connect(success_handler)
         events.on_failure_task_signal.connect(failure_handler)

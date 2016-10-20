@@ -83,10 +83,9 @@ def test_custom_driver():
 
 
 class TestFileSystemDriver(TestFileSystem):
-    path = None
 
-    def setup_method(self, method):
-        super(TestFileSystemDriver, self).setup_method(method)
+    def setup_method(self):
+        super(TestFileSystemDriver, self).setup_method()
         self.driver = FileSystemModelDriver(directory=self.path)
 
     def test_name(self):

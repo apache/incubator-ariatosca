@@ -45,9 +45,9 @@ class InMemoryModelDriver(ModelDriver):
 
 
 class TestFileSystem(object):
-    def setup_method(self, method):
+
+    def setup_method(self):
         self.path = mkdtemp('{0}'.format(self.__class__.__name__))
 
-    def teardown_method(self, method):
+    def teardown_method(self):
         rmtree(self.path)
-        self.path = None

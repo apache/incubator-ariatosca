@@ -52,12 +52,12 @@ def test_field_choices():
         field.validate_in_choice('field', 'value', field.choices)
 
 
-def test_field_without_defaulf():
+def test_field_without_default():
     class Test(object):
         field = Field()
     test = Test()
     with pytest.raises(AttributeError, message="'Test' object has no attribute 'field'"):
-        test.field
+        assert test.field
 
 
 def test_field_default_func():
