@@ -14,17 +14,23 @@
 # limitations under the License.
 
 """
-Aria exceptions module.
- Every sub-package in Aria have a module with his Exceptions.
- aria.exceptions module is a center for all exceptions.
+Aria exceptions module
+Every sub-package in Aria has a module with its exceptions.
+aria.exceptions module conveniently collects all these exceptions for easier imports.
 """
 
 from .workflows.exceptions import *     # pylint: disable=W0401, W0614
 
 
 class AriaError(Exception):
+    """
+    General aria exception
+    """
     pass
 
 
 class StorageError(AriaError):
+    """
+    General storage exception
+    """
     pass

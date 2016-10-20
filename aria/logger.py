@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Logging related mixins and functions
+"""
+
 import logging
 from logging.handlers import RotatingFileHandler
 
-# todo: documentation...
-base_logger = logging.getLogger('aria')
+_base_logger = logging.getLogger('aria')
 
 
 class LoggerMixin(object):
@@ -34,7 +37,7 @@ class LoggerMixin(object):
 
     def __init__(self, *args, **kwargs):
         self.logger_name = self.logger_name or self.__class__.__name__
-        self.logger = base_logger.getChild(self.logger_name)
+        self.logger = _base_logger.getChild(self.logger_name)
         self.logger.setLevel(self.logger_level)
         super(LoggerMixin, self).__init__(*args, **kwargs)
 
@@ -45,6 +48,9 @@ class LoggerMixin(object):
             logger_level=logging.DEBUG,
             base_logger=logging.getLogger(),
             **kwargs):
+        """
+        Set the logger used by the consuming class
+        """
         cls.logger_name = logger_name
         cls.logger_level = logger_level
         cls.base_logger = base_logger
@@ -57,11 +63,11 @@ class LoggerMixin(object):
 
     def __setstate__(self, obj_dict):
         vars(self).update(
-            logger=base_logger.getChild(obj_dict['logger_name']),
+            logger=_base_logger.getChild(obj_dict['logger_name']),
             **obj_dict)
 
 
-def create_logger(logger=base_logger, handlers=(), **configs):
+def create_logger(logger=_base_logger, handlers=(), **configs):
     """
 
     :param logging.Logger logger: The logger name [default: aria logger]
@@ -115,6 +121,9 @@ def create_file_log_handler(
         max_bytes=5 * 1000 * 1024,
         backup_count=10,
         formatter=None):
+    """
+    Create a logging.handlers.RotatingFileHandler
+    """
     rotating_file = RotatingFileHandler(
         filename=file_path,
         maxBytes=max_bytes,
