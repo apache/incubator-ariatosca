@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Filesystem related CLI storage location and configuration
+"""
+
 import os
 import getpass
 from shutil import rmtree
@@ -22,6 +26,9 @@ storage_directory_name = 'local-storage'
 
 
 def user_space(user_name=getpass.getuser()):
+    """
+    Base work directory
+    """
     user_path = '~{0}'.format(user_name)
     real_path = os.path.expanduser(user_path)
     if os.path.exists(real_path):
@@ -30,18 +37,30 @@ def user_space(user_name=getpass.getuser()):
 
 
 def local_storage(user_name=getpass.getuser()):
+    """
+    Base storage directory
+    """
     return os.path.join(user_space(user_name), storage_directory_name)
 
 
 def local_model_storage():
+    """
+    Model storage directory
+    """
     return os.path.join(local_storage(), 'models')
 
 
 def local_resource_storage():
+    """
+    Resource storage directory
+    """
     return os.path.join(local_storage(), 'resources')
 
 
 def config_file_path():
+    """
+    Configuration file path
+    """
     path = os.path.join(user_space(), 'config.yaml')
     if not os.path.exists(path):
         open(path, 'w').close()
@@ -49,6 +68,9 @@ def config_file_path():
 
 
 def create_user_space(user_name=getpass.getuser(), override=False):
+    """
+    Creates the base work directory
+    """
     path = user_space(user_name)
     if os.path.exists(path):
         if override:
@@ -60,6 +82,9 @@ def create_user_space(user_name=getpass.getuser(), override=False):
 
 
 def create_local_storage(user_name=getpass.getuser(), override=False):
+    """
+    Creates the base storage directory
+    """
     path = local_storage(user_name)
     if os.path.exists(path):
         if override:
