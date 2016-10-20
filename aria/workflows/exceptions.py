@@ -13,12 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Workflow related Exception classes
+"""
+
 
 class ExecutorException(Exception):
+    """
+    General executor exception
+    """
     pass
 
 
 class ProcessException(ExecutorException):
+    """
+    Raised when subprocess execution fails
+    """
+
     def __init__(self, command, stderr=None, stdout=None, return_code=None):
         """
         Process class Exception
@@ -36,6 +47,9 @@ class ProcessException(ExecutorException):
 
     @property
     def explanation(self):
+        """
+        Describes the error in detail
+        """
         return (
             'Command "{error.command}" executed with an error.\n'
             'code: {error.return_code}\n'
@@ -44,4 +58,6 @@ class ProcessException(ExecutorException):
 
 
 class AriaEngineError(Exception):
-    pass
+    """
+    Raised by the workflow engine
+    """
