@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Workflow and operation decorators
+"""
+
 from uuid import uuid4
 from functools import partial, wraps
 
@@ -24,6 +28,9 @@ def workflow(
         workflow_context=True,
         simple_workflow=True,
         suffix_template=''):
+    """
+    Workflow decorator
+    """
     if func is None:
         return partial(
             workflow,
@@ -32,7 +39,7 @@ def workflow(
             suffix_template=suffix_template)
 
     @wraps(func)
-    def wrapper(context, **custom_kwargs):
+    def _wrapper(context, **custom_kwargs):
         workflow_name = _generate_workflow_name(
             func_name=func.__name__,
             suffix_template=suffix_template,
@@ -46,17 +53,20 @@ def workflow(
         validate_function_arguments(func, func_kwargs)
         func(**func_kwargs)
         return func_kwargs['graph']
-    return wrapper
+    return _wrapper
 
 
 def operation(
         func=None,
         operation_context=True):
+    """
+    Operation decorator
+    """
     if func is None:
         return partial(operation)
 
     @wraps(func)
-    def wrapper(context, **custom_kwargs):
+    def _wrapper(context, **custom_kwargs):
         func_kwargs = _create_func_kwargs(
             custom_kwargs,
             context,
@@ -64,13 +74,12 @@ def operation(
         validate_function_arguments(func, func_kwargs)
         context.description = func.__doc__
         return func(**func_kwargs)
-    return wrapper
+    return _wrapper
 
 
 def _generate_workflow_name(func_name, context, suffix_template, **custom_kwargs):
     return '{func_name}.{suffix}'.format(
         func_name=func_name,
-        context=context,
         suffix=suffix_template.format(context=context, **custom_kwargs) or str(uuid4()))
 
 

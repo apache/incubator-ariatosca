@@ -14,19 +14,16 @@
 # limitations under the License.
 
 """
-aria Package
-Path: aria
-
-Methods:
-    * __version__ - Aria Package Version.
-    * tosca_templates - Use the parser.parse method to validate tosca_templates.
-    * parser - aria.parser sub-package TOSCA parser and validation.
-    * deployment - aria.deployment sub-package convert plan,
-                   from parser to a deployment plan.
+Aria top level package
 """
 
 from .VERSION import version as __version__
-from .storage.drivers import ResourceDriver, ModelDriver, FileSystemModelDriver, FileSystemResourceDriver
+from .storage.drivers import (
+    ResourceDriver,
+    ModelDriver,
+    FileSystemModelDriver,
+    FileSystemResourceDriver,
+)
 from .storage import ModelStorage, ResourceStorage, models
 from .decorators import workflow, operation
 
@@ -41,8 +38,11 @@ _resource_storage = {}
 
 
 def application_model_storage(driver):
+    """
+    Initiate model storage for the supplied storage driver
+    """
+
     assert isinstance(driver, ModelDriver)
-    global _model_storage
     if driver not in _model_storage:
         _model_storage[driver] = ModelStorage(
             driver, models=[
@@ -62,8 +62,10 @@ def application_model_storage(driver):
 
 
 def application_resource_storage(driver):
+    """
+    Initiate resource storage for the supplied storage driver
+    """
     assert isinstance(driver, ResourceDriver)
-    global _resource_storage
     if driver not in _resource_storage:
         _resource_storage[driver] = ResourceStorage(
             driver,

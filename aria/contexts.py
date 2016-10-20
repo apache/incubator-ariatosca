@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Workflow and operation contexts
+"""
+
 from uuid import uuid4
 
 from aria.logger import LoggerMixin
@@ -21,7 +25,9 @@ from aria.workflows.api.tasks_graph import TaskGraph
 
 
 class WorkflowContext(LoggerMixin):
-    # todo: add documentations
+    """
+    Context object used during workflow creation and execution
+    """
 
     def __init__(
             self,
@@ -55,6 +61,10 @@ class WorkflowContext(LoggerMixin):
             operation_details,
             node_instance,
             inputs=None):
+        """
+        Called during workflow creation, return an operation context. This object should be added to
+        the task graph.
+        """
         return OperationContext(
             name=name,
             operation_details=operation_details,
@@ -64,46 +74,76 @@ class WorkflowContext(LoggerMixin):
 
     @property
     def task_graph(self):
+        """
+        The task graph class
+        """
         return TaskGraph
 
     @property
     def blueprint_id(self):
+        """
+        The blueprint id
+        """
         return self.deployment.blueprint_id
 
     @property
     @lru_cache()
     def blueprint(self):
+        """
+        The blueprint model
+        """
         return self.model.blueprint.get(self.blueprint_id)
 
     @property
     @lru_cache()
     def deployment(self):
+        """
+        The deployment model
+        """
         return self.model.deployment.get(self.deployment_id)
 
     @property
     def nodes(self):
+        """
+        Iterator over nodes
+        """
         return self.model.node.iter(
             filters={'blueprint_id': self.blueprint_id})
 
     @property
     def node_instances(self):
+        """
+        Iterator over node instances
+        """
         return self.model.node_instance.iter(filters={'deployment_id': self.deployment_id})
 
     @property
     def execution(self):
+        """
+        The execution model
+        """
         return self.model.execution.get(self.execution_id)
 
     @execution.setter
     def execution(self, value):
+        """
+        Store the execution in the model storage
+        """
         self.model.execution.store(value)
 
     def download_blueprint_resource(self, destination, path=None):
+        """
+        Download a blueprint resource from the resource storage
+        """
         return self.resource.blueprint.download(
             entry_id=self.blueprint_id,
             destination=destination,
             path=path)
 
     def download_deployment_resource(self, destination, path=None):
+        """
+        Download a deployment resource from the resource storage
+        """
         return self.resource.deployment.download(
             entry_id=self.deployment_id,
             destination=destination,
@@ -111,14 +151,24 @@ class WorkflowContext(LoggerMixin):
 
     @lru_cache()
     def get_deployment_resource_data(self, path=None):
+        """
+        Read a deployment resource as string from the resource storage
+        """
         return self.resource.deployment.data(entry_id=self.deployment_id, path=path)
 
     @lru_cache()
     def get_blueprint_resource_data(self, path=None):
+        """
+        Read a blueprint resource as string from the resource storage
+        """
         return self.resource.blueprint.data(entry_id=self.blueprint_id, path=path)
 
 
 class OperationContext(LoggerMixin):
+    """
+    Context object used during operation creation and execution
+    """
+
     def __init__(
             self,
             name,
@@ -148,8 +198,14 @@ class OperationContext(LoggerMixin):
 
     @property
     def operation(self):
+        """
+        The model operation
+        """
         return self.storage.operation.get(self.id)
 
     @operation.setter
     def operation(self, value):
+        """
+        Store the operation in the model storage
+        """
         self.storage.operation.store(value)
