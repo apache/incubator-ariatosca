@@ -29,7 +29,7 @@ from aria import application_model_storage, application_resource_storage
 from aria.logger import LoggerMixin
 from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
 from aria.tools.application import StorageManager
-from aria.contexts import WorkflowContext
+from aria.context.workflow import WorkflowContext
 from aria.workflows.core.engine import Engine
 from aria.workflows.executor.thread import ThreadExecutor
 

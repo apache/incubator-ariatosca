@@ -17,14 +17,23 @@
 Workflow and operation contexts
 """
 
+import threading
 from uuid import uuid4
+from contextlib import contextmanager
 
-from aria.logger import LoggerMixin
-from aria.tools.lru_cache import lru_cache
-from aria.workflows.api.tasks_graph import TaskGraph
+from .. import logger
+from ..tools.lru_cache import lru_cache
+from .. import exceptions
 
 
-class WorkflowContext(LoggerMixin):
+class ContextException(exceptions.AriaError):
+    """
+    Context based exception
+    """
+    pass
+
+
+class WorkflowContext(logger.LoggerMixin):
     """
     Context object used during workflow creation and execution
     """
@@ -36,6 +45,7 @@ class WorkflowContext(LoggerMixin):
             resource_storage,
             deployment_id,
             workflow_id,
+            execution_id=None,
             parameters=None,
             **kwargs):
         super(WorkflowContext, self).__init__(**kwargs)
@@ -45,7 +55,7 @@ class WorkflowContext(LoggerMixin):
         self.resource = resource_storage
         self.deployment_id = deployment_id
         self.workflow_id = workflow_id
-        self.execution_id = str(uuid4())
+        self.execution_id = execution_id or str(uuid4())
         self.parameters = parameters or {}
 
     def __repr__(self):
@@ -54,30 +64,6 @@ class WorkflowContext(LoggerMixin):
             'workflow_id={self.workflow_id}, '
             'execution_id={self.execution_id})'.format(
                 name=self.__class__.__name__, self=self))
-
-    def operation(
-            self,
-            name,
-            operation_details,
-            node_instance,
-            inputs=None):
-        """
-        Called during workflow creation, return an operation context. This object should be added to
-        the task graph.
-        """
-        return OperationContext(
-            name=name,
-            operation_details=operation_details,
-            workflow_context=self,
-            node_instance=node_instance,
-            inputs=inputs or {})
-
-    @property
-    def task_graph(self):
-        """
-        The task graph class
-        """
-        return TaskGraph
 
     @property
     def blueprint_id(self):
@@ -164,48 +150,41 @@ class WorkflowContext(LoggerMixin):
         return self.resource.blueprint.data(entry_id=self.blueprint_id, path=path)
 
 
-class OperationContext(LoggerMixin):
+class _CurrentContext(threading.local):
     """
-    Context object used during operation creation and execution
+    Provides thread-level context, which sugarcoats the task api.
     """
 
-    def __init__(
-            self,
-            name,
-            operation_details,
-            workflow_context,
-            node_instance,
-            inputs=None):
-        super(OperationContext, self).__init__()
-        self.name = name
-        self.id = str(uuid4())
-        self.operation_details = operation_details
-        self.workflow_context = workflow_context
-        self.node_instance = node_instance
-        self.inputs = inputs or {}
+    def __init__(self):
+        super(_CurrentContext, self).__init__()
+        self._workflow_context = None
 
-    def __repr__(self):
-        details = ', '.join(
-            '{0}={1}'.format(key, value)
-            for key, value in self.operation_details.items())
-        return '{name}({0})'.format(details, name=self.name)
+    def _set(self, value):
+        self._workflow_context = value
 
-    def __getattr__(self, attr):
+    def get(self):
+        """
+        Retrieves the current workflow context
+        :return: the workflow context
+        :rtype: WorkflowContext
+        """
+        if self._workflow_context is not None:
+            return self._workflow_context
+        raise ContextException("No context was set")
+
+    @contextmanager
+    def push(self, workflow_context):
+        """
+        Switches the current context to the provided context
+        :param workflow_context: the context to switch to.
+        :yields: the current context
+        """
+        prev_workflow_context = self._workflow_context
+        self._set(workflow_context)
         try:
-            return getattr(self.workflow_context, attr)
-        except AttributeError:
-            return super(OperationContext, self).__getattribute__(attr)
+            yield self
+        finally:
+            self._set(prev_workflow_context)
 
-    @property
-    def operation(self):
-        """
-        The model operation
-        """
-        return self.model.operation.get(self.id)
+current = _CurrentContext()
 
-    @operation.setter
-    def operation(self, value):
-        """
-        Store the operation in the model storage
-        """
-        self.model.operation.store(value)

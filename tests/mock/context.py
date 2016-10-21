@@ -13,8 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Core for the workflow execution mechanism
-"""
+from aria import context, application_model_storage
 
-from . import task
+from . import models
+from ..storage import InMemoryModelDriver
+
+
+def simple():
+    storage = application_model_storage(InMemoryModelDriver())
+    storage.setup()
+    return context.workflow.WorkflowContext(
+        name='simple_context',
+        model_storage=storage,
+        resource_storage=None,
+        deployment_id=models.DEPLOYMENT_ID,
+        workflow_id=models.WORKFLOW_ID,
+        execution_id=models.EXECUTION_ID
+    )

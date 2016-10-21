@@ -24,7 +24,7 @@ from .workflows import execute_operation_on_instance
 
 @workflow
 def execute_operation(
-        context,
+        ctx,
         graph,
         operation,
         operation_kwargs,
@@ -37,7 +37,7 @@ def execute_operation(
     """
     The execute_operation workflow
 
-    :param WorkflowContext context: the workflow context
+    :param WorkflowContext workflow_context: the workflow context
     :param TaskGraph graph: the graph which will describe the workflow.
     :param basestring operation: the operation name to execute
     :param dict operation_kwargs:
@@ -52,7 +52,7 @@ def execute_operation(
     subgraphs = {}
     # filtering node instances
     filtered_node_instances = list(_filter_node_instances(
-        context=context,
+        context=ctx,
         node_ids=node_ids,
         node_instance_ids=node_instance_ids,
         type_names=type_names))
@@ -60,31 +60,31 @@ def execute_operation(
     if run_by_dependency_order:
         filtered_node_instances_ids = set(node_instance.id
                                           for node_instance in filtered_node_instances)
-        for node_instance in context.node_instances:
+        for node_instance in ctx.node_instances:
             if node_instance.id not in filtered_node_instances_ids:
-                subgraphs[node_instance.id] = context.task_graph(
+                subgraphs[node_instance.id] = ctx.task_graph(
                     name='execute_operation_stub_{0}'.format(node_instance.id))
 
     # registering actual tasks to sequences
     for node_instance in filtered_node_instances:
-        node_instance_sub_workflow = execute_operation_on_instance(
-            context=context,
-            graph=graph,
-            node_instance=node_instance,
-            operation=operation,
-            operation_kwargs=operation_kwargs,
-            allow_kwargs_override=allow_kwargs_override)
-        subgraphs[node_instance.id] = node_instance_sub_workflow
+        graph.add_tasks(
+            execute_operation_on_instance(
+                node_instance=node_instance,
+                operation=operation,
+                operation_kwargs=operation_kwargs,
+                allow_kwargs_override=allow_kwargs_override
+            )
+        )
 
     for _, node_instance_sub_workflow in subgraphs.items():
-        graph.add_task(node_instance_sub_workflow)
+        graph.add_tasks(node_instance_sub_workflow)
 
     # adding tasks dependencies if required
     if run_by_dependency_order:
-        for node_instance in context.node_instances:
+        for node_instance in ctx.node_instances:
             for relationship_instance in node_instance.relationship_instances:
-                graph.dependency(source_task=subgraphs[node_instance.id],
-                                 after=[subgraphs[relationship_instance.target_id]])
+                graph.add_dependency(source_task=subgraphs[node_instance.id],
+                                     after=[subgraphs[relationship_instance.target_id]])
 
 
 def _filter_node_instances(context, node_ids=(), node_instance_ids=(), type_names=()):

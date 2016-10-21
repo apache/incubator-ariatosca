@@ -21,7 +21,11 @@ Function lru_cache implementation for python 2.7
 from time import time
 from functools import partial, wraps
 from itertools import imap
-from collections import OrderedDict
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 
 class _LRUCache(object):

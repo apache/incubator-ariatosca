@@ -36,37 +36,29 @@ from . import (
 
 @sent_task_signal.connect
 def _task_sent(task, *args, **kwargs):
-    operation_context = task.context
-    operation = operation_context.operation
-    operation.status = operation.SENT
-    operation_context.operation = operation
+    with task.update():
+        task.status = task.SENT
 
 
 @start_task_signal.connect
 def _task_started(task, *args, **kwargs):
-    operation_context = task.context
-    operation = operation_context.operation
-    operation.started_at = datetime.utcnow()
-    operation.status = operation.STARTED
-    operation_context.operation = operation
+    with task.update():
+        task.started_at = datetime.utcnow()
+        task.status = task.STARTED
 
 
 @on_failure_task_signal.connect
 def _task_failed(task, *args, **kwargs):
-    operation_context = task.context
-    operation = operation_context.operation
-    operation.ended_at = datetime.utcnow()
-    operation.status = operation.FAILED
-    operation_context.operation = operation
+    with task.update():
+        task.ended_at = datetime.utcnow()
+        task.status = task.FAILED
 
 
 @on_success_task_signal.connect
 def _task_succeeded(task, *args, **kwargs):
-    operation_context = task.context
-    operation = operation_context.operation
-    operation.ended_at = datetime.utcnow()
-    operation.status = operation.SUCCESS
-    operation_context.operation = operation
+    with task.update():
+        task.ended_at = datetime.utcnow()
+        task.status = task.SUCCESS
 
 
 @start_workflow_signal.connect

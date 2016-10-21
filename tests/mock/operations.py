@@ -13,8 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Core for the workflow execution mechanism
-"""
+NODE_OPERATIONS_INSTALL = [
+    'aria.interfaces.lifecycle.create',
+    'aria.interfaces.lifecycle.configure',
+    'aria.interfaces.lifecycle.start',
+    ]
+NODE_OPERATIONS_UNINSTALL = [
+    'aria.interfaces.lifecycle.stop',
+    'aria.interfaces.lifecycle.delete',
+]
+NODE_OPERATIONS = NODE_OPERATIONS_INSTALL + NODE_OPERATIONS_UNINSTALL
 
-from . import task
+RELATIONSHIP_OPERATIONS_INSTALL = [
+    'aria.interfaces.relationship_lifecycle.preconfigure',
+    'aria.interfaces.relationship_lifecycle.postconfigure',
+    'aria.interfaces.relationship_lifecycle.establish',
+    ]
+RELATIONSHIP_OPERATIONS_UNINSTALL = ['aria.interfaces.relationship_lifecycle.unlink']
+RELATIONSHIP_OPERATIONS = RELATIONSHIP_OPERATIONS_INSTALL + RELATIONSHIP_OPERATIONS_UNINSTALL

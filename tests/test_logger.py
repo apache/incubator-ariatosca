@@ -80,7 +80,7 @@ def test_create_file_log_handler():
         assert handler.baseFilename == temp_file.name
         assert handler.maxBytes == 5 * 1000 * 1024
         assert handler.backupCount == 10
-        assert handler.delay is True
+        assert handler.stream is None
         assert handler.level == logging.DEBUG
         assert handler.formatter == _default_file_formatter
 

@@ -17,17 +17,15 @@
 Translation of user graph's API to the execution graph
 """
 
-from aria import contexts
-
-from . import tasks
+from . import task as core_task
+from .. import api
 
 
 def build_execution_graph(
         task_graph,
-        workflow_context,
         execution_graph,
-        start_cls=tasks.StartWorkflowTask,
-        end_cls=tasks.EndWorkflowTask,
+        start_cls=core_task.StartWorkflowTask,
+        end_cls=core_task.EndWorkflowTask,
         depends_on=()):
     """
     Translates the user graph to the execution graph
@@ -39,43 +37,36 @@ def build_execution_graph(
     :param depends_on: internal use
     """
     # Insert start marker
-    start_task = start_cls(id=_start_graph_suffix(task_graph.id),
-                           name=_start_graph_suffix(task_graph.name),
-                           context=workflow_context)
+    start_task = start_cls(id=_start_graph_suffix(task_graph.id))
     _add_task_and_dependencies(execution_graph, start_task, depends_on)
 
-    for operation_or_workflow, dependencies in task_graph.task_tree(reverse=True):
+    for api_task in task_graph.topological_order(reverse=True):
+        dependencies = task_graph.get_dependencies(api_task)
         operation_dependencies = _get_tasks_from_dependencies(
             execution_graph,
             dependencies,
             default=[start_task])
 
-        if _is_operation(operation_or_workflow):
+        if _is_operation(api_task):
             # Add the task an the dependencies
-            operation_task = tasks.OperationTask(id=operation_or_workflow.id,
-                                                 name=operation_or_workflow.name,
-                                                 context=operation_or_workflow)
+            operation_task = core_task.OperationTask(api_task)
             _add_task_and_dependencies(execution_graph, operation_task, operation_dependencies)
         else:
             # Built the graph recursively while adding start and end markers
             build_execution_graph(
-                task_graph=operation_or_workflow,
-                workflow_context=workflow_context,
+                task_graph=api_task,
                 execution_graph=execution_graph,
-                start_cls=tasks.StartSubWorkflowTask,
-                end_cls=tasks.EndSubWorkflowTask,
+                start_cls=core_task.StartSubWorkflowTask,
+                end_cls=core_task.EndSubWorkflowTask,
                 depends_on=operation_dependencies
             )
 
     # Insert end marker
     workflow_dependencies = _get_tasks_from_dependencies(
         execution_graph,
-        task_graph.leaf_tasks,
+        _get_non_dependency_tasks(task_graph),
         default=[start_task])
-    end_task = end_cls(
-        id=_end_graph_suffix(task_graph.id),
-        name=_end_graph_suffix(task_graph.name),
-        context=workflow_context)
+    end_task = end_cls(id=_end_graph_suffix(task_graph.id))
     _add_task_and_dependencies(execution_graph, end_task, workflow_dependencies)
 
 
@@ -95,7 +86,7 @@ def _get_tasks_from_dependencies(execution_graph, dependencies, default=()):
 
 
 def _is_operation(task):
-    return isinstance(task, contexts.OperationContext)
+    return isinstance(task, api.task.OperationTask)
 
 
 def _start_graph_suffix(id):
@@ -104,3 +95,9 @@ def _start_graph_suffix(id):
 
 def _end_graph_suffix(id):
     return '{0}-End'.format(id)
+
+
+def _get_non_dependency_tasks(graph):
+    for task in graph.tasks:
+        if len(list(graph.get_dependents(task))) == 0:
+            yield task

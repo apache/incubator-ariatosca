@@ -37,7 +37,7 @@ class LoggerMixin(object):
 
     def __init__(self, *args, **kwargs):
         self.logger_name = self.logger_name or self.__class__.__name__
-        self.logger = _base_logger.getChild(self.logger_name)
+        self.logger = logging.getLogger('{0}.{1}'.format(_base_logger.name, self.logger_name))
         self.logger.setLevel(self.logger_level)
         super(LoggerMixin, self).__init__(*args, **kwargs)
 
@@ -63,7 +63,7 @@ class LoggerMixin(object):
 
     def __setstate__(self, obj_dict):
         vars(self).update(
-            logger=_base_logger.getChild(obj_dict['logger_name']),
+            logger=logging.getLogger('{0}.{1}'.format(_base_logger.name, obj_dict['logger_name'])),
             **obj_dict)
 
 
@@ -112,7 +112,7 @@ class _DefaultConsoleFormat(logging.Formatter):
                 self._fmt = '%(levelname)s: %(message)s'
         except AttributeError:
             return record.message
-        return super(_DefaultConsoleFormat, self).format(record)
+        return logging.Formatter.format(self, record)
 
 
 def create_file_log_handler(

@@ -55,10 +55,8 @@ class ThreadExecutor(BaseExecutor):
                 task = self._queue.get(timeout=1)
                 self._task_started(task)
                 try:
-                    operation_context = task.context
-                    task_func = module.load_attribute(
-                        operation_context.operation_details['operation'])
-                    task_func(**operation_context.inputs)
+                    task_func = module.load_attribute(task.operation_details['operation'])
+                    task_func(**task.inputs)
                     self._task_succeeded(task)
                 except BaseException as e:
                     self._task_failed(task, exception=e)

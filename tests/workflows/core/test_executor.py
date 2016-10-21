@@ -15,6 +15,7 @@
 
 import logging
 import uuid
+from contextlib import contextmanager
 
 import pytest
 import retrying
@@ -76,7 +77,7 @@ class TestExecutor(object):
         events.start_task_signal.disconnect(start_handler)
         events.on_success_task_signal.disconnect(success_handler)
         events.on_failure_task_signal.disconnect(failure_handler)
-        if self.executor:
+        if hasattr(self, 'executor'):
             self.executor.close()
 
 
@@ -101,14 +102,6 @@ class MockException(Exception):
     pass
 
 
-class MockContext(object):
-
-    def __init__(self, operation_details, inputs):
-        self.operation_details = operation_details
-        self.inputs = inputs
-        self.operation = models.Operation(execution_id='')
-
-
 class MockTask(object):
 
     def __init__(self, func, inputs=None):
@@ -116,11 +109,18 @@ class MockTask(object):
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
-        operation = 'tests.workflows.test_executor.{name}'.format(name=name)
-        self.context = MockContext(operation_details={'operation': operation},
-                                   inputs=inputs or {})
+        operation = 'tests.workflows.core.test_executor.{name}'.format(name=name)
+        self.operation_details = {'operation': operation}
         self.logger = logging.getLogger()
         self.name = name
+        self.inputs = inputs or {}
+
+        for state in models.Task.STATES:
+            setattr(self, state.upper(), state)
+
+    @contextmanager
+    def update(self):
+        yield self
 
 
 def start_handler(task, *args, **kwargs):

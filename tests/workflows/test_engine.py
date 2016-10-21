@@ -20,11 +20,14 @@ import pytest
 import aria
 from aria import events
 from aria import workflow
-from aria import contexts
+from aria import context
 from aria.storage import models
 from aria.workflows import exceptions
 from aria.workflows.executor import thread
 from aria.workflows.core import engine
+from aria.workflows import api
+
+from .. import mock
 
 import tests.storage
 
@@ -47,8 +50,8 @@ class TestEngine(object):
 
     def test_single_task_successful_execution(self, workflow_context, executor):
         @workflow
-        def mock_workflow(context, graph):
-            graph.add_task(self._op(mock_success_task, context))
+        def mock_workflow(ctx, graph):
+            graph.add_tasks(self._op(mock_success_task, ctx))
         self._execute(
             workflow_func=mock_workflow,
             workflow_context=workflow_context,
@@ -59,8 +62,8 @@ class TestEngine(object):
 
     def test_single_task_failed_execution(self, workflow_context, executor):
         @workflow
-        def mock_workflow(context, graph):
-            graph.add_task(self._op(mock_failed_task, context))
+        def mock_workflow(ctx, graph):
+            graph.add_tasks(self._op(mock_failed_task, ctx))
         with pytest.raises(exceptions.ExecutorException):
             self._execute(
                 workflow_func=mock_workflow,
@@ -72,10 +75,10 @@ class TestEngine(object):
 
     def test_two_tasks_execution_order(self, workflow_context, executor):
         @workflow
-        def mock_workflow(context, graph):
-            op1 = self._op(mock_ordered_task, context, inputs={'counter': 1})
-            op2 = self._op(mock_ordered_task, context, inputs={'counter': 2})
-            graph.chain(tasks=[op1, op2])
+        def mock_workflow(ctx, graph):
+            op1 = self._op(mock_ordered_task, ctx, inputs={'counter': 1})
+            op2 = self._op(mock_ordered_task, ctx, inputs={'counter': 2})
+            graph.sequence(op1, op2)
         self._execute(
             workflow_func=mock_workflow,
             workflow_context=workflow_context,
@@ -87,19 +90,17 @@ class TestEngine(object):
 
     @staticmethod
     def _execute(workflow_func, workflow_context, executor):
-        graph = workflow_func(context=workflow_context)
-        eng = engine.Engine(executor=executor,
-                            workflow_context=workflow_context,
-                            tasks_graph=graph)
+        graph = workflow_func(ctx=workflow_context)
+        eng = engine.Engine(executor=executor, workflow_context=workflow_context, tasks_graph=graph)
         eng.execute()
 
     @staticmethod
-    def _op(function, context, inputs=None):
-        return context.operation(
+    def _op(func, ctx, inputs=None):
+        return api.task.OperationTask(
             name='task',
-            node_instance=None,
             operation_details={'operation': 'tests.workflows.test_engine.{name}'.format(
-                name=function.__name__)},
+                name=func.__name__)},
+            node_instance=ctx.model.node_instance.get('dependency_node_instance'),
             inputs=inputs
         )
 
@@ -158,7 +159,11 @@ class TestEngine(object):
             updated_at=datetime.now(),
             workflows={})
         model_storage.deployment.store(deployment)
-        result = contexts.WorkflowContext(
+        node = mock.models.get_dependency_node()
+        node_instance = mock.models.get_dependency_node_instance(node)
+        model_storage.node.store(node)
+        model_storage.node_instance.store(node_instance)
+        result = context.workflow.WorkflowContext(
             name='test',
             model_storage=model_storage,
             resource_storage=None,

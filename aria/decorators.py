@@ -20,12 +20,13 @@ Workflow and operation decorators
 from uuid import uuid4
 from functools import partial, wraps
 
-from aria.tools.validation import validate_function_arguments
+from . import context
+from .workflows.api import task_graph
+from .tools.validation import validate_function_arguments
 
 
 def workflow(
         func=None,
-        workflow_context=True,
         simple_workflow=True,
         suffix_template=''):
     """
@@ -34,31 +35,29 @@ def workflow(
     if func is None:
         return partial(
             workflow,
-            workflow_context=workflow_context,
             simple_workflow=simple_workflow,
             suffix_template=suffix_template)
 
     @wraps(func)
-    def _wrapper(context, **custom_kwargs):
+    def _wrapper(ctx, **workflow_parameters):
+
         workflow_name = _generate_workflow_name(
             func_name=func.__name__,
             suffix_template=suffix_template,
-            context=context,
-            **custom_kwargs)
-        func_kwargs = _create_func_kwargs(
-            custom_kwargs,
-            context,
-            add_context=workflow_context,
-            workflow_name=workflow_name)
-        validate_function_arguments(func, func_kwargs)
-        func(**func_kwargs)
-        return func_kwargs['graph']
+            ctx=ctx,
+            **workflow_parameters)
+
+        workflow_parameters.setdefault('ctx', ctx)
+        workflow_parameters.setdefault('graph', task_graph.TaskGraph(workflow_name))
+        validate_function_arguments(func, workflow_parameters)
+        with context.workflow.current.push(ctx):
+            func(**workflow_parameters)
+        return workflow_parameters['graph']
     return _wrapper
 
 
 def operation(
-        func=None,
-        operation_context=True):
+        func=None):
     """
     Operation decorator
     """
@@ -66,29 +65,25 @@ def operation(
         return partial(operation)
 
     @wraps(func)
-    def _wrapper(context, **custom_kwargs):
+    def _wrapper(ctx, **custom_kwargs):
         func_kwargs = _create_func_kwargs(
             custom_kwargs,
-            context,
-            add_context=operation_context)
+            ctx)
         validate_function_arguments(func, func_kwargs)
-        context.description = func.__doc__
+        ctx.description = func.__doc__
         return func(**func_kwargs)
     return _wrapper
 
 
-def _generate_workflow_name(func_name, context, suffix_template, **custom_kwargs):
+def _generate_workflow_name(func_name, ctx, suffix_template, **custom_kwargs):
     return '{func_name}.{suffix}'.format(
         func_name=func_name,
-        suffix=suffix_template.format(context=context, **custom_kwargs) or str(uuid4()))
+        suffix=suffix_template.format(ctx=ctx, **custom_kwargs) or str(uuid4()))
 
 
 def _create_func_kwargs(
         kwargs,
-        context,
-        add_context=True,
+        ctx,
         workflow_name=None):
-    if add_context:
-        kwargs['context'] = context
-    kwargs.setdefault('graph', context.task_graph(workflow_name))
+    kwargs.setdefault('graph', ctx.task_graph(workflow_name))
     return kwargs

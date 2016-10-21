@@ -20,10 +20,11 @@ Builtin uninstall workflow
 from aria import workflow
 
 from .workflows import uninstall_node_instance
+from ..api import task
 
 
 @workflow
-def uninstall(context, graph, node_instances=(), node_instance_sub_workflows=None):
+def uninstall(ctx, graph, node_instances=(), node_instance_sub_workflows=None):
     """
     The uninstall workflow
     :param WorkflowContext context: the workflow context
@@ -34,20 +35,18 @@ def uninstall(context, graph, node_instances=(), node_instance_sub_workflows=Non
     :return:
     """
     node_instance_sub_workflows = node_instance_sub_workflows or {}
-    node_instances = node_instances or list(context.node_instances)
+    node_instances = node_instances or list(ctx.node_instances)
 
     # create install sub workflow for every node instance
     for node_instance in node_instances:
-        node_instance_sub_workflow = uninstall_node_instance(
-            context=context,
-            node_instance=node_instance)
+        node_instance_sub_workflow = task.WorkflowTask(uninstall_node_instance,
+                                                       node_instance=node_instance)
         node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
-        graph.add_task(node_instance_sub_workflow)
+        graph.add_tasks(node_instance_sub_workflow)
 
     # create dependencies between the node instance sub workflow
     for node_instance in node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
         for relationship_instance in reversed(node_instance.relationship_instances):
-            graph.dependency(
-                source_task=node_instance_sub_workflows[relationship_instance.target_id],
-                after=[node_instance_sub_workflow])
+            graph.add_dependency(node_instance_sub_workflows[relationship_instance.target_id],
+                                 node_instance_sub_workflow)

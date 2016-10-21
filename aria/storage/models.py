@@ -216,34 +216,6 @@ class Execution(Model):
     is_system_workflow = Field(type=bool, default=False)
 
 
-class Operation(Model):
-    """
-    A Model which represents an operation
-    """
-    PENDING = 'pending'
-    SENT = 'sent'
-    STARTED = 'started'
-    SUCCESS = 'success'
-    FAILED = 'failed'
-    STATES = (
-        PENDING,
-        SENT,
-        STARTED,
-        SUCCESS,
-        FAILED,
-    )
-    END_STATES = [SUCCESS, FAILED]
-
-    id = Field(type=basestring, default=uuid_generator)
-    status = Field(type=basestring, choices=STATES, default=PENDING)
-    execution_id = Field(type=basestring)
-    eta = Field(type=datetime, default=datetime.now)
-    started_at = Field(type=datetime, default=None)
-    ended_at = Field(type=datetime, default=None)
-    max_retries = Field(type=int, default=0)
-    retry_count = Field(type=int, default=0)
-
-
 class Relationship(Model):
     """
     A Model which represents a relationship
@@ -397,3 +369,37 @@ class Plugin(Model):
     excluded_wheels = Field()
     supported_py_versions = Field(type=list)
     uploaded_at = Field(type=datetime)
+
+
+class Task(Model):
+    """
+    A Model which represents an task
+    """
+    PENDING = 'pending'
+    SENT = 'sent'
+    STARTED = 'started'
+    SUCCESS = 'success'
+    FAILED = 'failed'
+    STATES = (
+        PENDING,
+        SENT,
+        STARTED,
+        SUCCESS,
+        FAILED,
+    )
+    END_STATES = [SUCCESS, FAILED]
+
+    id = Field(type=basestring, default=uuid_generator)
+    status = Field(type=basestring, choices=STATES, default=PENDING)
+    execution_id = Field(type=basestring)
+    eta = Field(type=datetime, default=datetime.now)
+    started_at = Field(type=datetime, default=None)
+    ended_at = Field(type=datetime, default=None)
+    max_retries = Field(type=int, default=1)
+    retry_count = Field(type=int, default=0)
+
+    # Operation specific fields
+    name = Field(type=basestring)
+    operation_details = Field(type=dict)
+    node_instance = PointerField(type=NodeInstance)
+    inputs = Field(type=dict, default=lambda: {})

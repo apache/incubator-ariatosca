@@ -43,11 +43,10 @@ class CeleryExecutor(BaseExecutor):
         self._started_queue.get(timeout=30)
 
     def execute(self, task):
-        operation_context = task.context
         self._tasks[task.id] = task
         self._results[task.id] = self._app.send_task(
-            operation_context.operation_details['operation'],
-            kwargs=operation_context.inputs,
+            task.operation_details['operation'],
+            kwargs=task.inputs,
             task_id=task.id,
             queue=self._get_queue(task))
 

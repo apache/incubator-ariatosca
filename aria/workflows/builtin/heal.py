@@ -19,50 +19,47 @@ Builtin heal workflow
 
 from aria import workflow
 
-from .uninstall import uninstall
-from .install import install
-from .workflows import relationship_tasks
+from .workflows import relationship_tasks, install_node_instance, uninstall_node_instance
+from ..api import task
 
 
 @workflow
-def heal(context, graph, node_instance_id):
+def heal(ctx, graph, node_instance_id):
     """
     The heal workflow
 
-    :param WorkflowContext context: the workflow context
+    :param WorkflowContext ctx: the workflow context
     :param TaskGraph graph: the graph which will describe the workflow.
     :param node_instance_id: the id of the node instance to heal
     :return:
     """
-    failing_node = context.storage.node_instance.get(node_instance_id)
-    host_node = context.storage.node_instance.get(failing_node.host_id)
-    failed_node_instance_subgraph = _get_contained_subgraph(context, host_node)
+    failing_node = ctx.model.node_instance.get(node_instance_id)
+    host_node = ctx.model.node_instance.get(failing_node.host_id)
+    failed_node_instance_subgraph = _get_contained_subgraph(ctx, host_node)
     failed_node_instance_ids = list(n.id for n in failed_node_instance_subgraph)
 
-    targeted_node_instances = [
-        context.storage.node_instance.get(relationship_instance.target_id)
-        for node_instance in failed_node_instance_subgraph
-        for relationship_instance in node_instance.relationship_instances
-        if relationship_instance.target_id not in failed_node_instance_ids
-    ]
+    targeted_node_instances = [node_instance for node_instance in ctx.node_instances
+                               if node_instance.id not in failed_node_instance_ids]
 
-    graph.chain([
-        heal_uninstall(
-            context=context,
-            failing_node_instances=failed_node_instance_subgraph,
-            targeted_node_instances=targeted_node_instances),
-        heal_install(
-            context=context,
-            failing_node_instances=failed_node_instance_subgraph,
-            targeted_node_instances=targeted_node_instances)
-    ])
+    uninstall_subgraph = task.WorkflowTask(
+        heal_uninstall,
+        failing_node_instances=failed_node_instance_subgraph,
+        targeted_node_instances=targeted_node_instances
+    )
+
+    install_subgraph = task.WorkflowTask(
+        heal_install,
+        failing_node_instances=failed_node_instance_subgraph,
+        targeted_node_instances=targeted_node_instances)
+
+    graph.sequence(uninstall_subgraph, install_subgraph)
 
 
 @workflow(suffix_template='{failing_node_instances}')
-def heal_uninstall(context, graph, failing_node_instances, targeted_node_instances):
+def heal_uninstall(ctx, graph, failing_node_instances, targeted_node_instances):
     """
     the uninstall part of the heal mechanism
-    :param WorkflowContext context: the workflow context
+    :param WorkflowContext ctx: the workflow context
     :param TaskGraph graph: the task graph to edit.
     :param failing_node_instances: the failing nodes to heal.
     :param targeted_node_instances: the targets of the relationships where the failing node are
@@ -73,46 +70,49 @@ def heal_uninstall(context, graph, failing_node_instances, targeted_node_instanc
 
     # Create install stub workflow for each unaffected node instance
     for node_instance in targeted_node_instances:
-        node_instance_sub_workflow = context.task_graph(
-            name='uninstall_stub_{0}'.format(node_instance.id))
+        node_instance_stub = task.StubTask()
+        node_instance_sub_workflows[node_instance.id] = node_instance_stub
+        graph.add_tasks(node_instance_stub)
+
+    # create install sub workflow for every node instance
+    for node_instance in failing_node_instances:
+        node_instance_sub_workflow = task.WorkflowTask(uninstall_node_instance,
+                                                       node_instance=node_instance)
         node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
-        graph.add_task(node_instance_sub_workflow)
+        graph.add_tasks(node_instance_sub_workflow)
 
-    # Create install sub workflow for each failing node
-    uninstall(
-        context=context,
-        graph=graph,
-        node_instances=failing_node_instances,
-        node_instance_sub_workflows=node_instance_sub_workflows)
+    # create dependencies between the node instance sub workflow
+    for node_instance in failing_node_instances:
+        node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
+        for relationship_instance in reversed(node_instance.relationship_instances):
+            graph.add_dependency(node_instance_sub_workflows[relationship_instance.target_id],
+                                 node_instance_sub_workflow)
 
-    # Add operations for intact nodes depending on a node instance
-    # belonging to node_instances
+    # Add operations for intact nodes depending on a node instance belonging to node_instances
     for node_instance in targeted_node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
 
         for relationship_instance in reversed(node_instance.relationship_instances):
-            target_node_instance = context.storage.node_instance.get(
-                relationship_instance.target_id)
-            if target_node_instance in failing_node_instances:
-                after_tasks = [node_instance_sub_workflows[relationship.target_id]
-                               for relationship in node_instance.relationship_instances]
+            target_node_instance = ctx.model.node_instance.get(relationship_instance.target_id)
+            target_node_instance_subgraph = node_instance_sub_workflows[target_node_instance.id]
+            graph.add_dependency(target_node_instance_subgraph, node_instance_sub_workflow)
 
-            elif target_node_instance in targeted_node_instances:
-                after_tasks = [relationship_tasks(
+            if target_node_instance in failing_node_instances:
+                dependency = relationship_tasks(
+                    graph=graph,
                     node_instance=node_instance,
                     relationship_instance=relationship_instance,
-                    context=context,
-                    operation_name='aria.interfaces.relationship_lifecycle.unlink')]
+                    context=ctx,
+                    operation_name='aria.interfaces.relationship_lifecycle.unlink')
 
-            if after_tasks:
-                graph.dependency(source_task=node_instance_sub_workflow, after=after_tasks)
+                graph.add_dependency(node_instance_sub_workflow, dependency)
 
 
 @workflow(suffix_template='{failing_node_instances}')
-def heal_install(context, graph, failing_node_instances, targeted_node_instances):
+def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
     """
     the install part of the heal mechanism
-    :param WorkflowContext context: the workflow context
+    :param WorkflowContext ctx: the workflow context
     :param TaskGraph graph: the task graph to edit.
     :param failing_node_instances: the failing nodes to heal.
     :param targeted_node_instances: the targets of the relationships where the failing node are
@@ -123,17 +123,24 @@ def heal_install(context, graph, failing_node_instances, targeted_node_instances
 
     # Create install sub workflow for each unaffected
     for node_instance in targeted_node_instances:
-        node_instance_sub_workflow = context.task_graph(
-            name='install_stub_{0}'.format(node_instance.id))
-        node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
-        graph.add_task(node_instance_sub_workflow)
+        node_instance_stub = task.StubTask()
+        node_instance_sub_workflows[node_instance.id] = node_instance_stub
+        graph.add_tasks(node_instance_stub)
 
     # create install sub workflow for every node instance
-    install(
-        context=context,
-        graph=graph,
-        node_instances=failing_node_instances,
-        node_instance_sub_workflows=node_instance_sub_workflows)
+    for node_instance in failing_node_instances:
+        node_instance_sub_workflow = task.WorkflowTask(install_node_instance,
+                                                       node_instance=node_instance)
+        node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
+        graph.add_tasks(node_instance_sub_workflow)
+
+    # create dependencies between the node instance sub workflow
+    for node_instance in failing_node_instances:
+        node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
+        if node_instance.relationship_instances:
+            dependencies = [node_instance_sub_workflows[relationship_instance.target_id]
+                            for relationship_instance in node_instance.relationship_instances]
+            graph.add_dependency(node_instance_sub_workflow, dependencies)
 
     # Add operations for intact nodes depending on a node instance
     # belonging to node_instances
@@ -141,35 +148,33 @@ def heal_install(context, graph, failing_node_instances, targeted_node_instances
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
 
         for relationship_instance in node_instance.relationship_instances:
-            target_node_instance = context.storage.node_instance.get(
-                relationship_instance.target_id)
-            if target_node_instance in failing_node_instances:
-                after_tasks = [node_instance_sub_workflows[relationship.target_id]
-                               for relationship in node_instance.relationship_instances]
+            target_node_instance = ctx.model.node_instance.get(relationship_instance.target_id)
+            target_node_instance_subworkflow = node_instance_sub_workflows[target_node_instance.id]
+            graph.add_dependency(node_instance_sub_workflow, target_node_instance_subworkflow)
 
-            elif target_node_instance in targeted_node_instances:
-                after_tasks = [relationship_tasks(
+            if target_node_instance in failing_node_instances:
+                dependent = relationship_tasks(
+                    graph=graph,
                     node_instance=node_instance,
                     relationship_instance=relationship_instance,
-                    context=context,
-                    operation_name='aria.interfaces.relationship_lifecycle.establish')]
+                    context=ctx,
+                    operation_name='aria.interfaces.relationship_lifecycle.establish')
 
-            if after_tasks:
-                graph.dependency(source_task=node_instance_sub_workflow, after=after_tasks)
+                graph.add_dependency(dependent, node_instance_sub_workflow)
 
 
 def _get_contained_subgraph(context, host_node_instance):
-    contained_instances = set(node_instance
-                              for node_instance in context.node_instances
-                              if node_instance.host_id == host_node_instance.id and
-                              node_instance.id != node_instance.host_id)
-    result = {host_node_instance}
+    contained_instances = [node_instance
+                           for node_instance in context.node_instances
+                           if node_instance.host_id == host_node_instance.id and
+                           node_instance.id != node_instance.host_id]
+    result = [host_node_instance]
 
     if not contained_instances:
         return result
 
-    result.update(contained_instances)
+    result.extend(contained_instances)
     for node_instance in contained_instances:
-        result.update(_get_contained_subgraph(context, node_instance))
+        result.extend(_get_contained_subgraph(context, node_instance))
 
-    return result
+    return set(result)

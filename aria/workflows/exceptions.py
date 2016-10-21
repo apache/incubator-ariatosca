@@ -61,3 +61,10 @@ class AriaEngineError(Exception):
     """
     Raised by the workflow engine
     """
+
+
+class TaskException(Exception):
+    """
+    Raised by the task
+    """
+    pass

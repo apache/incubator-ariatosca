@@ -36,10 +36,6 @@ try:
 except IOError:
     install_requires = []
 
-try:
-    import importlib
-except ImportError:
-    install_requires.append('importlib')
 
 setup(
     name=_PACKAGE_NAME,

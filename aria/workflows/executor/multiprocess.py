@@ -40,16 +40,15 @@ class MultiprocessExecutor(BaseExecutor):
         self._listener_thread = threading.Thread(target=self._listener)
         self._listener_thread.daemon = True
         self._listener_thread.start()
-        self._pool = multiprocessing.Pool(processes=pool_size,
-                                          maxtasksperchild=1)
+        self._pool = multiprocessing.Pool(processes=pool_size)
 
     def execute(self, task):
         self._tasks[task.id] = task
         self._pool.apply_async(_multiprocess_handler, args=(
             self._queue,
             task.id,
-            task.context.operation_details,
-            task.context.inputs))
+            task.operation_details,
+            task.inputs))
 
     def close(self):
         self._pool.close()

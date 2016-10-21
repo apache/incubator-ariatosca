@@ -56,7 +56,7 @@ def application_model_storage(driver):
                 models.DeploymentModification,
                 models.Execution,
                 models.ProviderContext,
-                models.Operation,
+                models.Task,
             ])
     return _model_storage[driver]
 

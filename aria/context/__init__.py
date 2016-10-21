@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Core for the workflow execution mechanism
+Provides contexts to workflow and operation
 """
 
-from . import task
+from . import workflow, operation
