@@ -26,7 +26,7 @@ if (sys.version_info[0], sys.version_info[1]) not in _PYTHON_SUPPORTED_VERSIONS:
         '{0} Package support Python version 2.6 & 2.7 Only'.format(
             _PACKAGE_NAME))
 
-version = '0.0.1'
+version = '0.1.0'
 execfile(os.path.join('.', _PACKAGE_NAME, 'VERSION.py'))
 
 
@@ -45,10 +45,10 @@ setup(
     name=_PACKAGE_NAME,
     version=version,
     author='aria-core',
-    author_email='cosmo-admin@gigaspaces.com',
+    author_email='dev@ariatosca.incubator.apache.org',
     packages=find_packages(exclude=('*tests*',)),
     license='LICENSE',
-    description='Aria Project',
+    description='ARIA Project',
     zip_safe=False,
     install_requires=install_requires,
     entry_points={

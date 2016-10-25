@@ -47,7 +47,7 @@ def test_base_model_members():
 
     test_model = TestModel1(test_field='test_field_value', id='test_id')
 
-    assert repr(test_model) == "TestModel(fields=['id', 'test_field'])"
+    assert repr(test_model) == "TestModel1(fields=['id', 'test_field'])"
     expected = {'test_field': 'test_field_value', 'id': 'test_id'}
     assert json.loads(test_model.json) == expected
     assert test_model.fields_dict == expected
