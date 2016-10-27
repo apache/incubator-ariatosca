@@ -17,52 +17,111 @@
 Workflow and operation contexts
 """
 
-from uuid import uuid4
 
-from aria.logger import LoggerMixin
+from .common import BaseContext
 
-class OperationContext(LoggerMixin):
+
+class BaseOperationContext(BaseContext):
     """
     Context object used during operation creation and execution
     """
 
-    def __init__(
-            self,
-            name,
-            operation_details,
-            workflow_context,
-            node_instance,
-            inputs=None):
-        super(OperationContext, self).__init__()
-        self.name = name
-        self.id = str(uuid4())
-        self.operation_details = operation_details
-        self.workflow_context = workflow_context
-        self.node_instance = node_instance
-        self.inputs = inputs or {}
+    def __init__(self, name, workflow_context, task, **kwargs):
+        super(BaseOperationContext, self).__init__(
+            name=name,
+            model_storage=workflow_context.model,
+            resource_storage=workflow_context.resource,
+            deployment_id=workflow_context._deployment_id,
+            workflow_id=workflow_context._workflow_id,
+            execution_id=workflow_context._execution_id,
+            **kwargs)
+        self._task_model = task
+        self._actor = self.task.actor
 
     def __repr__(self):
-        details = ', '.join(
-            '{0}={1}'.format(key, value)
-            for key, value in self.operation_details.items())
+        details = 'operation_mapping={task.operation_mapping}; ' \
+                  'operation_inputs={task.inputs}'\
+            .format(task=self.task)
         return '{name}({0})'.format(details, name=self.name)
 
-    def __getattr__(self, attr):
-        try:
-            return getattr(self.workflow_context, attr)
-        except AttributeError:
-            return super(OperationContext, self).__getattribute__(attr)
+    @property
+    def task(self):
+        """
+        The task in the model storage
+        :return: Task model
+        """
+        return self._task_model
+
+
+class NodeOperationContext(BaseOperationContext):
+    """
+    Context for node based operations.
+    """
+    @property
+    def node(self):
+        """
+        the node of the current operation
+        :return:
+        """
+        return self._actor.node
 
     @property
-    def operation(self):
+    def node_instance(self):
         """
-        The model operation
+        The node instance of the current operation
+        :return:
         """
-        return self.storage.operation.get(self.id)
+        return self._actor
 
-    @operation.setter
-    def operation(self, value):
+
+class RelationshipOperationContext(BaseOperationContext):
+    """
+    Context for relationship based operations.
+    """
+    @property
+    def source_node(self):
         """
-        Store the operation in the model storage
+        The source node
+        :return:
         """
-        self.storage.operation.store(value)
+        return self.model.node.get(self.relationship.source_id)
+
+    @property
+    def source_node_instance(self):
+        """
+        The source node instance
+        :return:
+        """
+        return self.model.node_instance.get(self.relationship_instance.source_id)
+
+    @property
+    def target_node(self):
+        """
+        The target node
+        :return:
+        """
+        return self.model.node.get(self.relationship.target_id)
+
+    @property
+    def target_node_instance(self):
+        """
+        The target node instance
+        :return:
+        """
+        return self.model.node_instance.get(self._actor.target_id)
+
+    @property
+    def relationship(self):
+        """
+        The relationship of the current operation
+        :return:
+        """
+        return self._actor.relationship
+
+    @property
+    def relationship_instance(self):
+        """
+        The relationship instance of the current operation
+        :return:
+        """
+        return self._actor

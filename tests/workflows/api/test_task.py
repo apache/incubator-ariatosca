@@ -60,46 +60,76 @@ def ctx():
 
 class TestOperationTask(object):
 
-    def test_operation_task_creation(self):
+    def test_node_operation_task_creation(self):
         workflow_context = mock.context.simple()
 
-        name = 'task_name'
-        op_details = {'operation_details': True}
-        node_instance = mock.models.get_dependency_node_instance()
+        operation_name = 'aria.interfaces.lifecycle.create'
+        op_details = {'operation': True}
+        node = mock.models.get_dependency_node()
+        node.operations[operation_name] = op_details
+        node_instance = mock.models.get_dependency_node_instance(dependency_node=node)
         inputs = {'inputs': True}
         max_attempts = 10
         retry_interval = 10
         ignore_failure = True
 
         with context.workflow.current.push(workflow_context):
-            model_task = api.task.OperationTask(name=name,
-                                                operation_details=op_details,
-                                                node_instance=node_instance,
-                                                inputs=inputs,
-                                                max_attempts=max_attempts,
-                                                retry_interval=retry_interval,
-                                                ignore_failure=ignore_failure)
+            api_task = api.task.OperationTask.node_instance(
+                name=operation_name,
+                instance=node_instance,
+                inputs=inputs,
+                max_attempts=max_attempts,
+                retry_interval=retry_interval,
+                ignore_failure=ignore_failure)
 
-        assert model_task.name == name
-        assert model_task.operation_details == op_details
-        assert model_task.node_instance == node_instance
-        assert model_task.inputs == inputs
-        assert model_task.retry_interval == retry_interval
-        assert model_task.max_attempts == max_attempts
-        assert model_task.ignore_failure == ignore_failure
+        assert api_task.name == '{0}.{1}'.format(operation_name, node_instance.id)
+        assert api_task.operation_mapping is True
+        assert api_task.actor == node_instance
+        assert api_task.inputs == inputs
+        assert api_task.retry_interval == retry_interval
+        assert api_task.max_attempts == max_attempts
+        assert api_task.ignore_failure == ignore_failure
+
+    def test_relationship_operation_task_creation(self):
+        workflow_context = mock.context.simple()
+
+        operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
+        op_details = {'operation': True}
+        relationship = mock.models.get_relationship()
+        relationship.source_operations[operation_name] = op_details
+        relationship_instance = mock.models.get_relationship_instance(relationship=relationship)
+        inputs = {'inputs': True}
+        max_attempts = 10
+        retry_interval = 10
+
+        with context.workflow.current.push(workflow_context):
+            api_task = api.task.OperationTask.relationship_instance(
+                name=operation_name,
+                instance=relationship_instance,
+                operation_end=api.task.OperationTask.SOURCE_OPERATION,
+                inputs=inputs,
+                max_attempts=max_attempts,
+                retry_interval=retry_interval)
+
+        assert api_task.name == '{0}.{1}'.format(operation_name, relationship_instance.id)
+        assert api_task.operation_mapping is True
+        assert api_task.actor == relationship_instance
+        assert api_task.inputs == inputs
+        assert api_task.retry_interval == retry_interval
+        assert api_task.max_attempts == max_attempts
 
     def test_operation_task_default_values(self):
         workflow_context = mock.context.simple(task_ignore_failure=True)
         with context.workflow.current.push(workflow_context):
             model_task = api.task.OperationTask(
                 name='stub',
-                operation_details={},
-                node_instance=mock.models.get_dependency_node_instance())
+                operation_mapping='',
+                actor=mock.models.get_dependency_node_instance())
 
         assert model_task.inputs == {}
-        assert model_task.retry_interval == workflow_context.task_retry_interval
-        assert model_task.max_attempts == workflow_context.task_max_attempts
-        assert model_task.ignore_failure == workflow_context.task_ignore_failure
+        assert model_task.retry_interval == workflow_context._task_retry_interval
+        assert model_task.max_attempts == workflow_context._task_max_attempts
+        assert model_task.ignore_failure == workflow_context._task_ignore_failure
 
 
 class TestWorkflowTask(object):

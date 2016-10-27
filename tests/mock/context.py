@@ -22,6 +22,7 @@ from ..storage import InMemoryModelDriver
 def simple(**kwargs):
     storage = application_model_storage(InMemoryModelDriver())
     storage.setup()
+    storage.blueprint.store(models.get_blueprint())
     storage.deployment.store(models.get_deployment())
     final_kwargs = dict(
         name='simple_context',

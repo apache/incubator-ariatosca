@@ -44,9 +44,11 @@ class CeleryExecutor(BaseExecutor):
 
     def execute(self, task):
         self._tasks[task.id] = task
+        inputs = task.inputs.copy()
+        inputs['ctx'] = task.context
         self._results[task.id] = self._app.send_task(
-            task.operation_details['operation'],
-            kwargs=task.inputs,
+            task.operation_mapping,
+            kwargs=inputs,
             task_id=task.id,
             queue=self._get_queue(task))
 

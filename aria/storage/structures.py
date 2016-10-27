@@ -26,7 +26,6 @@ classes:
     * IterPointerField - represents an iterable pointers field.
     * Model - abstract model implementation.
 """
-
 import json
 from uuid import uuid4
 from itertools import count

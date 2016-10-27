@@ -195,6 +195,7 @@ def _relationship(id=''):
     return Relationship(
         id='rel{0}'.format(id),
         target_id='target{0}'.format(id),
+        source_id='source{0}'.format(id),
         source_interfaces={},
         source_operations={},
         target_interfaces={},
@@ -248,6 +249,8 @@ def test_relationship_instance():
     relationship_instances = [RelationshipInstance(
         id='rel{0}'.format(index),
         target_id='target_{0}'.format(index % 2),
+        source_id='source_{0}'.format(index % 2),
+        source_name='',
         target_name='',
         relationship=relationship,
         type='type{0}'.format(index)) for index in xrange(3)]
@@ -348,9 +351,9 @@ def test_task_max_attempts_validation():
     def create_task(max_attempts):
         Task(execution_id='eid',
              name='name',
-             operation_details={},
+             operation_mapping='',
              inputs={},
-             node_instance=models.get_dependency_node_instance(),
+             actor=models.get_dependency_node_instance(),
              max_attempts=max_attempts)
     create_task(max_attempts=1)
     create_task(max_attempts=2)

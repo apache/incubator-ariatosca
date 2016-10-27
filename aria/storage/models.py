@@ -241,6 +241,7 @@ class Relationship(Model):
     A Model which represents a relationship
     """
     id = Field(type=basestring, default=uuid_generator)
+    source_id = Field(type=basestring)
     target_id = Field(type=basestring)
     source_interfaces = Field(type=dict)
     source_operations = Field(type=dict)
@@ -290,6 +291,8 @@ class RelationshipInstance(Model):
     id = Field(type=basestring, default=uuid_generator)
     target_id = Field(type=basestring)
     target_name = Field(type=basestring)
+    source_id = Field(type=basestring)
+    source_name = Field(type=basestring)
     type = Field(type=basestring)
     relationship = PointerField(type=Relationship)
 
@@ -436,6 +439,6 @@ class Task(Model):
 
     # Operation specific fields
     name = Field(type=basestring)
-    operation_details = Field(type=dict)
-    node_instance = PointerField(type=NodeInstance)
+    operation_mapping = Field(type=basestring)
+    actor = Field()
     inputs = Field(type=dict, default=lambda: {})

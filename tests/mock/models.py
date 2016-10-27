@@ -26,11 +26,16 @@ EXECUTION_ID = 'test_execution_id'
 TASK_RETRY_INTERVAL = 1
 TASK_MAX_ATTEMPTS = 1
 
+DEPENDENCY_NODE_ID = 'dependency_node'
+DEPENDENCY_NODE_INSTANCE_ID = 'dependency_node_instance'
+DEPENDENT_NODE_ID = 'dependent_node'
+DEPENDENT_NODE_INSTANCE_ID = 'dependent_node_instance'
+
 
 def get_dependency_node():
     return models.Node(
-        id='dependency_node',
-        host_id='dependency_node',
+        id=DEPENDENCY_NODE_ID,
+        host_id=DEPENDENCY_NODE_ID,
         blueprint_id=BLUEPRINT_ID,
         type='test_node_type',
         type_hierarchy=[],
@@ -47,19 +52,20 @@ def get_dependency_node():
 
 def get_dependency_node_instance(dependency_node=None):
     return models.NodeInstance(
-        id='dependency_node_instance',
-        host_id='dependency_node_instance',
+        id=DEPENDENCY_NODE_INSTANCE_ID,
+        host_id=DEPENDENCY_NODE_INSTANCE_ID,
         deployment_id=DEPLOYMENT_ID,
-        runtime_properties={},
+        runtime_properties={'ip': '1.1.1.1'},
         version=None,
         relationship_instances=[],
         node=dependency_node or get_dependency_node()
     )
 
 
-def get_relationship(target=None):
+def get_relationship(source=None, target=None):
     return models.Relationship(
-        target_id=target.id or get_dependency_node().id,
+        source_id=source.id if source is not None else DEPENDENT_NODE_ID,
+        target_id=target.id if target is not None else DEPENDENCY_NODE_ID,
         source_interfaces={},
         source_operations=dict((key, {}) for key in operations.RELATIONSHIP_OPERATIONS),
         target_interfaces={},
@@ -70,10 +76,12 @@ def get_relationship(target=None):
     )
 
 
-def get_relationship_instance(target_instance=None, relationship=None):
+def get_relationship_instance(source_instance=None, target_instance=None, relationship=None):
     return models.RelationshipInstance(
-        target_id=target_instance.id or get_dependency_node_instance().id,
+        target_id=target_instance.id if target_instance else DEPENDENCY_NODE_INSTANCE_ID,
         target_name='test_target_name',
+        source_id=source_instance.id if source_instance else DEPENDENT_NODE_INSTANCE_ID,
+        source_name='test_source_name',
         type='some_type',
         relationship=relationship or get_relationship(target_instance.node
                                                       if target_instance else None)
@@ -82,8 +90,8 @@ def get_relationship_instance(target_instance=None, relationship=None):
 
 def get_dependent_node(relationship=None):
     return models.Node(
-        id='dependent_node',
-        host_id='dependent_node',
+        id=DEPENDENT_NODE_ID,
+        host_id=DEPENDENT_NODE_ID,
         blueprint_id=BLUEPRINT_ID,
         type='test_node_type',
         type_hierarchy=[],
@@ -98,15 +106,27 @@ def get_dependent_node(relationship=None):
     )
 
 
-def get_dependent_node_instance(relationship_instance, dependent_node=None):
+def get_dependent_node_instance(relationship_instance=None, dependent_node=None):
     return models.NodeInstance(
-        id='dependent_node_instance',
-        host_id='dependent_node_instance',
+        id=DEPENDENT_NODE_INSTANCE_ID,
+        host_id=DEPENDENT_NODE_INSTANCE_ID,
         deployment_id=DEPLOYMENT_ID,
         runtime_properties={},
         version=None,
         relationship_instances=[relationship_instance or get_relationship_instance()],
         node=dependent_node or get_dependency_node()
+    )
+
+
+def get_blueprint():
+    now = datetime.now()
+    return models.Blueprint(
+        plan={},
+        id=BLUEPRINT_ID,
+        description=None,
+        created_at=now,
+        updated_at=now,
+        main_file_name='main_file_name'
     )
 
 

@@ -99,12 +99,9 @@ def heal_uninstall(ctx, graph, failing_node_instances, targeted_node_instances):
 
             if target_node_instance in failing_node_instances:
                 dependency = relationship_tasks(
-                    graph=graph,
-                    node_instance=node_instance,
                     relationship_instance=relationship_instance,
-                    context=ctx,
                     operation_name='aria.interfaces.relationship_lifecycle.unlink')
-
+                graph.add_tasks(*dependency)
                 graph.add_dependency(node_instance_sub_workflow, dependency)
 
 
@@ -154,12 +151,9 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
 
             if target_node_instance in failing_node_instances:
                 dependent = relationship_tasks(
-                    graph=graph,
-                    node_instance=node_instance,
                     relationship_instance=relationship_instance,
-                    context=ctx,
                     operation_name='aria.interfaces.relationship_lifecycle.establish')
-
+                graph.add_tasks(*dependent)
                 graph.add_dependency(dependent, node_instance_sub_workflow)
 
 

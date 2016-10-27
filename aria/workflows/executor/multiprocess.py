@@ -46,8 +46,9 @@ class MultiprocessExecutor(BaseExecutor):
         self._tasks[task.id] = task
         self._pool.apply_async(_multiprocess_handler, args=(
             self._queue,
+            task.context,
             task.id,
-            task.operation_details,
+            task.operation_mapping,
             task.inputs))
 
     def close(self):
@@ -86,11 +87,11 @@ class _MultiprocessMessage(object):
         self.exception = exception
 
 
-def _multiprocess_handler(queue, task_id, operation_details, operation_inputs):
+def _multiprocess_handler(queue, ctx, task_id, operation_mapping, operation_inputs):
     queue.put(_MultiprocessMessage(type='task_started', task_id=task_id))
     try:
-        task_func = module.load_attribute(operation_details['operation'])
-        task_func(**operation_inputs)
+        task_func = module.load_attribute(operation_mapping)
+        task_func(ctx=ctx, **operation_inputs)
         queue.put(_MultiprocessMessage(type='task_succeeded', task_id=task_id))
     except BaseException as e:
         queue.put(_MultiprocessMessage(type='task_failed', task_id=task_id,

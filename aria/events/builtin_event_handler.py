@@ -41,20 +41,20 @@ from . import (
 
 @sent_task_signal.connect
 def _task_sent(task, *args, **kwargs):
-    with task.update():
+    with task._update():
         task.status = task.SENT
 
 
 @start_task_signal.connect
 def _task_started(task, *args, **kwargs):
-    with task.update():
+    with task._update():
         task.started_at = datetime.utcnow()
         task.status = task.STARTED
 
 
 @on_failure_task_signal.connect
 def _task_failed(task, *args, **kwargs):
-    with task.update():
+    with task._update():
         should_retry = (
             (task.retry_count < task.max_attempts - 1 or
              task.max_attempts == task.INFINITE_RETRIES) and
@@ -72,7 +72,7 @@ def _task_failed(task, *args, **kwargs):
 
 @on_success_task_signal.connect
 def _task_succeeded(task, *args, **kwargs):
-    with task.update():
+    with task._update():
         task.ended_at = datetime.utcnow()
         task.status = task.SUCCESS
 

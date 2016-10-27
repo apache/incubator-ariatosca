@@ -25,23 +25,17 @@ from .workflows.api import task_graph
 from .tools.validation import validate_function_arguments
 
 
-def workflow(
-        func=None,
-        simple_workflow=True,
-        suffix_template=''):
+def workflow(func=None, suffix_template=''):
     """
     Workflow decorator
     """
     if func is None:
-        return partial(
-            workflow,
-            simple_workflow=simple_workflow,
-            suffix_template=suffix_template)
+        return partial(workflow, suffix_template=suffix_template)
 
     @wraps(func)
     def _wrapper(ctx, **workflow_parameters):
 
-        workflow_name = _generate_workflow_name(
+        workflow_name = _generate_name(
             func_name=func.__name__,
             suffix_template=suffix_template,
             ctx=ctx,
@@ -56,34 +50,24 @@ def workflow(
     return _wrapper
 
 
-def operation(
-        func=None):
+def operation(func=None, toolbelt=False, suffix_template=''):
     """
     Operation decorator
     """
     if func is None:
-        return partial(operation)
+        return partial(operation, suffix_template=suffix_template, toolbelt=toolbelt)
 
     @wraps(func)
-    def _wrapper(ctx, **custom_kwargs):
-        func_kwargs = _create_func_kwargs(
-            custom_kwargs,
-            ctx)
+    def _wrapper(**func_kwargs):
+        if toolbelt:
+            operation_toolbelt = context.toolbelt(func_kwargs['ctx'])
+            func_kwargs.setdefault('toolbelt', operation_toolbelt)
         validate_function_arguments(func, func_kwargs)
-        ctx.description = func.__doc__
         return func(**func_kwargs)
     return _wrapper
 
 
-def _generate_workflow_name(func_name, ctx, suffix_template, **custom_kwargs):
+def _generate_name(func_name, ctx, suffix_template, **custom_kwargs):
     return '{func_name}.{suffix}'.format(
         func_name=func_name,
         suffix=suffix_template.format(ctx=ctx, **custom_kwargs) or str(uuid4()))
-
-
-def _create_func_kwargs(
-        kwargs,
-        ctx,
-        workflow_name=None):
-    kwargs.setdefault('graph', ctx.task_graph(workflow_name))
-    return kwargs

@@ -20,18 +20,24 @@ from datetime import datetime
 import pytest
 
 import aria
-from aria import events
-from aria import workflow
-from aria import context
+from aria import (
+    events,
+    workflow,
+    operation,
+    context
+)
 from aria.storage import models
-from aria.workflows import exceptions
-from aria.workflows.executor import thread
+from aria.workflows import (
+    api,
+    exceptions,
+)
 from aria.workflows.core import engine
-from aria.workflows import api
+from aria.workflows.executor import thread
 
-from tests import mock
 
 import tests.storage
+from tests import mock
+
 
 global_test_holder = {}
 
@@ -59,11 +65,14 @@ class BaseTest(object):
             max_attempts=None,
             retry_interval=None,
             ignore_failure=None):
-        return api.task.OperationTask(
-            name='task',
-            operation_details={'operation': 'tests.workflows.core.test_engine.{name}'.format(
-                name=func.__name__)},
-            node_instance=ctx.model.node_instance.get('dependency_node_instance'),
+        node_instance = ctx.model.node_instance.get('dependency_node_instance')
+        node_instance.node.operations['aria.interfaces.lifecycle.create'] = {
+            'operation': 'tests.workflows.core.test_engine.{name}'.format(name=func.__name__)
+        }
+        ctx.model.node_instance.store(node_instance)
+        return api.task.OperationTask.node_instance(
+            instance=node_instance,
+            name='aria.interfaces.lifecycle.create',
             inputs=inputs,
             max_attempts=max_attempts,
             retry_interval=retry_interval,
@@ -122,13 +131,9 @@ class BaseTest(object):
     def workflow_context(self):
         model_storage = aria.application_model_storage(tests.storage.InMemoryModelDriver())
         model_storage.setup()
-        deployment = models.Deployment(
-            id='d1',
-            blueprint_id='b1',
-            description=None,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            workflows={})
+        blueprint = mock.models.get_blueprint()
+        deployment = mock.models.get_deployment()
+        model_storage.blueprint.store(blueprint)
         model_storage.deployment.store(deployment)
         node = mock.models.get_dependency_node()
         node_instance = mock.models.get_dependency_node_instance(node)
@@ -396,20 +401,24 @@ class TestRetries(BaseTest):
         assert global_test_holder.get('sent_task_signal_calls') == 1
 
 
-def mock_success_task():
+@operation
+def mock_success_task(**_):
     pass
 
 
-def mock_failed_task():
+@operation
+def mock_failed_task(**_):
     raise RuntimeError
 
 
-def mock_ordered_task(counter):
+@operation
+def mock_ordered_task(counter, **_):
     invocations = global_test_holder.setdefault('invocations', [])
     invocations.append(counter)
 
 
-def mock_conditional_failure_task(failure_count):
+@operation
+def mock_conditional_failure_task(failure_count, **_):
     invocations = global_test_holder.setdefault('invocations', [])
     try:
         if len(invocations) < failure_count:
@@ -418,7 +427,7 @@ def mock_conditional_failure_task(failure_count):
         invocations.append(time.time())
 
 
-def mock_sleep_task(seconds):
+def mock_sleep_task(seconds, **_):
     invocations = global_test_holder.setdefault('invocations', [])
     invocations.append(time.time())
     time.sleep(seconds)

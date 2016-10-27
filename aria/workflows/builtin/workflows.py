@@ -34,7 +34,7 @@ __all__ = (
 # Install node instance workflow and sub workflows
 
 @workflow(suffix_template='{node_instance.id}')
-def install_node_instance(ctx, graph, node_instance):
+def install_node_instance(graph, node_instance, **kwargs):
     """
     A workflow which installs a node instance.
     :param WorkflowContext ctx: the workflow context
@@ -42,35 +42,30 @@ def install_node_instance(ctx, graph, node_instance):
     :param node_instance: the node instance to install
     :return:
     """
-    create_node_instance = task.OperationTask(
-        name='aria.interfaces.lifecycle.create.{0}'.format(node_instance.id),
-        operation_details=node_instance.node.operations['aria.interfaces.lifecycle.create'],
-        node_instance=node_instance
-    )
-    configure_node_instance = task.OperationTask(
-        name='aria.interfaces.lifecycle.configure.{0}'.format(node_instance.id),
-        operation_details=node_instance.node.operations['aria.interfaces.lifecycle.configure'],
-        node_instance=node_instance
-        )
-    start_node_instance = task.OperationTask(
-        name='aria.interfaces.lifecycle.start.{0}'.format(node_instance.id),
-        operation_details=node_instance.node.operations['aria.interfaces.lifecycle.start'],
-        node_instance=node_instance
-    )
+    create_node_instance = task.OperationTask.node_instance(
+        instance=node_instance,
+        name='aria.interfaces.lifecycle.create')
+
+    configure_node_instance = task.OperationTask.node_instance(
+        instance=node_instance,
+        name='aria.interfaces.lifecycle.configure')
+    start_node_instance = task.OperationTask.node_instance(
+        instance=node_instance,
+        name='aria.interfaces.lifecycle.start')
 
     graph.sequence(
         create_node_instance,
-        preconfigure_relationship(graph, ctx, node_instance),
+        preconfigure_relationship(graph, node_instance),
         configure_node_instance,
-        postconfigure_relationship(graph, ctx, node_instance),
+        postconfigure_relationship(graph, node_instance),
         start_node_instance,
-        establish_relationship(graph, ctx, node_instance)
+        establish_relationship(graph, node_instance)
     )
 
     return graph
 
 
-def preconfigure_relationship(graph, ctx, node_instance):
+def preconfigure_relationship(graph, node_instance, **kwargs):
     """
 
     :param context:
@@ -81,11 +76,10 @@ def preconfigure_relationship(graph, ctx, node_instance):
     return relationships_tasks(
         graph=graph,
         operation_name='aria.interfaces.relationship_lifecycle.preconfigure',
-        context=ctx,
         node_instance=node_instance)
 
 
-def postconfigure_relationship(graph, ctx, node_instance):
+def postconfigure_relationship(graph, node_instance, **kwargs):
     """
 
     :param context:
@@ -96,11 +90,10 @@ def postconfigure_relationship(graph, ctx, node_instance):
     return relationships_tasks(
         graph=graph,
         operation_name='aria.interfaces.relationship_lifecycle.postconfigure',
-        context=ctx,
         node_instance=node_instance)
 
 
-def establish_relationship(graph, ctx, node_instance):
+def establish_relationship(graph, node_instance, **kwargs):
     """
 
     :param context:
@@ -111,40 +104,35 @@ def establish_relationship(graph, ctx, node_instance):
     return relationships_tasks(
         graph=graph,
         operation_name='aria.interfaces.relationship_lifecycle.establish',
-        context=ctx,
         node_instance=node_instance)
 
 
 # Uninstall node instance workflow and subworkflows
 
 @workflow(suffix_template='{node_instance.id}')
-def uninstall_node_instance(ctx, graph, node_instance):
+def uninstall_node_instance(graph, node_instance, **kwargs):
     """
-        A workflow which uninstalls a node instance.
-        :param WorkflowContext context: the workflow context
-        :param TaskGraph graph: the tasks graph of which to edit
-        :param node_instance: the node instance to uninstall
-        :return:
-        """
-    stop_node_instance = task.OperationTask(
-        name='aria.interfaces.lifecycle.stop.{0}'.format(node_instance.id),
-        operation_details=node_instance.node.operations['aria.interfaces.lifecycle.stop'],
-        node_instance=node_instance
-    )
-    delete_node_instance = task.OperationTask(
-        name='aria.interfaces.lifecycle.delete.{0}'.format(node_instance.id),
-        operation_details=node_instance.node.operations['aria.interfaces.lifecycle.delete'],
-        node_instance=node_instance
-    )
+    A workflow which uninstalls a node instance.
+    :param WorkflowContext context: the workflow context
+    :param TaskGraph graph: the tasks graph of which to edit
+    :param node_instance: the node instance to uninstall
+    :return:
+    """
+    stop_node_instance = task.OperationTask.node_instance(
+        instance=node_instance,
+        name='aria.interfaces.lifecycle.stop')
+    delete_node_instance = task.OperationTask.node_instance(
+        instance=node_instance,
+        name='aria.interfaces.lifecycle.delete')
 
     graph.sequence(
         stop_node_instance,
-        unlink_relationship(graph, ctx, node_instance),
+        unlink_relationship(graph, node_instance),
         delete_node_instance
     )
 
 
-def unlink_relationship(graph, ctx, node_instance):
+def unlink_relationship(graph, node_instance):
     """
 
     :param context:
@@ -155,7 +143,6 @@ def unlink_relationship(graph, ctx, node_instance):
     return relationships_tasks(
         graph=graph,
         operation_name='aria.interfaces.relationship_lifecycle.unlink',
-        context=ctx,
         node_instance=node_instance
     )
 
@@ -167,8 +154,6 @@ def execute_operation_on_instance(
         allow_kwargs_override):
     """
     A workflow which executes a single operation
-    :param WorkflowContext context: the workflow to execute.
-    :param TaskGraph graph: the tasks graph of which to edit
     :param node_instance: the node instance to install
     :param basestring operation: the operation name
     :param dict operation_kwargs:
@@ -179,22 +164,13 @@ def execute_operation_on_instance(
     if allow_kwargs_override is not None:
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
-    task_name = '{node_instance.id}.{operation_name}'.format(
-        node_instance=node_instance,
-        operation_name=operation)
-
-    return task.OperationTask(
-        name=task_name,
-        operation_details=node_instance.node.operations[operation],
-        node_instance=node_instance,
+    return task.OperationTask.node_instance(
+        instance=node_instance,
+        name=operation,
         inputs=operation_kwargs)
 
 
-
-def relationships_tasks(graph,
-                        operation_name,
-                        context,
-                        node_instance):
+def relationships_tasks(graph, operation_name, node_instance):
     """
     Creates a relationship task (source and target) for all of a node_instance relationships.
     :param basestring operation_name: the relationship operation name.
@@ -207,26 +183,17 @@ def relationships_tasks(graph,
         key=lambda relationship_instance: relationship_instance.relationship.target_id)
 
     sub_tasks = []
-    for index, (_, relationship_group) in enumerate(relationships_groups):
+    for _, (_, relationship_group) in enumerate(relationships_groups):
         for relationship_instance in relationship_group:
             relationship_operations = relationship_tasks(
-                graph=graph,
-                node_instance=node_instance,
                 relationship_instance=relationship_instance,
-                context=context,
-                operation_name=operation_name,
-                index=index)
+                operation_name=operation_name)
             sub_tasks.append(relationship_operations)
 
     return graph.sequence(*sub_tasks)
 
 
-def relationship_tasks(graph,
-                       node_instance,
-                       relationship_instance,
-                       context,
-                       operation_name,
-                       index=None):
+def relationship_tasks(relationship_instance, operation_name):
     """
     Creates a relationship task source and target.
     :param NodeInstance node_instance: the node instance of the relationship
@@ -236,21 +203,13 @@ def relationship_tasks(graph,
     :param index: the relationship index - enables pretty print
     :return:
     """
-    index = index or node_instance.relationship_instances.index(relationship_instance)
-    operation_name_template = '{name}.{index}.{{0}}.<{source_id}, {target_id}>'.format(
+    source_operation = task.OperationTask.relationship_instance(
+        instance=relationship_instance,
         name=operation_name,
-        index=index,
-        source_id=node_instance.id,
-        target_id=relationship_instance.target_id,
-    )
-    source_operation = task.OperationTask(
-        name=operation_name_template.format('source'),
-        node_instance=node_instance,
-        operation_details=relationship_instance.relationship.source_operations[
-            operation_name])
-    target_operation = task.OperationTask(
-        name=operation_name_template.format('target'),
-        node_instance=context.model.node_instance.get(relationship_instance.target_id),
-        operation_details=relationship_instance.relationship.target_operations[
-            operation_name])
-    return graph.add_tasks(source_operation, target_operation)
+        operation_end=task.OperationTask.SOURCE_OPERATION)
+    target_operation = task.OperationTask.relationship_instance(
+        instance=relationship_instance,
+        name=operation_name,
+        operation_end=task.OperationTask.TARGET_OPERATION)
+
+    return source_operation, target_operation

@@ -89,6 +89,18 @@ class TestResourceStorage(TestFileSystem):
         with open(os.path.join(self.path, os.path.join(temp_dir, tmpfile_name))) as f:
             assert f.read() == 'fake context'
 
+    def test_download_non_existing_file(self):
+        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        self._create(storage)
+        with pytest.raises(StorageError):
+            storage.blueprint.download(entry_id='blueprint_id', destination='', path='fake_path')
+
+    def test_data_non_existing_file(self):
+        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        self._create(storage)
+        with pytest.raises(StorageError):
+            storage.blueprint.data(entry_id='blueprint_id', path='fake_path')
+
     def test_data_file(self):
         storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
         self._create(storage)

@@ -369,7 +369,10 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         :return: the content of the file
         :rtype: bytes
         """
-        resource = os.path.join(self.directory, entry_type, entry_id, path or '')
+        resource_relative_path = os.path.join(entry_type, entry_id, path or '')
+        resource = os.path.join(self.directory, resource_relative_path)
+        if not os.path.exists(resource):
+            raise StorageError("Resource {0} does not exist".format(resource_relative_path))
         if not os.path.isfile(resource):
             resources = os.listdir(resource)
             if len(resources) != 1:
@@ -387,7 +390,10 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         :param basestring destination: the destination of the files.
         :param basestring path: a path on the remote machine relative to the root of the entry.
         """
-        resource = os.path.join(self.directory, entry_type, entry_id, path or '')
+        resource_relative_path = os.path.join(entry_type, entry_id, path or '')
+        resource = os.path.join(self.directory, resource_relative_path)
+        if not os.path.exists(resource):
+            raise StorageError("Resource {0} does not exist".format(resource_relative_path))
         if os.path.isfile(resource):
             shutil.copy2(resource, destination)
         else:

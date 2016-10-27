@@ -46,6 +46,6 @@ def test_execute_operation(ctx):
     )
 
     assert len(execute_tasks) == 1
-    assert execute_tasks[0].name == '{0}.{1}'.format(node_instance_id, operation_name)
+    assert execute_tasks[0].name == '{0}.{1}'.format(operation_name, node_instance_id)
 
 # TODO: add more scenarios

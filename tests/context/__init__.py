@@ -12,3 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import sys
+
+import pytest
+
+from aria.workflows.core import engine
+
+
+def op_path(func, module_path=None):
+    module_path = module_path or sys.modules[__name__].__name__
+    return '{0}.{1}'.format(module_path, func.__name__)
+
+
+def op_name(actor, operation_name):
+    return '{name}.{actor.id}'.format(name=operation_name, actor=actor)
+
+
+def execute(workflow_func, workflow_context, executor):
+    graph = workflow_func(ctx=workflow_context)
+    eng = engine.Engine(executor=executor, workflow_context=workflow_context, tasks_graph=graph)
+    eng.execute()

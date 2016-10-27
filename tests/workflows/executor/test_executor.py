@@ -81,15 +81,15 @@ class TestExecutor(object):
             self.executor.close()
 
 
-def mock_successful_task():
+def mock_successful_task(**_):
     pass
 
 
-def mock_failing_task():
+def mock_failing_task(**_):
     raise MockException
 
 
-def mock_task_with_input(input):
+def mock_task_with_input(input, **_):
     raise MockException(input)
 
 if app:
@@ -106,16 +106,17 @@ class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
-    def __init__(self, func, inputs=None):
+    def __init__(self, func, inputs=None, ctx=None):
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
         operation = 'tests.workflows.executor.test_executor.{name}'.format(name=name)
-        self.operation_details = {'operation': operation}
+        self.operation_mapping = operation
         self.logger = logging.getLogger()
         self.name = name
         self.inputs = inputs or {}
+        self.context = ctx or None
         self.retry_count = 0
         self.max_attempts = 1
 
@@ -123,7 +124,7 @@ class MockTask(object):
             setattr(self, state.upper(), state)
 
     @contextmanager
-    def update(self):
+    def _update(self):
         yield self
 
 

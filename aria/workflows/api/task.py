@@ -18,7 +18,11 @@ Provides the tasks to be entered into the task graph
 """
 from uuid import uuid4
 
-from ... import context
+from ... import (
+    context,
+    storage,
+    exceptions,
+)
 
 
 class BaseTask(object):
@@ -54,10 +58,13 @@ class OperationTask(BaseTask):
     Represents an operation task in the task_graph
     """
 
+    SOURCE_OPERATION = 'source_operations'
+    TARGET_OPERATION = 'target_operations'
+
     def __init__(self,
                  name,
-                 operation_details,
-                 node_instance,
+                 actor,
+                 operation_mapping,
                  max_attempts=None,
                  retry_interval=None,
                  ignore_failure=None,
@@ -66,20 +73,67 @@ class OperationTask(BaseTask):
         Creates an operation task using the name, details, node instance and any additional kwargs.
         :param name: the operation of the name.
         :param operation_details: the details for the operation.
-        :param node_instance: the node instance on which this operation is registered.
+        :param actor: the operation host on which this operation is registered.
         :param inputs: operation inputs.
         """
+        assert isinstance(actor, (storage.models.NodeInstance,
+                                  storage.models.RelationshipInstance))
         super(OperationTask, self).__init__()
-        self.name = name
-        self.operation_details = operation_details
-        self.node_instance = node_instance
+        self.actor = actor
+        self.name = '{name}.{actor.id}'.format(name=name, actor=actor)
+        self.operation_mapping = operation_mapping
         self.inputs = inputs or {}
-        self.max_attempts = (self.workflow_context.task_max_attempts
+        self.max_attempts = (self.workflow_context._task_max_attempts
                              if max_attempts is None else max_attempts)
-        self.retry_interval = (self.workflow_context.task_retry_interval
+        self.retry_interval = (self.workflow_context._task_retry_interval
                                if retry_interval is None else retry_interval)
-        self.ignore_failure = (self.workflow_context.task_ignore_failure
+        self.ignore_failure = (self.workflow_context._task_ignore_failure
                                if ignore_failure is None else ignore_failure)
+
+    @classmethod
+    def node_instance(cls, instance, name, inputs=None, *args, **kwargs):
+        """
+        Represents a node based operation
+
+        :param instance: the node of which this operation belongs to.
+        :param name: the name of the operation.
+        """
+        assert isinstance(instance, storage.models.NodeInstance)
+        operation_details = instance.node.operations[name]
+        operation_inputs = operation_details.get('inputs', {})
+        operation_inputs.update(inputs or {})
+        return cls(name=name,
+                   actor=instance,
+                   operation_mapping=operation_details.get('operation', ''),
+                   inputs=operation_inputs,
+                   *args,
+                   **kwargs)
+
+    @classmethod
+    def relationship_instance(cls, instance, name, operation_end, inputs=None, *args, **kwargs):
+        """
+        Represents a relationship based operation
+
+        :param instance: the relationship of which this operation belongs to.
+        :param name: the name of the operation.
+        :param operation_end: source or target end of the relationship, this corresponds directly
+        with 'source_operations' and 'target_operations'
+        :param inputs any additional inputs to the operation
+        """
+        assert isinstance(instance, storage.models.RelationshipInstance)
+        if operation_end not in [cls.TARGET_OPERATION, cls.SOURCE_OPERATION]:
+            raise exceptions.TaskException('The operation end should be {0} or {1}'.format(
+                cls.TARGET_OPERATION, cls.SOURCE_OPERATION
+            ))
+        operation_details = getattr(instance.relationship, operation_end)[name]
+        operation_inputs = operation_details.get('inputs', {})
+        operation_inputs.update(inputs or {})
+        return cls(actor=instance,
+                   name=name,
+                   operation_mapping=operation_details.get('operation'),
+                   inputs=operation_inputs,
+                   *args,
+                   **kwargs)
 
 
 class WorkflowTask(BaseTask):

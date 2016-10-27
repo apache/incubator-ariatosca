@@ -18,10 +18,27 @@ Workflow tasks
 """
 from contextlib import contextmanager
 from datetime import datetime
+from functools import (
+    partial,
+    wraps,
+)
 
 from ... import logger
 from ...storage import models
+from ...context import operation as operation_context
 from .. import exceptions
+
+
+def _locked(func=None):
+    if func is None:
+        return partial(_locked, func=_locked)
+
+    @wraps(func)
+    def _wrapper(self, value, **kwargs):
+        if self._update_fields is None:
+            raise exceptions.TaskException("Task is not in update mode")
+        return func(self, value, **kwargs)
+    return _wrapper
 
 
 class BaseTask(logger.LoggerMixin):
@@ -80,32 +97,45 @@ class EndSubWorkflowTask(StubTask):
     pass
 
 
-class OperationTask(BaseTask, logger.LoggerMixin):
+class OperationTask(BaseTask):
     """
     Operation tasks
     """
 
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
-        self._workflow_ctx = api_task.workflow_context
-        task_model = api_task.workflow_context.model.task.model_cls
-        task = task_model(
+        self._workflow_context = api_task._workflow_context
+        task_model = api_task._workflow_context.model.task.model_cls
+        operation_task = task_model(
+            id=api_task.id,
             name=api_task.name,
-            operation_details=api_task.operation_details,
-            node_instance=api_task.node_instance,
+            operation_mapping=api_task.operation_mapping,
+            actor=api_task.actor,
             inputs=api_task.inputs,
             status=task_model.PENDING,
-            execution_id=self.workflow_context.execution_id,
+            execution_id=self._workflow_context._execution_id,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure
         )
-        self.workflow_context.model.task.store(task)
-        self._task_id = task.id
+
+        if isinstance(api_task.actor, models.NodeInstance):
+            context_class = operation_context.NodeOperationContext
+        elif isinstance(api_task.actor, models.RelationshipInstance):
+            context_class = operation_context.RelationshipOperationContext
+        else:
+            raise RuntimeError('No operation context could be created for {0}'
+                               .format(api_task.actor.model_cls))
+
+        self._ctx = context_class(name=api_task.name,
+                                  workflow_context=self._workflow_context,
+                                  task=operation_task)
+        self._workflow_context.model.task.store(operation_task)
+        self._task_id = operation_task.id
         self._update_fields = None
 
     @contextmanager
-    def update(self):
+    def _update(self):
         """
         A context manager which puts the task into update mode, enabling fields update.
         :yields: None
@@ -113,31 +143,32 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         self._update_fields = {}
         try:
             yield
-            task = self.context
+            task = self.model_task
             for key, value in self._update_fields.items():
                 setattr(task, key, value)
-            self.context = task
+            self.model_task = task
         finally:
             self._update_fields = None
 
     @property
-    def workflow_context(self):
-        """
-        :return: the task's name
-        """
-        return self._workflow_ctx
-
-    @property
-    def context(self):
+    def model_task(self):
         """
         Returns the task model in storage
         :return: task in storage
         """
-        return self.workflow_context.model.task.get(self._task_id)
+        return self._workflow_context.model.task.get(self._task_id)
 
-    @context.setter
-    def context(self, value):
-        self.workflow_context.model.task.store(value)
+    @model_task.setter
+    def model_task(self, value):
+        self._workflow_context.model.task.store(value)
+
+    @property
+    def context(self):
+        """
+        Contexts for the operation
+        :return:
+        """
+        return self._ctx
 
     @property
     def status(self):
@@ -145,11 +176,12 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         Returns the task status
         :return: task status
         """
-        return self.context.status
+        return self.model_task.status
 
     @status.setter
+    @_locked
     def status(self, value):
-        self._update_property('status', value)
+        self._update_fields['status'] = value
 
     @property
     def started_at(self):
@@ -157,11 +189,12 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         Returns when the task started
         :return: when task started
         """
-        return self.context.started_at
+        return self.model_task.started_at
 
     @started_at.setter
+    @_locked
     def started_at(self, value):
-        self._update_property('started_at', value)
+        self._update_fields['started_at'] = value
 
     @property
     def ended_at(self):
@@ -169,11 +202,12 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         Returns when the task ended
         :return: when task ended
         """
-        return self.context.ended_at
+        return self.model_task.ended_at
 
     @ended_at.setter
+    @_locked
     def ended_at(self, value):
-        self._update_property('ended_at', value)
+        self._update_fields['ended_at'] = value
 
     @property
     def retry_count(self):
@@ -181,11 +215,12 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         Returns the retry count for the task
         :return: retry count
         """
-        return self.context.retry_count
+        return self.model_task.retry_count
 
     @retry_count.setter
+    @_locked
     def retry_count(self, value):
-        self._update_property('retry_count', value)
+        self._update_fields['retry_count'] = value
 
     @property
     def due_at(self):
@@ -193,19 +228,15 @@ class OperationTask(BaseTask, logger.LoggerMixin):
         Returns the minimum datetime in which the task can be executed
         :return: eta
         """
-        return self.context.due_at
+        return self.model_task.due_at
 
     @due_at.setter
+    @_locked
     def due_at(self, value):
-        self._update_property('due_at', value)
+        self._update_fields['due_at'] = value
 
     def __getattr__(self, attr):
         try:
-            return getattr(self.context, attr)
+            return getattr(self.model_task, attr)
         except AttributeError:
             return super(OperationTask, self).__getattribute__(attr)
-
-    def _update_property(self, key, value):
-        if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
-        self._update_fields[key] = value

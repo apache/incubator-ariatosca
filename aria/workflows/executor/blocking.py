@@ -29,8 +29,8 @@ class CurrentThreadBlockingExecutor(BaseExecutor):
     def execute(self, task):
         self._task_started(task)
         try:
-            task_func = module.load_attribute(task.operation_details['operation'])
-            task_func(**task.inputs)
+            task_func = module.load_attribute(task.operation_mapping)
+            task_func(ctx=task.context, **task.inputs)
             self._task_succeeded(task)
         except BaseException as e:
             self._task_failed(task, exception=e)
