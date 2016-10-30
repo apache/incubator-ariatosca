@@ -21,20 +21,34 @@ import retrying
 
 from aria import events
 from aria.storage import models
-from aria.workflows.core import executor
+from aria.workflows.executor import (
+    thread,
+    multiprocess,
+    blocking,
+    # celery
+)
+
+try:
+    import celery as _celery
+    app = _celery.Celery()
+    app.conf.update(CELERY_RESULT_BACKEND='amqp://')
+except ImportError:
+    _celery = None
+    app = None
 
 
 class TestExecutor(object):
 
-    @pytest.mark.parametrize('pool_size,executor_cls', [
-        (1, executor.ThreadExecutor),
-        (2, executor.ThreadExecutor),
-        (1, executor.MultiprocessExecutor),
-        (2, executor.MultiprocessExecutor),
-        (0, executor.CurrentThreadBlockingExecutor)
+    @pytest.mark.parametrize('executor_cls,executor_kwargs', [
+        (thread.ThreadExecutor, {'pool_size': 1}),
+        (thread.ThreadExecutor, {'pool_size': 2}),
+        (multiprocess.MultiprocessExecutor, {'pool_size': 1}),
+        (multiprocess.MultiprocessExecutor, {'pool_size': 2}),
+        (blocking.CurrentThreadBlockingExecutor, {}),
+        # (celery.CeleryExecutor, {'app': app})
     ])
-    def test_execute(self, pool_size, executor_cls):
-        self.executor = executor_cls(pool_size)
+    def test_execute(self, executor_cls, executor_kwargs):
+        self.executor = executor_cls(**executor_kwargs)
         expected_value = 'value'
         successful_task = MockTask(mock_successful_task)
         failing_task = MockTask(mock_failing_task)
@@ -48,8 +62,8 @@ class TestExecutor(object):
             assert successful_task.states == ['start', 'success']
             assert failing_task.states == ['start', 'failure']
             assert task_with_inputs.states == ['start', 'failure']
-            assert isinstance(failing_task.exception, TestException)
-            assert isinstance(task_with_inputs.exception, TestException)
+            assert isinstance(failing_task.exception, MockException)
+            assert isinstance(task_with_inputs.exception, MockException)
             assert task_with_inputs.exception.message == expected_value
         assertion()
 
@@ -71,14 +85,19 @@ def mock_successful_task():
 
 
 def mock_failing_task():
-    raise TestException
+    raise MockException
 
 
 def mock_task_with_input(input):
-    raise TestException(input)
+    raise MockException(input)
+
+if app:
+    mock_successful_task = app.task(mock_successful_task)
+    mock_failing_task = app.task(mock_failing_task)
+    mock_task_with_input = app.task(mock_task_with_input)
 
 
-class TestException(Exception):
+class MockException(Exception):
     pass
 
 

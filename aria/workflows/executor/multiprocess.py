@@ -14,110 +14,16 @@
 # limitations under the License.
 
 """
-Executors for workflow tasks
+Multiprocess based executor
 """
 
 import threading
 import multiprocessing
-import Queue
 
 import jsonpickle
 
-from aria import events
 from aria.tools import module
-
-
-class BaseExecutor(object):
-    """
-    Base class for executors for running tasks
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def execute(self, task):
-        """
-        Execute a task
-        :param task: task to execute
-        """
-        raise NotImplementedError
-
-    def close(self):
-        """
-        Close the executor
-        """
-        pass
-
-    @staticmethod
-    def _task_started(task):
-        events.start_task_signal.send(task)
-
-    @staticmethod
-    def _task_failed(task, exception):
-        events.on_failure_task_signal.send(task, exception=exception)
-
-    @staticmethod
-    def _task_succeeded(task):
-        events.on_success_task_signal.send(task)
-
-
-class CurrentThreadBlockingExecutor(BaseExecutor):
-    """
-    Executor which runs tasks in the current thread (blocking)
-    """
-
-    def execute(self, task):
-        self._task_started(task)
-        try:
-            operation_context = task.context
-            task_func = module.load_attribute(operation_context.operation_details['operation'])
-            task_func(**operation_context.inputs)
-            self._task_succeeded(task)
-        except BaseException as e:
-            self._task_failed(task, exception=e)
-
-
-class ThreadExecutor(BaseExecutor):
-    """
-    Executor which runs tasks in a separate thread
-    """
-
-    def __init__(self, pool_size=1, *args, **kwargs):
-        super(ThreadExecutor, self).__init__(*args, **kwargs)
-        self._stopped = False
-        self._queue = Queue.Queue()
-        self._pool = []
-        for i in range(pool_size):
-            name = 'ThreadExecutor-{index}'.format(index=i+1)
-            thread = threading.Thread(target=self._processor, name=name)
-            thread.daemon = True
-            thread.start()
-            self._pool.append(thread)
-
-    def execute(self, task):
-        self._queue.put(task)
-
-    def close(self):
-        self._stopped = True
-        for thread in self._pool:
-            thread.join()
-
-    def _processor(self):
-        while not self._stopped:
-            try:
-                task = self._queue.get(timeout=1)
-                self._task_started(task)
-                try:
-                    operation_context = task.context
-                    task_func = module.load_attribute(
-                        operation_context.operation_details['operation'])
-                    task_func(**operation_context.inputs)
-                    self._task_succeeded(task)
-                except BaseException as e:
-                    self._task_failed(task, exception=e)
-            # Daemon threads
-            except BaseException:
-                pass
+from .base import BaseExecutor
 
 
 class MultiprocessExecutor(BaseExecutor):
