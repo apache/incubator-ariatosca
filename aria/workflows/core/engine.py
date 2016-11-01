@@ -18,12 +18,16 @@ The workflow engine. Executes workflows
 """
 
 import time
+from datetime import datetime
 
 import networkx
 
 from aria import events, logger
+from aria.storage import models
 
+from .. import exceptions
 from . import translation
+from . import tasks
 
 
 class Engine(logger.LoggerMixin):
@@ -34,10 +38,9 @@ class Engine(logger.LoggerMixin):
     def __init__(self, executor, workflow_context, tasks_graph, **kwargs):
         super(Engine, self).__init__(**kwargs)
         self._workflow_context = workflow_context
-        self._tasks_graph = tasks_graph
         self._execution_graph = networkx.DiGraph()
         self._executor = executor
-        translation.build_execution_graph(task_graph=self._tasks_graph,
+        translation.build_execution_graph(task_graph=tasks_graph,
                                           workflow_context=workflow_context,
                                           execution_graph=self._execution_graph)
 
@@ -62,17 +65,18 @@ class Engine(logger.LoggerMixin):
             raise
 
     def _executable_tasks(self):
-        now = time.time()
+        now = datetime.now()
         return (task for task in self._tasks_iter()
-                if task.status == task.PENDING and
+                if task.status == models.Operation.PENDING and
                 task.eta <= now and
                 not self._task_has_dependencies(task))
 
     def _ended_tasks(self):
-        return (task for task in self._tasks_iter() if task.status in task.END_STATES)
+        return (task for task in self._tasks_iter()
+                if task.status in models.Operation.END_STATES)
 
     def _task_has_dependencies(self, task):
-        return len(self._execution_graph.succ.get(task.id, {})) > 0
+        return len(self._execution_graph.pred.get(task.id, {})) > 0
 
     def _all_tasks_consumed(self):
         return len(self._execution_graph.node) == 0
@@ -81,10 +85,14 @@ class Engine(logger.LoggerMixin):
         return (data['task'] for _, data in self._execution_graph.nodes_iter(data=True))
 
     def _handle_executable_task(self, task):
-        self._executor.execute(task)
+        if isinstance(task, tasks.BaseWorkflowTask):
+            task.status = models.Operation.SUCCESS
+        else:
+            events.sent_task_signal.send(task)
+            self._executor.execute(task)
 
     def _handle_ended_tasks(self, task):
-        if task.status == task.FAILED:
-            raise RuntimeError('Workflow failed')
+        if task.status == models.Operation.FAILED:
+            raise exceptions.ExecutorException('Workflow failed')
         else:
             self._execution_graph.remove_node(task.id)

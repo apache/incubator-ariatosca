@@ -17,13 +17,19 @@
 Workflow tasks
 """
 
+from datetime import datetime
 
-class BaseTask(object):
+from aria import logger
+from aria.storage import models
+
+
+class BaseTask(logger.LoggerMixin):
     """
     Base class for Task objects
     """
 
-    def __init__(self, id, name, context):
+    def __init__(self, id, name, context, *args, **kwargs):
+        super(BaseTask, self).__init__(*args, **kwargs)
         self._id = id
         self._name = name
         self._context = context
@@ -50,28 +56,39 @@ class BaseTask(object):
         return self._context
 
 
-class StartWorkflowTask(BaseTask):
+class BaseWorkflowTask(BaseTask):
+    """
+    Base class for all workflow wrapping tasks
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(BaseWorkflowTask, self).__init__(*args, **kwargs)
+        self.status = models.Operation.PENDING
+        self.eta = datetime.now()
+
+
+class StartWorkflowTask(BaseWorkflowTask):
     """
     Tasks marking a workflow start
     """
     pass
 
 
-class EndWorkflowTask(BaseTask):
+class EndWorkflowTask(BaseWorkflowTask):
     """
     Tasks marking a workflow end
     """
     pass
 
 
-class StartSubWorkflowTask(BaseTask):
+class StartSubWorkflowTask(BaseWorkflowTask):
     """
     Tasks marking a subworkflow start
     """
     pass
 
 
-class EndSubWorkflowTask(BaseTask):
+class EndSubWorkflowTask(BaseWorkflowTask):
     """
     Tasks marking a subworkflow end
     """
@@ -88,7 +105,7 @@ class OperationTask(BaseTask):
         self._create_operation_in_storage()
 
     def _create_operation_in_storage(self):
-        operation_cls = self.context.storage.operation.model_cls
+        operation_cls = self.context.model.operation.model_cls
         operation = operation_cls(
             id=self.context.id,
             execution_id=self.context.execution_id,
@@ -99,6 +116,6 @@ class OperationTask(BaseTask):
 
     def __getattr__(self, attr):
         try:
-            return getattr(self.context, attr)
+            return getattr(self.context.operation, attr)
         except AttributeError:
             return super(OperationTask, self).__getattribute__(attr)

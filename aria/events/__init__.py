@@ -39,6 +39,7 @@ from blinker import signal
 from ..tools.plugin import plugin_installer
 
 # workflow engine task signals:
+sent_task_signal = signal('sent_task_signal')
 start_task_signal = signal('start_task_signal')
 on_success_task_signal = signal('success_task_signal')
 on_failure_task_signal = signal('failure_task_signal')

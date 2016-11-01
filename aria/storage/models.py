@@ -221,11 +221,13 @@ class Operation(Model):
     A Model which represents an operation
     """
     PENDING = 'pending'
+    SENT = 'sent'
     STARTED = 'started'
     SUCCESS = 'success'
     FAILED = 'failed'
     STATES = (
         PENDING,
+        SENT,
         STARTED,
         SUCCESS,
         FAILED,
@@ -233,9 +235,9 @@ class Operation(Model):
     END_STATES = [SUCCESS, FAILED]
 
     id = Field(type=basestring, default=uuid_generator)
-    status = Field(type=basestring, choices=STATES, default=STARTED)
+    status = Field(type=basestring, choices=STATES, default=PENDING)
     execution_id = Field(type=basestring)
-    eta = Field(type=datetime, default=0)
+    eta = Field(type=datetime, default=datetime.now)
     started_at = Field(type=datetime, default=None)
     ended_at = Field(type=datetime, default=None)
     max_retries = Field(type=int, default=0)

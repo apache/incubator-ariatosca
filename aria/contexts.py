@@ -201,11 +201,11 @@ class OperationContext(LoggerMixin):
         """
         The model operation
         """
-        return self.storage.operation.get(self.id)
+        return self.model.operation.get(self.id)
 
     @operation.setter
     def operation(self, value):
         """
         Store the operation in the model storage
         """
-        self.storage.operation.store(value)
+        self.model.operation.store(value)

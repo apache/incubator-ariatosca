@@ -85,11 +85,11 @@ class StorageManager(LoggerMixin):
         Create a StorageManager from a blueprint
         """
         return cls(
-            model_storage,
-            resource_storage,
-            blueprint_path,
-            blueprint_plan,
-            blueprint_id,
+            model_storage=model_storage,
+            resource_storage=resource_storage,
+            blueprint_path=blueprint_path,
+            blueprint_plan=blueprint_plan,
+            blueprint_id=blueprint_id,
             deployment_id=None,
             deployment_plan=None)
 

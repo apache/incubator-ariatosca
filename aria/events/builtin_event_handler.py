@@ -27,10 +27,19 @@ from . import (
     start_workflow_signal,
     on_success_workflow_signal,
     on_failure_workflow_signal,
+    sent_task_signal,
     start_task_signal,
     on_success_task_signal,
     on_failure_task_signal,
 )
+
+
+@sent_task_signal.connect
+def _task_sent(task, *args, **kwargs):
+    operation_context = task.context
+    operation = operation_context.operation
+    operation.status = operation.SENT
+    operation_context.operation = operation
 
 
 @start_task_signal.connect
@@ -62,7 +71,7 @@ def _task_succeeded(task, *args, **kwargs):
 
 @start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
-    execution_cls = workflow_context.storage.execution.model_cls
+    execution_cls = workflow_context.model.execution.model_cls
     execution = execution_cls(
         id=workflow_context.execution_id,
         deployment_id=workflow_context.deployment_id,
@@ -80,7 +89,7 @@ def _workflow_failed(workflow_context, exception, *args, **kwargs):
     execution = workflow_context.execution
     execution.error = str(exception)
     execution.status = execution.FAILED
-    execution.ended_at = datetime.utcnow(),
+    execution.ended_at = datetime.utcnow()
     workflow_context.execution = execution
 
 
@@ -88,5 +97,5 @@ def _workflow_failed(workflow_context, exception, *args, **kwargs):
 def _workflow_succeeded(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     execution.status = execution.TERMINATED
-    execution.ended_at = datetime.utcnow(),
+    execution.ended_at = datetime.utcnow()
     workflow_context.execution = execution
