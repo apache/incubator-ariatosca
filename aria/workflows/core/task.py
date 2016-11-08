@@ -41,39 +41,39 @@ class BaseTask(logger.LoggerMixin):
         return self._id
 
 
-class BaseWorkflowTask(BaseTask):
+class StubTask(BaseTask):
     """
-    Base class for all workflow wrapping tasks
+    Base stub task for all tasks that don't actually run anything
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseWorkflowTask, self).__init__(*args, **kwargs)
+        super(StubTask, self).__init__(*args, **kwargs)
         self.status = models.Task.PENDING
-        self.eta = datetime.now()
+        self.due_at = datetime.utcnow()
 
 
-class StartWorkflowTask(BaseWorkflowTask):
+class StartWorkflowTask(StubTask):
     """
     Tasks marking a workflow start
     """
     pass
 
 
-class EndWorkflowTask(BaseWorkflowTask):
+class EndWorkflowTask(StubTask):
     """
     Tasks marking a workflow end
     """
     pass
 
 
-class StartSubWorkflowTask(BaseWorkflowTask):
+class StartSubWorkflowTask(StubTask):
     """
     Tasks marking a subworkflow start
     """
     pass
 
 
-class EndSubWorkflowTask(BaseWorkflowTask):
+class EndSubWorkflowTask(StubTask):
     """
     Tasks marking a subworkflow end
     """
@@ -96,7 +96,8 @@ class OperationTask(BaseTask, logger.LoggerMixin):
             inputs=api_task.inputs,
             status=task_model.PENDING,
             execution_id=self.workflow_context.execution_id,
-            max_retries=self.workflow_context.parameters.get('max_retries', 1),
+            max_retries=api_task.max_retries,
+            retry_interval=api_task.retry_interval,
         )
         self.workflow_context.model.task.store(task)
         self._task_id = task.id
@@ -147,9 +148,7 @@ class OperationTask(BaseTask, logger.LoggerMixin):
 
     @status.setter
     def status(self, value):
-        if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
-        self._update_fields['status'] = value
+        self._update_property('status', value)
 
     @property
     def started_at(self):
@@ -161,9 +160,7 @@ class OperationTask(BaseTask, logger.LoggerMixin):
 
     @started_at.setter
     def started_at(self, value):
-        if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
-        self._update_fields['started_at'] = value
+        self._update_property('started_at', value)
 
     @property
     def ended_at(self):
@@ -175,9 +172,7 @@ class OperationTask(BaseTask, logger.LoggerMixin):
 
     @ended_at.setter
     def ended_at(self, value):
-        if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
-        self._update_fields['ended_at'] = value
+        self._update_property('ended_at', value)
 
     @property
     def retry_count(self):
@@ -189,12 +184,27 @@ class OperationTask(BaseTask, logger.LoggerMixin):
 
     @retry_count.setter
     def retry_count(self, value):
-        if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
-        self._update_fields['retry_count'] = value
+        self._update_property('retry_count', value)
+
+    @property
+    def due_at(self):
+        """
+        Returns the minimum datetime in which the task can be executed
+        :return: eta
+        """
+        return self.context.due_at
+
+    @due_at.setter
+    def due_at(self, value):
+        self._update_property('due_at', value)
 
     def __getattr__(self, attr):
         try:
             return getattr(self.context, attr)
         except AttributeError:
             return super(OperationTask, self).__getattribute__(attr)
+
+    def _update_property(self, key, value):
+        if self._update_fields is None:
+            raise exceptions.TaskException("Task is not in update mode")
+        self._update_fields[key] = value

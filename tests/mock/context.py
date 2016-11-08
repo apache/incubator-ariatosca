@@ -28,5 +28,7 @@ def simple():
         resource_storage=None,
         deployment_id=models.DEPLOYMENT_ID,
         workflow_id=models.WORKFLOW_ID,
-        execution_id=models.EXECUTION_ID
+        execution_id=models.EXECUTION_ID,
+        task_max_retries=models.TASK_MAX_RETRIES,
+        task_retry_interval=models.TASK_RETRY_INTERVAL
     )

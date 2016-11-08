@@ -47,6 +47,8 @@ class WorkflowContext(logger.LoggerMixin):
             workflow_id,
             execution_id=None,
             parameters=None,
+            task_max_retries=0,
+            task_retry_interval=0,
             **kwargs):
         super(WorkflowContext, self).__init__(**kwargs)
         self.name = name
@@ -57,6 +59,8 @@ class WorkflowContext(logger.LoggerMixin):
         self.workflow_id = workflow_id
         self.execution_id = execution_id or str(uuid4())
         self.parameters = parameters or {}
+        self.task_max_retries = task_max_retries
+        self.task_retry_interval = task_retry_interval
 
     def __repr__(self):
         return (
@@ -187,4 +191,3 @@ class _CurrentContext(threading.local):
             self._set(prev_workflow_context)
 
 current = _CurrentContext()
-

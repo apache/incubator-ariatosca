@@ -63,10 +63,10 @@ class Engine(logger.LoggerMixin):
             raise
 
     def _executable_tasks(self):
-        now = datetime.now()
+        now = datetime.utcnow()
         return (task for task in self._tasks_iter()
-                if task.status == models.Task.PENDING and
-                task.eta <= now and
+                if task.status in models.Task.WAIT_STATES and
+                task.due_at <= now and
                 not self._task_has_dependencies(task))
 
     def _ended_tasks(self):
@@ -82,7 +82,7 @@ class Engine(logger.LoggerMixin):
         return (data['task'] for _, data in self._execution_graph.nodes_iter(data=True))
 
     def _handle_executable_task(self, task):
-        if isinstance(task, engine_task.BaseWorkflowTask):
+        if isinstance(task, engine_task.StubTask):
             task.status = models.Task.SUCCESS
         else:
             events.sent_task_signal.send(task)

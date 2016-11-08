@@ -104,16 +104,20 @@ class MockException(Exception):
 
 class MockTask(object):
 
+    INFINITE_RETRIES = models.Task.INFINITE_RETRIES
+
     def __init__(self, func, inputs=None):
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
-        operation = 'tests.workflows.core.test_executor.{name}'.format(name=name)
+        operation = 'tests.workflows.executor.test_executor.{name}'.format(name=name)
         self.operation_details = {'operation': operation}
         self.logger = logging.getLogger()
         self.name = name
         self.inputs = inputs or {}
+        self.retry_count = 0
+        self.max_retries = 0
 
         for state in models.Task.STATES:
             setattr(self, state.upper(), state)

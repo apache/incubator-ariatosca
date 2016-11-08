@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Provides the tasks to be enterd into the task graph
+Provides the tasks to be entered into the task graph
 """
 from uuid import uuid4
 
@@ -58,6 +58,8 @@ class OperationTask(BaseTask):
                  name,
                  operation_details,
                  node_instance,
+                 max_retries=None,
+                 retry_interval=None,
                  inputs=None):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
@@ -71,6 +73,10 @@ class OperationTask(BaseTask):
         self.operation_details = operation_details
         self.node_instance = node_instance
         self.inputs = inputs or {}
+        self.max_retries = (self.workflow_context.task_max_retries
+                            if max_retries is None else max_retries)
+        self.retry_interval = (self.workflow_context.task_retry_interval
+                               if retry_interval is None else retry_interval)
 
 
 class WorkflowTask(BaseTask):

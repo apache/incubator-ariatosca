@@ -17,8 +17,8 @@
 Translation of user graph's API to the execution graph
 """
 
-from . import task as core_task
 from .. import api
+from . import task as core_task
 
 
 def build_execution_graph(
@@ -47,12 +47,12 @@ def build_execution_graph(
             dependencies,
             default=[start_task])
 
-        if _is_operation(api_task):
+        if isinstance(api_task, api.task.OperationTask):
             # Add the task an the dependencies
             operation_task = core_task.OperationTask(api_task)
             _add_task_and_dependencies(execution_graph, operation_task, operation_dependencies)
-        else:
-            # Built the graph recursively while adding start and end markers
+        elif isinstance(api_task, api.task.WorkflowTask):
+            # Build the graph recursively while adding start and end markers
             build_execution_graph(
                 task_graph=api_task,
                 execution_graph=execution_graph,
@@ -60,6 +60,11 @@ def build_execution_graph(
                 end_cls=core_task.EndSubWorkflowTask,
                 depends_on=operation_dependencies
             )
+        elif isinstance(api_task, api.task.StubTask):
+            stub_task = core_task.StubTask(id=api_task.id)
+            _add_task_and_dependencies(execution_graph, stub_task, operation_dependencies)
+        else:
+            raise RuntimeError('Undefined state')
 
     # Insert end marker
     workflow_dependencies = _get_tasks_from_dependencies(
@@ -80,13 +85,11 @@ def _get_tasks_from_dependencies(execution_graph, dependencies, default=()):
     """
     Returns task list from dependencies.
     """
-    return [execution_graph.node[dependency.id if _is_operation(dependency)
+    return [execution_graph.node[dependency.id
+                                 if isinstance(dependency, (api.task.OperationTask,
+                                                            api.task.StubTask))
                                  else _end_graph_suffix(dependency.id)]['task']
             for dependency in dependencies] or default
-
-
-def _is_operation(task):
-    return isinstance(task, api.task.OperationTask)
 
 
 def _start_graph_suffix(id):

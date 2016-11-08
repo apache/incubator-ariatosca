@@ -67,17 +67,35 @@ class TestOperationTask(object):
         op_details = {'operation_details': True}
         node_instance = mock.models.get_dependency_node_instance()
         inputs = {'inputs': True}
+        max_retries = 10
+        retry_interval = 10
 
         with context.workflow.current.push(workflow_context):
             model_task = api.task.OperationTask(name=name,
                                                 operation_details=op_details,
                                                 node_instance=node_instance,
-                                                inputs=inputs)
+                                                inputs=inputs,
+                                                max_retries=max_retries,
+                                                retry_interval=retry_interval)
 
         assert model_task.name == name
         assert model_task.operation_details == op_details
         assert model_task.node_instance == node_instance
         assert model_task.inputs == inputs
+        assert model_task.retry_interval == retry_interval
+        assert model_task.max_retries == max_retries
+
+    def test_operation_task_default_values(self):
+        workflow_context = mock.context.simple()
+        with context.workflow.current.push(workflow_context):
+            model_task = api.task.OperationTask(
+                name='stub',
+                operation_details={},
+                node_instance=mock.models.get_dependency_node_instance())
+
+        assert model_task.inputs == {}
+        assert model_task.retry_interval == workflow_context.task_retry_interval
+        assert model_task.max_retries == workflow_context.task_max_retries
 
 
 class TestWorkflowTask(object):

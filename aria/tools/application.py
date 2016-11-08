@@ -108,7 +108,7 @@ class StorageManager(LoggerMixin):
         self.logger.debug('created blueprint resource storage entry')
 
         self.logger.debug('creating blueprint model storage entry')
-        now = datetime.now()
+        now = datetime.utcnow()
         blueprint = self.model_storage.blueprint.model_cls(
             plan=self.blueprint_plan,
             id=self.blueprint_id,
@@ -175,7 +175,7 @@ class StorageManager(LoggerMixin):
         self.logger.debug('created deployment resource storage entry')
 
         self.logger.debug('creating deployment model storage entry')
-        now = datetime.now()
+        now = datetime.utcnow()
         deployment = self.model_storage.deployment.model_cls(
             id=self.deployment_id,
             blueprint_id=self.blueprint_id,
@@ -241,7 +241,7 @@ class StorageManager(LoggerMixin):
         self.logger.debug('creating plugin model storage entry')
         plugin = _load_plugin_from_archive(source)
         build_props = plugin.get('build_server_os_properties')
-        now = datetime.now()
+        now = datetime.utcnow()
 
         plugin = self.model_storage.plugin.model_cls(
             id=plugin_id,

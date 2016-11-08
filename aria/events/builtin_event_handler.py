@@ -21,7 +21,10 @@ Implementation of storage handlers for workflow and operation events.
 """
 
 
-from datetime import datetime
+from datetime import (
+    datetime,
+    timedelta,
+)
 
 from . import (
     start_workflow_signal,
@@ -50,8 +53,13 @@ def _task_started(task, *args, **kwargs):
 @on_failure_task_signal.connect
 def _task_failed(task, *args, **kwargs):
     with task.update():
-        task.ended_at = datetime.utcnow()
-        task.status = task.FAILED
+        if task.retry_count < task.max_retries or task.max_retries == task.INFINITE_RETRIES:
+            task.status = task.RETRYING
+            task.retry_count += 1
+            task.due_at = datetime.utcnow() + timedelta(seconds=task.retry_interval)
+        else:
+            task.ended_at = datetime.utcnow()
+            task.status = task.FAILED
 
 
 @on_success_task_signal.connect

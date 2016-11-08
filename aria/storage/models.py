@@ -376,27 +376,32 @@ class Task(Model):
     A Model which represents an task
     """
     PENDING = 'pending'
+    RETRYING = 'retrying'
     SENT = 'sent'
     STARTED = 'started'
     SUCCESS = 'success'
     FAILED = 'failed'
     STATES = (
         PENDING,
+        RETRYING,
         SENT,
         STARTED,
         SUCCESS,
         FAILED,
     )
+    WAIT_STATES = [PENDING, RETRYING]
     END_STATES = [SUCCESS, FAILED]
+    INFINITE_RETRIES = -1
 
     id = Field(type=basestring, default=uuid_generator)
     status = Field(type=basestring, choices=STATES, default=PENDING)
     execution_id = Field(type=basestring)
-    eta = Field(type=datetime, default=datetime.now)
+    due_at = Field(type=datetime, default=datetime.utcnow)
     started_at = Field(type=datetime, default=None)
     ended_at = Field(type=datetime, default=None)
     max_retries = Field(type=int, default=1)
     retry_count = Field(type=int, default=0)
+    retry_interval = Field(type=(int, float), default=0)
 
     # Operation specific fields
     name = Field(type=basestring)

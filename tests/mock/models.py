@@ -23,6 +23,8 @@ DEPLOYMENT_ID = 'test_deployment_id'
 BLUEPRINT_ID = 'test_blueprint_id'
 WORKFLOW_ID = 'test_workflow_id'
 EXECUTION_ID = 'test_execution_id'
+TASK_RETRY_INTERVAL = 1
+TASK_MAX_RETRIES = 1
 
 
 def get_dependency_node():
@@ -115,13 +117,13 @@ def get_execution():
         deployment_id=DEPLOYMENT_ID,
         workflow_id=WORKFLOW_ID,
         blueprint_id=BLUEPRINT_ID,
-        started_at=datetime.now(),
+        started_at=datetime.utcnow(),
         parameters=None
     )
 
 
 def get_deployment():
-    now = datetime.now()
+    now = datetime.utcnow()
     return models.Deployment(
         id=DEPLOYMENT_ID,
         description=None,

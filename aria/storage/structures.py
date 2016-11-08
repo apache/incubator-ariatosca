@@ -195,17 +195,17 @@ class Model(object):
         :param fields: each item is validated and transformed into instance attributes.
         """
         self._assert_model_have_id_field(**fields)
-        missing_fileds, unexpected_fileds = self._setup_fields(fields)
+        missing_fields, unexpected_fields = self._setup_fields(fields)
 
-        if missing_fileds:
+        if missing_fields:
             raise StorageError(
                 'Model {name} got missing keyword arguments: {fields}'.format(
-                    name=self.__class__.__name__, fields=missing_fileds))
+                    name=self.__class__.__name__, fields=missing_fields))
 
-        if unexpected_fileds:
+        if unexpected_fields:
             raise StorageError(
                 'Model {name} got unexpected keyword arguments: {fields}'.format(
-                    name=self.__class__.__name__, fields=unexpected_fileds))
+                    name=self.__class__.__name__, fields=unexpected_fields))
 
     def __repr__(self):
         return '{name}(fields={0})'.format(sorted(self.fields), name=self.__class__.__name__)

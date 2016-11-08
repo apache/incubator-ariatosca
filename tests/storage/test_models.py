@@ -71,8 +71,8 @@ def test_blueprint_model():
         plan={},
         id='id',
         description='description',
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
         main_file_name='/path',
     )
     with pytest.raises(TypeError):
@@ -80,8 +80,8 @@ def test_blueprint_model():
             plan=None,
             id='id',
             description='description',
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
             main_file_name='/path',
         )
     with pytest.raises(TypeError):
@@ -89,8 +89,8 @@ def test_blueprint_model():
             plan={},
             id=999,
             description='description',
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
             main_file_name='/path',
         )
     with pytest.raises(TypeError):
@@ -98,8 +98,8 @@ def test_blueprint_model():
             plan={},
             id='id',
             description=999,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
             main_file_name='/path',
         )
     with pytest.raises(TypeError):
@@ -108,7 +108,7 @@ def test_blueprint_model():
             id='id',
             description='description',
             created_at='error',
-            updated_at=datetime.now(),
+            updated_at=datetime.utcnow(),
             main_file_name='/path',
         )
     with pytest.raises(TypeError):
@@ -116,7 +116,7 @@ def test_blueprint_model():
             plan={},
             id='id',
             description='description',
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             updated_at=None,
             main_file_name='/path',
         )
@@ -125,15 +125,15 @@ def test_blueprint_model():
             plan={},
             id='id',
             description='description',
-            created_at=datetime.now(),
+            created_at=datetime.utcnow(),
             updated_at=None,
             main_file_name=88,
         )
     Blueprint(
         plan={},
         description='description',
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
         main_file_name='/path',
     )
 
