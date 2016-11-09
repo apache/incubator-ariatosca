@@ -24,18 +24,7 @@ class ValidatorMixin(object):
     """
 
     _ARGUMENT_TYPE_MESSAGE = '{name} argument must be {type} based, got {arg!r}'
-    _ACTION_MESSAGE = 'action arg options: {actions}, got {action}'
     _ARGUMENT_CHOICE_MESSAGE = '{name} argument must be in {choices}, got {arg!r}'
-
-    @classmethod
-    def validate_actions(cls, action):
-        """
-        Validate action is defined in the class ``ACTIONS`` attribute
-        """
-        # todo: remove this and use validate choice
-        if action not in cls.ACTIONS:
-            raise TypeError(cls._ACTION_MESSAGE.format(
-                actions=cls.ACTIONS, action=action))
 
     @classmethod
     def validate_in_choice(cls, name, argument, choices):

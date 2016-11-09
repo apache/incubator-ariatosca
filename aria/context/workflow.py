@@ -61,6 +61,12 @@ class WorkflowContext(logger.LoggerMixin):
         self.parameters = parameters or {}
         self.task_max_retries = task_max_retries
         self.task_retry_interval = task_retry_interval
+        # TODO: execution creation should happen somewhere else
+        # should be moved there, when such logical place exists
+        try:
+            self.model.execution.get(self.execution_id)
+        except exceptions.StorageError:
+            self._create_execution()
 
     def __repr__(self):
         return (
@@ -68,6 +74,18 @@ class WorkflowContext(logger.LoggerMixin):
             'workflow_id={self.workflow_id}, '
             'execution_id={self.execution_id})'.format(
                 name=self.__class__.__name__, self=self))
+
+    def _create_execution(self):
+        execution_cls = self.model.execution.model_cls
+        execution = self.model.execution.model_cls(
+            id=self.execution_id,
+            deployment_id=self.deployment_id,
+            workflow_id=self.workflow_id,
+            blueprint_id=self.blueprint_id,
+            status=execution_cls.PENDING,
+            parameters=self.parameters,
+        )
+        self.model.execution.store(execution)
 
     @property
     def blueprint_id(self):

@@ -30,6 +30,8 @@ from . import (
     start_workflow_signal,
     on_success_workflow_signal,
     on_failure_workflow_signal,
+    on_cancelled_workflow_signal,
+    on_cancelling_workflow_signal,
     sent_task_signal,
     start_task_signal,
     on_success_task_signal,
@@ -71,16 +73,9 @@ def _task_succeeded(task, *args, **kwargs):
 
 @start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
-    execution_cls = workflow_context.model.execution.model_cls
-    execution = execution_cls(
-        id=workflow_context.execution_id,
-        deployment_id=workflow_context.deployment_id,
-        workflow_id=workflow_context.workflow_id,
-        blueprint_id=workflow_context.blueprint_id,
-        status=execution_cls.PENDING,
-        started_at=datetime.utcnow(),
-        parameters=workflow_context.parameters,
-    )
+    execution = workflow_context.execution
+    execution.status = execution.STARTED
+    execution.started_at = datetime.utcnow()
     workflow_context.execution = execution
 
 
@@ -98,4 +93,25 @@ def _workflow_succeeded(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     execution.status = execution.TERMINATED
     execution.ended_at = datetime.utcnow()
+    workflow_context.execution = execution
+
+
+@on_cancelled_workflow_signal.connect
+def _workflow_cancelled(workflow_context, *args, **kwargs):
+    execution = workflow_context.execution
+    # _workflow_cancelling function may have called this function
+    # already
+    if execution.status == execution.CANCELLED:
+        return
+    execution.status = execution.CANCELLED
+    execution.ended_at = datetime.utcnow()
+    workflow_context.execution = execution
+
+
+@on_cancelling_workflow_signal.connect
+def _workflow_cancelling(workflow_context, *args, **kwargs):
+    execution = workflow_context.execution
+    if execution.status == execution.PENDING:
+        return _workflow_cancelled(workflow_context=workflow_context)
+    execution.status = execution.CANCELLING
     workflow_context.execution = execution

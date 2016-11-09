@@ -48,7 +48,11 @@ class Engine(logger.LoggerMixin):
         """
         try:
             events.start_workflow_signal.send(self._workflow_context)
+            cancel = False
             while True:
+                cancel = self._is_cancel()
+                if cancel:
+                    break
                 for task in self._ended_tasks():
                     self._handle_ended_tasks(task)
                 for task in self._executable_tasks():
@@ -57,10 +61,25 @@ class Engine(logger.LoggerMixin):
                     break
                 else:
                     time.sleep(0.1)
-            events.on_success_workflow_signal.send(self._workflow_context)
+            if cancel:
+                events.on_cancelled_workflow_signal.send(self._workflow_context)
+            else:
+                events.on_success_workflow_signal.send(self._workflow_context)
         except BaseException as e:
             events.on_failure_workflow_signal.send(self._workflow_context, exception=e)
             raise
+
+    def cancel_execution(self):
+        """
+        Send a cancel request to the engine. If execution already started, execution status
+        will be modified to 'cancelling' status. If execution is in pending mode, execution status
+        will be modified to 'cancelled' directly.
+        """
+        events.on_cancelling_workflow_signal.send(self._workflow_context)
+
+    def _is_cancel(self):
+        return self._workflow_context.execution.status in [models.Execution.CANCELLING,
+                                                           models.Execution.CANCELLED]
 
     def _executable_tasks(self):
         now = datetime.utcnow()

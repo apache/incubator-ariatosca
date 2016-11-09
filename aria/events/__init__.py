@@ -46,6 +46,8 @@ on_failure_task_signal = signal('failure_task_signal')
 
 # workflow engine workflow signals:
 start_workflow_signal = signal('start_workflow_signal')
+on_cancelling_workflow_signal = signal('on_cancelling_workflow_signal')
+on_cancelled_workflow_signal = signal('on_cancelled_workflow_signal')
 on_success_workflow_signal = signal('on_success_workflow_signal')
 on_failure_workflow_signal = signal('on_failure_workflow_signal')
 

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import time
+import threading
 from datetime import datetime
 
 import pytest
@@ -37,11 +38,20 @@ global_test_holder = {}
 
 class BaseTest(object):
 
-    @staticmethod
-    def _execute(workflow_func, workflow_context, executor):
-        graph = workflow_func(ctx=workflow_context)
-        eng = engine.Engine(executor=executor, workflow_context=workflow_context, tasks_graph=graph)
+    @classmethod
+    def _execute(cls, workflow_func, workflow_context, executor):
+        eng = cls._engine(workflow_func=workflow_func,
+                          workflow_context=workflow_context,
+                          executor=executor)
         eng.execute()
+        return eng
+
+    @staticmethod
+    def _engine(workflow_func, workflow_context, executor):
+        graph = workflow_func(ctx=workflow_context)
+        return engine.Engine(executor=executor,
+                             workflow_context=workflow_context,
+                             tasks_graph=graph)
 
     @staticmethod
     def _op(func, ctx, inputs=None, max_retries=None, retry_interval=None):
@@ -78,9 +88,13 @@ class BaseTest(object):
             workflow_context.states.append('failure')
             workflow_context.exception = exception
 
+        def cancel_workflow_handler(workflow_context, *args, **kwargs):
+            workflow_context.states.append('cancel')
+
         events.start_workflow_signal.connect(start_workflow_handler)
         events.on_success_workflow_signal.connect(success_workflow_handler)
         events.on_failure_workflow_signal.connect(failure_workflow_handler)
+        events.on_cancelled_workflow_signal.connect(cancel_workflow_handler)
         events.sent_task_signal.connect(sent_task_handler)
         try:
             yield
@@ -88,6 +102,7 @@ class BaseTest(object):
             events.start_workflow_signal.disconnect(start_workflow_handler)
             events.on_success_workflow_signal.disconnect(success_workflow_handler)
             events.on_failure_workflow_signal.disconnect(failure_workflow_handler)
+            events.on_cancelled_workflow_signal.disconnect(cancel_workflow_handler)
             events.sent_task_signal.disconnect(sent_task_handler)
 
     @pytest.fixture(scope='function')
@@ -137,6 +152,10 @@ class TestEngine(BaseTest):
         assert workflow_context.states == ['start', 'success']
         assert workflow_context.exception is None
         assert 'sent_task_signal_calls' not in global_test_holder
+        execution = workflow_context.execution
+        assert execution.started_at <= execution.ended_at <= datetime.utcnow()
+        assert execution.error is None
+        assert execution.status == models.Execution.TERMINATED
 
     def test_single_task_successful_execution(self, workflow_context, executor):
         @workflow
@@ -162,6 +181,10 @@ class TestEngine(BaseTest):
         assert workflow_context.states == ['start', 'failure']
         assert isinstance(workflow_context.exception, exceptions.ExecutorException)
         assert global_test_holder.get('sent_task_signal_calls') == 1
+        execution = workflow_context.execution
+        assert execution.started_at <= execution.ended_at <= datetime.utcnow()
+        assert execution.error is not None
+        assert execution.status == models.Execution.FAILED
 
     def test_two_tasks_execution_order(self, workflow_context, executor):
         @workflow
@@ -189,15 +212,51 @@ class TestEngine(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             graph.add_tasks(api.task.WorkflowTask(sub_workflow, ctx=ctx))
-
         self._execute(workflow_func=mock_workflow,
                       workflow_context=workflow_context,
                       executor=executor)
-
         assert workflow_context.states == ['start', 'success']
         assert workflow_context.exception is None
         assert global_test_holder.get('invocations') == [1, 2]
         assert global_test_holder.get('sent_task_signal_calls') == 2
+
+
+class TestCancel(BaseTest):
+
+    def test_cancel_started_execution(self, workflow_context, executor):
+        number_of_tasks = 100
+
+        @workflow
+        def mock_workflow(ctx, graph):
+            return graph.sequence(*(self._op(mock_sleep_task, ctx, inputs={'seconds': 0.1})
+                                    for _ in range(number_of_tasks)))
+        eng = self._engine(workflow_func=mock_workflow,
+                           workflow_context=workflow_context,
+                           executor=executor)
+        t = threading.Thread(target=eng.execute)
+        t.start()
+        time.sleep(1)
+        eng.cancel_execution()
+        t.join(timeout=30)
+        assert workflow_context.states == ['start', 'cancel']
+        assert workflow_context.exception is None
+        invocations = global_test_holder.get('invocations', [])
+        assert 0 < len(invocations) < number_of_tasks
+        execution = workflow_context.execution
+        assert execution.started_at <= execution.ended_at <= datetime.utcnow()
+        assert execution.error is None
+        assert execution.status == models.Execution.CANCELLED
+
+    def test_cancel_pending_execution(self, workflow_context, executor):
+        @workflow
+        def mock_workflow(graph, **_):
+            return graph
+        eng = self._engine(workflow_func=mock_workflow,
+                           workflow_context=workflow_context,
+                           executor=executor)
+        eng.cancel_execution()
+        execution = workflow_context.execution
+        assert execution.status == models.Execution.CANCELLED
 
 
 class TestRetries(BaseTest):
@@ -334,3 +393,9 @@ def mock_conditional_failure_task(failure_count):
             raise RuntimeError
     finally:
         invocations.append(time.time())
+
+
+def mock_sleep_task(seconds):
+    invocations = global_test_holder.setdefault('invocations', [])
+    invocations.append(time.time())
+    time.sleep(seconds)

@@ -90,9 +90,9 @@ def test_pointer_field():
         vars(PointerField(type=Model, choices=(), default=Field.NO_DEFAULT))
     with pytest.raises(AssertionError):
         PointerField(type=list)
-    pointer_field.validate_value('pointer_field', test_model)
+    pointer_field.validate_value('pointer_field', test_model, None)
     with pytest.raises(TypeError):
-        pointer_field.validate_value('pointer_field', int)
+        pointer_field.validate_value('pointer_field', int, None)
 
 
 def test_iterable_pointer_field():
@@ -103,6 +103,22 @@ def test_iterable_pointer_field():
     with pytest.raises(AssertionError):
         IterPointerField(type=list)
 
-    iter_pointer_field.validate_value('iter_pointer_field', [test_model, test_model])
+    iter_pointer_field.validate_value('iter_pointer_field', [test_model, test_model], None)
     with pytest.raises(TypeError):
-        iter_pointer_field.validate_value('iter_pointer_field', [int, test_model])
+        iter_pointer_field.validate_value('iter_pointer_field', [int, test_model], None)
+
+
+def test_custom_field_validation():
+    def validation_func(name, value, instance):
+        assert name == 'id'
+        assert value == 'value'
+        assert isinstance(instance, TestModel)
+
+    class TestModel(Model):
+        id = Field(default='_', validation_func=validation_func)
+
+    obj = TestModel()
+    obj.id = 'value'
+
+    with pytest.raises(AssertionError):
+        obj.id = 'not_value'

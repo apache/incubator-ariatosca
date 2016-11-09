@@ -27,7 +27,9 @@ from . import (
     on_failure_task_signal,
     start_workflow_signal,
     on_success_workflow_signal,
-    on_failure_workflow_signal
+    on_failure_workflow_signal,
+    on_cancelled_workflow_signal,
+    on_cancelling_workflow_signal,
 )
 
 
@@ -60,3 +62,13 @@ def _failure_workflow_handler(context, **kwargs):
 @on_success_workflow_signal.connect
 def _success_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Workflow success: {context.name}'.format(context=context))
+
+
+@on_cancelled_workflow_signal.connect
+def _cancel_workflow_handler(context, **kwargs):
+    context.logger.debug('Event: Workflow cancelled: {context.name}'.format(context=context))
+
+
+@on_cancelling_workflow_signal.connect
+def _cancelling_workflow_handler(context, **kwargs):
+    context.logger.debug('Event: Workflow cancelling: {context.name}'.format(context=context))

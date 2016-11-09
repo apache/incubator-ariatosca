@@ -72,6 +72,7 @@ class Field(ValidatorMixin):
             self,
             type=None,
             choices=(),
+            validation_func=None,
             default=NO_DEFAULT,
             **kwargs):
         """
@@ -85,6 +86,7 @@ class Field(ValidatorMixin):
         self.type = type
         self.choices = choices
         self.default = default
+        self.validation_func = validation_func
         super(Field, self).__init__(**kwargs)
 
     def __get__(self, instance, owner):
@@ -104,15 +106,16 @@ class Field(ValidatorMixin):
 
     def __set__(self, instance, value):
         field_name = self._field_name(instance)
-        self.validate_value(field_name, value)
+        self.validate_value(field_name, value, instance)
         setattr(instance, self._ATTRIBUTE_NAME(field_name), value)
 
-    def validate_value(self, name, value):
+    def validate_value(self, name, value, instance):
         """
         Validates the value of the field.
 
         :param name: the name of the field.
         :param value: the value of the field.
+        :param instance: the instance containing the field.
         """
         if self.default != self.NO_DEFAULT and value == self.default:
             return
@@ -120,6 +123,8 @@ class Field(ValidatorMixin):
             self.validate_instance(name, value, self.type)
         if self.choices:
             self.validate_in_choice(name, value, self.choices)
+        if self.validation_func:
+            self.validation_func(name, value, instance)
 
     def _field_name(self, instance):
         """
@@ -147,7 +152,7 @@ class IterField(Field):
         """
         super(IterField, self).__init__(choices=(), **kwargs)
 
-    def validate_value(self, name, values):
+    def validate_value(self, name, values, *args):
         """
         Validates the value of each iterable value.
 

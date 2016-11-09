@@ -12,24 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from aria import context, application_model_storage
-
-from . import models
-from ..storage import InMemoryModelDriver
-
-
-def simple():
-    storage = application_model_storage(InMemoryModelDriver())
-    storage.setup()
-    storage.deployment.store(models.get_deployment())
-    return context.workflow.WorkflowContext(
-        name='simple_context',
-        model_storage=storage,
-        resource_storage=None,
-        deployment_id=models.DEPLOYMENT_ID,
-        workflow_id=models.WORKFLOW_ID,
-        execution_id=models.EXECUTION_ID,
-        task_max_retries=models.TASK_MAX_RETRIES,
-        task_retry_interval=models.TASK_RETRY_INTERVAL
-    )

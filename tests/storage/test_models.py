@@ -26,7 +26,8 @@ from aria.storage.models import (
     RelationshipInstance,
     Node,
     NodeInstance,
-    Blueprint)
+    Blueprint,
+    Execution)
 
 # TODO: add tests per model
 
@@ -273,3 +274,68 @@ def test_relationship_instance():
     assert set(relationship_instances) == set(chain(
         node_instance.relationships_by_target('target_0'),
         node_instance.relationships_by_target('target_1')))
+
+
+def test_execution_status_transition():
+    def create_execution(status):
+        return Execution(
+            id='e_id',
+            deployment_id='d_id',
+            workflow_id='w_id',
+            blueprint_id='b_id',
+            status=status,
+            parameters={}
+        )
+
+    valid_transitions = {
+        Execution.PENDING: [Execution.STARTED,
+                            Execution.CANCELLED,
+                            Execution.PENDING],
+        Execution.STARTED: [Execution.FAILED,
+                            Execution.TERMINATED,
+                            Execution.CANCELLED,
+                            Execution.CANCELLING,
+                            Execution.STARTED],
+        Execution.CANCELLING: [Execution.FAILED,
+                               Execution.TERMINATED,
+                               Execution.CANCELLED,
+                               Execution.CANCELLING],
+        Execution.FAILED: [Execution.FAILED],
+        Execution.TERMINATED: [Execution.TERMINATED],
+        Execution.CANCELLED: [Execution.CANCELLED]
+    }
+
+    invalid_transitions = {
+        Execution.PENDING: [Execution.FAILED,
+                            Execution.TERMINATED,
+                            Execution.CANCELLING],
+        Execution.STARTED: [Execution.PENDING],
+        Execution.CANCELLING: [Execution.PENDING,
+                               Execution.STARTED],
+        Execution.FAILED: [Execution.PENDING,
+                           Execution.STARTED,
+                           Execution.TERMINATED,
+                           Execution.CANCELLED,
+                           Execution.CANCELLING],
+        Execution.TERMINATED: [Execution.PENDING,
+                               Execution.STARTED,
+                               Execution.FAILED,
+                               Execution.CANCELLED,
+                               Execution.CANCELLING],
+        Execution.CANCELLED: [Execution.PENDING,
+                              Execution.STARTED,
+                              Execution.FAILED,
+                              Execution.TERMINATED,
+                              Execution.CANCELLING],
+    }
+
+    for current_status, valid_transitioned_statues in valid_transitions.items():
+        for transitioned_status in valid_transitioned_statues:
+            execution = create_execution(current_status)
+            execution.status = transitioned_status
+
+    for current_status, invalid_transitioned_statues in invalid_transitions.items():
+        for transitioned_status in invalid_transitioned_statues:
+            execution = create_execution(current_status)
+            with pytest.raises(ValueError):
+                execution.status = transitioned_status

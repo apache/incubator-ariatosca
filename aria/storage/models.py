@@ -185,13 +185,28 @@ class Execution(Model):
     """
     A Model which represents an execution
     """
+
+    class _Validation(object):
+
+        @staticmethod
+        def execution_status_transition_validation(_, value, instance):
+            """Validation function that verifies execution status transitions are OK"""
+            try:
+                current_status = instance.status
+            except AttributeError:
+                return
+            valid_transitions = Execution.VALID_TRANSITIONS.get(current_status, [])
+            if current_status != value and value not in valid_transitions:
+                raise ValueError('Cannot change execution status from {current} to {new}'.format(
+                    current=current_status,
+                    new=value))
+
     TERMINATED = 'terminated'
     FAILED = 'failed'
     CANCELLED = 'cancelled'
     PENDING = 'pending'
     STARTED = 'started'
     CANCELLING = 'cancelling'
-    FORCE_CANCELLING = 'force_cancelling'
     STATES = (
         TERMINATED,
         FAILED,
@@ -199,21 +214,26 @@ class Execution(Model):
         PENDING,
         STARTED,
         CANCELLING,
-        FORCE_CANCELLING,
     )
     END_STATES = [TERMINATED, FAILED, CANCELLED]
     ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
+    VALID_TRANSITIONS = {
+        PENDING: [STARTED, CANCELLED],
+        STARTED: END_STATES + [CANCELLING],
+        CANCELLING: END_STATES
+    }
 
     id = Field(type=basestring, default=uuid_generator)
-    status = Field(type=basestring, choices=STATES)
+    status = Field(type=basestring, choices=STATES,
+                   validation_func=_Validation.execution_status_transition_validation)
     deployment_id = Field(type=basestring)
     workflow_id = Field(type=basestring)
     blueprint_id = Field(type=basestring)
-    started_at = Field(type=datetime)
+    created_at = Field(type=datetime, default=datetime.utcnow)
+    started_at = Field(type=datetime, default=None)
     ended_at = Field(type=datetime, default=None)
     error = Field(type=basestring, default=None)
     parameters = Field()
-    is_system_workflow = Field(type=bool, default=False)
 
 
 class Relationship(Model):
