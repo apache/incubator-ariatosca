@@ -1,0 +1,64 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+relationship_types:
+
+  tosca.relationships.nfv.VirtualBindsTo:
+    _extensions:
+      shorthand_name: VirtualBindsTo
+      type_qualified_name: tosca:VirtualBindsTo
+      specification: tosca-simple-nfv-1.0
+      specification_section: 8.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc419290234'
+    description: >-
+      This relationship type represents an association relationship between VDU and CP node types.
+    derived_from: tosca.relationships.DependsOn
+    valid_target_types: [ tosca.capabilities.nfv.VirtualBindable ]
+
+  tosca.relationships.nfv.Monitor:
+    _extensions:
+      shorthand_name: Monitor
+      type_qualified_name: tosca:Monitor
+      specification: tosca-simple-nfv-1.0
+      specification_section: 8.4.2
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc418607880'
+    description: >-
+      This relationship type represents an association relationship to the Metric capability of VDU node types.
+    derived_from: tosca.relationships.ConnectsTo
+    valid_target_types: [ tosca.capabilities.nfv.Metric ]
+
+  tosca.relationships.nfv.ForwardsTo:
+    _extensions:
+      shorthand_name: ForwardsTo
+      type_qualified_name: tosca:ForwardsTo
+      specification: tosca-simple-nfv-1.0
+      specification_section: 10.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc447714720'
+    description: >-
+      This relationship type represents a traffic flow between two connection point node types.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [ tosca.capabilities.nfv.Forwarder ]
+
+  tosca.relationships.nfv.VirtualLinksTo:
+    _extensions:
+      shorthand_name: VirtualLinksTo
+      type_qualified_name: tosca:VirtualLinksTo
+      specification: tosca-simple-nfv-1.0
+      specification_section: 11.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc447714737'
+    description: >-
+      This relationship type represents an association relationship between VNFs and VL node types.
+    derived_from: tosca.relationships.DependsOn
+    valid_target_types: [ tosca.capabilities.nfv.VirtualLinkable ]

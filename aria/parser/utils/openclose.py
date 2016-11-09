@@ -13,24 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
-
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
+class OpenClose(object):
     """
-    General aria exception
+    Wraps an object that has open() and close() methods to support the "with" keyword.
     """
-    pass
 
+    def __init__(self, wrapped):
+        self.wrapped = wrapped
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    def __enter__(self):
+        if hasattr(self.wrapped, 'open'):
+            self.wrapped.open()
+        return self.wrapped
+
+    def __exit__(self, the_type, value, traceback):
+        if hasattr(self.wrapped, 'close'):
+            self.wrapped.close()
+        return False

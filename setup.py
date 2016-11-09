@@ -40,11 +40,35 @@ except IOError:
 setup(
     name=_PACKAGE_NAME,
     version=version,
-    author='aria-core',
+    description='ARIA',
+    license='Apache License Version 2.0',
+    author='aria',
     author_email='dev@ariatosca.incubator.apache.org',
+    url='http://ariatosca.org',
+
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: System :: Networking',
+        'Topic :: System :: Systems Administration'],
+
     packages=find_packages(exclude=('*tests*',)),
-    license='LICENSE',
-    description='ARIA Project',
+    package_data={
+        'aria.tools': [
+            'web/**'],
+        'aria_extension_tosca': [
+            'profiles/tosca-simple-1.0/**',
+            'profiles/tosca-simple-nfv-1.0/**'],
+        'aria_extension_open_o': [
+            'web/**']},
+
     zip_safe=False,
     install_requires=install_requires,
     entry_points={

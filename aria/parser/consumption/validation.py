@@ -13,24 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from .consumer import Consumer
 
 
-class AriaError(Exception):
+class Validate(Consumer):
     """
-    General aria exception
+    Validates the presentation.
     """
-    pass
 
+    def consume(self):
+        if self.context.presentation.presenter is None:
+            self.context.validation.report('Validation consumer: missing presenter')
+            return
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+        self.context.presentation.presenter._validate(self.context)

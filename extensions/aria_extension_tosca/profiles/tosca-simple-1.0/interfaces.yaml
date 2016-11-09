@@ -1,0 +1,86 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+interface_types:
+
+  tosca.interfaces.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.7.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Ref384391055'
+    description: >-
+      This is the default (root) TOSCA Interface Type definition that all other TOSCA Interface Types derive from.
+  
+  tosca.interfaces.node.lifecycle.Standard:
+    _extensions:
+      shorthand_name: Standard
+      type_qualified_name: tosca:Standard
+      specification: tosca-simple-1.0
+      specification_section: 5.7.4
+    description: >-
+      This lifecycle interface defines the essential, normative operations that TOSCA nodes may support.
+    derived_from: tosca.interfaces.Root
+    create:
+      description: >-
+        Standard lifecycle create operation.
+    configure:
+      description: >-
+        Standard lifecycle configure operation.
+    start:
+      description: >-
+        Standard lifecycle start operation.
+    stop:
+      description: >-
+        Standard lifecycle stop operation.
+    delete:
+      description: >-
+        Standard lifecycle delete operation.
+
+  tosca.interfaces.relationship.Configure:
+    _extensions:
+      shorthand_name: Configure
+      type_qualified_name: tosca:Configure
+      specification: tosca-simple-1.0
+      specification_section: 5.7.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ITFC_RELATIONSHIP_CONFIGURE'
+    description: >-
+      The lifecycle interfaces define the essential, normative operations that each TOSCA Relationship Types may support.
+    derived_from: tosca.interfaces.Root
+    pre_configure_source:
+      description: >-
+        Operation to pre-configure the source endpoint.
+    pre_configure_target:
+      description: >-
+        Operation to pre-configure the target endpoint.
+    post_configure_source:
+      description: >-
+        Operation to post-configure the source endpoint.
+    post_configure_target:
+      description: >-
+        Operation to post-configure the target endpoint.
+    add_target:
+      description: >-
+        Operation to notify the source node of a target node being added via a relationship.
+    add_source:
+      description: >-
+        Operation to notify the target node of a source node which is now available via a relationship.
+    target_changed:
+      description: >-
+        Operation to notify source some property or attribute of the target changed
+    remove_target:
+      description: >-
+        Operation to remove a target node.

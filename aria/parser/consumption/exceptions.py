@@ -13,24 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from .. import AriaException
 
 
-class AriaError(Exception):
+class ConsumerException(AriaException):
     """
-    General aria exception
+    ARIA consumer exception.
     """
-    pass
-
-
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass

@@ -1,0 +1,268 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+data_types:
+
+  #
+  # Primitive
+  #
+  
+  timestamp:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_timestamp
+
+  version:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_version
+      type_qualified_name: tosca:version
+      specification: tosca-simple-1.0
+      specification_section: 3.2.2
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_VERSION'
+
+  range:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_range
+      type_qualified_name: tosca:range
+      specification: tosca-simple-1.0
+      specification_section: 3.2.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_RANGE'
+
+  #
+  # With entry schema
+  #
+
+  list:
+    _extensions:
+      use_entry_schema: true
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_list
+      type_qualified_name: tosca:list
+      specification: tosca-simple-1.0
+      specification_section: 3.2.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_LIST'
+
+  map:
+    _extensions:
+      use_entry_schema: true
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_map_value
+      type_qualified_name: tosca:map
+      specification: tosca-simple-1.0
+      specification_section: 3.2.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_MAP'
+  
+  #
+  # Scalar
+  #
+
+  scalar-unit.size:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_size
+      type_qualified_name: tosca:scalar-unit.size
+      specification: tosca-simple-1.0
+      specification_section: 3.2.6.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_SIZE'
+
+  scalar-unit.time:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_time
+      type_qualified_name: tosca:scalar-unit.time
+      specification: tosca-simple-1.0
+      specification_section: 3.2.6.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_TIME'
+
+  scalar-unit.frequency:
+    _extensions:
+      coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_frequency
+      type_qualified_name: tosca:scalar-unit.frequency
+      specification: tosca-simple-1.0
+      specification_section: 3.2.6.6
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_SCALAR_UNIT_FREQUENCY'
+
+  #
+  # Complex
+  #
+
+  tosca.datatypes.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.2.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_ROOT'
+    description: >-
+      This is the default (root) TOSCA Root Type definition that all complex TOSCA Data Types derive from.
+
+  tosca.datatypes.Credential:
+    _extensions:
+      shorthand_name: Credential
+      type_qualified_name: tosca:Credential
+      specification: tosca-simple-1.0
+      specification_section: 5.2.2
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_CREDENTIAL'
+    description: >-
+      The Credential type is a complex TOSCA data Type used when describing authorization credentials used to access network
+      accessible resources.
+    derived_from: tosca.datatypes.Root
+    properties:
+      protocol:
+        description: >-
+          The optional protocol name.
+        type: string
+        required: false
+      token_type:
+        description: >-
+          The required token type.
+        type: string
+        default: password
+      token:
+        description: >-
+          The required token used as a credential for authorization or access to a networked resource.
+        type: string
+        required: false
+      keys:
+        description: >-
+          The optional list of protocol-specific keys or assertions.
+        type: map
+        entry_schema:
+          type: string
+        required: false
+      user:
+        description: >-
+          The optional user (name or ID) used for non-token based credentials.
+        type: string
+        required: false
+  
+  tosca.datatypes.network.NetworkInfo:
+    _extensions:
+      shorthand_name: NetworkInfo
+      type_qualified_name: tosca:NetworkInfo
+      specification: tosca-simple-1.0
+      specification_section: 5.2.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_NETWORKINFO'
+    description: >-
+      The Network type is a complex TOSCA data type used to describe logical network information.
+    derived_from: tosca.datatypes.Root
+    properties:
+      network_name:
+        description: >-
+          The name of the logical network. e.g., "public", "private", "admin". etc.
+        type: string
+        required: false
+      network_id:
+        description: >-
+          The unique ID of for the network generated by the network provider.
+        type: string
+        required: false
+      addresses:
+        description: >-
+          The list of IP addresses assigned from the underlying network.
+        type: list
+        entry_schema:
+          type: string
+        required: false
+  
+  tosca.datatypes.network.PortInfo:
+    _extensions:
+      shorthand_name: PortInfo
+      type_qualified_name: tosca:PortInfo
+      specification: tosca-simple-1.0
+      specification_section: 5.2.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_PORTINFO'
+    description: >-
+      The PortInfo type is a complex TOSCA data type used to describe network port information.
+    derived_from: tosca.datatypes.Root
+    properties:
+      port_name:
+        description: >-
+          The logical network port name.
+        type: string
+        required: false
+      port_id:
+        description: >-
+          The unique ID for the network port generated by the network provider.
+        type: string
+        required: false
+      network_id:
+        description: >-
+          The unique ID for the network.
+        type: string
+        required: false
+      mac_address:
+        description: >-
+          The unique media access control address (MAC address) assigned to the port.
+        type: string
+        required: false
+      addresses:
+        description: >-
+          The list of IP address(es) assigned to the port.
+        type: list
+        entry_schema:
+          type: string
+        required: false
+  
+  tosca.datatypes.network.PortDef:
+    _extensions:
+      shorthand_name: PortDef
+      type_qualified_name: tosca:PortDef
+      specification: tosca-simple-1.0
+      specification_section: 5.2.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_PORTDEF'
+    description: >-
+      The PortDef type is a TOSCA data Type used to define a network port.
+    derived_from: integer # ARIA allows deriving from primitives; it's unclear if the TOSCA spec does
+    constraints:
+      - in_range: [ 1, 65535 ]
+
+  tosca.datatypes.network.PortSpec:
+    _extensions:
+      shorthand_name: PortSpec
+      type_qualified_name: tosca:PortSpec
+      specification: tosca-simple-1.0
+      specification_section: 5.2.6
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_PORTSPEC'
+    description: >-
+      The PortSpec type is a complex TOSCA data Type used when describing port specifications for a network connection.
+    derived_from: tosca.datatypes.Root
+    properties:
+      protocol:
+        description: >-
+          The required protocol used on the port.
+        type: string
+        constraints:
+          - valid_values: [ udp, tcp, igmp ]
+        default: tcp
+      source:
+        description: >-
+          The optional source port.
+        type: tosca.datatypes.network.PortDef
+        required: false
+      source_range:
+        description: >-
+          The optional range for source port.
+        type: range
+        constraints:
+          - in_range: [ 1, 65535 ]
+        required: false
+      target:
+        description: >-
+          The optional target port.
+        type: tosca.datatypes.network.PortDef
+        required: false
+      target_range:
+        description: >-
+          The optional range for target port.
+        type: range
+        constraints:
+          - in_range: [ 1, 65535 ]
+        required: false

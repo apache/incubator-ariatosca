@@ -13,24 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
+from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
+from aria.parser.utils import cachedmethod
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
+@has_fields
+class ExtensiblePresentation(Presentation):
     """
-    General aria exception
+    A presentation that supports an optional :code:`_extensions` dict field.
     """
-    pass
 
+    @primitive_dict_field()
+    def _extensions(self):
+        pass
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    @cachedmethod
+    def _get_extension(self, name, default=None):
+        extensions = self._extensions
+        return extensions.get(name, default) if extensions is not None else None # pylint: disable=no-member

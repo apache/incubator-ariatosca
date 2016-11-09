@@ -1,0 +1,108 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+capability_types:
+
+  tosca.capabilities.Compute.Container.Architecture:
+    _extensions:
+      shorthand_name: Compute.Container.Architecture
+      type_qualified_name: tosca:Compute.Container.Architecture
+      specification: tosca-simple-nfv-1.0
+      specification_section: 8.2.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#DEFN_TYPE_CAPABILITIES_CONTAINER'
+    description: >-
+      Enhance compute architecture capability that needs to be typically use for performance sensitive NFV workloads.
+    derived_from: tosca.capabilities.Container
+    properties:
+      mem_page_size:
+        description: >-
+          Describe page size of the VM:
+  
+          * small page size is typically 4KB
+          * large page size is typically 2MB
+          * any page size maps to system default
+          * custom MB value: sets TLB size to this specific value
+        type: string
+        #constraints: # seems wrong in the spec
+        #  - [ normal, huge ]
+      cpu_allocation:
+        description: >-
+          Describes CPU allocation requirements like dedicated CPUs (cpu pinning), socket count, thread count, etc.
+        type: tosca.datatypes.compute.Container.Architecture.CPUAllocation
+        required: false
+      numa_node_count:
+        description: >-
+          Specifies the symmetric count of NUMA nodes to expose to the VM. vCPU and Memory equally split across this number of
+          NUMA.
+  
+          NOTE: the map of numa_nodes should not be specified.
+        type: integer
+        required: false 
+      numa_nodes:
+        description: >-
+          Asymmetric allocation of vCPU and Memory across the specific NUMA nodes (CPU sockets and memory banks).
+  
+          NOTE: symmetric numa_node_count should not be specified.
+        type: map
+        entry_schema: tosca.datatypes.compute.Container.Architecture.NUMA
+        required: false
+
+  tosca.capabilities.nfv.VirtualBindable:
+    _extensions:
+      shorthand_name: VirtualBindable
+      type_qualified_name: tosca:VirtualBindable
+      specification: tosca-simple-nfv-1.0
+      specification_section: 8.2.2
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc419290220'
+    description: >-
+      A node type that includes the VirtualBindable capability indicates that it can be pointed by
+      tosca.relationships.nfv.VirtualBindsTo relationship type.
+    derived_from: tosca.capabilities.Node
+
+  tosca.capabilities.nfv.Metric:
+    _extensions:
+      shorthand_name: Metric
+      type_qualified_name: tosca:Metric
+      specification: tosca-simple-nfv-1.0
+      specification_section: 8.2.3
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc418607874'
+    description: >-
+      A node type that includes the Metric capability indicates that it can be monitored using an nfv.relationships.Monitor
+      relationship type.
+    derived_from: tosca.capabilities.Endpoint
+
+  tosca.capabilities.nfv.Forwarder:
+    _extensions:
+      shorthand_name: Forwarder
+      type_qualified_name: tosca:Forwarder
+      specification: tosca-simple-nfv-1.0
+      specification_section: 10.3.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc447714718'
+    description: >-
+      A node type that includes the Forwarder capability indicates that it can be pointed by tosca.relationships.nfv.FowardsTo
+      relationship type.
+    derived_from: tosca.capabilities.Root
+
+  tosca.capabilities.nfv.VirtualLinkable:
+    _extensions:
+      shorthand_name: VirtualLinkable
+      type_qualified_name: tosca:VirtualLinkable
+      specification: tosca-simple-nfv-1.0
+      specification_section: 11.3.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html#_Toc447714735'
+    description: >-
+      A node type that includes the VirtualLinkable capability indicates that it can be pointed by
+      tosca.relationships.nfv.VirtualLinksTo relationship type.
+    derived_from: tosca.capabilities.Node

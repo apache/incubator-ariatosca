@@ -13,24 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
+import os
+import urlparse
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
+def as_file(uri):
     """
-    General aria exception
+    If the URI is a file (either the :code:`file` scheme or no scheme), then returns the absolute
+    path. Otherwise, returns None.
     """
-    pass
 
-
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    url = urlparse.urlparse(uri)
+    if (not url.scheme) or (url.scheme == 'file'):
+        return os.path.abspath(url.path)
+    return None

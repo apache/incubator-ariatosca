@@ -13,24 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
+group_types:
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
-    """
-    General aria exception
-    """
-    pass
-
-
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+  tosca.groups.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.9.1
+    description: >-
+      This is the default (root) TOSCA Group Type definition that all other TOSCA base Group Types derive from.
+    interfaces:
+      standard:
+        type: tosca.interfaces.node.lifecycle.Standard

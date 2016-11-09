@@ -13,24 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
-
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from ..utils import safe_repr, Colored, indent
 
 
-class AriaError(Exception):
-    """
-    General aria exception
-    """
-    pass
+class Style(object):
+    def __init__(self, indentation=2):
+        self.indentation = indentation
 
+    @property
+    def indent(self):
+        return indent(self.indentation)
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    @staticmethod
+    def section(value):
+        return Colored.cyan(value, bold=True)
+
+    @staticmethod
+    def type(value):
+        return Colored.blue(value, bold=True)
+
+    @staticmethod
+    def node(value):
+        return Colored.red(value, bold=True)
+
+    @staticmethod
+    def property(value):
+        return Colored.magenta(value, bold=True)
+
+    @staticmethod
+    def literal(value):
+        return Colored.yellow(safe_repr(value), bold=True)
+
+    @staticmethod
+    def meta(value):
+        return Colored.green(value)

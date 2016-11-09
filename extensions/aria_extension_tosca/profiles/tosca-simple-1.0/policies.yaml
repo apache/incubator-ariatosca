@@ -1,0 +1,71 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+policy_types:
+
+  tosca.policies.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.10.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_ROOT'
+    description: >-
+      This is the default (root) TOSCA Policy Type definition that all other TOSCA base Policy Types derive from.
+  
+  tosca.policies.Placement:
+    _extensions:
+      shorthand_name: Placement # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Placement
+      specification: tosca-simple-1.0
+      specification_section: 5.10.2
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_PLACEMENT'
+    description: >-
+      This is the default (root) TOSCA Policy Type definition that is used to govern placement of TOSCA nodes or groups of nodes.
+    derived_from: tosca.policies.Root
+  
+  tosca.policies.Scaling:
+    _extensions:
+      shorthand_name: Scaling # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Scaling
+      specification: tosca-simple-1.0
+      specification_section: 5.10.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_SCALING'
+    description: >-
+      This is the default (root) TOSCA Policy Type definition that is used to govern scaling of TOSCA nodes or groups of nodes.
+    derived_from: tosca.policies.Root
+  
+  tosca.policies.Update:
+    _extensions:
+      shorthand_name: Update # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Update
+      specification: tosca-simple-1.0
+      specification_section: 5.10.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_UPDATE'
+    description: >-
+      This is the default (root) TOSCA Policy Type definition that is used to govern update of TOSCA nodes or groups of nodes.
+    derived_from: tosca.policies.Root
+  
+  tosca.policies.Performance:
+    _extensions:
+      shorthand_name: Performance # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Performance
+      specification: tosca-simple-1.0
+      specification_section: 5.10.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_PERFORMANCE'
+    description: >-
+      This is the default (root) TOSCA Policy Type definition that is used to declare performance requirements for TOSCA nodes or
+      groups of nodes.
+    derived_from: tosca.policies.Root

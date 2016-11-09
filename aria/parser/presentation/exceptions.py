@@ -13,24 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from .. import AriaException
 
 
-class AriaError(Exception):
+class PresenterException(AriaException):
     """
-    General aria exception
+    ARIA presenter exception.
     """
-    pass
 
 
-class StorageError(AriaError):
+class PresenterNotFoundError(PresenterException):
     """
-    General storage exception
+    ARIA presenter error: presenter not found for raw.
     """
-    pass

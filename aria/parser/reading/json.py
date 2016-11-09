@@ -10,17 +10,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PyYAML==3.10
-networkx==1.9
-requests==2.7.0
-retrying==1.3.3
-blinker==1.4
-importlib==1.0.4 ; python_version < '2.7'
-ordereddict==1.1 ; python_version < '2.7'
-jsonpickle
-ruamel.yaml==0.11.15
-Jinja2==2.8
-shortuuid==0.4.3
-CacheControl[filecache]==0.11.6
-clint==0.5.1
-python-daemon==2.1.2
+from __future__ import absolute_import  # so we can import standard 'json'
+
+import json
+from collections import OrderedDict
+
+from .reader import Reader
+from .exceptions import ReaderSyntaxError
+
+
+class JsonReader(Reader):
+    """
+    ARIA JSON reader.
+    """
+
+    def read(self):
+        data = self.load()
+        try:
+            data = unicode(data)
+            return json.loads(data, object_pairs_hook=OrderedDict)
+        except Exception as e:
+            raise ReaderSyntaxError('JSON: %s' % e, cause=e)

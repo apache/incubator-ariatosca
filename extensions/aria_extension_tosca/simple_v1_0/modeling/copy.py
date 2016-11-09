@@ -13,24 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
+#
+# NodeTemplate, RelationshipTemplate
+#
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
+def get_default_raw_from_copy(presentation, field_name):
     """
-    General aria exception
+    Used for the :code:`_get_default_raw` field hook.
     """
-    pass
 
-
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    copy = presentation._raw.get('copy')
+    if copy is not None:
+        templates = getattr(presentation._container, field_name)
+        if templates is not None:
+            template = templates.get(copy)
+            if template is not None:
+                return template._raw
+    return None

@@ -13,24 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
+from aria.parser import InvalidValueError
+from aria.parser.utils import safe_repr
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
-
-
-class AriaError(Exception):
+def data_type_class_getter(cls):
     """
-    General aria exception
-    """
-    pass
+    Wraps the field value in a specialized data type class.
 
+    Can be used with the :func:`field_getter` decorator.
+    """
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    def getter(field, presentation, context=None):
+        raw = field.default_get(presentation, context)
+        if raw is not None:
+            try:
+                return cls(None, None, raw, None)
+            except ValueError as e:
+                raise InvalidValueError(
+                    '%s is not a valid "%s" in "%s": %s'
+                    % (field.full_name, field.full_cls_name, presentation._name, safe_repr(raw)),
+                    cause=e, locator=field.get_locator(raw))
+    return getter

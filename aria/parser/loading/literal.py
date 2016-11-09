@@ -13,24 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
-"""
 
-from .workflows.exceptions import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from .loader import Loader
 
 
-class AriaError(Exception):
+class LiteralLoader(Loader):
     """
-    General aria exception
-    """
-    pass
+    ARIA literal loader.
 
+    See :class:`aria.loading.LiteralLocation`.
+    """
 
-class StorageError(AriaError):
-    """
-    General storage exception
-    """
-    pass
+    def __init__(self, location):
+        self.location = location
+
+    def load(self):
+        return self.location.content

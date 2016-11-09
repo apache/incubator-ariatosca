@@ -1,0 +1,319 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+capability_types:
+
+  tosca.capabilities.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ROOT'
+    description: >-
+      This is the default (root) TOSCA Capability Type definition that all other TOSCA Capability Types derive from.
+
+  tosca.capabilities.Node:
+    _extensions:
+      shorthand_name: Node
+      type_qualified_name: tosca:Node
+      specification: tosca-simple-1.0
+      specification_section: 5.4.2
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_NODE'
+    description: >-
+      The Node capability indicates the base capabilities of a TOSCA Node Type.
+    derived_from: tosca.capabilities.Root
+
+  tosca.capabilities.Container:
+    _extensions:
+      shorthand_name: Container
+      type_qualified_name: tosca:Container
+      specification: tosca-simple-1.0
+      specification_section: 5.4.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_CONTAINER'
+    description: >-
+      The Container capability, when included on a Node Type or Template definition, indicates that the node can act as a container
+      for (or a host for) one or more other declared Node Types.
+    derived_from: tosca.capabilities.Root
+    properties:
+      num_cpus:
+        description: >-    
+          Number of (actual or virtual) CPUs associated with the Compute node.
+        type: integer
+        constraints:
+          - greater_or_equal: 1
+        required: false
+      cpu_frequency:
+        description: >-
+          Specifies the operating frequency of CPU's core. This property expresses the expected frequency of one (1) CPU as
+          provided by the property "num_cpus".
+        type: scalar-unit.frequency
+        constraints:
+          - greater_or_equal: 0.1 GHz
+        required: false
+      disk_size:
+        description: >-
+          Size of the local disk available to applications running on the Compute node (default unit is MB).
+        type: scalar-unit.size
+        constraints:
+          - greater_or_equal: 0 MB
+        required: false
+      mem_size:
+        description: >-
+          Size of memory available to applications running on the Compute node (default unit is MB).
+        type: scalar-unit.size
+        constraints:
+          - greater_or_equal: 0 MB
+        required: false
+
+  tosca.capabilities.Attachment:
+    _extensions:
+      shorthand_name: Attachment
+      type_qualified_name: tosca:Attachment
+      specification: tosca-simple-1.0
+      specification_section: 5.4.8
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ATTACHMENT'
+    description: >-
+      This is the default TOSCA type that should be used or extended to define an attachment capability of a (logical)
+      infrastructure device node (e.g., BlockStorage node).
+    derived_from: tosca.capabilities.Root
+
+  tosca.capabilities.OperatingSystem:
+    _extensions:
+      shorthand_name: OperatingSystem
+      type_qualified_name: tosca:OperatingSystem
+      specification: tosca-simple-1.0
+      specification_section: 5.4.9
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_OPSYS'
+    description: >-
+      This is the default TOSCA type that should be used to express an Operating System capability for a node.
+    derived_from: tosca.capabilities.Root
+    properties:
+      architecture:
+        description: >-
+          The Operating System (OS) architecture. Examples of valid values include: x86_32, x86_64, etc.
+        type: string
+        required: false
+      type:
+        description: >-
+          The Operating System (OS) type. Examples of valid values include: linux, aix, mac, windows, etc.
+        type: string
+        required: false
+      distribution:
+        description: >-
+          The Operating System (OS) distribution. Examples of valid values for a "type" of "Linux" would include: debian, fedora,
+          rhel and ubuntu.
+        type: string
+        required: false
+      version:
+        description: >-
+          The Operating System version.
+        type: version
+        required: false
+
+  tosca.capabilities.Scalable:
+    _extensions:
+      shorthand_name: Scalable
+      type_qualified_name: tosca:Scalable
+      specification: tosca-simple-1.0
+      specification_section: 5.4.10
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_SCALABLE'
+    description: >-
+      This is the default TOSCA type that should be used to express a scalability capability for a node.
+    derived_from: tosca.capabilities.Root
+    properties:
+      min_instances:
+        description: >-
+          This property is used to indicate the minimum number of instances that should be created for the associated TOSCA Node
+          Template by a TOSCA orchestrator.
+        type: integer
+        default: 1
+      max_instances:
+        description: >-
+          This property is used to indicate the maximum number of instances that should be created for the associated TOSCA Node
+          Template by a TOSCA orchestrator.
+        type: integer
+        default: 1
+      default_instances:
+        description: >-
+          An optional property that indicates the requested default number of instances that should be the starting number of
+          instances a TOSCA orchestrator should attempt to allocate. Note: The value for this property MUST be in the range between
+          the values set for "min_instances" and "max_instances" properties.
+        type: integer
+        required: false
+
+  #
+  # Endpoints
+  #
+
+  tosca.capabilities.Endpoint:
+    _extensions:
+      shorthand_name: Endpoint
+      type_qualified_name: tosca:Endpoint
+      specification: tosca-simple-1.0
+      specification_section: 5.4.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ENDPOINT'
+    description: >-
+      This is the default TOSCA type that should be used or extended to define a network endpoint capability. This includes the information to express a basic endpoint with a single port or a complex endpoint with multiple ports. By default the Endpoint is assumed to represent an address on a private network unless otherwise specified.
+    derived_from: tosca.capabilities.Root
+    properties:
+      protocol:
+        description: >-
+          The name of the protocol (i.e., the protocol prefix) that the endpoint accepts (any OSI Layer 4-7 protocols). Examples:
+          http, https, ftp, tcp, udp, etc.
+        type: string
+        default: tcp
+        required: true
+      port:
+        description: >-
+          The optional port of the endpoint.
+        type: tosca.datatypes.network.PortDef
+        required: false
+      secure:
+        description: >-
+          Requests for the endpoint to be secure and use credentials supplied on the ConnectsTo relationship.
+        type: boolean
+        default: false
+        required: false
+      url_path:
+        description: >-
+          The optional URL path of the endpoint's address if applicable for the protocol.
+        type: string
+        required: false
+      port_name:
+        description: >-
+          The optional name (or ID) of the network port this endpoint should be bound to.
+        type: string
+        required: false
+      network_name:
+        description: >-
+          The optional name (or ID) of the network this endpoint should be bound to. network_name: PRIVATE | PUBLIC |
+          <network_name> | <network_id>.
+        type: string
+        default: PRIVATE
+        required: false
+      initiator:
+        description: >-
+          The optional indicator of the direction of the connection.
+        type: string
+        constraints:
+          - valid_values: [ source, target, peer ]
+        default: source
+        required: false
+      ports:
+        description: >-
+          The optional map of ports the Endpoint supports (if more than one).
+        type: map
+        entry_schema:
+          type: tosca.datatypes.network.PortSpec
+        constraints:
+          - min_length: 1
+        required: false
+    attributes:
+      ip_address:
+        description: >-
+          Note: This is the IP address as propagated up by the associated node's host (Compute) container.
+        type: string
+
+  tosca.capabilities.Endpoint.Public:
+    _extensions:
+      shorthand_name: Endpoint.Public
+      type_qualified_name: tosca:Endpoint.Public
+      specification: tosca-simple-1.0
+      specification_section: 5.4.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ENDPOINT_PUBLIC'
+    description: >-
+      This capability represents a public endpoint which is accessible to the general internet (and its public IP address ranges).
+  
+      This public endpoint capability also can be used to create a floating (IP) address that the underlying network assigns from a
+      pool allocated from the application's underlying public network. This floating address is managed by the underlying network
+      such that can be routed an application's private address and remains reliable to internet clients.
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      network_name:
+        type: string
+        constraints:
+          - equal: PUBLIC
+        default: PUBLIC
+      floating:
+        description: >-
+          Indicates that the public address should be allocated from a pool of floating IPs that are associated with the network.
+        type: boolean
+        default: false
+        status: experimental
+      dns_name:
+        description: >-
+          The optional name to register with DNS.
+        type: string
+        required: false
+        status: experimental
+
+  tosca.capabilities.Endpoint.Admin:
+    _extensions:
+      shorthand_name: Endpoint.Admin
+      type_qualified_name: tosca:Endpoint.Admin
+      specification: tosca-simple-1.0
+      specification_section: 5.4.6
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ENDPOINT_ADMIN'
+    description: >-
+      This is the default TOSCA type that should be used or extended to define a specialized administrator endpoint capability.
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      secure:
+        description: >-
+          Requests for the endpoint to be secure and use credentials supplied on the ConnectsTo relationship.
+        type: boolean
+        constraints:
+          - equal: true
+        default: true
+
+  tosca.capabilities.Endpoint.Database:
+    _extensions:
+      shorthand_name: Endpoint.Database
+      type_qualified_name: tosca:Endpoint.Database
+      specification: tosca-simple-1.0
+      specification_section: 5.4.7
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ENDPOINT_DATABASE'
+    description: >-
+      This is the default TOSCA type that should be used or extended to define a specialized database endpoint capability.
+    derived_from: tosca.capabilities.Endpoint
+  
+  #
+  # Network
+  #
+
+  tosca.capabilities.network.Bindable:
+    _extensions:
+      shorthand_name: Bindable # mistake in spec? has "network." as a prefix 
+      type_qualified_name: tosca:Bindable
+      specification: tosca-simple-1.0
+      specification_section: 5.4.11
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_NETWORK_BINDABLE'
+    description: >-
+      A node type that includes the Bindable capability indicates that it can be bound to a logical network association via a
+      network port.
+    derived_from: tosca.capabilities.Node
+
+  tosca.capabilities.network.Linkable:
+    _extensions:
+      shorthand_name: Linkable
+      type_qualified_name: tosca:Linkable
+      specification: tosca-simple-1.0
+      specification_section: 7.5.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_NETWORK_LINKABLE'
+    description: >-
+      A node type that includes the Linkable capability indicates that it can be pointed by tosca.relationships.network.LinksTo
+      relationship type.
+    derived_from: tosca.capabilities.Node

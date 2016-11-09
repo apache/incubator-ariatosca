@@ -1,0 +1,158 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+relationship_types:
+
+  tosca.relationships.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.6.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_ROOT'
+    description: >-
+      This is the default (root) TOSCA Relationship Type definition that all other TOSCA Relationship Types derive from.
+    attributes:
+      tosca_id:
+        description: >-
+          A unique identifier of the realized instance of a Relationship Template that derives from any TOSCA normative type.
+        type: string
+      tosca_name:
+        description: >-
+          This attribute reflects the name of the Relationship Template as defined in the TOSCA service template. This name is not
+          unique to the realized instance model of corresponding deployed application as each template in the model can result in
+          one or more instances (e.g., scaled) when orchestrated to a provider environment.
+        type: string
+      state:
+        description: >-
+          The state of the relationship instance.
+        type: string
+        default: initial
+    interfaces:
+      Configure:
+        type: tosca.interfaces.relationship.Configure
+  
+  tosca.relationships.DependsOn:
+    _extensions:
+      shorthand_name: DependsOn
+      type_qualified_name: tosca:DependsOn
+      specification: tosca-simple-1.0
+      specification_section: 5.6.2
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_DEPENDSON'
+    description: >-
+      This type represents a general dependency relationship between two nodes.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [ tosca.capabilities.Node ]
+  
+  tosca.relationships.HostedOn:
+    _extensions:
+      shorthand_name: HostedOn
+      type_qualified_name: tosca:HostedOn
+      specification: tosca-simple-1.0
+      specification_section: 5.6.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_HOSTEDON'
+    description: >-
+      This type represents a hosting relationship between two nodes.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [ tosca.capabilities.Container ]
+  
+  tosca.relationships.ConnectsTo:
+    _extensions:
+      shorthand_name: ConnectsTo
+      type_qualified_name: tosca:ConnectsTo
+      specification: tosca-simple-1.0
+      specification_section: 5.6.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_CONNECTSTO'
+    description: >-
+      This type represents a network connection relationship between two nodes.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [ tosca.capabilities.Endpoint ]
+    properties:
+      credential:
+        type: tosca.datatypes.Credential
+        required: false
+  
+  tosca.relationships.AttachesTo:
+    _extensions:
+      shorthand_name: AttachesTo
+      type_qualified_name: tosca:AttachesTo
+      specification: tosca-simple-1.0
+      specification_section: 5.6.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_ATTACHTO'
+    description: >-
+      This type represents an attachment relationship between two nodes. For example, an AttachesTo relationship type would be used
+      for attaching a storage node to a Compute node.
+    derived_from: tosca.relationships.Root
+    valid_target_types: [ tosca.capabilities.Attachment ]
+    properties:
+      location:
+        description: >-
+          The relative location (e.g., path on the file system), which provides the root location to address an attached node.
+          e.g., a mount point / path such as '/usr/data'. Note: The user must provide it and it cannot be "root".
+        type: string
+        constraints:
+          - min_length: 1
+      device:
+        description: >-
+          The logical device name which for the attached device (which is represented by the target node in the model). e.g.,
+          '/dev/hda1'.
+        type: string
+        required: false
+    attributes:
+      device:
+        description: >-
+          The logical name of the device as exposed to the instance.
+          Note: A runtime property that gets set when the model gets instantiated by the orchestrator.
+        type: string
+  
+  tosca.relationships.RoutesTo:
+    _extensions:
+      shorthand_name: RoutesTo
+      type_qualified_name: tosca:RoutesTo
+      specification: tosca-simple-1.0
+      specification_section: 5.6.6
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc397688815'
+    description: >-
+      This type represents an intentional network routing between two Endpoints in different networks.
+    derived_from: tosca.relationships.ConnectsTo
+    valid_target_types: [ tosca.capabilities.Endpoint ]
+  
+  #
+  # Network
+  #
+  
+  tosca.relationships.network.LinksTo:
+    _extensions:
+      shorthand_name: LinksTo
+      type_qualified_name: tosca:LinksTo
+      specification: tosca-simple-1.0
+      specification_section: 7.5.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_NETWORK_LINKSTO'
+    description: >-
+      This relationship type represents an association relationship between Port and Network node types.
+    derived_from: tosca.relationships.DependsOn
+    valid_target_types: [ tosca.capabilities.network.Linkable ]
+  
+  tosca.relationships.network.BindsTo:
+    _extensions:
+      shorthand_name: network.BindsTo # mistake in spec? this seems different than the usual shorthand convention
+      type_qualified_name: tosca:BindsTo
+      specification: tosca-simple-1.0
+      specification_section: 7.5.5
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_RELATIONSHIPS_NETWORK_BINDTO'
+    description: >-
+      This type represents a network association relationship between Port and Compute node types.
+    derived_from: tosca.relationships.DependsOn
+    valid_target_types: [ tosca.capabilities.network.Bindable ]

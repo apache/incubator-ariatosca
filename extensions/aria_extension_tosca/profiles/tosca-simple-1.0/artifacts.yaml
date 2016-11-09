@@ -1,0 +1,121 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+artifact_types:
+
+  tosca.artifacts.Root:
+    _extensions:
+      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Root
+      specification: tosca-simple-1.0
+      specification_section: 5.3.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_ROOT'
+    description: >-
+      This is the default (root) TOSCA Artifact Type definition that all other TOSCA base Artifact Types derive from.
+  
+  tosca.artifacts.File:
+    _extensions:
+      shorthand_name: File
+      type_qualified_name: tosca:File
+      specification: tosca-simple-1.0
+      specification_section: 5.3.2
+    description: >-
+      This artifact type is used when an artifact definition needs to have its associated file simply treated as a file and no special handling/handlers are invoked (i.e., it is not treated as either an implementation or deployment artifact type).
+    derived_from: tosca.artifacts.Root
+  
+  #
+  # Deployments
+  #
+  
+  tosca.artifacts.Deployment:
+    _extensions:
+      shorthand_name: Deployment # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Deployment
+      specification: tosca-simple-1.0
+      specification_section: 5.3.3.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_DEPLOYMENT'
+    description: >-
+      This artifact type represents the parent type for all deployment artifacts in TOSCA. This class of artifacts typically
+      represents a binary packaging of an application or service that is used to install/create or deploy it as part of a node's
+      lifecycle.
+    derived_from: tosca.artifacts.Root
+    
+  tosca.artifacts.Deployment.Image:
+    _extensions:
+      shorthand_name: Deployment.Image
+      type_qualified_name: tosca:Deployment.Image
+      specification: tosca-simple-1.0
+      specification_section: 5.3.3.3
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_DEPLOYMENT_IMAGE'
+    description: >-
+      This artifact type represents a parent type for any "image" which is an opaque packaging of a TOSCA Node's deployment
+      (whether real or virtual) whose contents are typically already installed and pre-configured (i.e., "stateful") and prepared
+      to be run on a known target container.
+    derived_from: tosca.artifacts.Deployment
+  
+  tosca.artifacts.Deployment.Image.VM:
+    _extensions:
+      shorthand_name: Deployment.VM # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Deployment.VM
+      specification: tosca-simple-1.0
+      specification_section: 5.3.3.4
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_DEPLOY_IMAGE_VM'
+    description: >-
+      This artifact represents the parent type for all Virtual Machine (VM) image and container formatted deployment artifacts.
+      These images contain a stateful capture of a machine (e.g., server) including operating system and installed software along
+      with any configurations and can be run on another machine using a hypervisor which virtualizes typical server (i.e.,
+      hardware) resources.
+    derived_from: tosca.artifacts.Deployment
+  
+  #
+  # Implementations
+  #
+  
+  tosca.artifacts.Implementation:
+    _extensions:
+      shorthand_name: Implementation # ommitted in the spec (seems to be a mistake)
+      type_qualified_name: tosca:Implementation
+      specification: tosca-simple-1.0
+      specification_section: 5.3.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_IMPLEMENTATION'
+    description: >-
+      This artifact type represents the parent type for all implementation artifacts in TOSCA. These artifacts are used to
+      implement operations of TOSCA interfaces either directly (e.g., scripts) or indirectly (e.g., config. files).
+    derived_from: tosca.artifacts.Root
+  
+  tosca.artifacts.Implementation.Bash:
+    _extensions:
+      shorthand_name: Implementation.Bash # mistake in spec? shouldn't we have "Implementation." as prefix?
+      type_qualified_name: tosca:Implementation.Bash
+      specification: tosca-simple-1.0
+      specification_section: 5.3.4.3
+    description: >-
+      This artifact type represents a Bash script type that contains Bash commands that can be executed on the Unix Bash shell.
+    derived_from: tosca.artifacts.Implementation
+    mime_type: application/x-sh
+    file_ext: [ sh ]
+  
+  tosca.artifacts.Implementation.Python:
+    _extensions:
+      shorthand_name: Implementation.Python # mistake in spec? shouldn't we have "Implementation." as prefix?
+      type_qualified_name: tosca:Implementation.Python
+      specification: tosca-simple-1.0
+      specification_section: 5.3.4.4
+    description: >-
+      This artifact type represents a Python file that contains Python language constructs that can be executed within a Python
+      interpreter.
+    derived_from: tosca.artifacts.Implementation
+    mime_type: application/x-python
+    file_ext: [ py ]

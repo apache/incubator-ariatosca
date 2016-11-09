@@ -10,17 +10,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PyYAML==3.10
-networkx==1.9
-requests==2.7.0
-retrying==1.3.3
-blinker==1.4
-importlib==1.0.4 ; python_version < '2.7'
-ordereddict==1.1 ; python_version < '2.7'
-jsonpickle
-ruamel.yaml==0.11.15
-Jinja2==2.8
-shortuuid==0.4.3
-CacheControl[filecache]==0.11.6
-clint==0.5.1
-python-daemon==2.1.2
+from .reader import Reader
+
+
+class RawReader(Reader):
+    """
+    ARIA raw reader.
+
+    Expects to receive agnostic raw data from the loader, and so does nothing to it.
+    """
+
+    def read(self):
+        return self.load()
