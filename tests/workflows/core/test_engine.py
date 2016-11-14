@@ -54,7 +54,11 @@ class BaseTest(object):
                              tasks_graph=graph)
 
     @staticmethod
-    def _op(func, ctx, inputs=None, max_attempts=None, retry_interval=None):
+    def _op(func, ctx,
+            inputs=None,
+            max_attempts=None,
+            retry_interval=None,
+            ignore_failure=None):
         return api.task.OperationTask(
             name='task',
             operation_details={'operation': 'tests.workflows.core.test_engine.{name}'.format(
@@ -62,7 +66,8 @@ class BaseTest(object):
             node_instance=ctx.model.node_instance.get('dependency_node_instance'),
             inputs=inputs,
             max_attempts=max_attempts,
-            retry_interval=retry_interval
+            retry_interval=retry_interval,
+            ignore_failure=ignore_failure
         )
 
     @pytest.fixture(scope='function', autouse=True)
@@ -371,6 +376,24 @@ class TestRetries(BaseTest):
         invocation1, invocation2 = invocations
         assert invocation2 - invocation1 >= retry_interval
         assert global_test_holder.get('sent_task_signal_calls') == 2
+
+    def test_ignore_failure(self, workflow_context, executor):
+        @workflow
+        def mock_workflow(ctx, graph):
+            op = self._op(mock_conditional_failure_task, ctx,
+                          ignore_failure=True,
+                          inputs={'failure_count': 100},
+                          max_attempts=100)
+            graph.add_tasks(op)
+        self._execute(
+            workflow_func=mock_workflow,
+            workflow_context=workflow_context,
+            executor=executor)
+        assert workflow_context.states == ['start', 'success']
+        assert workflow_context.exception is None
+        invocations = global_test_holder.get('invocations', [])
+        assert len(invocations) == 1
+        assert global_test_holder.get('sent_task_signal_calls') == 1
 
 
 def mock_success_task():

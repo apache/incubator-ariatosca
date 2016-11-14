@@ -432,6 +432,7 @@ class Task(Model):
     max_attempts = Field(type=int, default=1, validation_func=_Validation.validate_max_attempts)
     retry_count = Field(type=int, default=0)
     retry_interval = Field(type=(int, float), default=0)
+    ignore_failure = Field(type=bool, default=False)
 
     # Operation specific fields
     name = Field(type=basestring)

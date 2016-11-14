@@ -60,6 +60,7 @@ class OperationTask(BaseTask):
                  node_instance,
                  max_attempts=None,
                  retry_interval=None,
+                 ignore_failure=None,
                  inputs=None):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
@@ -77,6 +78,8 @@ class OperationTask(BaseTask):
                              if max_attempts is None else max_attempts)
         self.retry_interval = (self.workflow_context.task_retry_interval
                                if retry_interval is None else retry_interval)
+        self.ignore_failure = (self.workflow_context.task_ignore_failure
+                               if ignore_failure is None else ignore_failure)
 
 
 class WorkflowTask(BaseTask):

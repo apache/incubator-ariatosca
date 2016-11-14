@@ -69,6 +69,7 @@ class TestOperationTask(object):
         inputs = {'inputs': True}
         max_attempts = 10
         retry_interval = 10
+        ignore_failure = True
 
         with context.workflow.current.push(workflow_context):
             model_task = api.task.OperationTask(name=name,
@@ -76,7 +77,8 @@ class TestOperationTask(object):
                                                 node_instance=node_instance,
                                                 inputs=inputs,
                                                 max_attempts=max_attempts,
-                                                retry_interval=retry_interval)
+                                                retry_interval=retry_interval,
+                                                ignore_failure=ignore_failure)
 
         assert model_task.name == name
         assert model_task.operation_details == op_details
@@ -84,9 +86,10 @@ class TestOperationTask(object):
         assert model_task.inputs == inputs
         assert model_task.retry_interval == retry_interval
         assert model_task.max_attempts == max_attempts
+        assert model_task.ignore_failure == ignore_failure
 
     def test_operation_task_default_values(self):
-        workflow_context = mock.context.simple()
+        workflow_context = mock.context.simple(task_ignore_failure=True)
         with context.workflow.current.push(workflow_context):
             model_task = api.task.OperationTask(
                 name='stub',
@@ -96,6 +99,7 @@ class TestOperationTask(object):
         assert model_task.inputs == {}
         assert model_task.retry_interval == workflow_context.task_retry_interval
         assert model_task.max_attempts == workflow_context.task_max_attempts
+        assert model_task.ignore_failure == workflow_context.task_ignore_failure
 
 
 class TestWorkflowTask(object):

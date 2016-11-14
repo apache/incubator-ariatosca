@@ -49,6 +49,7 @@ class WorkflowContext(logger.LoggerMixin):
             parameters=None,
             task_max_attempts=1,
             task_retry_interval=0,
+            task_ignore_failure=False,
             **kwargs):
         super(WorkflowContext, self).__init__(**kwargs)
         self.name = name
@@ -61,6 +62,7 @@ class WorkflowContext(logger.LoggerMixin):
         self.parameters = parameters or {}
         self.task_max_attempts = task_max_attempts
         self.task_retry_interval = task_retry_interval
+        self.task_ignore_failure = task_ignore_failure
         # TODO: execution creation should happen somewhere else
         # should be moved there, when such logical place exists
         try:

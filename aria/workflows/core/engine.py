@@ -108,7 +108,7 @@ class Engine(logger.LoggerMixin):
             self._executor.execute(task)
 
     def _handle_ended_tasks(self, task):
-        if task.status == models.Task.FAILED:
+        if task.status == models.Task.FAILED and not task.ignore_failure:
             raise exceptions.ExecutorException('Workflow failed')
         else:
             self._execution_graph.remove_node(task.id)

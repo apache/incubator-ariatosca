@@ -98,6 +98,7 @@ class OperationTask(BaseTask, logger.LoggerMixin):
             execution_id=self.workflow_context.execution_id,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
+            ignore_failure=api_task.ignore_failure
         )
         self.workflow_context.model.task.store(task)
         self._task_id = task.id

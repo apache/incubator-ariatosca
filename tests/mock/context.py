@@ -19,11 +19,11 @@ from . import models
 from ..storage import InMemoryModelDriver
 
 
-def simple():
+def simple(**kwargs):
     storage = application_model_storage(InMemoryModelDriver())
     storage.setup()
     storage.deployment.store(models.get_deployment())
-    return context.workflow.WorkflowContext(
+    final_kwargs = dict(
         name='simple_context',
         model_storage=storage,
         resource_storage=None,
@@ -33,3 +33,5 @@ def simple():
         task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL
     )
+    final_kwargs.update(kwargs)
+    return context.workflow.WorkflowContext(**final_kwargs)
