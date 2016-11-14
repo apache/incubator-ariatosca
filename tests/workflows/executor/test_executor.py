@@ -117,7 +117,7 @@ class MockTask(object):
         self.name = name
         self.inputs = inputs or {}
         self.retry_count = 0
-        self.max_retries = 0
+        self.max_attempts = 1
 
         for state in models.Task.STATES:
             setattr(self, state.upper(), state)

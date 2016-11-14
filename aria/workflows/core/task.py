@@ -96,7 +96,7 @@ class OperationTask(BaseTask, logger.LoggerMixin):
             inputs=api_task.inputs,
             status=task_model.PENDING,
             execution_id=self.workflow_context.execution_id,
-            max_retries=api_task.max_retries,
+            max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
         )
         self.workflow_context.model.task.store(task)

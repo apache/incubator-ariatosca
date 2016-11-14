@@ -30,6 +30,6 @@ def simple():
         deployment_id=models.DEPLOYMENT_ID,
         workflow_id=models.WORKFLOW_ID,
         execution_id=models.EXECUTION_ID,
-        task_max_retries=models.TASK_MAX_RETRIES,
+        task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL
     )

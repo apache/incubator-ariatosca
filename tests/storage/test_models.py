@@ -27,7 +27,10 @@ from aria.storage.models import (
     Node,
     NodeInstance,
     Blueprint,
-    Execution)
+    Execution,
+    Task
+)
+from tests.mock import models
 
 # TODO: add tests per model
 
@@ -339,3 +342,20 @@ def test_execution_status_transition():
             execution = create_execution(current_status)
             with pytest.raises(ValueError):
                 execution.status = transitioned_status
+
+
+def test_task_max_attempts_validation():
+    def create_task(max_attempts):
+        Task(execution_id='eid',
+             name='name',
+             operation_details={},
+             inputs={},
+             node_instance=models.get_dependency_node_instance(),
+             max_attempts=max_attempts)
+    create_task(max_attempts=1)
+    create_task(max_attempts=2)
+    create_task(max_attempts=Task.INFINITE_RETRIES)
+    with pytest.raises(ValueError):
+        create_task(max_attempts=0)
+    with pytest.raises(ValueError):
+        create_task(max_attempts=-2)

@@ -58,7 +58,7 @@ class OperationTask(BaseTask):
                  name,
                  operation_details,
                  node_instance,
-                 max_retries=None,
+                 max_attempts=None,
                  retry_interval=None,
                  inputs=None):
         """
@@ -73,8 +73,8 @@ class OperationTask(BaseTask):
         self.operation_details = operation_details
         self.node_instance = node_instance
         self.inputs = inputs or {}
-        self.max_retries = (self.workflow_context.task_max_retries
-                            if max_retries is None else max_retries)
+        self.max_attempts = (self.workflow_context.task_max_attempts
+                             if max_attempts is None else max_attempts)
         self.retry_interval = (self.workflow_context.task_retry_interval
                                if retry_interval is None else retry_interval)
 

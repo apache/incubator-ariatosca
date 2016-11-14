@@ -395,6 +395,16 @@ class Task(Model):
     """
     A Model which represents an task
     """
+
+    class _Validation(object):
+
+        @staticmethod
+        def validate_max_attempts(_, value, *args):
+            """Validates that max attempts is either -1 or a positive number"""
+            if value < 1 and value != Task.INFINITE_RETRIES:
+                raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
+                                 'Got {value}'.format(value=value))
+
     PENDING = 'pending'
     RETRYING = 'retrying'
     SENT = 'sent'
@@ -419,7 +429,7 @@ class Task(Model):
     due_at = Field(type=datetime, default=datetime.utcnow)
     started_at = Field(type=datetime, default=None)
     ended_at = Field(type=datetime, default=None)
-    max_retries = Field(type=int, default=1)
+    max_attempts = Field(type=int, default=1, validation_func=_Validation.validate_max_attempts)
     retry_count = Field(type=int, default=0)
     retry_interval = Field(type=(int, float), default=0)
 

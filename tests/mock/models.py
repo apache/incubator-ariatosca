@@ -24,7 +24,7 @@ BLUEPRINT_ID = 'test_blueprint_id'
 WORKFLOW_ID = 'test_workflow_id'
 EXECUTION_ID = 'test_execution_id'
 TASK_RETRY_INTERVAL = 1
-TASK_MAX_RETRIES = 1
+TASK_MAX_ATTEMPTS = 1
 
 
 def get_dependency_node():

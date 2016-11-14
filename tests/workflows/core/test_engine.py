@@ -54,14 +54,14 @@ class BaseTest(object):
                              tasks_graph=graph)
 
     @staticmethod
-    def _op(func, ctx, inputs=None, max_retries=None, retry_interval=None):
+    def _op(func, ctx, inputs=None, max_attempts=None, retry_interval=None):
         return api.task.OperationTask(
             name='task',
             operation_details={'operation': 'tests.workflows.core.test_engine.{name}'.format(
                 name=func.__name__)},
             node_instance=ctx.model.node_instance.get('dependency_node_instance'),
             inputs=inputs,
-            max_retries=max_retries,
+            max_attempts=max_attempts,
             retry_interval=retry_interval
         )
 
@@ -261,12 +261,12 @@ class TestCancel(BaseTest):
 
 class TestRetries(BaseTest):
 
-    def test_one_max_retries_and_success_on_retry(self, workflow_context, executor):
+    def test_two_max_attempts_and_success_on_retry(self, workflow_context, executor):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 1},
-                          max_retries=1)
+                          max_attempts=2)
             graph.add_tasks(op)
         self._execute(
             workflow_func=mock_workflow,
@@ -277,12 +277,12 @@ class TestRetries(BaseTest):
         assert len(global_test_holder.get('invocations', [])) == 2
         assert global_test_holder.get('sent_task_signal_calls') == 2
 
-    def test_one_max_retries_and_failure_on_retry(self, workflow_context, executor):
+    def test_two_max_attempts_and_failure_on_retry(self, workflow_context, executor):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 2},
-                          max_retries=1)
+                          max_attempts=2)
             graph.add_tasks(op)
         with pytest.raises(exceptions.ExecutorException):
             self._execute(
@@ -294,12 +294,12 @@ class TestRetries(BaseTest):
         assert len(global_test_holder.get('invocations', [])) == 2
         assert global_test_holder.get('sent_task_signal_calls') == 2
 
-    def test_two_max_retries_and_success_on_first_retry(self, workflow_context, executor):
+    def test_three_max_attempts_and_success_on_first_retry(self, workflow_context, executor):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 1},
-                          max_retries=2)
+                          max_attempts=3)
             graph.add_tasks(op)
         self._execute(
             workflow_func=mock_workflow,
@@ -310,12 +310,12 @@ class TestRetries(BaseTest):
         assert len(global_test_holder.get('invocations', [])) == 2
         assert global_test_holder.get('sent_task_signal_calls') == 2
 
-    def test_two_max_retries_and_success_on_second_retry(self, workflow_context, executor):
+    def test_three_max_attempts_and_success_on_second_retry(self, workflow_context, executor):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 2},
-                          max_retries=2)
+                          max_attempts=3)
             graph.add_tasks(op)
         self._execute(
             workflow_func=mock_workflow,
@@ -331,7 +331,7 @@ class TestRetries(BaseTest):
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 1},
-                          max_retries=-1)
+                          max_attempts=-1)
             graph.add_tasks(op)
         self._execute(
             workflow_func=mock_workflow,
@@ -357,7 +357,7 @@ class TestRetries(BaseTest):
         def mock_workflow(ctx, graph):
             op = self._op(mock_conditional_failure_task, ctx,
                           inputs={'failure_count': 1},
-                          max_retries=1,
+                          max_attempts=2,
                           retry_interval=retry_interval)
             graph.add_tasks(op)
         self._execute(
