@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import OrderedDict
-
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from ..validation import Issue
 from ..utils import (StrictList, StrictDict, FrozenList, puts, indent, as_raw, as_raw_list,\
                      as_raw_dict, as_agnostic, safe_repr)

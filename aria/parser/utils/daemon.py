@@ -16,13 +16,13 @@
 from __future__ import absolute_import  # so we can import standard 'daemon'
 
 try:
+    import os
+    import signal
+    from time import sleep
     from .console import puts, Colored
     from daemon import DaemonContext
     from daemon.pidfile import TimeoutPIDLockFile
     from daemon.runner import is_pidfile_stale
-    from time import sleep
-    import os
-    import signal
 
     def start_daemon(pidfile_path, log_path, acquire_timeout=5):
         pidfile = TimeoutPIDLockFile(pidfile_path, acquire_timeout=acquire_timeout)

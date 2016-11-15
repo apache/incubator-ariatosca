@@ -27,13 +27,12 @@ classes:
     * Model - abstract model implementation.
 """
 import json
-from uuid import uuid4
 from itertools import count
+from uuid import uuid4
 
+from .exceptions import StorageError
 from ..logger import LoggerMixin
-from ..exceptions import StorageError
 from ..tools.validation import ValidatorMixin
-
 
 __all__ = (
     'uuid_generator',

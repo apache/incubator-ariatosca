@@ -21,8 +21,10 @@ import shutil
 import json
 import sys
 import BaseHTTPServer
-from collections import OrderedDict
-
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from ..utils import (puts, Colored)
 
 class RestServer(object):

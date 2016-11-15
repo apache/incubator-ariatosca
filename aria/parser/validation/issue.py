@@ -15,7 +15,10 @@
 
 from __future__ import absolute_import  # so we can import standard 'collections'
 
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from ..utils import full_type_name
 
 class Issue(object):

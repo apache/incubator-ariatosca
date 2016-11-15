@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria import context, application_model_storage
+from aria import application_model_storage
+from aria.orchestrator import context
 
 from . import models
 from ..storage import InMemoryModelDriver

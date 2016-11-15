@@ -20,8 +20,8 @@ from aria.storage import (
     ModelStorage,
     models,
 )
-from aria.exceptions import StorageError
 from aria.storage import structures
+from aria.storage.exceptions import StorageError
 from aria.storage.structures import Model, Field, PointerField
 from aria import application_model_storage
 

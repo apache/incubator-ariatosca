@@ -23,16 +23,22 @@ import sys
 from glob import glob
 from importlib import import_module
 
+from dsl_parser.parser import parse_from_path
+from dsl_parser.tasks import prepare_deployment_plan
 from yaml import safe_load, YAMLError
 
 from aria import application_model_storage, application_resource_storage
+from aria.orchestrator.context.workflow import WorkflowContext
 from aria.logger import LoggerMixin
 from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
 from aria.tools.application import StorageManager
-from aria.context.workflow import WorkflowContext
-from aria.workflows.core.engine import Engine
-from aria.workflows.executor.thread import ThreadExecutor
-
+from aria.orchestrator.workflows.core.engine import Engine
+from aria.orchestrator.workflows.executor.thread import ThreadExecutor
+from .exceptions import (
+    AriaCliFormatInputsError,
+    AriaCliYAMLInputsError,
+    AriaCliInvalidInputsError
+)
 from .storage import (
     local_resource_storage,
     create_local_storage,
@@ -42,15 +48,7 @@ from .storage import (
     local_storage,
 )
 
-from .exceptions import (
-    AriaCliFormatInputsError,
-    AriaCliYAMLInputsError,
-    AriaCliInvalidInputsError
-)
 
-#######################################
-from dsl_parser.parser import parse_from_path
-from dsl_parser.tasks import prepare_deployment_plan
 #######################################
 
 

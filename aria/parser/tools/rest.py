@@ -15,8 +15,12 @@
 
 import os
 import urllib
-from collections import OrderedDict
 from urlparse import (urlparse, parse_qs)
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 from ..loading import LiteralLocation
 from .. import install_aria_extensions

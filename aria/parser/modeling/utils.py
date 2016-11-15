@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from collections import OrderedDict
 from random import randrange
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from shortuuid import ShortUUID
 
 from .. import InvalidValueError

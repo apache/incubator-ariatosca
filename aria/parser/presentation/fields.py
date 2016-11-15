@@ -16,7 +16,10 @@
 import threading
 from functools import wraps
 from types import MethodType
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 from ..exceptions import InvalidValueError, AriaException
 from ..utils import (FrozenList, FrozenDict, print_exception, deepcopy_with_locators, merge,

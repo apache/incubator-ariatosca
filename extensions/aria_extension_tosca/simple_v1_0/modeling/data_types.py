@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import re
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 from aria.parser import dsl_specification
 from aria.parser.presentation import (get_locator, validate_primitive)

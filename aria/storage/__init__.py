@@ -49,7 +49,7 @@ from .drivers import (
     FileSystemResourceDriver,
     FileSystemModelDriver,
 )
-from . import models
+from . import models, exceptions
 
 __all__ = (
     'ModelStorage',

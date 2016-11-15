@@ -17,7 +17,7 @@ import os
 import pytest
 
 from aria.storage.drivers import FileSystemModelDriver, Driver, ModelDriver, ResourceDriver
-from aria.exceptions import StorageError
+from aria.storage.exceptions import StorageError
 
 from . import InMemoryModelDriver, TestFileSystem
 

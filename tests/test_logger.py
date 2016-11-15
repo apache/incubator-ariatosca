@@ -23,7 +23,6 @@ from aria.logger import (create_logger,
                          LoggerMixin,
                          _DefaultConsoleFormat)
 
-
 def test_create_logger():
 
     logger = create_logger()

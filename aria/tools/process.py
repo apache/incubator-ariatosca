@@ -23,7 +23,7 @@ from signal import SIGKILL
 from time import sleep
 
 from aria.logger import LoggerMixin
-from aria.exceptions import ExecutorException, ProcessException
+from aria.orchestrator.workflows.exceptions import ExecutorException, ProcessException
 
 
 class Process(LoggerMixin):

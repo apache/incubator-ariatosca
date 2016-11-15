@@ -17,8 +17,10 @@ from __future__ import absolute_import  # so we can import standard 'collections
 
 import json
 from types import MethodType
-from collections import OrderedDict
-
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from ruamel import yaml  # @UnresolvedImport
 
 from aria.parser.utils.collections import (FrozenList, FrozenDict, StrictList, StrictDict)

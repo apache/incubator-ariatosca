@@ -18,7 +18,7 @@ import tempfile
 
 import pytest
 
-from aria.exceptions import StorageError
+from aria.storage.exceptions import StorageError
 from aria.storage import ResourceStorage, FileSystemResourceDriver
 from . import TestFileSystem
 

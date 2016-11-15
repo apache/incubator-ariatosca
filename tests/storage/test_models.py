@@ -19,7 +19,7 @@ from datetime import datetime
 import pytest
 
 from aria.storage import Model, Field
-from aria.exceptions import StorageError
+from aria.storage.exceptions import StorageError
 from aria.storage.models import (
     DeploymentUpdateStep,
     Relationship,

@@ -17,8 +17,10 @@ from __future__ import absolute_import  # so we can import standard 'collections
 
 from threading import Lock
 from functools import partial
-from collections import OrderedDict
-
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 
 class cachedmethod(object):  # pylint: disable=invalid-name

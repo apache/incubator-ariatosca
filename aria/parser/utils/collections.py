@@ -16,7 +16,11 @@
 from __future__ import absolute_import  # so we can import standard 'collections'
 
 from copy import deepcopy
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+
 
 def cls_name(cls):
     module = str(cls.__module__)

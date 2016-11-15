@@ -14,9 +14,12 @@
 # limitations under the License.
 
 from __future__ import absolute_import  # so we can import standard 'types'
-
-from collections import OrderedDict
 from types import FunctionType
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 from ..validation import Issue
 from ..utils import (StrictList, StrictDict, puts, safe_repr, as_raw, as_raw_list, as_raw_dict,

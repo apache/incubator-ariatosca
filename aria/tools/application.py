@@ -18,15 +18,15 @@ Convenience storage related tools.
 # TODO rename module name
 """
 
-import os
 import json
+import os
 import shutil
 import tarfile
 import tempfile
 from datetime import datetime
 
+from aria.storage.exceptions import StorageError
 from aria.logger import LoggerMixin
-from aria.exceptions import StorageError
 
 
 class StorageManager(LoggerMixin):

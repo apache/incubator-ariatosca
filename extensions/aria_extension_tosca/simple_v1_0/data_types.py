@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import re
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 from functools import total_ordering
 from datetime import datetime, tzinfo, timedelta
 

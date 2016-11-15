@@ -16,7 +16,7 @@
 import pytest
 
 from aria.storage import _ModelApi, models
-from aria.exceptions import StorageError
+from aria.storage.exceptions import StorageError
 
 from . import InMemoryModelDriver
 

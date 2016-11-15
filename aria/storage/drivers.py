@@ -27,18 +27,16 @@ classes:
     * FileSystemResourceDriver - file system implementation for resource storage driver.
 """
 
+import distutils.dir_util                                                                           # pylint: disable=no-name-in-module, import-error
 import os
 import shutil
-# pylint has an issue with distutils and virtualenvs: https://github.com/PyCQA/pylint/issues/73
-import distutils.dir_util                                                                           # pylint: disable=no-name-in-module, import-error
 from functools import partial
 from multiprocessing import RLock
 
 import jsonpickle
 
-from ..exceptions import StorageError
 from ..logger import LoggerMixin
-
+from .exceptions import StorageError
 
 __all__ = (
     'ModelDriver',
