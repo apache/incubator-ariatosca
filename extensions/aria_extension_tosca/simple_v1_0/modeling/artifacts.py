@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
+from aria.utils.collections import OrderedDict
 
 #
 # NodeType, NodeTemplate
 #
+
 
 def get_inherited_artifact_definitions(context, presentation, for_presentation=None):
 

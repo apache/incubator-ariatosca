@@ -22,7 +22,7 @@ from .VERSION import version as __version__
 from .orchestrator.decorators import workflow, operation
 from .storage import ModelStorage, ResourceStorage, models, ModelDriver, ResourceDriver
 from . import (
-    tools,
+    utils,
     parser,
     storage,
     orchestrator,

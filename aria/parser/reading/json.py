@@ -13,11 +13,8 @@
 from __future__ import absolute_import  # so we can import standard 'json'
 
 import json
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 
+from ...utils.collections import OrderedDict
 from .reader import Reader
 from .exceptions import ReaderSyntaxError
 

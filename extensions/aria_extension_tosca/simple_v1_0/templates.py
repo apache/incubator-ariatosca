@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.collections import FrozenDict, FrozenList
+from aria.utils.caching import cachedmethod
 from aria.parser import dsl_specification
 from aria.parser.presentation import (has_fields, primitive_field, primitive_list_field,
                                       object_field, object_list_field, object_dict_field,
                                       object_sequenced_list_field, field_validator,
                                       type_validator, list_type_validator)
-from aria.parser.utils import (FrozenDict, FrozenList, cachedmethod)
 
 from .assignments import (PropertyAssignment, AttributeAssignment, RequirementAssignment,
                           CapabilityAssignment, InterfaceAssignment, ArtifactAssignment)

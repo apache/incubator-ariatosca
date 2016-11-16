@@ -27,6 +27,7 @@ def cls_name(cls):
     name = str(cls.__name__)
     return name if module == '__builtin__' else '%s.%s' % (module, name)
 
+
 class FrozenList(list):
     """
     An immutable list.
@@ -256,6 +257,8 @@ def prune(value, is_removable_function=is_removable):
 
     return value
 
+
+# TODO (left for tal): Move following two methods to some place parser specific
 def deepcopy_with_locators(value):
     """
     Like :code:`deepcopy`, but also copies over locators.
@@ -264,6 +267,7 @@ def deepcopy_with_locators(value):
     res = deepcopy(value)
     copy_locators(res, value)
     return res
+
 
 def copy_locators(target, source):
     """

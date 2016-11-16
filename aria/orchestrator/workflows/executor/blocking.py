@@ -17,7 +17,7 @@
 Blocking executor
 """
 
-from aria.tools import module
+from aria.utils import imports
 from .base import BaseExecutor
 
 
@@ -29,7 +29,7 @@ class CurrentThreadBlockingExecutor(BaseExecutor):
     def execute(self, task):
         self._task_started(task)
         try:
-            task_func = module.load_attribute(task.operation_mapping)
+            task_func = imports.load_attribute(task.operation_mapping)
             task_func(ctx=task.context, **task.inputs)
             self._task_succeeded(task)
         except BaseException as e:

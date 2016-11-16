@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.caching import cachedmethod
+from aria.utils.console import puts
+from aria.utils.formatting import as_raw
 from aria.parser import dsl_specification
 from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknown_fields,
                                       short_form_field, primitive_field, primitive_list_field,
                                       primitive_dict_unknown_fields, object_field,
                                       object_list_field, object_dict_field, field_validator,
                                       type_validator)
-from aria.parser.utils import (cachedmethod, puts, as_raw)
 
 from .modeling.data_types import (get_data_type, get_data_type_value, get_property_constraints,
                                   apply_constraint_to_value)

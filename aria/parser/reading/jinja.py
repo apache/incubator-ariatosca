@@ -14,7 +14,7 @@ import os
 
 from jinja2 import Template
 
-from .. import VERSION
+from ...VERSION import version
 from ..loading import LiteralLocation, LiteralLoader
 from .reader import Reader
 from .exceptions import ReaderSyntaxError
@@ -22,7 +22,7 @@ from .exceptions import ReaderSyntaxError
 
 # TODO: we could put a lot of other useful stuff here.
 CONTEXT = {
-    'ARIA_VERSION': VERSION,
+    'ARIA_VERSION': version,
     'ENV': os.environ}
 
 

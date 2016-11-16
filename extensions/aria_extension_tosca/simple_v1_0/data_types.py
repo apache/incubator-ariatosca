@@ -14,18 +14,16 @@
 # limitations under the License.
 
 import re
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 from functools import total_ordering
 from datetime import datetime, tzinfo, timedelta
 
 from aria.parser import dsl_specification
-from aria.parser.utils import StrictDict, safe_repr
+from aria.utils.collections import StrictDict, OrderedDict
+from aria.utils.formatting import safe_repr
 
 from .modeling.data_types import (coerce_to_data_type_class, report_issue_for_bad_format,
                                   coerce_value)
+
 
 class Timezone(tzinfo):
     """

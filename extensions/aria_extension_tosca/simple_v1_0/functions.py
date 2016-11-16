@@ -15,9 +15,10 @@
 
 from cStringIO import StringIO
 
+from aria.utils.collections import FrozenList
+from aria.utils.formatting import as_raw, safe_repr
 from aria.parser import (dsl_specification, InvalidValueError)
 from aria.parser.modeling import (Function, CannotEvaluateFunctionException)
-from aria.parser.utils import (FrozenList, as_raw, safe_repr)
 from aria.parser.validation import Issue
 
 #

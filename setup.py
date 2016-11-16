@@ -16,22 +16,29 @@
 
 import os
 import sys
+
 from setuptools import setup, find_packages
 
 _PACKAGE_NAME = 'aria'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
+_EXTENSION_DIR = 'extensions'
+_EXTENSION_NAMES = [
+    'aria_extension_tosca'
+]
 
 if (sys.version_info[0], sys.version_info[1]) not in _PYTHON_SUPPORTED_VERSIONS:
     raise NotImplementedError(
         '{0} Package support Python version 2.6 & 2.7 Only'.format(
             _PACKAGE_NAME))
 
+root_dir = os.path.dirname(__file__)
+
 version = '0.1.0'
-execfile(os.path.join('.', _PACKAGE_NAME, 'VERSION.py'))
+execfile(os.path.join(root_dir, _PACKAGE_NAME, 'VERSION.py'))
 
 
 try:
-    with open('./requirements.txt') as requirements:
+    with open(os.path.join(root_dir, 'requirements.txt')) as requirements:
         install_requires = [requirement.strip() for requirement in requirements.readlines()]
 except IOError:
     install_requires = []
@@ -45,7 +52,6 @@ setup(
     author='aria',
     author_email='dev@ariatosca.incubator.apache.org',
     url='http://ariatosca.org',
-
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -58,17 +64,16 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
         'Topic :: System :: Systems Administration'],
-
-    packages=find_packages(exclude=('*tests*',)),
+    packages=find_packages(include=['aria*']) +
+             find_packages(where=_EXTENSION_DIR,
+                           include=['{0}*'.format(name) for name in _EXTENSION_NAMES]),
+    package_dir=dict((name, '{0}/{1}'.format(_EXTENSION_DIR, name)) for name in _EXTENSION_NAMES),
     package_data={
-        'aria.tools': [
-            'web/**'],
         'aria_extension_tosca': [
             'profiles/tosca-simple-1.0/**',
-            'profiles/tosca-simple-nfv-1.0/**'],
-        'aria_extension_open_o': [
-            'web/**']},
-
+            'profiles/tosca-simple-nfv-1.0/**'
+        ]
+    },
     zip_safe=False,
     install_requires=install_requires,
     entry_points={

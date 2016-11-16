@@ -20,7 +20,7 @@ Thread based executor
 import Queue
 import threading
 
-from aria.tools import module
+from aria.utils import imports
 from .base import BaseExecutor
 
 
@@ -55,7 +55,7 @@ class ThreadExecutor(BaseExecutor):
                 task = self._queue.get(timeout=1)
                 self._task_started(task)
                 try:
-                    task_func = module.load_attribute(task.operation_mapping)
+                    task_func = imports.load_attribute(task.operation_mapping)
                     task_func(ctx=task.context, **task.inputs)
                     self._task_succeeded(task)
                 except BaseException as e:

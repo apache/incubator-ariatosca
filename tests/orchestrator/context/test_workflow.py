@@ -59,5 +59,6 @@ class TestWorkflowContext(object):
 def storage():
     result = application_model_storage(InMemoryModelDriver())
     result.setup()
+    result.blueprint.store(models.get_blueprint())
     result.deployment.store(models.get_deployment())
     return result

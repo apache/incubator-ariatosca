@@ -16,11 +16,8 @@
 import sys
 import pkgutil
 
-from .exceptions import AriaException, InvalidValueError
 from .specification import (DSL_SPECIFICATION, DSL_SPECIFICATION_PACKAGES, dsl_specification,
                             iter_spec)
-
-VERSION = '0.1'
 
 
 def install_aria_extensions():
@@ -45,16 +42,11 @@ MODULES = (
     'modeling',
     'presentation',
     'reading',
-    'tools',
-    'utils',
     'validation')
 
 __all__ = (
     'MODULES',
-    'VERSION',
     'install_aria_extensions',
-    'AriaException',
-    'InvalidValueError',
     'DSL_SPECIFICATION',
     'DSL_SPECIFICATION_PACKAGES',
     'dsl_specification',

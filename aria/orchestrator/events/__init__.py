@@ -36,7 +36,7 @@ import os
 
 from blinker import signal
 
-from aria.tools import plugin_installer
+from aria.utils.plugin import plugin_installer
 
 # workflow engine task signals:
 sent_task_signal = signal('sent_task_signal')

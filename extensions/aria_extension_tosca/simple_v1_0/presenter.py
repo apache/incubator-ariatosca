@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.collections import FrozenList, EMPTY_READ_ONLY_LIST
+from aria.utils.caching import cachedmethod
 from aria.parser.presentation import Presenter
-from aria.parser.utils import (FrozenList, EMPTY_READ_ONLY_LIST, cachedmethod)
 
 from .functions import (Concat, Token, GetInput, GetProperty, GetAttribute, GetOperationOutput,
                         GetNodesOfType, GetArtifact)

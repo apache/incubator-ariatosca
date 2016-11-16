@@ -14,7 +14,12 @@
 # limitations under the License.
 
 from .issue import Issue
-from ..utils import (LockedList, FrozenList, print_exception, puts, Colored, indent, as_raw)
+from ...utils.threading import LockedList
+from ...utils.collections import FrozenList
+from ...utils.exceptions import print_exception
+from ...utils.console import puts, Colored, indent
+from ...utils.formatting import as_raw
+
 
 class ValidationContext(object):
     """

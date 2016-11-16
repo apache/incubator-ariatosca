@@ -15,15 +15,12 @@
 
 from random import randrange
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 from shortuuid import ShortUUID
 
-from .. import InvalidValueError
+from ...utils.collections import OrderedDict
+from ...utils.console import puts
+from ..exceptions import InvalidValueError
 from ..presentation import Value
-from ..utils import puts
 from .exceptions import CannotEvaluateFunctionException
 
 # UUID = ShortUUID() # default alphabet is base57, which is alphanumeric without visually ambiguous

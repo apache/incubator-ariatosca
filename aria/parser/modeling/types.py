@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-from ..utils import StrictList, StrictDict, puts, as_raw
+from ...utils.collections import StrictList, StrictDict, OrderedDict
+from ...utils.formatting import as_raw
+from ...utils.console import puts
 
 
 class Type(object):

@@ -32,7 +32,7 @@ from uuid import uuid4
 
 from .exceptions import StorageError
 from ..logger import LoggerMixin
-from ..tools.validation import ValidatorMixin
+from ..utils.validation import ValidatorMixin
 
 __all__ = (
     'uuid_generator',

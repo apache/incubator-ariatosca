@@ -16,13 +16,15 @@
 import os
 from urlparse import urljoin
 
-from ..utils import StrictList, as_file
+from ...utils.collections import StrictList
+from ...utils.uris import as_file
 from .loader import Loader
 from .file import FileTextLoader
 from .request import RequestTextLoader
 from .exceptions import DocumentNotFoundException
 
 URI_LOADER_PREFIXES = StrictList(value_class=basestring)
+
 
 class UriTextLoader(Loader):
     """

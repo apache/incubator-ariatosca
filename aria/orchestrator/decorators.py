@@ -20,7 +20,7 @@ Workflow and operation decorators
 from uuid import uuid4
 from functools import partial, wraps
 
-from aria.tools.validation import validate_function_arguments
+from aria.utils.validation import validate_function_arguments
 
 from . import context
 from .workflows.api import task_graph

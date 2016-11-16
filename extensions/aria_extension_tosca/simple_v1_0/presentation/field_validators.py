@@ -15,9 +15,9 @@
 
 import re
 
+from aria.utils.formatting import safe_repr
 from aria.parser import dsl_specification
 from aria.parser.presentation import (report_issue_for_unknown_type, derived_from_validator)
-from aria.parser.utils import safe_repr
 from aria.parser.validation import Issue
 
 from ..modeling.data_types import (get_primitive_data_type, get_data_type_name, coerce_value,

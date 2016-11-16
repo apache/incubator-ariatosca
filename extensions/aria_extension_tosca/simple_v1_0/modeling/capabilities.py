@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-
-from aria.parser.utils import deepcopy_with_locators
+from aria.utils.collections import deepcopy_with_locators, OrderedDict
 from aria.parser.validation import Issue
 
 from .properties import (convert_property_definitions_to_values, merge_raw_property_definitions,

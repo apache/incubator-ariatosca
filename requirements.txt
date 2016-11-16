@@ -23,4 +23,3 @@ Jinja2==2.8
 shortuuid==0.4.3
 CacheControl[filecache]==0.11.6
 clint==0.5.1
-python-daemon==2.1.2

@@ -13,13 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
+from ...utils.collections import StrictList, StrictDict, FrozenList, OrderedDict
+from ...utils.formatting import as_raw, as_raw_list, as_raw_dict, as_agnostic, safe_repr
+from ...utils.console import puts, indent
 from ..validation import Issue
-from ..utils import (StrictList, StrictDict, FrozenList, puts, indent, as_raw, as_raw_list,\
-                     as_raw_dict, as_agnostic, safe_repr)
 from .elements import Element, Parameter
 from .utils import (validate_dict_values, validate_list_values, coerce_dict_values,
                     coerce_list_values, dump_list_values, dump_dict_values, dump_parameters,

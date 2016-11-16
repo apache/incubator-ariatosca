@@ -14,9 +14,9 @@
 # limitations under the License.
 
 
-from .. import AriaException
+from ...exceptions import AriaException
+from ...utils.exceptions import print_exception
 from ..validation import Issue
-from ..utils import print_exception
 
 
 class Consumer(object):

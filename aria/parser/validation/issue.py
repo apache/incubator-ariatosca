@@ -15,11 +15,9 @@
 
 from __future__ import absolute_import  # so we can import standard 'collections'
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-from ..utils import full_type_name
+from ...utils.collections import OrderedDict
+from ...utils.formatting import full_type_name
+
 
 class Issue(object):
     PLATFORM = 0

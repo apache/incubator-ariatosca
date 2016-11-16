@@ -16,7 +16,7 @@
 
 import os
 
-from ..utils import as_file
+from ...utils.uris import as_file
 
 
 class Location(object):

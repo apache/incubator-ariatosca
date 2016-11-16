@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.formatting import safe_repr
 from aria.parser import InvalidValueError
-from aria.parser.utils import safe_repr
+
 
 def data_type_class_getter(cls):
     """

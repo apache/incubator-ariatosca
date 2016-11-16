@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ...utils.formatting import safe_repr
 from ..loading import UriLocation, LiteralLocation
 from ..reading import JsonReader
-from ..utils import safe_repr
 from .consumer import Consumer
 
 

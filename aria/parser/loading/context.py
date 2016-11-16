@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-from ..utils import StrictList
+from ...utils.collections import StrictList
 from .source import DefaultLoaderSource
 
 

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.caching import cachedmethod
 from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
-from aria.parser.utils import cachedmethod
 
 @has_fields
 class ExtensiblePresentation(Presentation):

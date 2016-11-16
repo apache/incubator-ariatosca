@@ -14,16 +14,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import  # so we can import standard 'types'
+
 from types import FunctionType
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-
+from ...utils.collections import StrictList, StrictDict, deepcopy_with_locators, OrderedDict
+from ...utils.formatting import as_raw, as_raw_list, as_raw_dict, as_agnostic, safe_repr
+from ...utils.console import puts
 from ..validation import Issue
-from ..utils import (StrictList, StrictDict, puts, safe_repr, as_raw, as_raw_list, as_raw_dict,
-                     as_agnostic, deepcopy_with_locators)
 from .elements import ModelElement, Parameter
 from .instance_elements import (ServiceInstance, Node, Capability, Relationship, Artifact, Group,
                                 Policy, GroupPolicy, GroupPolicyTrigger, Mapping, Substitution,

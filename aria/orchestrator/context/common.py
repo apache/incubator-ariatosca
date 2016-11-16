@@ -19,7 +19,6 @@ from uuid import uuid4
 
 from aria import logger
 from aria.storage import exceptions
-from aria.tools.lru_cache import lru_cache
 
 
 class BaseContext(logger.LoggerMixin):
@@ -76,7 +75,6 @@ class BaseContext(logger.LoggerMixin):
         return self._resource
 
     @property
-    @lru_cache()
     def blueprint(self):
         """
         The blueprint model
@@ -84,7 +82,6 @@ class BaseContext(logger.LoggerMixin):
         return self.model.blueprint.get(self.deployment.blueprint_id)
 
     @property
-    @lru_cache()
     def deployment(self):
         """
         The deployment model
@@ -134,7 +131,6 @@ class BaseContext(logger.LoggerMixin):
                                                     destination=destination,
                                                     path=path)
 
-    @lru_cache()
     def get_resource(self, path=None):
         """
         Read a deployment resource as string from the resource storage

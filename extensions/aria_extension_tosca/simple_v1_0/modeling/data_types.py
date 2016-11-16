@@ -14,14 +14,12 @@
 # limitations under the License.
 
 import re
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 
+from aria.utils.collections import OrderedDict
+from aria.utils.formatting import full_type_name, safe_repr
+from aria.utils.imports import import_fullname
 from aria.parser import dsl_specification
 from aria.parser.presentation import (get_locator, validate_primitive)
-from aria.parser.utils import (import_fullname, full_type_name, safe_repr)
 from aria.parser.validation import Issue
 
 from ..functions import get_function

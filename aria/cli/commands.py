@@ -31,7 +31,7 @@ from aria import application_model_storage, application_resource_storage
 from aria.orchestrator.context.workflow import WorkflowContext
 from aria.logger import LoggerMixin
 from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
-from aria.tools.application import StorageManager
+from aria.utils.application import StorageManager
 from aria.orchestrator.workflows.core.engine import Engine
 from aria.orchestrator.workflows.executor.thread import ThreadExecutor
 from .exceptions import (

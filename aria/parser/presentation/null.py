@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils import deepcopy_with_locators
+from ...utils.collections import deepcopy_with_locators
 
 
 class Null(object):

@@ -13,11 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
-from .utils import full_type_name
+from ..utils.collections import OrderedDict
+from ..utils.formatting import full_type_name
 
 DSL_SPECIFICATION = {}
 DSL_SPECIFICATION_PACKAGES = []

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.caching import cachedmethod
 from aria.parser import dsl_specification
-from aria.parser.utils import cachedmethod
 from aria.parser.presentation import (has_fields, object_sequenced_list_field, field_validator)
 
 from .misc import ConstraintClause

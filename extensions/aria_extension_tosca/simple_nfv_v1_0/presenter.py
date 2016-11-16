@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.parser.utils import (FrozenList, EMPTY_READ_ONLY_LIST, cachedmethod)
+from aria.utils.collections import FrozenList, EMPTY_READ_ONLY_LIST
+from aria.utils.caching import cachedmethod
 
 from ..simple_v1_0 import ToscaSimplePresenter1_0
+
 
 class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0): # pylint: disable=invalid-name
     """

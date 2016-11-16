@@ -22,7 +22,7 @@ import threading
 
 import jsonpickle
 
-from aria.tools import module
+from aria.utils import imports
 from .base import BaseExecutor
 
 
@@ -90,7 +90,7 @@ class _MultiprocessMessage(object):
 def _multiprocess_handler(queue, ctx, task_id, operation_mapping, operation_inputs):
     queue.put(_MultiprocessMessage(type='task_started', task_id=task_id))
     try:
-        task_func = module.load_attribute(operation_mapping)
+        task_func = imports.load_attribute(operation_mapping)
         task_func(ctx=ctx, **operation_inputs)
         queue.put(_MultiprocessMessage(type='task_succeeded', task_id=task_id))
     except BaseException as e:

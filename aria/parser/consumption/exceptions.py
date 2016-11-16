@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-from .. import AriaException
+from ...exceptions import AriaException
 
 
 class ConsumerException(AriaException):

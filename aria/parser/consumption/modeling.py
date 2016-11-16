@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils import json_dumps, yaml_dumps
+from ...utils.formatting import json_dumps, yaml_dumps
 from .consumer import Consumer, ConsumerChain
 
 

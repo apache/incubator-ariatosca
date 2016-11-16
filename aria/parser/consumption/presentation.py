@@ -14,7 +14,8 @@
 # limitations under the License.
 
 
-from ..utils import FixedThreadPoolExecutor, json_dumps, yaml_dumps
+from ...utils.threading import FixedThreadPoolExecutor
+from ...utils.formatting import json_dumps, yaml_dumps
 from ..loading import UriLocation
 from ..reading import AlreadyReadException
 from ..presentation import PresenterNotFoundError

@@ -16,15 +16,19 @@
 from clint.textui.core import STDOUT
 from clint.textui import puts as _puts
 from clint.textui.colored import ColoredString as _ColoredString
+from clint.textui import indent  # pylint: disable=unused-import
 
 from .formatting import safe_str
+
 
 class ColoredString(_ColoredString):
     def __init__(self, color, str_, always_color=False, bold=False):
         super(ColoredString, self).__init__(color, safe_str(str_), always_color, bold)
 
+
 def puts(string='', newline=True, stream=STDOUT):
     _puts(safe_str(string), newline, stream)
+
 
 class Colored(object):
     @staticmethod

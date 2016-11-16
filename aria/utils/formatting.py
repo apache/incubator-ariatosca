@@ -17,13 +17,9 @@ from __future__ import absolute_import  # so we can import standard 'collections
 
 import json
 from types import MethodType
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 from ruamel import yaml  # @UnresolvedImport
 
-from aria.parser.utils.collections import (FrozenList, FrozenDict, StrictList, StrictDict)
+from .collections import FrozenList, FrozenDict, StrictList, StrictDict, OrderedDict
 
 # Add our types to ruamel.yaml (for round trips)
 yaml.representer.RoundTripRepresenter.add_representer(

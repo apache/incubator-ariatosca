@@ -16,14 +16,15 @@
 import threading
 from functools import wraps
 from types import MethodType
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
 
-from ..exceptions import InvalidValueError, AriaException
-from ..utils import (FrozenList, FrozenDict, print_exception, deepcopy_with_locators, merge,
-                     cachedmethod, puts, as_raw, full_type_name, safe_repr)
+from ...exceptions import AriaException
+from ...utils.collections import FrozenDict, FrozenList, deepcopy_with_locators, merge, OrderedDict
+from ...utils.caching import cachedmethod
+from ...utils.console import puts
+from ...utils.formatting import as_raw, safe_repr, full_type_name
+from ...utils.exceptions import print_exception
+from ..exceptions import InvalidValueError
+
 from .null import NULL
 from .utils import validate_primitive
 

@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ...utils.caching import HasCachedMethods
+from ...utils.collections import deepcopy_with_locators
+from ...utils.formatting import full_type_name, safe_repr
+from ...utils.console import puts
 from ..validation import Issue
-from ..utils import HasCachedMethods, full_type_name, deepcopy_with_locators, puts, safe_repr
 from .null import none_to_null
 from .utils import (get_locator, validate_no_short_form, validate_no_unknown_fields,
                     validate_known_fields, validate_primitive)

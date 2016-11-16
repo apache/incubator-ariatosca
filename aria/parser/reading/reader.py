@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils import OpenClose
+from ...utils.openclose import OpenClose
 from .exceptions import ReaderException, AlreadyReadException
 
 

@@ -19,9 +19,28 @@ Every sub-package in Aria has a module with its exceptions.
 aria.exceptions module conveniently collects all these exceptions for easier imports.
 """
 
+import sys
+
 
 class AriaError(Exception):
     """
-    General aria exception
+    Base class for ARIA errors.
     """
     pass
+
+
+class AriaException(Exception):
+    """
+    Base class for ARIA exceptions.
+    """
+
+    def __init__(self, message=None, cause=None, cause_traceback=None):
+        super(AriaException, self).__init__(message)
+        self.cause = cause
+        self.issue = None
+        if cause_traceback is None:
+            _, e, traceback = sys.exc_info()
+            if cause == e:
+                # Make sure it's our traceback
+                cause_traceback = traceback
+        self.cause_tb = cause_traceback

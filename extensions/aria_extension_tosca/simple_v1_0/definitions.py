@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aria.utils.collections import FrozenDict
+from aria.utils.caching import cachedmethod
 from aria.parser import dsl_specification
-from aria.parser.utils import (FrozenDict, cachedmethod)
 from aria.parser.presentation import (has_fields, short_form_field, allow_unknown_fields,
                                       primitive_field, primitive_list_field, object_field,
                                       object_list_field, object_dict_field,

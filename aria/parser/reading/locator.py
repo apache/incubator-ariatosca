@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils import puts, Colored, indent
+from ...utils.console import puts, Colored, indent
 
 # We are inheriting the primitive types in order to add the ability to set
 # an attribute (_locator) on them.
