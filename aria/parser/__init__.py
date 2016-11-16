@@ -13,28 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import pkgutil
+from .specification import (DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION_URLS, dsl_specification,
+                            iter_specifications)
 
-from .specification import (DSL_SPECIFICATION, DSL_SPECIFICATION_PACKAGES, dsl_specification,
-                            iter_spec)
-
-
-def install_aria_extensions():
-    """
-    Iterates all Python packages with names beginning with :code:`aria_extension_` and calls
-    their :code:`install_aria_extension` function if they have it.
-    """
-
-    for loader, module_name, _ in pkgutil.iter_modules():
-        if module_name.startswith('aria_extension_'):
-            module = loader.find_module(module_name).load_module(module_name)
-
-            if hasattr(module, 'install_aria_extension'):
-                module.install_aria_extension()
-
-            # Loading the module has contaminated sys.modules, so we'll clean it up
-            del sys.modules[module_name]
 
 MODULES = (
     'consumption',
@@ -46,8 +27,7 @@ MODULES = (
 
 __all__ = (
     'MODULES',
-    'install_aria_extensions',
-    'DSL_SPECIFICATION',
     'DSL_SPECIFICATION_PACKAGES',
+    'DSL_SPECIFICATION_URLS',
     'dsl_specification',
-    'iter_spec')
+    'iter_specifications')

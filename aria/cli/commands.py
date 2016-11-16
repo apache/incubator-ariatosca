@@ -20,20 +20,34 @@ CLI various commands implementation
 import json
 import os
 import sys
+import csv
 from glob import glob
 from importlib import import_module
 
-from dsl_parser.parser import parse_from_path
-from dsl_parser.tasks import prepare_deployment_plan
 from yaml import safe_load, YAMLError
 
-from aria import application_model_storage, application_resource_storage
-from aria.orchestrator.context.workflow import WorkflowContext
-from aria.logger import LoggerMixin
-from aria.storage import FileSystemModelDriver, FileSystemResourceDriver
-from aria.utils.application import StorageManager
-from aria.orchestrator.workflows.core.engine import Engine
-from aria.orchestrator.workflows.executor.thread import ThreadExecutor
+from .. import (application_model_storage, application_resource_storage)
+from ..logger import LoggerMixin
+from ..storage import (FileSystemModelDriver, FileSystemResourceDriver)
+from ..orchestrator.context.workflow import WorkflowContext
+from ..orchestrator.workflows.core.engine import Engine
+from ..orchestrator.workflows.executor.thread import ThreadExecutor
+from ..parser import (DSL_SPECIFICATION_PACKAGES, iter_specifications)
+from ..parser.consumption import (
+    ConsumptionContext,
+    ConsumerChain,
+    Read,
+    Validate,
+    Model,
+    Types,
+    Inputs,
+    Instance
+)
+from ..parser.loading import (UriLocation, URI_LOADER_PREFIXES)
+from ..utils.application import StorageManager
+from ..utils.caching import cachedmethod
+from ..utils.console import (puts, Colored, indent)
+from ..utils.imports import (import_fullname, import_modules)
 from .exceptions import (
     AriaCliFormatInputsError,
     AriaCliYAMLInputsError,
@@ -49,9 +63,6 @@ from .storage import (
 )
 
 
-#######################################
-
-
 class BaseCommand(LoggerMixin):
     """
     Base class for CLI commands
@@ -60,7 +71,7 @@ class BaseCommand(LoggerMixin):
     def __repr__(self):
         return 'AriaCli({cls.__name__})'.format(cls=self.__class__)
 
-    def __call__(self, args_namespace):
+    def __call__(self, args_namespace, unknown_args):
         """
         __call__ method is called when running command
         :param args_namespace:
@@ -128,8 +139,8 @@ class InitCommand(BaseCommand):
 
     _IN_VIRTUAL_ENV = hasattr(sys, 'real_prefix')
 
-    def __call__(self, args_namespace):
-        super(InitCommand, self).__call__(args_namespace)
+    def __call__(self, args_namespace, unknown_args):
+        super(InitCommand, self).__call__(args_namespace, unknown_args)
         self._workspace_setup()
         inputs = self.parse_inputs(args_namespace.input) if args_namespace.input else None
         plan, deployment_plan = self._parse_blueprint(args_namespace.blueprint_path, inputs)
@@ -164,10 +175,8 @@ class InitCommand(BaseCommand):
         return local_storage()
 
     def _parse_blueprint(self, blueprint_path, inputs=None):
-        plan = parse_from_path(blueprint_path)
-        self.logger.info('blueprint parsed successfully')
-        deployment_plan = prepare_deployment_plan(plan=plan.copy(), inputs=inputs)
-        return plan, deployment_plan
+        # TODO
+        pass
 
     @staticmethod
     def _create_storage(
@@ -206,8 +215,8 @@ class ExecuteCommand(BaseCommand):
     ``execute`` command implementation
     """
 
-    def __call__(self, args_namespace):
-        super(ExecuteCommand, self).__call__(args_namespace)
+    def __call__(self, args_namespace, unknown_args):
+        super(ExecuteCommand, self).__call__(args_namespace, unknown_args)
         parameters = (self.parse_inputs(args_namespace.parameters)
                       if args_namespace.parameters else {})
         resource_storage = application_resource_storage(
@@ -290,8 +299,92 @@ class ExecuteCommand(BaseCommand):
             module = import_module(module_name)
             return getattr(module, spec_handler_name)
         except ImportError:
-            # todo: exception handler
+            # TODO: exception handler
             raise
         except AttributeError:
-            # todo: exception handler
+            # TODO: exception handler
             raise
+
+
+class ParseCommand(BaseCommand):
+    def __call__(self, args_namespace, unknown_args):
+        super(ParseCommand, self).__call__(args_namespace, unknown_args)
+        
+        if args_namespace.prefix:
+            for prefix in args_namespace.prefix:
+                URI_LOADER_PREFIXES.append(prefix)
+
+        cachedmethod.ENABLED = args_namespace.cached_methods
+
+        context = ParseCommand.create_context_from_namespace(args_namespace)
+        context.args = unknown_args
+
+        consumer = ConsumerChain(context, (Read, Validate))
+
+        consumer_class_name = args_namespace.consumer
+        dumper = None
+        if consumer_class_name == 'presentation':
+            dumper = consumer.consumers[0]
+        elif consumer_class_name == 'model':
+            consumer.append(Model)
+        elif consumer_class_name == 'types':
+            consumer.append(Model, Types)
+        elif consumer_class_name == 'instance':
+            consumer.append(Model, Inputs, Instance)
+        else:
+            consumer.append(Model, Inputs, Instance)
+            consumer.append(import_fullname(consumer_class_name))
+
+        if dumper is None:
+            # Default to last consumer
+            dumper = consumer.consumers[-1]
+
+        consumer.consume()
+
+        if not context.validation.dump_issues():
+            dumper.dump()
+
+    @staticmethod
+    def create_context_from_namespace(namespace, **kwargs):
+        args = vars(namespace).copy()
+        args.update(kwargs)
+        return ParseCommand.create_context(**args)
+    
+    @staticmethod
+    def create_context(uri, loader_source, reader_source, presenter_source, presenter, debug, **kwargs):
+        context = ConsumptionContext()
+        context.loading.loader_source = import_fullname(loader_source)()
+        context.reading.reader_source = import_fullname(reader_source)()
+        context.presentation.location = UriLocation(uri) if isinstance(uri, basestring) else uri
+        context.presentation.presenter_source = import_fullname(presenter_source)()
+        context.presentation.presenter_class = import_fullname(presenter)
+        context.presentation.print_exceptions = debug
+        return context
+
+
+class SpecCommand(BaseCommand):
+    def __call__(self, args_namespace, unknown_args):
+        super(SpecCommand, self).__call__(args_namespace, unknown_args)
+
+        # Make sure that all @dsl_specification decorators are processed
+        for pkg in DSL_SPECIFICATION_PACKAGES:
+            import_modules(pkg)
+
+        # TODO: scan YAML documents as well
+
+        if args_namespace.csv:
+            writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
+            writer.writerow(('Specification', 'Section', 'Code', 'URL'))
+            for spec, sections in iter_specifications():
+                for section, details in sections:
+                    writer.writerow((spec, section, details['code'], details['url']))
+
+        else:
+            for spec, sections in iter_specifications():
+                puts(Colored.cyan(spec))
+                with indent(2):
+                    for section, details in sections:
+                        puts(Colored.blue(section))
+                        with indent(2):
+                            for k, v in details.iteritems():
+                                puts('%s: %s' % (Colored.magenta(k), v))

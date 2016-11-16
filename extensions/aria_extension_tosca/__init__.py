@@ -15,7 +15,7 @@
 
 import os.path
 
-from aria.parser import DSL_SPECIFICATION_PACKAGES
+from aria.parser import (DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION_URLS)
 from aria.parser.presentation import PRESENTER_CLASSES
 from aria.parser.loading import URI_LOADER_PREFIXES
 
@@ -32,6 +32,13 @@ def install_aria_extension():
 
     # DSL specification
     DSL_SPECIFICATION_PACKAGES.append('aria_extension_tosca')
+    DSL_SPECIFICATION_URLS['yaml-1.1'] = \
+        'http://yaml.org'
+    DSL_SPECIFICATION_URLS['tosca-simple-1.0'] = \
+        'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01' \
+        '/TOSCA-Simple-Profile-YAML-v1.0-cos01.html'
+    DSL_SPECIFICATION_URLS['tosca-simple-nfv-1.0'] = \
+        'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/tosca-nfv-v1.0.html'
 
     # Imports
     the_dir = os.path.dirname(__file__)

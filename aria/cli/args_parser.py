@@ -20,6 +20,8 @@ Argument parsing configuration and functions
 import argparse
 from functools import partial
 
+from ..utils.argparse import ArgumentParser
+
 NO_VERBOSE = 0
 
 
@@ -48,10 +50,6 @@ def sub_parser_decorator(func=None, **parser_settings):
             action='count',
             default=NO_VERBOSE,
             help='Set verbosity level (can be passed multiple times)')
-        sub_parser.add_argument(
-            '-d', '--deployment-id',
-            required=True,
-            help='A unique ID for the deployment')
         func(sub_parser)
         return sub_parser
     return _wrapper
@@ -61,14 +59,16 @@ def config_parser(parser=None):
     """
     Top level argparse configuration
     """
-    parser = parser or argparse.ArgumentParser(
-        prog='Aria',
-        description="Aria's Command Line Interface",
+    parser = parser or ArgumentParser(
+        prog='ARIA',
+        description="ARIA's Command Line Interface",
         formatter_class=SmartFormatter)
     parser.add_argument('-v', '--version', action='version')
     sub_parser = parser.add_subparsers(title='Commands', dest='command')
     add_init_parser(sub_parser)
     add_execute_parser(sub_parser)
+    add_parse_parser(sub_parser)
+    add_spec_parser(sub_parser)
     return parser
 
 
@@ -80,6 +80,10 @@ def add_init_parser(init):
     """
     ``init`` command parser configuration
     """
+    init.add_argument(
+        '-d', '--deployment-id',
+        required=True,
+        help='A unique ID for the deployment')
     init.add_argument(
         '-p', '--blueprint-path',
         dest='blueprint_path',
@@ -110,6 +114,10 @@ def add_execute_parser(execute):
     ``execute`` command parser configuration
     """
     execute.add_argument(
+        '-d', '--deployment-id',
+        required=True,
+        help='A unique ID for the deployment')
+    execute.add_argument(
         '-w', '--workflow',
         dest='workflow_id',
         help='The workflow to execute')
@@ -132,3 +140,62 @@ def add_execute_parser(execute):
         default=1,
         type=int,
         help='How many seconds to wait before each task is retried')
+
+
+@sub_parser_decorator(
+    name='parse',
+    help='Parse a blueprint',
+    formatter_class=SmartFormatter)
+def add_parse_parser(parse):
+    """
+    ``parse`` command parser configuration
+    """
+    parse.add_argument(
+        'uri',
+        help='URI or file path to profile')
+    parse.add_argument(
+        'consumer',
+        nargs='?',
+        default='instance',
+        help='consumer class name (full class path or short name)')
+    parse.add_argument(
+        '--loader-source',
+        default='aria.parser.loading.DefaultLoaderSource',
+        help='loader source class for the parser')
+    parse.add_argument(
+        '--reader-source',
+        default='aria.parser.reading.DefaultReaderSource',
+        help='reader source class for the parser')
+    parse.add_argument(
+        '--presenter-source',
+        default='aria.parser.presentation.DefaultPresenterSource',
+        help='presenter source class for the parser')
+    parse.add_argument(
+        '--presenter',
+        help='force use of this presenter class in parser')
+    parse.add_argument(
+        '--prefix', nargs='*',
+        help='prefixes for imports')
+    parse.add_flag_argument(
+        'debug',
+        help_true='print debug info',
+        help_false='don\'t print debug info')
+    parse.add_flag_argument(
+        'cached-methods',
+        help_true='enable cached methods',
+        help_false='disable cached methods',
+        default=True)
+
+
+@sub_parser_decorator(
+    name='spec',
+    help='Specification tool',
+    formatter_class=SmartFormatter)
+def add_spec_parser(spec):
+    """
+    ``spec`` command parser configuration
+    """
+    spec.add_argument(
+        '--csv',
+        action='store_true',
+        help='output as CSV')

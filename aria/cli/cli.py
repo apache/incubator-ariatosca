@@ -19,16 +19,20 @@ CLI Entry point
 
 import logging
 
-from aria.logger import (
+from .. import install_aria_extensions
+from ..logger import (
     create_logger,
     create_console_log_handler,
     create_file_log_handler,
     LoggerMixin,
 )
+from ..utils.exceptions import print_exception
 from .args_parser import config_parser
 from .commands import (
     InitCommand,
     ExecuteCommand,
+    ParseCommand,
+    SpecCommand,
 )
 
 __version__ = '0.1.0'
@@ -44,6 +48,8 @@ class AriaCli(LoggerMixin):
         self.commands = {
             'init': InitCommand.with_logger(base_logger=self.logger),
             'execute': ExecuteCommand.with_logger(base_logger=self.logger),
+            'parse': ParseCommand.with_logger(base_logger=self.logger),
+            'spec': SpecCommand.with_logger(base_logger=self.logger),
         }
 
     def __enter__(self):
@@ -67,18 +73,22 @@ class AriaCli(LoggerMixin):
         Parses user arguments and run the appropriate command
         """
         parser = config_parser()
-        args = parser.parse_args()
+        args, unknown_args = parser.parse_known_args()
 
         command_handler = self.commands[args.command]
         self.logger.debug('Running command: {args.command} handler: {0}'.format(
             command_handler, args=args))
-        command_handler(args)
+        try:
+            command_handler(args, unknown_args)
+        except Exception as e:
+            print_exception(e)
 
 
 def main():
     """
     CLI entry point
     """
+    install_aria_extensions()
     create_logger(
         handlers=[
             create_console_log_handler(),

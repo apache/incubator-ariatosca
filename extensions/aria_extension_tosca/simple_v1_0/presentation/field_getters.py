@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from aria.utils.formatting import safe_repr
-from aria.parser import InvalidValueError
+from aria.parser.exceptions import InvalidValueError
 
 
 def data_type_class_getter(cls):
