@@ -21,6 +21,8 @@ import json
 import os
 import sys
 import csv
+import shutil
+import tempfile
 from glob import glob
 from importlib import import_module
 
@@ -43,11 +45,12 @@ from ..parser.consumption import (
     Inputs,
     Instance
 )
-from ..parser.loading import (UriLocation, URI_LOADER_PREFIXES)
+from ..parser.loading import (LiteralLocation, UriLocation, URI_LOADER_PREFIXES)
 from ..utils.application import StorageManager
 from ..utils.caching import cachedmethod
 from ..utils.console import (puts, Colored, indent)
 from ..utils.imports import (import_fullname, import_modules)
+from . import csar
 from .exceptions import (
     AriaCliFormatInputsError,
     AriaCliYAMLInputsError,
@@ -394,3 +397,69 @@ class SpecCommand(BaseCommand):
                         with indent(2):
                             for k, v in details.iteritems():
                                 puts('%s: %s' % (Colored.magenta(k), v))
+
+
+class BaseCSARCommand(BaseCommand):
+
+    @staticmethod
+    def _parse_and_dump(reader):
+        context = ConsumptionContext()
+        context.loading.prefixes += [os.path.join(reader.destination, 'definitions')]
+        context.presentation.location = LiteralLocation(reader.entry_definitions_yaml)
+        chain = ConsumerChain(context, (Read, Validate, Model, Instance))
+        chain.consume()
+        if context.validation.dump_issues():
+            raise RuntimeError('Validation failed')
+        dumper = chain.consumers[-1]
+        dumper.dump()
+
+    def _read(self, source, destination):
+        reader = csar.read(
+            source=source,
+            destination=destination,
+            logger=self.logger)
+        self.logger.info(
+            'Path: {r.destination}\n'
+            'TOSCA meta file version: {r.meta_file_version}\n'
+            'CSAR Version: {r.csar_version}\n'
+            'Created By: {r.created_by}\n'
+            'Entry definitions: {r.entry_definitions}'
+            .format(r=reader))
+        self._parse_and_dump(reader)
+
+    def _validate(self, source):
+        workdir = tempfile.mkdtemp()
+        try:
+            self._read(
+                source=source,
+                destination=workdir)
+        finally:
+            shutil.rmtree(workdir, ignore_errors=True)
+
+
+class CSARCreateCommand(BaseCSARCommand):
+
+    def __call__(self, args_namespace, unknown_args):
+        super(CSARCreateCommand, self).__call__(args_namespace, unknown_args)
+        csar.write(
+            source=args_namespace.source,
+            entry=args_namespace.entry,
+            destination=args_namespace.destination,
+            logger=self.logger)
+        self._validate(args_namespace.destination)
+
+
+class CSAROpenCommand(BaseCSARCommand):
+
+    def __call__(self, args_namespace, unknown_args):
+        super(CSAROpenCommand, self).__call__(args_namespace, unknown_args)
+        self._read(
+            source=args_namespace.source,
+            destination=args_namespace.destination)
+
+
+class CSARValidateCommand(BaseCSARCommand):
+
+    def __call__(self, args_namespace, unknown_args):
+        super(CSARValidateCommand, self).__call__(args_namespace, unknown_args)
+        self._validate(args_namespace.source)

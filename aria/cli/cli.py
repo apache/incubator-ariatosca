@@ -33,6 +33,9 @@ from .commands import (
     ExecuteCommand,
     ParseCommand,
     SpecCommand,
+    CSARCreateCommand,
+    CSAROpenCommand,
+    CSARValidateCommand,
 )
 
 __version__ = '0.1.0'
@@ -50,6 +53,9 @@ class AriaCli(LoggerMixin):
             'execute': ExecuteCommand.with_logger(base_logger=self.logger),
             'parse': ParseCommand.with_logger(base_logger=self.logger),
             'spec': SpecCommand.with_logger(base_logger=self.logger),
+            'csar-create': CSARCreateCommand.with_logger(base_logger=self.logger),
+            'csar-open': CSAROpenCommand.with_logger(base_logger=self.logger),
+            'csar-validate': CSARValidateCommand.with_logger(base_logger=self.logger),
         }
 
     def __enter__(self):

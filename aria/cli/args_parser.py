@@ -69,6 +69,9 @@ def config_parser(parser=None):
     add_execute_parser(sub_parser)
     add_parse_parser(sub_parser)
     add_spec_parser(sub_parser)
+    add_csar_create_parser(sub_parser)
+    add_csar_open_parser(sub_parser)
+    add_csar_validate_parser(sub_parser)
     return parser
 
 
@@ -199,3 +202,44 @@ def add_spec_parser(spec):
         '--csv',
         action='store_true',
         help='output as CSV')
+
+
+@sub_parser_decorator(
+    name='csar-create',
+    help='Create a CSAR file from a TOSCA service template directory',
+    formatter_class=SmartFormatter)
+def add_csar_create_parser(parse):
+    parse.add_argument(
+        'source',
+        help='Service template directory')
+    parse.add_argument(
+        'entry',
+        help='Entry definition file relative to service template directory')
+    parse.add_argument(
+        '-d', '--destination',
+        help='Output CSAR zip destination',
+        required=True)
+
+
+@sub_parser_decorator(
+    name='csar-open',
+    help='Extracts a CSAR file to a TOSCA service template directory',
+    formatter_class=SmartFormatter)
+def add_csar_open_parser(parse):
+    parse.add_argument(
+        'source',
+        help='CSAR file location')
+    parse.add_argument(
+        '-d', '--destination',
+        help='Output directory to extract the CSAR into',
+        required=True)
+
+
+@sub_parser_decorator(
+    name='csar-validate',
+    help='Validates a CSAR file',
+    formatter_class=SmartFormatter)
+def add_csar_validate_parser(parse):
+    parse.add_argument(
+        'source',
+        help='CSAR file location')
