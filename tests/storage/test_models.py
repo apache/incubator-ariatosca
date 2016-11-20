@@ -206,7 +206,7 @@ def _relationship(id=''):
 
 
 def test_relationships():
-    relationships = [_relationship(index) for index in xrange(3)]
+    relationships = [_relationship(index).fields_dict for index in xrange(3)]
 
     node = Node(
         blueprint_id='blueprint_id',
@@ -222,8 +222,8 @@ def test_relationships():
         max_number_of_instances=1)
 
     for index in xrange(3):
-        assert relationships[index] is \
-               next(node.relationships_by_target('target{0}'.format(index)))
+        assert relationships[index] == \
+               next(node.relationships_by_target('target{0}'.format(index))).fields_dict
 
     relationship = _relationship()
 

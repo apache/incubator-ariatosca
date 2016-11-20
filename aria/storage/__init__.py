@@ -40,7 +40,6 @@ API:
 # todo: rewrite the above package documentation
 # (something like explaning the two types of storage - models and resources)
 
-from collections import namedtuple
 
 from .structures import Storage, Field, Model, IterField, PointerField
 from .drivers import (
@@ -106,15 +105,9 @@ class ModelStorage(Storage):
         Registers the model type in the resource storage manager.
         :param model_cls: the model to register.
         """
-        model_name = generate_lower_name(model_cls)
-        model_api = _ModelApi(model_name, self.driver, model_cls)
-        self.registered[model_name] = model_api
-
-        for pointer_schema_register in model_api.pointer_mapping.values():
-            model_cls = pointer_schema_register.model_cls
-            self.register(model_cls)
-
-_Pointer = namedtuple('_Pointer', 'name, is_iter')
+        model_name = _generate_lower_name(model_cls)
+        model_api = _ModelApi(model_name, self._driver, model_cls)
+        self._registered[model_name] = model_api
 
 
 class _ModelApi(object):
@@ -128,34 +121,30 @@ class _ModelApi(object):
         """
         assert isinstance(driver, ModelDriver)
         assert issubclass(model_cls, Model)
-        self.name = name
-        self.driver = driver
-        self.model_cls = model_cls
-        self.pointer_mapping = {}
-        self._setup_pointers_mapping()
+        self._name = name
+        self._driver = driver
+        self._model_cls = model_cls
 
-    def _setup_pointers_mapping(self):
-        for field_name, field_cls in vars(self.model_cls).items():
-            if not(isinstance(field_cls, PointerField) and field_cls.type):
-                continue
-            pointer_key = _Pointer(field_name, is_iter=isinstance(field_cls, IterField))
-            self.pointer_mapping[pointer_key] = self.__class__(
-                name=generate_lower_name(field_cls.type),
-                driver=self.driver,
-                model_cls=field_cls.type)
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def model_cls(self):
+        return self._model_cls
 
     def __iter__(self):
         return self.iter()
 
     def __repr__(self):
-        return '{self.name}(driver={self.driver}, model={self.model_cls})'.format(self=self)
+        return '{self.name}(driver={self._driver}, model={self.model_cls})'.format(self=self)
 
     def create(self):
         """
         Creates the model in the storage.
         """
-        with self.driver as connection:
-            connection.create(self.name)
+        with self._driver as connection:
+            connection.create(name=self._name, model_cls=self._model_cls)
 
     def get(self, entry_id, **kwargs):
         """
@@ -165,13 +154,12 @@ class _ModelApi(object):
         :return: model instance
         :rtype: Model
         """
-        with self.driver as connection:
-            data = connection.get(
-                name=self.name,
+        with self._driver as connection:
+            return connection.get(
+                name=self._name,
                 entry_id=entry_id,
+                model_cls=self._model_cls,
                 **kwargs)
-            data.update(self._get_pointers(data, **kwargs))
-        return self.model_cls(**data)
 
     def store(self, entry, **kwargs):
         """
@@ -179,14 +167,12 @@ class _ModelApi(object):
 
         :param Model entry: the table/document to store.
         """
-        assert isinstance(entry, self.model_cls)
-        with self.driver as connection:
-            data = entry.fields_dict
-            data.update(self._store_pointers(data, **kwargs))
+        assert isinstance(entry, self._model_cls)
+        with self._driver as connection:
             connection.store(
-                name=self.name,
+                name=self._name,
                 entry_id=entry.id,
-                entry=data,
+                entry=entry,
                 **kwargs)
 
     def delete(self, entry_id, **kwargs):
@@ -195,11 +181,9 @@ class _ModelApi(object):
 
         :param basestring entry_id: id of the entity to delete from storage.
         """
-        entry = self.get(entry_id)
-        with self.driver as connection:
-            self._delete_pointers(entry, **kwargs)
+        with self._driver as connection:
             connection.delete(
-                name=self.name,
+                name=self._name,
                 entry_id=entry_id,
                 **kwargs)
 
@@ -207,10 +191,9 @@ class _ModelApi(object):
         """
         Generator over the entries of model in storage.
         """
-        with self.driver as connection:
-            for data in connection.iter(name=self.name, **kwargs):
-                data.update(self._get_pointers(data, **kwargs))
-                yield self.model_cls(**data)
+        with self._driver as connection:
+            for data in connection.iter(name=self._name, model_cls=self._model_cls, **kwargs):
+                yield data
 
     def update(self, entry_id, **kwargs):
         """
@@ -220,53 +203,20 @@ class _ModelApi(object):
         :param kwargs: the fields to update.
         :return:
         """
-        with self.driver as connection:
+        with self._driver as connection:
             connection.update(
-                name=self.name,
+                name=self._name,
                 entry_id=entry_id,
                 **kwargs
             )
-
-    def _get_pointers(self, data, **kwargs):
-        pointers = {}
-        for field, schema in self.pointer_mapping.items():
-            if field.is_iter:
-                pointers[field.name] = [
-                    schema.get(entry_id=pointer_id, **kwargs)
-                    for pointer_id in data[field.name]
-                    if pointer_id]
-            elif data[field.name]:
-                pointers[field.name] = schema.get(entry_id=data[field.name], **kwargs)
-        return pointers
-
-    def _store_pointers(self, data, **kwargs):
-        pointers = {}
-        for field, model_api in self.pointer_mapping.items():
-            if field.is_iter:
-                pointers[field.name] = []
-                for iter_entity in data[field.name]:
-                    pointers[field.name].append(iter_entity.id)
-                    model_api.store(iter_entity, **kwargs)
-            else:
-                pointers[field.name] = data[field.name].id
-                model_api.store(data[field.name], **kwargs)
-        return pointers
-
-    def _delete_pointers(self, entry, **kwargs):
-        for field, schema in self.pointer_mapping.items():
-            if field.is_iter:
-                for iter_entry in getattr(entry, field.name):
-                    schema.delete(iter_entry.id, **kwargs)
-            else:
-                schema.delete(getattr(entry, field.name).id, **kwargs)
 
 
 class ResourceApi(object):
     """
     Managing the resource in the storage, using the driver.
 
-    :param basestring name: the name of the resource.
     :param ResourceDriver driver: the driver which supports this resource in the storage.
+    :param basestring resource_name: the name of the resource.
     """
     def __init__(self, driver, resource_name):
         """
@@ -340,7 +290,7 @@ class ResourceApi(object):
                 **kwargs)
 
 
-def generate_lower_name(model_cls):
+def _generate_lower_name(model_cls):
     """
     Generates the name of the class from the class object. e.g. SomeClass -> some_class
     :param model_cls: the class to evaluate.
@@ -372,7 +322,7 @@ class ResourceStorage(Storage):
         Registers the resource type in the resource storage manager.
         :param resource: the resource to register.
         """
-        self.registered[resource] = ResourceApi(self.driver, resource_name=resource)
+        self._registered[resource] = ResourceApi(self._driver, resource_name=resource)
 
     def __getattr__(self, resource):
         """

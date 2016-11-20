@@ -35,11 +35,11 @@ class LoggerMixin(object):
     logger_name = None
     logger_level = logging.DEBUG
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.logger_name = self.logger_name or self.__class__.__name__
         self.logger = logging.getLogger('{0}.{1}'.format(_base_logger.name, self.logger_name))
         self.logger.setLevel(self.logger_level)
-        super(LoggerMixin, self).__init__(*args, **kwargs)
+        super(LoggerMixin, self).__init__(**kwargs)
 
     @classmethod
     def with_logger(

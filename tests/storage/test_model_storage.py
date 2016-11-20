@@ -32,7 +32,7 @@ def test_storage_base():
     driver = InMemoryModelDriver()
     storage = Storage(driver)
 
-    assert storage.driver == driver
+    assert storage._driver == driver
 
     with pytest.raises(AttributeError):
         storage.non_existent_attribute()
@@ -64,14 +64,15 @@ def test_storage_driver():
     storage.register(models.ProviderContext)
     storage.setup()
     pc = models.ProviderContext(context={}, name='context_name', id='id2')
-    storage.driver.store(name='provider_context', entry=pc.fields_dict, entry_id=pc.id)
+    storage._driver.store(name='provider_context', entry=pc, entry_id=pc.id)
 
-    assert storage.driver.get(
+    assert storage._driver.get(
         name='provider_context',
         entry_id='id2',
-        model_cls=models.ProviderContext) == pc.fields_dict
+        model_cls=models.ProviderContext) == pc
 
-    assert [i for i in storage.driver.iter(name='provider_context')] == [pc.fields_dict]
+    assert [i for i in storage._driver.iter(name='provider_context',
+                                            model_cls=models.ProviderContext)] == [pc]
     assert [i for i in storage.provider_context] == [pc]
 
     storage.provider_context.delete('id2')
@@ -107,7 +108,7 @@ def test_storage_pointers():
         id = Field()
         pointing_field = PointerField(type=PointedModel)
 
-    storage = ModelStorage(InMemoryModelDriver(), model_classes=[PointingModel])
+    storage = ModelStorage(InMemoryModelDriver(), model_classes=[PointingModel, PointedModel])
     storage.setup()
 
     assert storage.pointed_model
@@ -136,7 +137,8 @@ def test_storage_iter_pointers():
         id = models.Field()
         pointing_field = structures.IterPointerField(type=PointedIterModel)
 
-    storage = ModelStorage(InMemoryModelDriver(), model_classes=[PointingIterModel])
+    storage = ModelStorage(InMemoryModelDriver(), model_classes=[PointingIterModel,
+                                                                 PointedIterModel])
     storage.setup()
 
     assert storage.pointed_iter_model

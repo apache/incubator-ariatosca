@@ -93,7 +93,7 @@ class Driver(LoggerMixin):
     def create(self, name, *args, **kwargs):
         """
         Create table/document in storage by name.
-        :param str name: name of table/document in storage.
+        :param basestring name: name of table/document in storage.
         """
         pass
 
@@ -107,8 +107,8 @@ class ModelDriver(Driver):
     def get(self, name, entry_id, **kwargs):
         """
         Getter from storage.
-        :param str name: name of table/document in storage.
-        :param str entry_id: id of the document to get from storage.
+        :param basestring name: name of table/document in storage.
+        :param basestring entry_id: id of the document to get from storage.
         :return: value of entity from the storage.
         """
         raise NotImplementedError('Subclass must implement abstract get method')
@@ -116,8 +116,8 @@ class ModelDriver(Driver):
     def delete(self, name, entry_id, **kwargs):
         """
         Delete from storage.
-        :param str name: name of table/document in storage.
-        :param str entry_id: id of the entity to delete from storage.
+        :param basestring name: name of table/document in storage.
+        :param basestring entry_id: id of the entity to delete from storage.
         :param dict kwargs: extra kwargs if needed.
         """
         raise NotImplementedError('Subclass must implement abstract delete method')
@@ -125,16 +125,16 @@ class ModelDriver(Driver):
     def store(self, name, entry_id, entry, **kwargs):
         """
         Setter to storage.
-        :param str name: name of table/document in storage.
-        :param str entry_id: id of the entity to store in the storage.
-        :param dict entry: content to store.
+        :param basestring name: name of table/document in storage.
+        :param basestring entry_id: id of the entity to store in the storage.
+        :param Model entry: content to store.
         """
         raise NotImplementedError('Subclass must implement abstract store method')
 
     def iter(self, name, **kwargs):
         """
         Generator over the entries of table/document in storage.
-        :param str name: name of table/document/file in storage to iter over.
+        :param basestring name: name of table/document/file in storage to iter over.
         """
         raise NotImplementedError('Subclass must implement abstract iter method')
 
@@ -142,8 +142,8 @@ class ModelDriver(Driver):
         """
         Updates and entry in storage.
 
-        :param str name: name of table/document in storage.
-        :param str entry_id: id of the document to get from storage.
+        :param basestring name: name of table/document in storage.
+        :param basestring entry_id: id of the document to get from storage.
         :param kwargs: the fields to update.
         :return:
         """
@@ -257,7 +257,7 @@ class FileSystemModelDriver(ModelDriver, BaseFileSystemDriver):
         return '{cls.__name__}(directory={self.directory})'.format(
             cls=self.__class__, self=self)
 
-    def create(self, name):
+    def create(self, name, **kwargs):
         """
         Create directory in storage by path.
         tries to create the root directory as well.
@@ -345,7 +345,7 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         return '{cls.__name__}(directory={self.directory})'.format(
             cls=self.__class__, self=self)
 
-    def create(self, name):
+    def create(self, name, **kwargs):
         """
         Create directory in storage by path.
         tries to create the root directory as well.
@@ -357,7 +357,7 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
             pass
         os.makedirs(self._join_path(name))
 
-    def data(self, entry_type, entry_id, path=None):
+    def data(self, entry_type, entry_id, path=None, **kwargs):
         """
         Retrieve the content of a file system storage resource.
 
@@ -379,7 +379,7 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         with open(resource, 'rb') as resource_file:
             return resource_file.read()
 
-    def download(self, entry_type, entry_id, destination, path=None):
+    def download(self, entry_type, entry_id, destination, path=None, **kwargs):
         """
         Download a specific file or dir from the file system resource storage.
 
@@ -397,7 +397,7 @@ class FileSystemResourceDriver(ResourceDriver, BaseFileSystemDriver):
         else:
             distutils.dir_util.copy_tree(resource, destination)                                     # pylint: disable=no-member
 
-    def upload(self, entry_type, entry_id, source, path=None):
+    def upload(self, entry_type, entry_id, source, path=None, **kwargs):
         """
         Uploads a specific file or dir to the file system resource storage.
 
