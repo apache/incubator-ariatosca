@@ -44,4 +44,11 @@ class DefaultPresenterSource(PresenterSource):
             if cls.can_present(raw):
                 return cls
 
+        if 'tosca_definitions_version' in raw:
+            if raw['tosca_definitions_version'] is None:
+                raise PresenterNotFoundError("'tosca_definitions_version' is not specified")
+            if not isinstance(raw['tosca_definitions_version'], basestring):
+                raise PresenterNotFoundError("'tosca_definitions_version' is not a string")
+            if not raw['tosca_definitions_version']:
+                raise PresenterNotFoundError("'tosca_definitions_version' is not specified")
         return super(DefaultPresenterSource, self).get_presenter(raw)

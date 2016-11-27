@@ -309,7 +309,7 @@ class ExecuteCommand(BaseCommand):
 class ParseCommand(BaseCommand):
     def __call__(self, args_namespace, unknown_args):
         super(ParseCommand, self).__call__(args_namespace, unknown_args)
-        
+
         if args_namespace.prefix:
             for prefix in args_namespace.prefix:
                 URI_LOADER_PREFIXES.append(prefix)
@@ -349,9 +349,15 @@ class ParseCommand(BaseCommand):
         args = vars(namespace).copy()
         args.update(kwargs)
         return ParseCommand.create_context(**args)
-    
+
     @staticmethod
-    def create_context(uri, loader_source, reader_source, presenter_source, presenter, debug, **kwargs):
+    def create_context(uri,
+                       loader_source,
+                       reader_source,
+                       presenter_source,
+                       presenter,
+                       debug,
+                       **kwargs):
         context = ConsumptionContext()
         context.loading.loader_source = import_fullname(loader_source)()
         context.reading.reader_source = import_fullname(reader_source)()
