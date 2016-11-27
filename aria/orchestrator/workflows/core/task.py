@@ -106,8 +106,9 @@ class OperationTask(BaseTask):
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
-        base_task_model = api_task._workflow_context.model.task.model_cls
+        model = api_task._workflow_context.model
 
+        base_task_model = model.task.model_cls
         if isinstance(api_task.actor, models.NodeInstance):
             context_class = operation_context.NodeOperationContext
             task_model_cls = base_task_model.as_node_instance
@@ -117,7 +118,13 @@ class OperationTask(BaseTask):
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
-
+        plugin = api_task.plugin
+        plugins = model.plugin.list(filters={'package_name': plugin.get('package_name', ''),
+                                             'package_version': plugin.get('package_version', '')},
+                                    include=['id'])
+        # Validation during installation ensures that at most one plugin can exists with provided
+        # package_name and package_version
+        plugin_id = plugins[0].id if plugins else None
         operation_task = task_model_cls(
             name=api_task.name,
             operation_mapping=api_task.operation_mapping,
@@ -127,6 +134,7 @@ class OperationTask(BaseTask):
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
+            plugin_id=plugin_id
         )
         self._workflow_context.model.task.put(operation_task)
 

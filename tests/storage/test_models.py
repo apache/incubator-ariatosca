@@ -111,7 +111,9 @@ def _node_instances_storage():
 def _execution_storage():
     storage = _deployment_storage()
     execution = mock.models.get_execution(storage.deployment.list()[0])
+    plugin = mock.models.get_plugin()
     storage.execution.put(execution)
+    storage.plugin.put(plugin)
     return storage
 
 
@@ -531,34 +533,31 @@ class TestNode(object):
     @pytest.mark.parametrize(
         'is_valid, name, deploy_number_of_instances, max_number_of_instances, '
         'min_number_of_instances, number_of_instances, planned_number_of_instances, plugins, '
-        'plugins_to_install, properties, operations, type, type_hierarchy',
+        'properties, operations, type, type_hierarchy',
         [
-            (False, m_cls, 1, 1, 1, 1, 1, {}, {}, {}, {}, 'type', []),
-            (False, 'name', m_cls, 1, 1, 1, 1, {}, {}, {}, {}, 'type', []),
-            (False, 'name', 1, m_cls, 1, 1, 1, {}, {}, {}, {}, 'type', []),
-            (False, 'name', 1, 1, m_cls, 1, 1, {}, {}, {}, {}, 'type', []),
-            (False, 'name', 1, 1, 1, m_cls, 1, {}, {}, {}, {}, 'type', []),
-            (False, 'name', 1, 1, 1, 1, m_cls, {}, {}, {}, {}, 'type', []),
-            (False, 'name', 1, 1, 1, 1, 1, m_cls, {}, {}, {}, 'type', []),
-            (False, 'name', 1, 1, 1, 1, 1, {}, m_cls, {}, {}, 'type', []),
-            (False, 'name', 1, 1, 1, 1, 1, {}, {}, m_cls, {}, 'type', []),
-            (False, 'name', 1, 1, 1, 1, 1, {}, {}, {}, m_cls, 'type', []),
-            (False, 'name', 1, 1, 1, 1, 1, {}, {}, {}, {}, m_cls, []),
-            (False, 'name', 1, 1, 1, 1, 1, {}, {}, {}, {}, 'type', m_cls),
+            (False, m_cls, 1, 1, 1, 1, 1, [], {}, {}, 'type', []),
+            (False, 'name', m_cls, 1, 1, 1, 1, [], {}, {}, 'type', []),
+            (False, 'name', 1, m_cls, 1, 1, 1, [], {}, {}, 'type', []),
+            (False, 'name', 1, 1, m_cls, 1, 1, [], {}, {}, 'type', []),
+            (False, 'name', 1, 1, 1, m_cls, 1, [], {}, {}, 'type', []),
+            (False, 'name', 1, 1, 1, 1, m_cls, [], {}, {}, 'type', []),
+            (False, 'name', 1, 1, 1, 1, 1, m_cls, {}, {}, 'type', []),
+            (False, 'name', 1, 1, 1, 1, 1, [], m_cls, {}, 'type', []),
+            (False, 'name', 1, 1, 1, 1, 1, [], {}, m_cls, 'type', []),
+            (False, 'name', 1, 1, 1, 1, 1, [], {}, {}, m_cls, []),
+            (False, 'name', 1, 1, 1, 1, 1, [], {}, {}, 'type', m_cls),
 
-            (True, 'name', 1, 1, 1, 1, 1, {}, {}, {}, {}, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, None, {}, {}, {}, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, {}, None, {}, {}, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, {}, {}, None, {}, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, {}, {}, {}, None, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, {}, {}, {}, {}, 'type', []),
-            (True, 'name', 1, 1, 1, 1, 1, {}, {}, {}, {}, 'type', None),
+            (True, 'name', 1, 1, 1, 1, 1, [], {}, {}, 'type', []),
+            (True, 'name', 1, 1, 1, 1, 1, None, {}, {}, 'type', []),
+            (True, 'name', 1, 1, 1, 1, 1, [], None, {}, 'type', []),
+            (True, 'name', 1, 1, 1, 1, 1, [], {}, None, 'type', []),
+            (True, 'name', 1, 1, 1, 1, 1, [], {}, {}, 'type', None),
         ]
     )
     def test_node_model_creation(self, deployment_storage, is_valid, name,
                                  deploy_number_of_instances, max_number_of_instances,
                                  min_number_of_instances, number_of_instances,
-                                 planned_number_of_instances, plugins, plugins_to_install,
+                                 planned_number_of_instances, plugins,
                                  properties, operations, type, type_hierarchy):
         node = _test_model(
             is_valid=is_valid,
@@ -573,7 +572,6 @@ class TestNode(object):
                 number_of_instances=number_of_instances,
                 planned_number_of_instances=planned_number_of_instances,
                 plugins=plugins,
-                plugins_to_install=plugins_to_install,
                 properties=properties,
                 operations=operations,
                 type=type,
@@ -713,58 +711,56 @@ class TestProviderContext(object):
 class TestPlugin(object):
     @pytest.mark.parametrize(
         'is_valid, archive_name, distribution, distribution_release, '
-        'distribution_version, excluded_wheels, package_name, package_source, '
+        'distribution_version, package_name, package_source, '
         'package_version, supported_platform, supported_py_versions, uploaded_at, wheels',
         [
-            (False, m_cls, 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', m_cls, 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', m_cls, 'dis_ver', {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', m_cls, {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', m_cls, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, m_cls, 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', m_cls, 'pak_ver',
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src', m_cls,
-             {}, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', m_cls, {}, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, m_cls, now, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, m_cls, {}),
-            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, now, m_cls),
+            (False, m_cls, 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', m_cls, 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', m_cls, 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', m_cls, 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', m_cls, 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', m_cls, 'pak_ver',
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', m_cls,
+             'sup_pla', [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', m_cls, [], now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', m_cls, now, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', [], m_cls, []),
+            (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', [], now, m_cls),
 
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, now, {}),
-            (True, 'arc_name', None, 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', None, 'dis_ver', {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', None, {}, 'pak_name', 'pak_src', 'pak_ver',
-             {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', None, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', None, 'pak_ver',
-             {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src', None,
-             {}, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', None, {}, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, None, now, {}),
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', {}, 'pak_name', 'pak_src',
-             'pak_ver', {}, {}, now, {}),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', [], now, []),
+            (True, 'arc_name', None, 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', None, 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', None, 'pak_name', 'pak_src', 'pak_ver',
+             'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', None, 'pak_ver',
+             'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', None,
+             'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', None, [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', None, now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
+             'pak_ver', 'sup_pla', [], now, []),
         ]
     )
     def test_plugin_model_creation(self, empty_storage, is_valid, archive_name, distribution,
-                                   distribution_release, distribution_version, excluded_wheels,
+                                   distribution_release, distribution_version,
                                    package_name, package_source, package_version,
                                    supported_platform, supported_py_versions, uploaded_at, wheels):
         _test_model(is_valid=is_valid,
@@ -776,7 +772,6 @@ class TestPlugin(object):
                         distribution=distribution,
                         distribution_release=distribution_release,
                         distribution_version=distribution_version,
-                        excluded_wheels=excluded_wheels,
                         package_name=package_name,
                         package_source=package_source,
                         package_version=package_version,
@@ -791,34 +786,36 @@ class TestTask(object):
 
     @pytest.mark.parametrize(
         'is_valid, status, due_at, started_at, ended_at, max_attempts, retry_count, '
-        'retry_interval, ignore_failure, name, operation_mapping, inputs',
+        'retry_interval, ignore_failure, name, operation_mapping, inputs, plugin_id',
         [
-            (False, m_cls, now, now, now, 1, 1, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, m_cls, now, now, 1, 1, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, m_cls, now, 1, 1, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, now, m_cls, 1, 1, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, now, now, m_cls, 1, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, now, now, 1, m_cls, 1, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, now, now, 1, 1, m_cls, True, 'name', 'map', {}),
-            (False, Task.STARTED, now, now, now, 1, 1, 1, True, m_cls, 'map', {}),
-            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', m_cls, {}),
-            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', m_cls),
+            (False, m_cls, now, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, m_cls, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, m_cls, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, now, m_cls, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, now, now, m_cls, 1, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, now, now, 1, m_cls, 1, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, now, now, 1, 1, m_cls, True, 'name', 'map', {}, '1'),
+            (False, Task.STARTED, now, now, now, 1, 1, 1, True, m_cls, 'map', {}, '1'),
+            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', m_cls, {}, '1'),
+            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', m_cls, '1'),
+            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, m_cls),
 
-            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}),
-            (True, Task.STARTED, None, now, now, 1, 1, 1, True, 'name', 'map', {}),
-            (True, Task.STARTED, now, None, now, 1, 1, 1, True, 'name', 'map', {}),
-            (True, Task.STARTED, now, now, None, 1, 1, 1, True, 'name', 'map', {}),
-            (True, Task.STARTED, now, now, now, 1, None, 1, True, 'name', 'map', {}),
-            (True, Task.STARTED, now, now, now, 1, 1, None, True, 'name', 'map', {}),
-            (True, Task.STARTED, now, now, now, 1, 1, 1, None, 'name', 'map', {}),
-            (True, Task.STARTED, now, now, now, 1, 1, 1, True, None, 'map', {}),
-            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', None, {}),
-            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', None),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, None, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, None, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, now, None, 1, 1, 1, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, None, 1, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, None, True, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, None, 'name', 'map', {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, True, None, 'map', {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', None, {}, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', None, '1'),
+            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, None),
         ]
     )
     def test_task_model_creation(self, execution_storage, is_valid, status, due_at, started_at,
                                  ended_at, max_attempts, retry_count, retry_interval,
-                                 ignore_failure, name, operation_mapping, inputs):
+                                 ignore_failure, name, operation_mapping, inputs, plugin_id):
         task = _test_model(
             is_valid=is_valid,
             storage=execution_storage,
@@ -837,9 +834,12 @@ class TestTask(object):
                 name=name,
                 operation_mapping=operation_mapping,
                 inputs=inputs,
+                plugin_id=plugin_id,
             ))
         if is_valid:
             assert task.execution == execution_storage.execution.list()[0]
+            if task.plugin_id:
+                assert task.plugin == execution_storage.plugin.list()[0]
 
     def test_task_max_attempts_validation(self):
         def create_task(max_attempts):

@@ -17,16 +17,14 @@
 Base executor module
 """
 
+from aria import logger
 from aria.orchestrator import events
 
 
-class BaseExecutor(object):
+class BaseExecutor(logger.LoggerMixin):
     """
     Base class for executors for running tasks
     """
-
-    def __init__(self, *args, **kwargs):
-        pass
 
     def execute(self, task):
         """

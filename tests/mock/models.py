@@ -152,3 +152,19 @@ def get_deployment(blueprint):
         outputs={},
         scaling_groups={},
     )
+
+
+def get_plugin(package_name='package', package_version='0.1'):
+    return models.Plugin(
+        archive_name='archive_name',
+        distribution='distribution',
+        distribution_release='dist_release',
+        distribution_version='dist_version',
+        package_name=package_name,
+        package_source='source',
+        package_version=package_version,
+        supported_platform='any',
+        supported_py_versions=['python27'],
+        uploaded_at=datetime.now(),
+        wheels=[],
+    )

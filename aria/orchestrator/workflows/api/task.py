@@ -67,11 +67,11 @@ class OperationTask(BaseTask):
                  max_attempts=None,
                  retry_interval=None,
                  ignore_failure=None,
-                 inputs=None):
+                 inputs=None,
+                 plugin=None):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
         :param name: the operation of the name.
-        :param operation_details: the details for the operation.
         :param actor: the operation host on which this operation is registered.
         :param inputs: operation inputs.
         """
@@ -82,6 +82,7 @@ class OperationTask(BaseTask):
         self.name = '{name}.{actor.id}'.format(name=name, actor=actor)
         self.operation_mapping = operation_mapping
         self.inputs = inputs or {}
+        self.plugin = plugin or {}
         self.max_attempts = (self.workflow_context._task_max_attempts
                              if max_attempts is None else max_attempts)
         self.retry_interval = (self.workflow_context._task_retry_interval
@@ -98,15 +99,13 @@ class OperationTask(BaseTask):
         :param name: the name of the operation.
         """
         assert isinstance(instance, models.NodeInstance)
-        operation_details = instance.node.operations[name]
-        operation_inputs = operation_details.get('inputs', {})
-        operation_inputs.update(inputs or {})
-        return cls(name=name,
-                   actor=instance,
-                   operation_mapping=operation_details.get('operation', ''),
-                   inputs=operation_inputs,
-                   *args,
-                   **kwargs)
+        return cls._instance(instance=instance,
+                             name=name,
+                             operation_details=instance.node.operations[name],
+                             inputs=inputs,
+                             plugins=instance.node.plugins or [],
+                             *args,
+                             **kwargs)
 
     @classmethod
     def relationship_instance(cls, instance, name, operation_end, inputs=None, *args, **kwargs):
@@ -125,12 +124,33 @@ class OperationTask(BaseTask):
                 cls.TARGET_OPERATION, cls.SOURCE_OPERATION
             ))
         operation_details = getattr(instance.relationship, operation_end)[name]
+        if operation_end == cls.SOURCE_OPERATION:
+            plugins = instance.relationship.source_node.plugins
+        else:
+            plugins = instance.relationship.target_node.plugins
+        return cls._instance(instance=instance,
+                             name=name,
+                             operation_details=operation_details,
+                             inputs=inputs,
+                             plugins=plugins or [],
+                             *args,
+                             **kwargs)
+
+    @classmethod
+    def _instance(cls, instance, name, operation_details, inputs, plugins, *args, **kwargs):
+        operation_mapping = operation_details.get('operation')
         operation_inputs = operation_details.get('inputs', {})
         operation_inputs.update(inputs or {})
+        plugin_name = operation_details.get('plugin')
+        matching_plugins = [p for p in plugins if p['name'] == plugin_name]
+        # All matching plugins should have identical package_name/package_version, so it's safe to
+        # take the first found.
+        plugin = matching_plugins[0] if matching_plugins else {}
         return cls(actor=instance,
                    name=name,
-                   operation_mapping=operation_details.get('operation'),
+                   operation_mapping=operation_mapping,
                    inputs=operation_inputs,
+                   plugin=plugin,
                    *args,
                    **kwargs)
 

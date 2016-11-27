@@ -42,24 +42,30 @@ class TestOperationTask(object):
         with workflow_context.current.push(ctx):
             api_task = api.task.OperationTask.node_instance(
                 instance=node_instance,
-                name='aria.interfaces.lifecycle.create',
-            )
-
+                name='aria.interfaces.lifecycle.create')
             core_task = core.task.OperationTask(api_task=api_task)
-
         return api_task, core_task
 
     def test_operation_task_creation(self, ctx):
+        storage_plugin = mock.models.get_plugin(package_name='p1', package_version='0.1')
+        storage_plugin_other = mock.models.get_plugin(package_name='p0', package_version='0.0')
+        ctx.model.plugin.put(storage_plugin_other)
+        ctx.model.plugin.put(storage_plugin)
         node_instance = \
             ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node = node_instance.node
+        node.plugins = [{'name': 'plugin1',
+                         'package_name': 'p1',
+                         'package_version': '0.1'}]
+        node.operations['aria.interfaces.lifecycle.create'] = {'plugin': 'plugin1'}
         api_task, core_task = self._create_operation_task(ctx, node_instance)
         storage_task = ctx.model.task.get_by_name(core_task.name)
-
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
         assert core_task.operation_mapping == api_task.operation_mapping
         assert core_task.actor == api_task.actor == node_instance
         assert core_task.inputs == api_task.inputs == storage_task.inputs
+        assert core_task.plugin == storage_plugin
 
     def test_operation_task_edit_locked_attribute(self, ctx):
         node_instance = \

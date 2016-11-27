@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Executors for task execution
-"""
+import os
 
 
-from . import process, thread
-from .base import BaseExecutor
+DIR = os.path.dirname(__file__)

@@ -13,10 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Executors for task execution
-"""
+from setuptools import setup
 
 
-from . import process, thread
-from .base import BaseExecutor
+setup(
+    name='mock-plugin1',
+    version='0.1',
+    py_modules=['mock_plugin1'],
+    entry_points={
+        'console_scripts': [
+            'mock-plugin1 = mock_plugin1:console_script_entry_point'
+        ]
+    }
+)

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import os
 import uuid
 from contextlib import contextmanager
 
@@ -28,57 +29,34 @@ except ImportError:
     _celery = None
     app = None
 
+import aria
 from aria.storage import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
     thread,
-    multiprocess,
-    blocking,
+    process,
     # celery
 )
 
 
-class TestExecutor(object):
+def test_execute(executor):
+    expected_value = 'value'
+    successful_task = MockTask(mock_successful_task)
+    failing_task = MockTask(mock_failing_task)
+    task_with_inputs = MockTask(mock_task_with_input, inputs={'input': expected_value})
 
-    @pytest.mark.parametrize('executor_cls,executor_kwargs', [
-        (thread.ThreadExecutor, {'pool_size': 1}),
-        (thread.ThreadExecutor, {'pool_size': 2}),
-        (multiprocess.MultiprocessExecutor, {'pool_size': 1}),
-        (multiprocess.MultiprocessExecutor, {'pool_size': 2}),
-        (blocking.CurrentThreadBlockingExecutor, {}),
-        # (celery.CeleryExecutor, {'app': app})
-    ])
-    def test_execute(self, executor_cls, executor_kwargs):
-        self.executor = executor_cls(**executor_kwargs)
-        expected_value = 'value'
-        successful_task = MockTask(mock_successful_task)
-        failing_task = MockTask(mock_failing_task)
-        task_with_inputs = MockTask(mock_task_with_input, inputs={'input': expected_value})
+    for task in [successful_task, failing_task, task_with_inputs]:
+        executor.execute(task)
 
-        for task in [successful_task, failing_task, task_with_inputs]:
-            self.executor.execute(task)
-
-        @retrying.retry(stop_max_delay=10000, wait_fixed=100)
-        def assertion():
-            assert successful_task.states == ['start', 'success']
-            assert failing_task.states == ['start', 'failure']
-            assert task_with_inputs.states == ['start', 'failure']
-            assert isinstance(failing_task.exception, MockException)
-            assert isinstance(task_with_inputs.exception, MockException)
-            assert task_with_inputs.exception.message == expected_value
-        assertion()
-
-    def setup_method(self):
-        events.start_task_signal.connect(start_handler)
-        events.on_success_task_signal.connect(success_handler)
-        events.on_failure_task_signal.connect(failure_handler)
-
-    def teardown_method(self):
-        events.start_task_signal.disconnect(start_handler)
-        events.on_success_task_signal.disconnect(success_handler)
-        events.on_failure_task_signal.disconnect(failure_handler)
-        if hasattr(self, 'executor'):
-            self.executor.close()
+    @retrying.retry(stop_max_delay=10000, wait_fixed=100)
+    def assertion():
+        assert successful_task.states == ['start', 'success']
+        assert failing_task.states == ['start', 'failure']
+        assert task_with_inputs.states == ['start', 'failure']
+        assert isinstance(failing_task.exception, MockException)
+        assert isinstance(task_with_inputs.exception, MockException)
+        assert task_with_inputs.exception.message == expected_value
+    assertion()
 
 
 def mock_successful_task(**_):
@@ -116,9 +94,10 @@ class MockTask(object):
         self.logger = logging.getLogger()
         self.name = name
         self.inputs = inputs or {}
-        self.context = ctx or None
+        self.context = ctx
         self.retry_count = 0
         self.max_attempts = 1
+        self.plugin_id = None
 
         for state in models.Task.STATES:
             setattr(self, state.upper(), state)
@@ -128,14 +107,36 @@ class MockTask(object):
         yield self
 
 
-def start_handler(task, *args, **kwargs):
-    task.states.append('start')
+@pytest.fixture(params=[
+    (thread.ThreadExecutor, {'pool_size': 1}),
+    (thread.ThreadExecutor, {'pool_size': 2}),
+    # subprocess needs to load a tests module so we explicitly add the root directory as if
+    # the project has been installed in editable mode
+    (process.ProcessExecutor, {'python_path': [os.path.dirname(os.path.dirname(aria.__file__))]}),
+    # (celery.CeleryExecutor, {'app': app})
+])
+def executor(request):
+    executor_cls, executor_kwargs = request.param
+    result = executor_cls(**executor_kwargs)
+    yield result
+    result.close()
 
 
-def success_handler(task, *args, **kwargs):
-    task.states.append('success')
+@pytest.fixture(autouse=True)
+def register_signals():
+    def start_handler(task, *args, **kwargs):
+        task.states.append('start')
 
+    def success_handler(task, *args, **kwargs):
+        task.states.append('success')
 
-def failure_handler(task, exception, *args, **kwargs):
-    task.states.append('failure')
-    task.exception = exception
+    def failure_handler(task, exception, *args, **kwargs):
+        task.states.append('failure')
+        task.exception = exception
+    events.start_task_signal.connect(start_handler)
+    events.on_success_task_signal.connect(success_handler)
+    events.on_failure_task_signal.connect(failure_handler)
+    yield
+    events.start_task_signal.disconnect(start_handler)
+    events.on_success_task_signal.disconnect(success_handler)
+    events.on_failure_task_signal.disconnect(failure_handler)

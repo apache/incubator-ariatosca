@@ -13,24 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Blocking executor
-"""
-
-from aria.utils import imports
-from .base import BaseExecutor
+import subprocess
 
 
-class CurrentThreadBlockingExecutor(BaseExecutor):
-    """
-    Executor which runs tasks in the current thread (blocking)
-    """
+def operation(**_):
+    process = subprocess.Popen(['mock-plugin1'], stdout=subprocess.PIPE)
+    output, _ = process.communicate()
+    assert not process.poll()
+    raise RuntimeError(output.strip())
 
-    def execute(self, task):
-        self._task_started(task)
-        try:
-            task_func = imports.load_attribute(task.operation_mapping)
-            task_func(ctx=task.context, **task.inputs)
-            self._task_succeeded(task)
-        except BaseException as e:
-            self._task_failed(task, exception=e)
+
+def console_script_entry_point():
+    print 'mock-plugin-output'

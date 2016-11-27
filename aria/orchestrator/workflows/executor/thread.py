@@ -26,7 +26,9 @@ from .base import BaseExecutor
 
 class ThreadExecutor(BaseExecutor):
     """
-    Executor which runs tasks in a separate thread
+    Executor which runs tasks in a separate thread. It's easier writing tests
+    using this executor rather than the full blown subprocess executor.
+    Note: This executor is not capable of running plugin operations.
     """
 
     def __init__(self, pool_size=1, *args, **kwargs):

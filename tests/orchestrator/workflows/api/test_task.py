@@ -39,9 +39,12 @@ class TestOperationTask(object):
 
     def test_node_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.lifecycle.create'
-        op_details = {'operation': True}
+        op_details = {'operation': True, 'plugin': 'plugin'}
         node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         node.operations[operation_name] = op_details
+        node.plugins = [{'name': 'plugin',
+                         'package_name': 'package',
+                         'package_version': '0.1'}]
         ctx.model.node.update(node)
         node_instance = \
             ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
@@ -66,12 +69,18 @@ class TestOperationTask(object):
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
         assert api_task.ignore_failure == ignore_failure
+        assert api_task.plugin == {'name': 'plugin',
+                                   'package_name': 'package',
+                                   'package_version': '0.1'}
 
-    def test_relationship_operation_task_creation(self, ctx):
+    def test_source_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
-        op_details = {'operation': True}
+        op_details = {'operation': True, 'plugin': 'plugin'}
         relationship = ctx.model.relationship.list()[0]
         relationship.source_operations[operation_name] = op_details
+        relationship.source_node.plugins = [{'name': 'plugin',
+                                             'package_name': 'package',
+                                             'package_version': '0.1'}]
         relationship_instance = ctx.model.relationship_instance.list()[0]
         inputs = {'inputs': True}
         max_attempts = 10
@@ -92,6 +101,41 @@ class TestOperationTask(object):
         assert api_task.inputs == inputs
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
+        assert api_task.plugin == {'name': 'plugin',
+                                   'package_name': 'package',
+                                   'package_version': '0.1'}
+
+    def test_target_relationship_operation_task_creation(self, ctx):
+        operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
+        op_details = {'operation': True, 'plugin': 'plugin'}
+        relationship = ctx.model.relationship.list()[0]
+        relationship.target_operations[operation_name] = op_details
+        relationship.target_node.plugins = [{'name': 'plugin',
+                                             'package_name': 'package',
+                                             'package_version': '0.1'}]
+        relationship_instance = ctx.model.relationship_instance.list()[0]
+        inputs = {'inputs': True}
+        max_attempts = 10
+        retry_interval = 10
+
+        with context.workflow.current.push(ctx):
+            api_task = api.task.OperationTask.relationship_instance(
+                name=operation_name,
+                instance=relationship_instance,
+                operation_end=api.task.OperationTask.TARGET_OPERATION,
+                inputs=inputs,
+                max_attempts=max_attempts,
+                retry_interval=retry_interval)
+
+        assert api_task.name == '{0}.{1}'.format(operation_name, relationship_instance.id)
+        assert api_task.operation_mapping is True
+        assert api_task.actor == relationship_instance
+        assert api_task.inputs == inputs
+        assert api_task.retry_interval == retry_interval
+        assert api_task.max_attempts == max_attempts
+        assert api_task.plugin == {'name': 'plugin',
+                                   'package_name': 'package',
+                                   'package_version': '0.1'}
 
     def test_operation_task_default_values(self, ctx):
         dependency_node_instance = ctx.model.node_instance.get_by_name(
@@ -106,6 +150,7 @@ class TestOperationTask(object):
         assert task.retry_interval == ctx._task_retry_interval
         assert task.max_attempts == ctx._task_max_attempts
         assert task.ignore_failure == ctx._task_ignore_failure
+        assert task.plugin == {}
 
 
 class TestWorkflowTask(object):

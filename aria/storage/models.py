@@ -344,8 +344,7 @@ class Node(SQLModelBase):
     min_number_of_instances = Column(Integer, nullable=False)
     number_of_instances = Column(Integer, nullable=False)
     planned_number_of_instances = Column(Integer, nullable=False)
-    plugins = Column(Dict)
-    plugins_to_install = Column(Dict)
+    plugins = Column(List)
     properties = Column(Dict)
     operations = Column(Dict)
     type = Column(Text, nullable=False, index=True)
@@ -474,14 +473,13 @@ class Plugin(SQLModelBase):
     distribution = Column(Text)
     distribution_release = Column(Text)
     distribution_version = Column(Text)
-    excluded_wheels = Column(Dict)
     package_name = Column(Text, nullable=False, index=True)
     package_source = Column(Text)
     package_version = Column(Text)
-    supported_platform = Column(Dict)
-    supported_py_versions = Column(Dict)
+    supported_platform = Column(Text)
+    supported_py_versions = Column(List)
     uploaded_at = Column(DateTime, nullable=False, index=True)
-    wheels = Column(Dict, nullable=False)
+    wheels = Column(List, nullable=False)
 
 
 class Task(SQLModelBase):
@@ -550,6 +548,11 @@ class Task(SQLModelBase):
     name = Column(String)
     operation_mapping = Column(String)
     inputs = Column(Dict)
+    plugin_id = foreign_key(Plugin.id, nullable=True)
+
+    @declared_attr
+    def plugin(cls):
+        return one_to_many_relationship(cls, Plugin, cls.plugin_id)
 
     @declared_attr
     def execution(cls):

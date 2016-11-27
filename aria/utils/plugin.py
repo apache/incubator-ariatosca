@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Executors for task execution
-"""
+import wagon
 
 
-from . import process, thread
-from .base import BaseExecutor
+def create(source, destination_dir):
+    return wagon.create(source=source, archive_destination_dir=destination_dir)

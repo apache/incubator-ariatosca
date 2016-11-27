@@ -23,3 +23,10 @@ class OrchestratorError(AriaError):
     Orchestrator based exception
     """
     pass
+
+
+class PluginAlreadyExistsError(AriaError):
+    """
+    Raised when a plugin with the same package name and package version already exists
+    """
+    pass
