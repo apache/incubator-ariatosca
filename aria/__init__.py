@@ -23,7 +23,6 @@ import pkgutil
 from .VERSION import version as __version__
 
 from .orchestrator.decorators import workflow, operation
-from .storage import ModelStorage, ResourceStorage, models, ModelDriver, ResourceDriver
 from . import (
     utils,
     parser,
@@ -37,7 +36,6 @@ __all__ = (
     'operation',
 )
 
-_model_storage = {}
 _resource_storage = {}
 
 
@@ -58,37 +56,38 @@ def install_aria_extensions():
             del sys.modules[module_name]
 
 
-def application_model_storage(driver):
+def application_model_storage(api, api_kwargs=None):
     """
     Initiate model storage for the supplied storage driver
     """
+    models = [
+        storage.models.Plugin,
+        storage.models.ProviderContext,
 
-    assert isinstance(driver, ModelDriver)
-    if driver not in _model_storage:
-        _model_storage[driver] = ModelStorage(
-            driver, model_classes=[
-                models.Node,
-                models.NodeInstance,
-                models.Plugin,
-                models.Blueprint,
-                models.Snapshot,
-                models.Deployment,
-                models.DeploymentUpdate,
-                models.DeploymentModification,
-                models.Execution,
-                models.ProviderContext,
-                models.Task,
-            ])
-    return _model_storage[driver]
+        storage.models.Blueprint,
+        storage.models.Deployment,
+        storage.models.DeploymentUpdate,
+        storage.models.DeploymentUpdateStep,
+        storage.models.DeploymentModification,
+
+        storage.models.Node,
+        storage.models.NodeInstance,
+        storage.models.Relationship,
+        storage.models.RelationshipInstance,
+
+        storage.models.Execution,
+        storage.models.Task,
+    ]
+    # if api not in _model_storage:
+    return storage.ModelStorage(api, items=models, api_kwargs=api_kwargs or {})
 
 
 def application_resource_storage(driver):
     """
     Initiate resource storage for the supplied storage driver
     """
-    assert isinstance(driver, ResourceDriver)
     if driver not in _resource_storage:
-        _resource_storage[driver] = ResourceStorage(
+        _resource_storage[driver] = storage.ResourceStorage(
             driver,
             resources=[
                 'blueprint',

@@ -19,20 +19,19 @@ import pytest
 
 from aria import application_model_storage
 from aria.orchestrator import context
-
+from aria.storage.sql_mapi import SQLAlchemyModelAPI
+from tests import storage as test_storage
 from tests.mock import models
-from tests.storage import InMemoryModelDriver
 
 
 class TestWorkflowContext(object):
 
     def test_execution_creation_on_workflow_context_creation(self, storage):
-        self._create_ctx(storage)
-        execution = storage.execution.get(models.EXECUTION_ID)
-        assert execution.id == models.EXECUTION_ID
-        assert execution.deployment_id == models.DEPLOYMENT_ID
-        assert execution.workflow_id == models.WORKFLOW_ID
-        assert execution.blueprint_id == models.BLUEPRINT_ID
+        ctx = self._create_ctx(storage)
+        execution = storage.execution.get(ctx.execution.id)             # pylint: disable=no-member
+        assert execution.deployment == storage.deployment.get_by_name(models.DEPLOYMENT_NAME)
+        assert execution.workflow_name == models.WORKFLOW_NAME
+        assert execution.blueprint == storage.blueprint.get_by_name(models.BLUEPRINT_NAME)
         assert execution.status == storage.execution.model_cls.PENDING
         assert execution.parameters == {}
         assert execution.created_at <= datetime.utcnow()
@@ -43,13 +42,17 @@ class TestWorkflowContext(object):
 
     @staticmethod
     def _create_ctx(storage):
+        """
+
+        :param storage:
+        :return WorkflowContext:
+        """
         return context.workflow.WorkflowContext(
             name='simple_context',
             model_storage=storage,
             resource_storage=None,
-            deployment_id=models.DEPLOYMENT_ID,
-            workflow_id=models.WORKFLOW_ID,
-            execution_id=models.EXECUTION_ID,
+            deployment_id=storage.deployment.get_by_name(models.DEPLOYMENT_NAME).id,
+            workflow_name=models.WORKFLOW_NAME,
             task_max_attempts=models.TASK_MAX_ATTEMPTS,
             task_retry_interval=models.TASK_RETRY_INTERVAL
         )
@@ -57,8 +60,10 @@ class TestWorkflowContext(object):
 
 @pytest.fixture(scope='function')
 def storage():
-    result = application_model_storage(InMemoryModelDriver())
-    result.setup()
-    result.blueprint.store(models.get_blueprint())
-    result.deployment.store(models.get_deployment())
-    return result
+    api_kwargs = test_storage.get_sqlite_api_kwargs()
+    workflow_storage = application_model_storage(SQLAlchemyModelAPI, api_kwargs=api_kwargs)
+    workflow_storage.blueprint.put(models.get_blueprint())
+    blueprint = workflow_storage.blueprint.get_by_name(models.BLUEPRINT_NAME)
+    workflow_storage.deployment.put(models.get_deployment(blueprint))
+    yield workflow_storage
+    test_storage.release_sqlite_storage(workflow_storage)

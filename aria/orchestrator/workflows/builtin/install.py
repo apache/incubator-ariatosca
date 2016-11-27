@@ -47,7 +47,8 @@ def install(ctx, graph, node_instances=(), node_instance_sub_workflows=None):
     # create dependencies between the node instance sub workflow
     for node_instance in node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
-        if node_instance.relationship_instances:
-            dependencies = [node_instance_sub_workflows[relationship_instance.target_id]
-                            for relationship_instance in node_instance.relationship_instances]
+        if node_instance.outbound_relationship_instances:
+            dependencies = [
+                node_instance_sub_workflows[relationship_instance.target_node_instance.id]
+                for relationship_instance in node_instance.outbound_relationship_instances]
             graph.add_dependency(node_instance_sub_workflow, dependencies)

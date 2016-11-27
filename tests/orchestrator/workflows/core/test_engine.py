@@ -12,19 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import time
 import threading
 from datetime import datetime
 
 import pytest
 
-import aria
 from aria.orchestrator import (
     events,
     workflow,
     operation,
-    context
 )
 from aria.storage import models
 from aria.orchestrator.workflows import (
@@ -34,9 +31,7 @@ from aria.orchestrator.workflows import (
 from aria.orchestrator.workflows.core import engine
 from aria.orchestrator.workflows.executor import thread
 
-
-import tests.storage
-from tests import mock
+from tests import mock, storage
 
 
 global_test_holder = {}
@@ -65,11 +60,11 @@ class BaseTest(object):
             max_attempts=None,
             retry_interval=None,
             ignore_failure=None):
-        node_instance = ctx.model.node_instance.get('dependency_node_instance')
+        node_instance = \
+            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
         node_instance.node.operations['aria.interfaces.lifecycle.create'] = {
             'operation': '{name}.{func.__name__}'.format(name=__name__, func=func)
         }
-        ctx.model.node_instance.store(node_instance)
         return api.task.OperationTask.node_instance(
             instance=node_instance,
             name='aria.interfaces.lifecycle.create',
@@ -79,14 +74,14 @@ class BaseTest(object):
             ignore_failure=ignore_failure
         )
 
-    @pytest.fixture(scope='function', autouse=True)
+    @pytest.fixture(autouse=True)
     def globals_cleanup(self):
         try:
             yield
         finally:
             global_test_holder.clear()
 
-    @pytest.fixture(scope='function', autouse=True)
+    @pytest.fixture(autouse=True)
     def signals_registration(self, ):
         def sent_task_handler(*args, **kwargs):
             calls = global_test_holder.setdefault('sent_task_signal_calls', 0)
@@ -119,7 +114,7 @@ class BaseTest(object):
             events.on_cancelled_workflow_signal.disconnect(cancel_workflow_handler)
             events.sent_task_signal.disconnect(sent_task_handler)
 
-    @pytest.fixture(scope='function')
+    @pytest.fixture
     def executor(self):
         result = thread.ThreadExecutor()
         try:
@@ -127,27 +122,13 @@ class BaseTest(object):
         finally:
             result.close()
 
-    @pytest.fixture(scope='function')
-    def workflow_context(self):
-        model_storage = aria.application_model_storage(tests.storage.InMemoryModelDriver())
-        model_storage.setup()
-        blueprint = mock.models.get_blueprint()
-        deployment = mock.models.get_deployment()
-        model_storage.blueprint.store(blueprint)
-        model_storage.deployment.store(deployment)
-        node = mock.models.get_dependency_node()
-        node_instance = mock.models.get_dependency_node_instance(node)
-        model_storage.node.store(node)
-        model_storage.node_instance.store(node_instance)
-        result = context.workflow.WorkflowContext(
-            name='test',
-            model_storage=model_storage,
-            resource_storage=None,
-            deployment_id=deployment.id,
-            workflow_id='name')
-        result.states = []
-        result.exception = None
-        return result
+    @pytest.fixture
+    def workflow_context(self, tmpdir):
+        workflow_context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+        workflow_context.states = []
+        workflow_context.exception = None
+        yield workflow_context
+        storage.release_sqlite_storage(workflow_context.model)
 
 
 class TestEngine(BaseTest):
@@ -245,7 +226,7 @@ class TestCancel(BaseTest):
                            executor=executor)
         t = threading.Thread(target=eng.execute)
         t.start()
-        time.sleep(1)
+        time.sleep(10)
         eng.cancel_execution()
         t.join(timeout=30)
         assert workflow_context.states == ['start', 'cancel']

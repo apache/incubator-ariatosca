@@ -19,20 +19,14 @@ from aria.orchestrator import context
 from aria.orchestrator.workflows import api, core
 
 from tests import mock
+from tests import storage
 
 
 def test_task_graph_into_execution_graph():
     operation_name = 'aria.interfaces.lifecycle.create'
-    task_context = mock.context.simple()
-    node = mock.models.get_dependency_node()
-    node_instance = mock.models.get_dependency_node_instance()
-    deployment = mock.models.get_deployment()
-    execution = mock.models.get_execution()
-    task_context.model.node.store(node)
-    task_context.model.node_instance.store(node_instance)
-    task_context.model.deployment.store(deployment)
-    task_context.model.execution.store(execution)
-
+    task_context = mock.context.simple(storage.get_sqlite_api_kwargs())
+    node_instance = \
+        task_context.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
     def sub_workflow(name, **_):
         return api.task_graph.TaskGraph(name)
 
@@ -91,6 +85,7 @@ def test_task_graph_into_execution_graph():
                                   simple_after_task)
     assert isinstance(_get_task_by_name(execution_tasks[6], execution_graph),
                       core.task.EndWorkflowTask)
+    storage.release_sqlite_storage(task_context.model)
 
 
 def _assert_execution_is_api_task(execution_task, api_task):

@@ -27,30 +27,14 @@ class NodeToolBelt(object):
         self._op_context = operation_context
 
     @property
-    def dependent_node_instances(self):
-        """
-        Any node instance which has a relationship to the current node instance.
-        :return:
-        """
-        assert isinstance(self._op_context, operation.NodeOperationContext)
-        node_instances = self._op_context.model.node_instance.iter(
-            filters={'deployment_id': self._op_context.deployment.id}
-        )
-        for node_instance in node_instances:
-            for relationship_instance in node_instance.relationship_instances:
-                if relationship_instance.target_id == self._op_context.node_instance.id:
-                    yield node_instance
-
-    @property
     def host_ip(self):
         """
         The host ip of the current node
         :return:
         """
         assert isinstance(self._op_context, operation.NodeOperationContext)
-        host_id = self._op_context._actor.host_id
-        host_instance = self._op_context.model.node_instance.get(host_id)
-        return host_instance.runtime_properties.get('ip')
+        host = self._op_context.node_instance.host
+        return host.runtime_properties.get('ip')
 
 
 class RelationshipToolBelt(object):

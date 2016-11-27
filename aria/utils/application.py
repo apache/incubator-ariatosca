@@ -117,7 +117,7 @@ class StorageManager(LoggerMixin):
             updated_at=now,
             main_file_name=main_file_name,
         )
-        self.model_storage.blueprint.store(blueprint)
+        self.model_storage.blueprint.put(blueprint)
         self.logger.debug('created blueprint model storage entry')
 
     def create_nodes_storage(self):
@@ -138,7 +138,7 @@ class StorageManager(LoggerMixin):
             scalable = node_copy.pop('capabilities')['scalable']['properties']
             for index, relationship in enumerate(node_copy['relationships']):
                 relationship = self.model_storage.relationship.model_cls(**relationship)
-                self.model_storage.relationship.store(relationship)
+                self.model_storage.relationship.put(relationship)
                 node_copy['relationships'][index] = relationship
 
             node_copy = self.model_storage.node.model_cls(
@@ -149,7 +149,7 @@ class StorageManager(LoggerMixin):
                 max_number_of_instances=scalable['max_instances'],
                 number_of_instances=scalable['current_instances'],
                 **node_copy)
-            self.model_storage.node.store(node_copy)
+            self.model_storage.node.put(node_copy)
 
     def create_deployment_storage(self):
         """
@@ -190,7 +190,7 @@ class StorageManager(LoggerMixin):
             created_at=now,
             updated_at=now
         )
-        self.model_storage.deployment.store(deployment)
+        self.model_storage.deployment.put(deployment)
         self.logger.debug('created deployment model storage entry')
 
     def create_node_instances_storage(self):
@@ -213,7 +213,7 @@ class StorageManager(LoggerMixin):
                     type=relationship_instance['type'],
                     target_id=relationship_instance['target_id'])
                 relationship_instances.append(relationship_instance_model)
-                self.model_storage.relationship_instance.store(relationship_instance_model)
+                self.model_storage.relationship_instance.put(relationship_instance_model)
 
             node_instance_model = self.model_storage.node_instance.model_cls(
                 node=node_model,
@@ -224,7 +224,7 @@ class StorageManager(LoggerMixin):
                 version='1.0',
                 relationship_instances=relationship_instances)
 
-            self.model_storage.node_instance.store(node_instance_model)
+            self.model_storage.node_instance.put(node_instance_model)
         self.logger.debug('created node-instances model storage entries')
 
     def create_plugin_storage(self, plugin_id, source):
@@ -258,7 +258,7 @@ class StorageManager(LoggerMixin):
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=now
         )
-        self.model_storage.plugin.store(plugin)
+        self.model_storage.plugin.put(plugin)
         self.logger.debug('created plugin model storage entry')
 
 

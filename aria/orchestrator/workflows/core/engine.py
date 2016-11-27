@@ -100,7 +100,11 @@ class Engine(logger.LoggerMixin):
         return len(self._execution_graph.node) == 0
 
     def _tasks_iter(self):
-        return (data['task'] for _, data in self._execution_graph.nodes_iter(data=True))
+        for _, data in self._execution_graph.nodes_iter(data=True):
+            task = data['task']
+            if isinstance(task, engine_task.OperationTask):
+                self._workflow_context.model.task.refresh(task.model_task)
+            yield task
 
     def _handle_executable_task(self, task):
         if isinstance(task, engine_task.StubTask):

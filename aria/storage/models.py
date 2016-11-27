@@ -36,16 +36,30 @@ classes:
     * ProviderContext - provider context implementation model.
     * Plugin - plugin implementation model.
 """
-
+from collections import namedtuple
 from datetime import datetime
-from types import NoneType
 
-from .structures import Field, IterPointerField, Model, uuid_generator, PointerField
+from sqlalchemy.ext.declarative.base import declared_attr
+
+from .structures import (
+    SQLModelBase,
+    Column,
+    Integer,
+    Text,
+    DateTime,
+    Boolean,
+    Enum,
+    String,
+    Float,
+    List,
+    Dict,
+    foreign_key,
+    one_to_many_relationship,
+    relationship_to_self,
+    orm)
 
 __all__ = (
-    'Model',
     'Blueprint',
-    'Snapshot',
     'Deployment',
     'DeploymentUpdateStep',
     'DeploymentUpdate',
@@ -59,66 +73,192 @@ __all__ = (
     'Plugin',
 )
 
-# todo: sort this, maybe move from mgr or move from aria???
-ACTION_TYPES = ()
-ENTITY_TYPES = ()
+
+#pylint: disable=no-self-argument
 
 
-class Blueprint(Model):
+class Blueprint(SQLModelBase):
     """
-    A Model which represents a blueprint
+    Blueprint model representation.
     """
-    plan = Field(type=dict)
-    id = Field(type=basestring, default=uuid_generator)
-    description = Field(type=(basestring, NoneType))
-    created_at = Field(type=datetime)
-    updated_at = Field(type=datetime)
-    main_file_name = Field(type=basestring)
+    __tablename__ = 'blueprints'
+
+    name = Column(Text, index=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    main_file_name = Column(Text, nullable=False)
+    plan = Column(Dict, nullable=False)
+    updated_at = Column(DateTime)
+    description = Column(Text)
 
 
-class Snapshot(Model):
+class Deployment(SQLModelBase):
     """
-    A Model which represents a snapshot
+    Deployment model representation.
     """
-    CREATED = 'created'
+    __tablename__ = 'deployments'
+
+    _private_fields = ['blueprint_id']
+
+    blueprint_id = foreign_key(Blueprint.id)
+
+    name = Column(Text, index=True)
+    created_at = Column(DateTime, nullable=False, index=True)
+    description = Column(Text)
+    inputs = Column(Dict)
+    groups = Column(Dict)
+    permalink = Column(Text)
+    policy_triggers = Column(Dict)
+    policy_types = Column(Dict)
+    outputs = Column(Dict)
+    scaling_groups = Column(Dict)
+    updated_at = Column(DateTime)
+    workflows = Column(Dict)
+
+    @declared_attr
+    def blueprint(cls):
+        return one_to_many_relationship(cls, Blueprint, cls.blueprint_id)
+
+
+class Execution(SQLModelBase):
+    """
+    Execution model representation.
+    """
+    __tablename__ = 'executions'
+
+    TERMINATED = 'terminated'
     FAILED = 'failed'
-    CREATING = 'creating'
-    UPLOADED = 'uploaded'
-    END_STATES = [CREATED, FAILED, UPLOADED]
+    CANCELLED = 'cancelled'
+    PENDING = 'pending'
+    STARTED = 'started'
+    CANCELLING = 'cancelling'
+    FORCE_CANCELLING = 'force_cancelling'
 
-    id = Field(type=basestring, default=uuid_generator)
-    created_at = Field(type=datetime)
-    status = Field(type=basestring)
-    error = Field(type=basestring, default=None)
+    STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING, FORCE_CANCELLING]
+    END_STATES = [TERMINATED, FAILED, CANCELLED]
+    ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
+
+    VALID_TRANSITIONS = {
+        PENDING: [STARTED, CANCELLED],
+        STARTED: END_STATES + [CANCELLING],
+        CANCELLING: END_STATES
+    }
+
+    @orm.validates('status')
+    def validate_status(self, key, value):
+        """Validation function that verifies execution status transitions are OK"""
+        try:
+            current_status = getattr(self, key)
+        except AttributeError:
+            return
+        valid_transitions = Execution.VALID_TRANSITIONS.get(current_status, [])
+        if all([current_status is not None,
+                current_status != value,
+                value not in valid_transitions]):
+            raise ValueError('Cannot change execution status from {current} to {new}'.format(
+                current=current_status,
+                new=value))
+        return value
+
+    deployment_id = foreign_key(Deployment.id)
+    blueprint_id = foreign_key(Blueprint.id)
+    _private_fields = ['deployment_id', 'blueprint_id']
+
+    created_at = Column(DateTime, index=True)
+    started_at = Column(DateTime, nullable=True, index=True)
+    ended_at = Column(DateTime, nullable=True, index=True)
+    error = Column(Text, nullable=True)
+    is_system_workflow = Column(Boolean, nullable=False, default=False)
+    parameters = Column(Dict)
+    status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
+    workflow_name = Column(Text, nullable=False)
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+
+    @declared_attr
+    def blueprint(cls):
+        return one_to_many_relationship(cls, Blueprint, cls.blueprint_id)
+
+    def __str__(self):
+        return '<{0} id=`{1}` (status={2})>'.format(
+            self.__class__.__name__,
+            self.id,
+            self.status
+        )
 
 
-class Deployment(Model):
+class DeploymentUpdate(SQLModelBase):
     """
-    A Model which represents a deployment
+    Deployment update model representation.
     """
-    id = Field(type=basestring, default=uuid_generator)
-    description = Field(type=(basestring, NoneType))
-    created_at = Field(type=datetime)
-    updated_at = Field(type=datetime)
-    blueprint_id = Field(type=basestring)
-    workflows = Field(type=dict)
-    inputs = Field(type=dict, default=lambda: {})
-    policy_types = Field(type=dict, default=lambda: {})
-    policy_triggers = Field(type=dict, default=lambda: {})
-    groups = Field(type=dict, default=lambda: {})
-    outputs = Field(type=dict, default=lambda: {})
-    scaling_groups = Field(type=dict, default=lambda: {})
+    __tablename__ = 'deployment_updates'
+
+    deployment_id = foreign_key(Deployment.id)
+    execution_id = foreign_key(Execution.id, nullable=True)
+    _private_fields = ['execution_id', 'deployment_id']
+
+    created_at = Column(DateTime, nullable=False, index=True)
+    deployment_plan = Column(Dict, nullable=False)
+    deployment_update_node_instances = Column(Dict)
+    deployment_update_deployment = Column(Dict)
+    deployment_update_nodes = Column(Dict)
+    modified_entity_ids = Column(Dict)
+    state = Column(Text)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_id)
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+
+    def to_dict(self, suppress_error=False, **kwargs):
+        dep_update_dict = super(DeploymentUpdate, self).to_dict(suppress_error)
+        # Taking care of the fact the DeploymentSteps are objects
+        dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
+        return dep_update_dict
 
 
-class DeploymentUpdateStep(Model):
+class DeploymentUpdateStep(SQLModelBase):
     """
-    A Model which represents a deployment update step
+    Deployment update step model representation.
     """
-    id = Field(type=basestring, default=uuid_generator)
-    action = Field(type=basestring, choices=ACTION_TYPES)
-    entity_type = Field(type=basestring, choices=ENTITY_TYPES)
-    entity_id = Field(type=basestring)
-    supported = Field(type=bool, default=True)
+    __tablename__ = 'deployment_update_steps'
+    _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
+    ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
+    _entity_types = namedtuple(
+        'ENTITY_TYPES',
+        'NODE, RELATIONSHIP, PROPERTY, OPERATION, WORKFLOW, OUTPUT, DESCRIPTION, GROUP, '
+        'POLICY_TYPE, POLICY_TRIGGER, PLUGIN')
+    ENTITY_TYPES = _entity_types(
+        NODE='node',
+        RELATIONSHIP='relationship',
+        PROPERTY='property',
+        OPERATION='operation',
+        WORKFLOW='workflow',
+        OUTPUT='output',
+        DESCRIPTION='description',
+        GROUP='group',
+        POLICY_TYPE='policy_type',
+        POLICY_TRIGGER='policy_trigger',
+        PLUGIN='plugin'
+    )
+
+    deployment_update_id = foreign_key(DeploymentUpdate.id)
+    _private_fields = ['deployment_update_id']
+
+    action = Column(Enum(*ACTION_TYPES, name='action_type'), nullable=False)
+    entity_id = Column(Text, nullable=False)
+    entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
+
+    @declared_attr
+    def deployment_update(cls):
+        return one_to_many_relationship(cls,
+                                        DeploymentUpdate,
+                                        cls.deployment_update_id,
+                                        backreference='steps')
 
     def __hash__(self):
         return hash((self.id, self.entity_id))
@@ -148,265 +288,225 @@ class DeploymentUpdateStep(Model):
         return False
 
 
-class DeploymentUpdate(Model):
+class DeploymentModification(SQLModelBase):
     """
-    A Model which represents a deployment update
+    Deployment modification model representation.
     """
-    INITIALIZING = 'initializing'
-    SUCCESSFUL = 'successful'
-    UPDATING = 'updating'
-    FINALIZING = 'finalizing'
-    EXECUTING_WORKFLOW = 'executing_workflow'
-    FAILED = 'failed'
+    __tablename__ = 'deployment_modifications'
 
-    STATES = [
-        INITIALIZING,
-        SUCCESSFUL,
-        UPDATING,
-        FINALIZING,
-        EXECUTING_WORKFLOW,
-        FAILED,
-    ]
-
-    # '{0}-{1}'.format(kwargs['deployment_id'], uuid4())
-    id = Field(type=basestring, default=uuid_generator)
-    deployment_id = Field(type=basestring)
-    state = Field(type=basestring, choices=STATES, default=INITIALIZING)
-    deployment_plan = Field()
-    deployment_update_nodes = Field(default=None)
-    deployment_update_node_instances = Field(default=None)
-    deployment_update_deployment = Field(default=None)
-    modified_entity_ids = Field(default=None)
-    execution_id = Field(type=basestring)
-    steps = IterPointerField(type=DeploymentUpdateStep, default=())
-
-
-class Execution(Model):
-    """
-    A Model which represents an execution
-    """
-
-    class _Validation(object):
-
-        @staticmethod
-        def execution_status_transition_validation(_, value, instance):
-            """Validation function that verifies execution status transitions are OK"""
-            try:
-                current_status = instance.status
-            except AttributeError:
-                return
-            valid_transitions = Execution.VALID_TRANSITIONS.get(current_status, [])
-            if current_status != value and value not in valid_transitions:
-                raise ValueError('Cannot change execution status from {current} to {new}'.format(
-                    current=current_status,
-                    new=value))
-
-    TERMINATED = 'terminated'
-    FAILED = 'failed'
-    CANCELLED = 'cancelled'
-    PENDING = 'pending'
-    STARTED = 'started'
-    CANCELLING = 'cancelling'
-    STATES = (
-        TERMINATED,
-        FAILED,
-        CANCELLED,
-        PENDING,
-        STARTED,
-        CANCELLING,
-    )
-    END_STATES = [TERMINATED, FAILED, CANCELLED]
-    ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
-    VALID_TRANSITIONS = {
-        PENDING: [STARTED, CANCELLED],
-        STARTED: END_STATES + [CANCELLING],
-        CANCELLING: END_STATES
-    }
-
-    id = Field(type=basestring, default=uuid_generator)
-    status = Field(type=basestring, choices=STATES,
-                   validation_func=_Validation.execution_status_transition_validation)
-    deployment_id = Field(type=basestring)
-    workflow_id = Field(type=basestring)
-    blueprint_id = Field(type=basestring)
-    created_at = Field(type=datetime, default=datetime.utcnow)
-    started_at = Field(type=datetime, default=None)
-    ended_at = Field(type=datetime, default=None)
-    error = Field(type=basestring, default=None)
-    parameters = Field()
-
-
-class Relationship(Model):
-    """
-    A Model which represents a relationship
-    """
-    id = Field(type=basestring, default=uuid_generator)
-    source_id = Field(type=basestring)
-    target_id = Field(type=basestring)
-    source_interfaces = Field(type=dict)
-    source_operations = Field(type=dict)
-    target_interfaces = Field(type=dict)
-    target_operations = Field(type=dict)
-    type = Field(type=basestring)
-    type_hierarchy = Field(type=list)
-    properties = Field(type=dict)
-
-
-class Node(Model):
-    """
-    A Model which represents a node
-    """
-    id = Field(type=basestring, default=uuid_generator)
-    blueprint_id = Field(type=basestring)
-    type = Field(type=basestring)
-    type_hierarchy = Field()
-    number_of_instances = Field(type=int)
-    planned_number_of_instances = Field(type=int)
-    deploy_number_of_instances = Field(type=int)
-    host_id = Field(type=basestring, default=None)
-    properties = Field(type=dict)
-    operations = Field(type=dict)
-    plugins = Field(type=list, default=())
-    relationships = IterPointerField(type=Relationship)
-    plugins_to_install = Field(type=list, default=())
-    min_number_of_instances = Field(type=int)
-    max_number_of_instances = Field(type=int)
-
-    def relationships_by_target(self, target_id):
-        """
-        Retreives all of the relationship by target.
-        :param target_id: the node id of the target  of the relationship
-        :yields: a relationship which target and node with the specified target_id
-        """
-        for relationship in self.relationships:
-            if relationship.target_id == target_id:
-                yield relationship
-        # todo: maybe add here Exception if isn't exists (didn't yield one's)
-
-
-class RelationshipInstance(Model):
-    """
-    A Model which represents a relationship instance
-    """
-    id = Field(type=basestring, default=uuid_generator)
-    target_id = Field(type=basestring)
-    target_name = Field(type=basestring)
-    source_id = Field(type=basestring)
-    source_name = Field(type=basestring)
-    type = Field(type=basestring)
-    relationship = PointerField(type=Relationship)
-
-
-class NodeInstance(Model):
-    """
-    A Model which represents a node instance
-    """
-    # todo: add statuses
-    UNINITIALIZED = 'uninitialized'
-    INITIALIZING = 'initializing'
-    CREATING = 'creating'
-    CONFIGURING = 'configuring'
-    STARTING = 'starting'
-    DELETED = 'deleted'
-    STOPPING = 'stopping'
-    DELETING = 'deleting'
-    STATES = (
-        UNINITIALIZED,
-        INITIALIZING,
-        CREATING,
-        CONFIGURING,
-        STARTING,
-        DELETED,
-        STOPPING,
-        DELETING
-    )
-
-    id = Field(type=basestring, default=uuid_generator)
-    deployment_id = Field(type=basestring)
-    runtime_properties = Field(type=dict)
-    state = Field(type=basestring, choices=STATES, default=UNINITIALIZED)
-    version = Field(type=(basestring, NoneType))
-    relationship_instances = IterPointerField(type=RelationshipInstance)
-    node = PointerField(type=Node)
-    host_id = Field(type=basestring, default=None)
-    scaling_groups = Field(default=())
-
-    def relationships_by_target(self, target_id):
-        """
-        Retreives all of the relationship by target.
-        :param target_id: the instance id of the target of the relationship
-        :yields: a relationship instance which target and node with the specified target_id
-        """
-        for relationship_instance in self.relationship_instances:
-            if relationship_instance.target_id == target_id:
-                yield relationship_instance
-        # todo: maybe add here Exception if isn't exists (didn't yield one's)
-
-
-class DeploymentModification(Model):
-    """
-    A Model which represents a deployment modification
-    """
     STARTED = 'started'
     FINISHED = 'finished'
     ROLLEDBACK = 'rolledback'
+
+    STATES = [STARTED, FINISHED, ROLLEDBACK]
     END_STATES = [FINISHED, ROLLEDBACK]
 
-    id = Field(type=basestring, default=uuid_generator)
-    deployment_id = Field(type=basestring)
-    modified_nodes = Field(type=(dict, NoneType))
-    added_and_related = IterPointerField(type=NodeInstance)
-    removed_and_related = IterPointerField(type=NodeInstance)
-    extended_and_related = IterPointerField(type=NodeInstance)
-    reduced_and_related = IterPointerField(type=NodeInstance)
-    # before_modification = IterPointerField(type=NodeInstance)
-    status = Field(type=basestring, choices=(STARTED, FINISHED, ROLLEDBACK))
-    created_at = Field(type=datetime)
-    ended_at = Field(type=(datetime, NoneType))
-    context = Field()
+    deployment_id = foreign_key(Deployment.id)
+    _private_fields = ['deployment_id']
+
+    context = Column(Dict)
+    created_at = Column(DateTime, nullable=False, index=True)
+    ended_at = Column(DateTime, index=True)
+    modified_nodes = Column(Dict)
+    node_instances = Column(Dict)
+    status = Column(Enum(*STATES, name='deployment_modification_status'))
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls,
+                                        Deployment,
+                                        cls.deployment_id,
+                                        backreference='modifications')
 
 
-class ProviderContext(Model):
+class Node(SQLModelBase):
     """
-    A Model which represents a provider context
+    Node model representation.
     """
-    id = Field(type=basestring, default=uuid_generator)
-    context = Field(type=dict)
-    name = Field(type=basestring)
+    __tablename__ = 'nodes'
+
+    # See base class for an explanation on these properties
+    is_id_unique = False
+
+    name = Column(Text, index=True)
+    _private_fields = ['deployment_id', 'host_id']
+    deployment_id = foreign_key(Deployment.id)
+    host_id = foreign_key('nodes.id', nullable=True)
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+
+    deploy_number_of_instances = Column(Integer, nullable=False)
+    # TODO: This probably should be a foreign key, but there's no guarantee
+    # in the code, currently, that the host will be created beforehand
+    max_number_of_instances = Column(Integer, nullable=False)
+    min_number_of_instances = Column(Integer, nullable=False)
+    number_of_instances = Column(Integer, nullable=False)
+    planned_number_of_instances = Column(Integer, nullable=False)
+    plugins = Column(Dict)
+    plugins_to_install = Column(Dict)
+    properties = Column(Dict)
+    operations = Column(Dict)
+    type = Column(Text, nullable=False, index=True)
+    type_hierarchy = Column(List)
+
+    @declared_attr
+    def host(cls):
+        return relationship_to_self(cls, cls.host_id, cls.id)
 
 
-class Plugin(Model):
+class Relationship(SQLModelBase):
     """
-    A Model which represents a plugin
+    Relationship model representation.
     """
-    id = Field(type=basestring, default=uuid_generator)
-    package_name = Field(type=basestring)
-    archive_name = Field(type=basestring)
-    package_source = Field(type=dict)
-    package_version = Field(type=basestring)
-    supported_platform = Field(type=basestring)
-    distribution = Field(type=basestring)
-    distribution_version = Field(type=basestring)
-    distribution_release = Field(type=basestring)
-    wheels = Field()
-    excluded_wheels = Field()
-    supported_py_versions = Field(type=list)
-    uploaded_at = Field(type=datetime)
+    __tablename__ = 'relationships'
+
+    _private_fields = ['source_node_id', 'target_node_id']
+
+    source_node_id = foreign_key(Node.id)
+    target_node_id = foreign_key(Node.id)
+
+    @declared_attr
+    def source_node(cls):
+        return one_to_many_relationship(cls,
+                                        Node,
+                                        cls.source_node_id,
+                                        'outbound_relationships')
+
+    @declared_attr
+    def target_node(cls):
+        return one_to_many_relationship(cls,
+                                        Node,
+                                        cls.target_node_id,
+                                        'inbound_relationships')
+
+    source_interfaces = Column(Dict)
+    source_operations = Column(Dict, nullable=False)
+    target_interfaces = Column(Dict)
+    target_operations = Column(Dict, nullable=False)
+    type = Column(String, nullable=False)
+    type_hierarchy = Column(List)
+    properties = Column(Dict)
 
 
-class Task(Model):
+class NodeInstance(SQLModelBase):
+    """
+    Node instance model representation.
+    """
+    __tablename__ = 'node_instances'
+
+    node_id = foreign_key(Node.id)
+    deployment_id = foreign_key(Deployment.id)
+    host_id = foreign_key('node_instances.id', nullable=True)
+
+    _private_fields = ['node_id', 'host_id']
+
+    name = Column(Text, index=True)
+    runtime_properties = Column(Dict)
+    scaling_groups = Column(Dict)
+    state = Column(Text, nullable=False)
+    version = Column(Integer, default=1)
+
+    @declared_attr
+    def deployment(cls):
+        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+
+    @declared_attr
+    def node(cls):
+        return one_to_many_relationship(cls, Node, cls.node_id)
+
+    @declared_attr
+    def host(cls):
+        return relationship_to_self(cls, cls.host_id, cls.id)
+
+
+class RelationshipInstance(SQLModelBase):
+    """
+    Relationship instance model representation.
+    """
+    __tablename__ = 'relationship_instances'
+
+    relationship_id = foreign_key(Relationship.id)
+    source_node_instance_id = foreign_key(NodeInstance.id)
+    target_node_instance_id = foreign_key(NodeInstance.id)
+
+    _private_fields = ['relationship_storage_id',
+                       'source_node_instance_id',
+                       'target_node_instance_id']
+
+    @declared_attr
+    def source_node_instance(cls):
+        return one_to_many_relationship(cls,
+                                        NodeInstance,
+                                        cls.source_node_instance_id,
+                                        'outbound_relationship_instances')
+
+    @declared_attr
+    def target_node_instance(cls):
+        return one_to_many_relationship(cls,
+                                        NodeInstance,
+                                        cls.target_node_instance_id,
+                                        'inbound_relationship_instances')
+
+    @declared_attr
+    def relationship(cls):
+        return one_to_many_relationship(cls, Relationship, cls.relationship_id)
+
+
+class ProviderContext(SQLModelBase):
+    """
+    Provider context model representation.
+    """
+    __tablename__ = 'provider_context'
+
+    name = Column(Text, nullable=False)
+    context = Column(Dict, nullable=False)
+
+
+class Plugin(SQLModelBase):
+    """
+    Plugin model representation.
+    """
+    __tablename__ = 'plugins'
+
+    archive_name = Column(Text, nullable=False, index=True)
+    distribution = Column(Text)
+    distribution_release = Column(Text)
+    distribution_version = Column(Text)
+    excluded_wheels = Column(Dict)
+    package_name = Column(Text, nullable=False, index=True)
+    package_source = Column(Text)
+    package_version = Column(Text)
+    supported_platform = Column(Dict)
+    supported_py_versions = Column(Dict)
+    uploaded_at = Column(DateTime, nullable=False, index=True)
+    wheels = Column(Dict, nullable=False)
+
+
+class Task(SQLModelBase):
     """
     A Model which represents an task
     """
 
-    class _Validation(object):
+    __tablename__ = 'task'
+    node_instance_id = foreign_key(NodeInstance.id, nullable=True)
+    relationship_instance_id = foreign_key(RelationshipInstance.id, nullable=True)
+    execution_id = foreign_key(Execution.id, nullable=True)
 
-        @staticmethod
-        def validate_max_attempts(_, value, *args):
-            """Validates that max attempts is either -1 or a positive number"""
-            if value < 1 and value != Task.INFINITE_RETRIES:
-                raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
-                                 'Got {value}'.format(value=value))
+    _private_fields = ['node_instance_id',
+                       'relationship_instance_id',
+                       'execution_id']
+
+    @declared_attr
+    def node_instance(cls):
+        return one_to_many_relationship(cls, NodeInstance, cls.node_instance_id)
+
+    @declared_attr
+    def relationship_instance(cls):
+        return one_to_many_relationship(cls,
+                                        RelationshipInstance,
+                                        cls.relationship_instance_id)
 
     PENDING = 'pending'
     RETRYING = 'retrying'
@@ -422,23 +522,51 @@ class Task(Model):
         SUCCESS,
         FAILED,
     )
+
     WAIT_STATES = [PENDING, RETRYING]
     END_STATES = [SUCCESS, FAILED]
+
+    @orm.validates('max_attempts')
+    def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
+        """Validates that max attempts is either -1 or a positive number"""
+        if value < 1 and value != Task.INFINITE_RETRIES:
+            raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
+                             'Got {value}'.format(value=value))
+        return value
+
     INFINITE_RETRIES = -1
 
-    id = Field(type=basestring, default=uuid_generator)
-    status = Field(type=basestring, choices=STATES, default=PENDING)
-    execution_id = Field(type=basestring)
-    due_at = Field(type=datetime, default=datetime.utcnow)
-    started_at = Field(type=datetime, default=None)
-    ended_at = Field(type=datetime, default=None)
-    max_attempts = Field(type=int, default=1, validation_func=_Validation.validate_max_attempts)
-    retry_count = Field(type=int, default=0)
-    retry_interval = Field(type=(int, float), default=0)
-    ignore_failure = Field(type=bool, default=False)
+    status = Column(Enum(*STATES), name='status', default=PENDING)
+
+    due_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=None)
+    ended_at = Column(DateTime, default=None)
+    max_attempts = Column(Integer, default=1)
+    retry_count = Column(Integer, default=0)
+    retry_interval = Column(Float, default=0)
+    ignore_failure = Column(Boolean, default=False)
 
     # Operation specific fields
-    name = Field(type=basestring)
-    operation_mapping = Field(type=basestring)
-    actor = Field()
-    inputs = Field(type=dict, default=lambda: {})
+    name = Column(String)
+    operation_mapping = Column(String)
+    inputs = Column(Dict)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_id)
+
+    @property
+    def actor(self):
+        """
+        Return the actor of the task
+        :return:
+        """
+        return self.node_instance or self.relationship_instance
+
+    @classmethod
+    def as_node_instance(cls, instance_id, **kwargs):
+        return cls(node_instance_id=instance_id, **kwargs)
+
+    @classmethod
+    def as_relationship_instance(cls, instance_id, **kwargs):
+        return cls(relationship_instance_id=instance_id, **kwargs)

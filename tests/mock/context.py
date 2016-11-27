@@ -15,23 +15,53 @@
 
 from aria import application_model_storage
 from aria.orchestrator import context
+from aria.storage.sql_mapi import SQLAlchemyModelAPI
 
 from . import models
-from ..storage import InMemoryModelDriver
 
 
-def simple(**kwargs):
-    storage = application_model_storage(InMemoryModelDriver())
-    storage.setup()
-    storage.blueprint.store(models.get_blueprint())
-    storage.deployment.store(models.get_deployment())
+def simple(api_kwargs, **kwargs):
+    model_storage = application_model_storage(SQLAlchemyModelAPI, api_kwargs=api_kwargs)
+    blueprint = models.get_blueprint()
+    model_storage.blueprint.put(blueprint)
+    deployment = models.get_deployment(blueprint)
+    model_storage.deployment.put(deployment)
+
+    #################################################################################
+    # Creating a simple deployment with node -> node as a graph
+
+    dependency_node = models.get_dependency_node(deployment)
+    model_storage.node.put(dependency_node)
+    storage_dependency_node = model_storage.node.get(dependency_node.id)
+
+    dependency_node_instance = models.get_dependency_node_instance(storage_dependency_node)
+    model_storage.node_instance.put(dependency_node_instance)
+    storage_dependency_node_instance = model_storage.node_instance.get(dependency_node_instance.id)
+
+    dependent_node = models.get_dependent_node(deployment)
+    model_storage.node.put(dependent_node)
+    storage_dependent_node = model_storage.node.get(dependent_node.id)
+
+    dependent_node_instance = models.get_dependent_node_instance(storage_dependent_node)
+    model_storage.node_instance.put(dependent_node_instance)
+    storage_dependent_node_instance = model_storage.node_instance.get(dependent_node_instance.id)
+
+    relationship = models.get_relationship(storage_dependent_node, storage_dependency_node)
+    model_storage.relationship.put(relationship)
+    storage_relationship = model_storage.relationship.get(relationship.id)
+    relationship_instance = models.get_relationship_instance(
+        relationship=storage_relationship,
+        target_instance=storage_dependency_node_instance,
+        source_instance=storage_dependent_node_instance
+    )
+    model_storage.relationship_instance.put(relationship_instance)
+
     final_kwargs = dict(
         name='simple_context',
-        model_storage=storage,
+        model_storage=model_storage,
         resource_storage=None,
-        deployment_id=models.DEPLOYMENT_ID,
-        workflow_id=models.WORKFLOW_ID,
-        execution_id=models.EXECUTION_ID,
+        deployment_id=deployment.id,
+        workflow_name=models.WORKFLOW_NAME,
         task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL
     )

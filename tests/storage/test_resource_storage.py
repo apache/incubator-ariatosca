@@ -1,4 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one or more
+# Licensed to the Apache ftware Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
 # The ASF licenses this file to You under the Apache License, Version 2.0
@@ -18,15 +18,17 @@ import tempfile
 
 import pytest
 
-from aria.storage.exceptions import StorageError
-from aria.storage import ResourceStorage, FileSystemResourceDriver
+from aria.storage.filesystem_rapi import FileSystemResourceAPI
+from aria.storage import (
+    exceptions,
+    ResourceStorage
+)
 from . import TestFileSystem
 
 
 class TestResourceStorage(TestFileSystem):
     def _create(self, storage):
         storage.register('blueprint')
-        storage.setup()
 
     def _upload(self, storage, tmp_path, id):
         with open(tmp_path, 'w') as f:
@@ -41,24 +43,26 @@ class TestResourceStorage(TestFileSystem):
 
         storage.blueprint.upload(entry_id=id, source=tmp_dir)
 
+    def _create_storage(self):
+        return ResourceStorage(FileSystemResourceAPI,
+                               api_kwargs=dict(directory=self.path))
+
     def test_name(self):
-        driver = FileSystemResourceDriver(directory=self.path)
-        storage = ResourceStorage(driver, resources=['blueprint'])
-        assert repr(storage) == 'ResourceStorage(driver={driver})'.format(
-            driver=driver
-        )
-        assert repr(storage.registered['blueprint']) == (
-            'ResourceApi(driver={driver}, resource={resource_name})'.format(
-                driver=driver,
-                resource_name='blueprint'))
+        api = FileSystemResourceAPI
+        storage = ResourceStorage(FileSystemResourceAPI,
+                                  items=['blueprint'],
+                                  api_kwargs=dict(directory=self.path))
+        assert repr(storage) == 'ResourceStorage(api={api})'.format(api=api)
+        assert 'directory={resource_dir}'.format(resource_dir=self.path) in \
+               repr(storage.registered['blueprint'])
 
     def test_create(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         assert os.path.exists(os.path.join(self.path, 'blueprint'))
 
     def test_upload_file(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = ResourceStorage(FileSystemResourceAPI, api_kwargs=dict(directory=self.path))
         self._create(storage)
         tmpfile_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
         self._upload(storage, tmpfile_path, id='blueprint_id')
@@ -74,7 +78,7 @@ class TestResourceStorage(TestFileSystem):
             assert f.read() == 'fake context'
 
     def test_download_file(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         tmpfile_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
         tmpfile_name = os.path.basename(tmpfile_path)
@@ -90,27 +94,27 @@ class TestResourceStorage(TestFileSystem):
             assert f.read() == 'fake context'
 
     def test_download_non_existing_file(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
-        with pytest.raises(StorageError):
+        with pytest.raises(exceptions.StorageError):
             storage.blueprint.download(entry_id='blueprint_id', destination='', path='fake_path')
 
     def test_data_non_existing_file(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
-        with pytest.raises(StorageError):
-            storage.blueprint.data(entry_id='blueprint_id', path='fake_path')
+        with pytest.raises(exceptions.StorageError):
+            storage.blueprint.read(entry_id='blueprint_id', path='fake_path')
 
     def test_data_file(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         tmpfile_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
         self._upload(storage, tmpfile_path, 'blueprint_id')
 
-        assert storage.blueprint.data(entry_id='blueprint_id') == 'fake context'
+        assert storage.blueprint.read(entry_id='blueprint_id') == 'fake context'
 
     def test_upload_dir(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
         second_level_tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
@@ -127,7 +131,7 @@ class TestResourceStorage(TestFileSystem):
         assert os.path.isfile(destination)
 
     def test_upload_path_in_dir(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
         second_level_tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
@@ -151,7 +155,7 @@ class TestResourceStorage(TestFileSystem):
             os.path.basename(second_update_file)))
 
     def test_download_dir(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
         tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
         second_level_tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
@@ -174,7 +178,7 @@ class TestResourceStorage(TestFileSystem):
             assert f.read() == 'fake context'
 
     def test_data_dir(self):
-        storage = ResourceStorage(FileSystemResourceDriver(directory=self.path))
+        storage = self._create_storage()
         self._create(storage)
 
         tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
@@ -183,5 +187,5 @@ class TestResourceStorage(TestFileSystem):
 
         storage.blueprint.upload(entry_id='blueprint_id', source=tmp_dir)
 
-        with pytest.raises(StorageError):
-            storage.blueprint.data(entry_id='blueprint_id')
+        with pytest.raises(exceptions.StorageError):
+            storage.blueprint.read(entry_id='blueprint_id')

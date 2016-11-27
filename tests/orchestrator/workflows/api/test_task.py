@@ -19,61 +19,38 @@ import pytest
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 
-from tests import mock
+from tests import mock, storage
 
 
-@pytest.fixture()
+@pytest.fixture
 def ctx():
     """
     Create the following graph in storage:
     dependency_node <------ dependent_node
     :return:
     """
-    simple_context = mock.context.simple()
-    dependency_node = mock.models.get_dependency_node()
-    dependency_node_instance = mock.models.get_dependency_node_instance(
-        dependency_node=dependency_node)
-
-    relationship = mock.models.get_relationship(dependency_node)
-    relationship_instance = mock.models.get_relationship_instance(
-        relationship=relationship,
-        target_instance=dependency_node_instance
-    )
-
-    dependent_node = mock.models.get_dependent_node(relationship)
-    dependent_node_instance = mock.models.get_dependent_node_instance(
-        dependent_node=dependent_node,
-        relationship_instance=relationship_instance
-    )
-
-    simple_context.model.node.store(dependent_node)
-    simple_context.model.node.store(dependency_node)
-    simple_context.model.node_instance.store(dependent_node_instance)
-    simple_context.model.node_instance.store(dependency_node_instance)
-    simple_context.model.relationship.store(relationship)
-    simple_context.model.relationship_instance.store(relationship_instance)
-    simple_context.model.execution.store(mock.models.get_execution())
-    simple_context.model.deployment.store(mock.models.get_deployment())
-
-    return simple_context
+    simple_context = mock.context.simple(storage.get_sqlite_api_kwargs())
+    simple_context.model.execution.put(mock.models.get_execution(simple_context.deployment))
+    yield simple_context
+    storage.release_sqlite_storage(simple_context.model)
 
 
 class TestOperationTask(object):
 
-    def test_node_operation_task_creation(self):
-        workflow_context = mock.context.simple()
-
+    def test_node_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.lifecycle.create'
         op_details = {'operation': True}
-        node = mock.models.get_dependency_node()
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         node.operations[operation_name] = op_details
-        node_instance = mock.models.get_dependency_node_instance(dependency_node=node)
+        ctx.model.node.update(node)
+        node_instance = \
+            ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
         inputs = {'inputs': True}
         max_attempts = 10
         retry_interval = 10
         ignore_failure = True
 
-        with context.workflow.current.push(workflow_context):
+        with context.workflow.current.push(ctx):
             api_task = api.task.OperationTask.node_instance(
                 name=operation_name,
                 instance=node_instance,
@@ -90,19 +67,17 @@ class TestOperationTask(object):
         assert api_task.max_attempts == max_attempts
         assert api_task.ignore_failure == ignore_failure
 
-    def test_relationship_operation_task_creation(self):
-        workflow_context = mock.context.simple()
-
+    def test_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
         op_details = {'operation': True}
-        relationship = mock.models.get_relationship()
+        relationship = ctx.model.relationship.list()[0]
         relationship.source_operations[operation_name] = op_details
-        relationship_instance = mock.models.get_relationship_instance(relationship=relationship)
+        relationship_instance = ctx.model.relationship_instance.list()[0]
         inputs = {'inputs': True}
         max_attempts = 10
         retry_interval = 10
 
-        with context.workflow.current.push(workflow_context):
+        with context.workflow.current.push(ctx):
             api_task = api.task.OperationTask.relationship_instance(
                 name=operation_name,
                 instance=relationship_instance,
@@ -118,18 +93,19 @@ class TestOperationTask(object):
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
 
-    def test_operation_task_default_values(self):
-        workflow_context = mock.context.simple(task_ignore_failure=True)
-        with context.workflow.current.push(workflow_context):
-            model_task = api.task.OperationTask(
+    def test_operation_task_default_values(self, ctx):
+        dependency_node_instance = ctx.model.node_instance.get_by_name(
+            mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        with context.workflow.current.push(ctx):
+            task = api.task.OperationTask(
                 name='stub',
                 operation_mapping='',
-                actor=mock.models.get_dependency_node_instance())
+                actor=dependency_node_instance)
 
-        assert model_task.inputs == {}
-        assert model_task.retry_interval == workflow_context._task_retry_interval
-        assert model_task.max_attempts == workflow_context._task_max_attempts
-        assert model_task.ignore_failure == workflow_context._task_ignore_failure
+        assert task.inputs == {}
+        assert task.retry_interval == ctx._task_retry_interval
+        assert task.max_attempts == ctx._task_max_attempts
+        assert task.ignore_failure == ctx._task_ignore_failure
 
 
 class TestWorkflowTask(object):

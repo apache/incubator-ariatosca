@@ -27,281 +27,218 @@ classes:
     * Model - abstract model implementation.
 """
 import json
-from itertools import count
-from uuid import uuid4
 
-from .exceptions import StorageError
-from ..logger import LoggerMixin
-from ..utils.validation import ValidatorMixin
-
-__all__ = (
-    'uuid_generator',
-    'Field',
-    'IterField',
-    'PointerField',
-    'IterPointerField',
-    'Model',
-    'Storage',
+from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.orm import relationship, backref
+from sqlalchemy.ext.declarative import declarative_base
+# pylint: disable=unused-import
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy import (
+    schema,
+    VARCHAR,
+    ARRAY,
+    Column,
+    Integer,
+    Text,
+    DateTime,
+    Boolean,
+    Enum,
+    String,
+    PickleType,
+    Float,
+    TypeDecorator,
+    ForeignKey,
+    orm,
 )
 
+from aria.storage import exceptions
 
-def uuid_generator():
+Model = declarative_base()
+
+
+def foreign_key(foreign_key_column, nullable=False):
+    """Return a ForeignKey object with the relevant
+
+    :param foreign_key_column: Unique id column in the parent table
+    :param nullable: Should the column be allowed to remain empty
     """
-    wrapper function which generates ids
+    return Column(
+        ForeignKey(foreign_key_column, ondelete='CASCADE'),
+        nullable=nullable
+    )
+
+
+def one_to_many_relationship(child_class,
+                             parent_class,
+                             foreign_key_column,
+                             backreference=None):
+    """Return a one-to-many SQL relationship object
+    Meant to be used from inside the *child* object
+
+    :param parent_class: Class of the parent table
+    :param child_class: Class of the child table
+    :param foreign_key_column: The column of the foreign key
+    :param backreference: The name to give to the reference to the child
     """
-    return str(uuid4())
+    backreference = backreference or child_class.__tablename__
+    return relationship(
+        parent_class,
+        primaryjoin=lambda: parent_class.id == foreign_key_column,
+        # The following line make sure that when the *parent* is
+        # deleted, all its connected children are deleted as well
+        backref=backref(backreference, cascade='all')
+    )
 
 
-class Field(ValidatorMixin):
+def relationship_to_self(self_cls, parent_key, self_key):
+    return relationship(
+        self_cls,
+        foreign_keys=parent_key,
+        remote_side=self_key
+    )
+
+
+class _MutableType(TypeDecorator):
     """
-    A single field implementation
+    Dict representation of type.
     """
-    NO_DEFAULT = 'NO_DEFAULT'
-
-    try:
-        # python 3 syntax
-        _next_id = count().__next__
-    except AttributeError:
-        # python 2 syntax
-        _next_id = count().next
-    _ATTRIBUTE_NAME = '_cache_{0}'.format
-
-    def __init__(
-            self,
-            type=None,
-            choices=(),
-            validation_func=None,
-            default=NO_DEFAULT,
-            **kwargs):
-        """
-        Simple field manager.
-
-        :param type: possible type of the field.
-        :param choices: a set of possible field values.
-        :param default: default field value.
-        :param kwargs: kwargs to be passed to next in line classes.
-        """
-        self.type = type
-        self.choices = choices
-        self.default = default
-        self.validation_func = validation_func
-        super(Field, self).__init__(**kwargs)
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        field_name = self._field_name(instance)
-        try:
-            return getattr(instance, self._ATTRIBUTE_NAME(field_name))
-        except AttributeError as exc:
-            if self.default == self.NO_DEFAULT:
-                raise AttributeError(
-                    str(exc).replace(self._ATTRIBUTE_NAME(field_name), field_name))
-
-        default_value = self.default() if callable(self.default) else self.default
-        setattr(instance, self._ATTRIBUTE_NAME(field_name), default_value)
-        return default_value
-
-    def __set__(self, instance, value):
-        field_name = self._field_name(instance)
-        self.validate_value(field_name, value, instance)
-        setattr(instance, self._ATTRIBUTE_NAME(field_name), value)
-
-    def validate_value(self, name, value, instance):
-        """
-        Validates the value of the field.
-
-        :param name: the name of the field.
-        :param value: the value of the field.
-        :param instance: the instance containing the field.
-        """
-        if self.default != self.NO_DEFAULT and value == self.default:
-            return
-        if self.type:
-            self.validate_instance(name, value, self.type)
-        if self.choices:
-            self.validate_in_choice(name, value, self.choices)
-        if self.validation_func:
-            self.validation_func(name, value, instance)
-
-    def _field_name(self, instance):
-        """
-        retrieves the field name from the instance.
-
-        :param Field instance: the instance which holds the field.
-        :return: name of the field
-        :rtype: basestring
-        """
-        for name, member in vars(instance.__class__).iteritems():
-            if member is self:
-                return name
-
-
-class IterField(Field):
-    """
-    Represents an iterable field.
-    """
-    def __init__(self, **kwargs):
-        """
-        Simple iterable field manager.
-        This field type don't have choices option.
-
-        :param kwargs: kwargs to be passed to next in line classes.
-        """
-        super(IterField, self).__init__(choices=(), **kwargs)
-
-    def validate_value(self, name, values, *args):
-        """
-        Validates the value of each iterable value.
-
-        :param name: the name of the field.
-        :param values: the values of the field.
-        """
-        for value in values:
-            self.validate_instance(name, value, self.type)
-
-
-class PointerField(Field):
-    """
-    A single pointer field implementation.
-
-    Any PointerField points via id to another document.
-    """
-
-    def __init__(self, type, **kwargs):
-        assert issubclass(type, Model)
-        super(PointerField, self).__init__(type=type, **kwargs)
-
-
-class IterPointerField(IterField, PointerField):
-    """
-    An iterable pointers field.
-
-    Any IterPointerField points via id to other documents.
-    """
-    pass
-
-
-class Model(object):
-    """
-    Base class for all of the storage models.
-    """
-    id = None
-
-    def __init__(self, **fields):
-        """
-        Abstract class for any model in the storage.
-        The Initializer creates attributes according to the (keyword arguments) that given
-        Each value is validated according to the Field.
-        Each model has to have and ID Field.
-
-        :param fields: each item is validated and transformed into instance attributes.
-        """
-        self._assert_model_have_id_field(**fields)
-        missing_fields, unexpected_fields = self._setup_fields(fields)
-
-        if missing_fields:
-            raise StorageError(
-                'Model {name} got missing keyword arguments: {fields}'.format(
-                    name=self.__class__.__name__, fields=missing_fields))
-
-        if unexpected_fields:
-            raise StorageError(
-                'Model {name} got unexpected keyword arguments: {fields}'.format(
-                    name=self.__class__.__name__, fields=unexpected_fields))
-
-    def __repr__(self):
-        return '{name}(fields={0})'.format(sorted(self.fields), name=self.__class__.__name__)
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__) and
-            self.fields_dict == other.fields_dict)
-
     @property
-    def fields(self):
-        """
-        Iterates over the fields of the model.
-        :yields: the class's field name
-        """
-        for name, field in vars(self.__class__).items():
-            if isinstance(field, Field):
-                yield name
+    def python_type(self):
+        raise NotImplementedError
 
+    def process_literal_param(self, value, dialect):
+        pass
+
+    impl = VARCHAR
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
+
+
+class _DictType(_MutableType):
     @property
-    def fields_dict(self):
-        """
-        Transforms the instance attributes into a dict.
+    def python_type(self):
+        return dict
 
-        :return: all fields in dict format.
-        :rtype dict
-        """
-        return dict((name, getattr(self, name)) for name in self.fields)
 
+class _ListType(_MutableType):
     @property
-    def json(self):
-        """
-        Transform the dict of attributes into json
-        :return:
-        """
-        return json.dumps(self.fields_dict)
+    def python_type(self):
+        return list
+
+
+class _MutableDict(Mutable, dict):
+    """
+    Enables tracking for dict values.
+    """
+    @classmethod
+    def coerce(cls, key, value):
+        "Convert plain dictionaries to MutableDict."
+
+        if not isinstance(value, _MutableDict):
+            if isinstance(value, dict):
+                return _MutableDict(value)
+
+            # this call will raise ValueError
+            try:
+                return Mutable.coerce(key, value)
+            except ValueError as e:
+                raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+        else:
+            return value
+
+    def __setitem__(self, key, value):
+        "Detect dictionary set events and emit change events."
+
+        dict.__setitem__(self, key, value)
+        self.changed()
+
+    def __delitem__(self, key):
+        "Detect dictionary del events and emit change events."
+
+        dict.__delitem__(self, key)
+        self.changed()
+
+
+class _MutableList(Mutable, list):
 
     @classmethod
-    def _assert_model_have_id_field(cls, **fields_initializer_values):
-        if not getattr(cls, 'id', None):
-            raise StorageError('Model {cls.__name__} must have id field'.format(cls=cls))
+    def coerce(cls, key, value):
+        "Convert plain dictionaries to MutableDict."
 
-        if cls.id.default == cls.id.NO_DEFAULT and 'id' not in fields_initializer_values:
-            raise StorageError(
-                'Model {cls.__name__} is missing required '
-                'keyword-only argument: "id"'.format(cls=cls))
+        if not isinstance(value, _MutableList):
+            if isinstance(value, list):
+                return _MutableList(value)
 
-    def _setup_fields(self, input_fields):
-        missing = []
-        for field_name in self.fields:
+            # this call will raise ValueError
             try:
-                field_obj = input_fields.pop(field_name)
-                setattr(self, field_name, field_obj)
-            except KeyError:
-                field = getattr(self.__class__, field_name)
-                if field.default == field.NO_DEFAULT:
-                    missing.append(field_name)
+                return Mutable.coerce(key, value)
+            except ValueError as e:
+                raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+        else:
+            return value
 
-        unexpected_fields = input_fields.keys()
-        return missing, unexpected_fields
+    def __setitem__(self, key, value):
+        list.__setitem__(self, key, value)
+        self.changed()
+
+    def __delitem__(self, key):
+        list.__delitem__(self, key)
 
 
-class Storage(LoggerMixin):
+Dict = _MutableDict.as_mutable(_DictType)
+List = _MutableList.as_mutable(_ListType)
+
+
+class SQLModelBase(Model):
     """
-    Represents the storage
+    Abstract base class for all SQL models that allows [de]serialization
     """
-    def __init__(self, driver, items=(), **kwargs):
-        super(Storage, self).__init__(**kwargs)
-        self.driver = driver
-        self.registered = {}
-        for item in items:
-            self.register(item)
-        self.logger.debug('{name} object is ready: {0!r}'.format(
-            self, name=self.__class__.__name__))
+    # SQLAlchemy syntax
+    __abstract__ = True
+
+    # This would be overridden once the models are created. Created for pylint.
+    __table__ = None
+
+    _private_fields = []
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    def to_dict(self, suppress_error=False):
+        """Return a dict representation of the model
+
+        :param suppress_error: If set to True, sets `None` to attributes that
+        it's unable to retrieve (e.g., if a relationship wasn't established
+        yet, and so it's impossible to access a property through it)
+        """
+        if suppress_error:
+            res = dict()
+            for field in self.fields():
+                try:
+                    field_value = getattr(self, field)
+                except AttributeError:
+                    field_value = None
+                res[field] = field_value
+        else:
+            # Can't simply call here `self.to_response()` because inheriting
+            # class might override it, but we always need the same code here
+            res = dict((f, getattr(self, f)) for f in self.fields())
+        return res
+
+    @classmethod
+    def fields(cls):
+        """Return the list of field names for this table
+
+        Mostly for backwards compatibility in the code (that uses `fields`)
+        """
+        return set(cls.__table__.columns.keys()) - set(cls._private_fields)
 
     def __repr__(self):
-        return '{name}(driver={self.driver})'.format(
-            name=self.__class__.__name__, self=self)
-
-    def __getattr__(self, item):
-        try:
-            return self.registered[item]
-        except KeyError:
-            return super(Storage, self).__getattribute__(item)
-
-    def setup(self):
-        """
-        Setup and create all storage items
-        """
-        for name, api in self.registered.iteritems():
-            try:
-                api.create()
-                self.logger.debug(
-                    'setup {name} in storage {self!r}'.format(name=name, self=self))
-            except StorageError:
-                pass
+        return '<{0} id=`{1}`>'.format(self.__class__.__name__, self.id)

@@ -32,8 +32,7 @@ class BaseContext(logger.LoggerMixin):
             model_storage,
             resource_storage,
             deployment_id,
-            workflow_id,
-            execution_id=None,
+            workflow_name,
             task_max_attempts=1,
             task_retry_interval=0,
             task_ignore_failure=False,
@@ -44,8 +43,7 @@ class BaseContext(logger.LoggerMixin):
         self._model = model_storage
         self._resource = resource_storage
         self._deployment_id = deployment_id
-        self._workflow_id = workflow_id
-        self._execution_id = execution_id or str(uuid4())
+        self._workflow_name = workflow_name
         self._task_max_attempts = task_max_attempts
         self._task_retry_interval = task_retry_interval
         self._task_ignore_failure = task_ignore_failure
@@ -54,8 +52,7 @@ class BaseContext(logger.LoggerMixin):
         return (
             '{name}(name={self.name}, '
             'deployment_id={self._deployment_id}, '
-            'workflow_id={self._workflow_id}, '
-            'execution_id={self._execution_id})'
+            'workflow_name={self._workflow_name}, '
             .format(name=self.__class__.__name__, self=self))
 
     @property
@@ -79,7 +76,7 @@ class BaseContext(logger.LoggerMixin):
         """
         The blueprint model
         """
-        return self.model.blueprint.get(self.deployment.blueprint_id)
+        return self.deployment.blueprint
 
     @property
     def deployment(self):
@@ -87,20 +84,6 @@ class BaseContext(logger.LoggerMixin):
         The deployment model
         """
         return self.model.deployment.get(self._deployment_id)
-
-    @property
-    def execution(self):
-        """
-        The execution model
-        """
-        return self.model.execution.get(self._execution_id)
-
-    @execution.setter
-    def execution(self, value):
-        """
-        Store the execution in the model storage
-        """
-        self.model.execution.store(value)
 
     @property
     def name(self):
@@ -136,6 +119,6 @@ class BaseContext(logger.LoggerMixin):
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.data(entry_id=self.deployment.id, path=path)
+            return self.resource.deployment.read(entry_id=self.deployment.id, path=path)
         except exceptions.StorageError:
-            return self.resource.blueprint.data(entry_id=self.blueprint.id, path=path)
+            return self.resource.blueprint.read(entry_id=self.blueprint.id, path=path)

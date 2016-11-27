@@ -12,22 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import pytest
 
-from aria.orchestrator.workflows.builtin.install import install
 from aria.orchestrator.workflows.api import task
+from aria.orchestrator.workflows.builtin.install import install
 
-from . import (assert_node_install_operations,
-               ctx_with_basic_graph)
+from tests import mock
+from tests import storage
+
+from . import assert_node_install_operations
 
 
 @pytest.fixture
-def ctx():
-    return ctx_with_basic_graph()
+def ctx(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 def test_install(ctx):
+
     install_tasks = list(task.WorkflowTask(install, ctx=ctx).topological_order(True))
 
     assert len(install_tasks) == 2

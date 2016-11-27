@@ -19,24 +19,24 @@ from aria.storage import models
 
 from . import operations
 
-DEPLOYMENT_ID = 'test_deployment_id'
-BLUEPRINT_ID = 'test_blueprint_id'
-WORKFLOW_ID = 'test_workflow_id'
-EXECUTION_ID = 'test_execution_id'
+DEPLOYMENT_NAME = 'test_deployment_id'
+BLUEPRINT_NAME = 'test_blueprint_id'
+WORKFLOW_NAME = 'test_workflow_id'
+EXECUTION_NAME = 'test_execution_id'
 TASK_RETRY_INTERVAL = 1
 TASK_MAX_ATTEMPTS = 1
 
-DEPENDENCY_NODE_ID = 'dependency_node'
-DEPENDENCY_NODE_INSTANCE_ID = 'dependency_node_instance'
-DEPENDENT_NODE_ID = 'dependent_node'
-DEPENDENT_NODE_INSTANCE_ID = 'dependent_node_instance'
+DEPENDENCY_NODE_NAME = 'dependency_node'
+DEPENDENCY_NODE_INSTANCE_NAME = 'dependency_node_instance'
+DEPENDENT_NODE_NAME = 'dependent_node'
+DEPENDENT_NODE_INSTANCE_NAME = 'dependent_node_instance'
+RELATIONSHIP_NAME = 'relationship'
+RELATIONSHIP_INSTANCE_NAME = 'relationship_instance'
 
 
-def get_dependency_node():
+def get_dependency_node(deployment):
     return models.Node(
-        id=DEPENDENCY_NODE_ID,
-        host_id=DEPENDENCY_NODE_ID,
-        blueprint_id=BLUEPRINT_ID,
+        name=DEPENDENCY_NODE_NAME,
         type='test_node_type',
         type_hierarchy=[],
         number_of_instances=1,
@@ -44,28 +44,28 @@ def get_dependency_node():
         deploy_number_of_instances=1,
         properties={},
         operations=dict((key, {}) for key in operations.NODE_OPERATIONS),
-        relationships=[],
         min_number_of_instances=1,
         max_number_of_instances=1,
+        deployment_id=deployment.id
     )
 
 
-def get_dependency_node_instance(dependency_node=None):
+def get_dependency_node_instance(dependency_node):
     return models.NodeInstance(
-        id=DEPENDENCY_NODE_INSTANCE_ID,
-        host_id=DEPENDENCY_NODE_INSTANCE_ID,
-        deployment_id=DEPLOYMENT_ID,
+        name=DEPENDENCY_NODE_INSTANCE_NAME,
         runtime_properties={'ip': '1.1.1.1'},
         version=None,
-        relationship_instances=[],
-        node=dependency_node or get_dependency_node()
+        node_id=dependency_node.id,
+        deployment_id=dependency_node.deployment.id,
+        state='',
+        scaling_groups={}
     )
 
 
 def get_relationship(source=None, target=None):
     return models.Relationship(
-        source_id=source.id if source is not None else DEPENDENT_NODE_ID,
-        target_id=target.id if target is not None else DEPENDENCY_NODE_ID,
+        source_node_id=source.id,
+        target_node_id=target.id,
         source_interfaces={},
         source_operations=dict((key, {}) for key in operations.RELATIONSHIP_OPERATIONS),
         target_interfaces={},
@@ -76,23 +76,18 @@ def get_relationship(source=None, target=None):
     )
 
 
-def get_relationship_instance(source_instance=None, target_instance=None, relationship=None):
+def get_relationship_instance(source_instance, target_instance, relationship):
     return models.RelationshipInstance(
-        target_id=target_instance.id if target_instance else DEPENDENCY_NODE_INSTANCE_ID,
-        target_name='test_target_name',
-        source_id=source_instance.id if source_instance else DEPENDENT_NODE_INSTANCE_ID,
-        source_name='test_source_name',
-        type='some_type',
-        relationship=relationship or get_relationship(target_instance.node
-                                                      if target_instance else None)
+        relationship_id=relationship.id,
+        target_node_instance_id=target_instance.id,
+        source_node_instance_id=source_instance.id,
     )
 
 
-def get_dependent_node(relationship=None):
+def get_dependent_node(deployment):
     return models.Node(
-        id=DEPENDENT_NODE_ID,
-        host_id=DEPENDENT_NODE_ID,
-        blueprint_id=BLUEPRINT_ID,
+        name=DEPENDENT_NODE_NAME,
+        deployment_id=deployment.id,
         type='test_node_type',
         type_hierarchy=[],
         number_of_instances=1,
@@ -100,21 +95,20 @@ def get_dependent_node(relationship=None):
         deploy_number_of_instances=1,
         properties={},
         operations=dict((key, {}) for key in operations.NODE_OPERATIONS),
-        relationships=[relationship or get_relationship()],
         min_number_of_instances=1,
         max_number_of_instances=1,
     )
 
 
-def get_dependent_node_instance(relationship_instance=None, dependent_node=None):
+def get_dependent_node_instance(dependent_node):
     return models.NodeInstance(
-        id=DEPENDENT_NODE_INSTANCE_ID,
-        host_id=DEPENDENT_NODE_INSTANCE_ID,
-        deployment_id=DEPLOYMENT_ID,
+        name=DEPENDENT_NODE_INSTANCE_NAME,
         runtime_properties={},
         version=None,
-        relationship_instances=[relationship_instance or get_relationship_instance()],
-        node=dependent_node or get_dependency_node()
+        node_id=dependent_node.id,
+        deployment_id=dependent_node.deployment.id,
+        state='',
+        scaling_groups={}
     )
 
 
@@ -122,7 +116,7 @@ def get_blueprint():
     now = datetime.now()
     return models.Blueprint(
         plan={},
-        id=BLUEPRINT_ID,
+        name=BLUEPRINT_NAME,
         description=None,
         created_at=now,
         updated_at=now,
@@ -130,25 +124,31 @@ def get_blueprint():
     )
 
 
-def get_execution():
+def get_execution(deployment):
     return models.Execution(
-        id=EXECUTION_ID,
+        deployment_id=deployment.id,
+        blueprint_id=deployment.blueprint.id,
         status=models.Execution.STARTED,
-        deployment_id=DEPLOYMENT_ID,
-        workflow_id=WORKFLOW_ID,
-        blueprint_id=BLUEPRINT_ID,
+        workflow_name=WORKFLOW_NAME,
         started_at=datetime.utcnow(),
         parameters=None
     )
 
 
-def get_deployment():
+def get_deployment(blueprint):
     now = datetime.utcnow()
     return models.Deployment(
-        id=DEPLOYMENT_ID,
-        description=None,
+        name=DEPLOYMENT_NAME,
+        blueprint_id=blueprint.id,
+        description='',
         created_at=now,
         updated_at=now,
-        blueprint_id=BLUEPRINT_ID,
-        workflows={}
+        workflows={},
+        inputs={},
+        groups={},
+        permalink='',
+        policy_triggers={},
+        policy_types={},
+        outputs={},
+        scaling_groups={},
     )

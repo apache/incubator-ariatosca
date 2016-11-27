@@ -26,17 +26,17 @@ class BaseOperationContext(BaseContext):
     Context object used during operation creation and execution
     """
 
-    def __init__(self, name, workflow_context, task, **kwargs):
+    def __init__(self, name, workflow_context, task, actor, **kwargs):
         super(BaseOperationContext, self).__init__(
             name=name,
             model_storage=workflow_context.model,
             resource_storage=workflow_context.resource,
             deployment_id=workflow_context._deployment_id,
-            workflow_id=workflow_context._workflow_id,
-            execution_id=workflow_context._execution_id,
+            workflow_name=workflow_context._workflow_name,
             **kwargs)
         self._task_model = task
-        self._actor = self.task.actor
+        self._task_id = task.id
+        self._actor_id = actor.id
 
     def __repr__(self):
         details = 'operation_mapping={task.operation_mapping}; ' \
@@ -50,7 +50,7 @@ class BaseOperationContext(BaseContext):
         The task in the model storage
         :return: Task model
         """
-        return self._task_model
+        return self.model.task.get(self._task_id)
 
 
 class NodeOperationContext(BaseOperationContext):
@@ -63,7 +63,7 @@ class NodeOperationContext(BaseOperationContext):
         the node of the current operation
         :return:
         """
-        return self._actor.node
+        return self.node_instance.node
 
     @property
     def node_instance(self):
@@ -71,7 +71,7 @@ class NodeOperationContext(BaseOperationContext):
         The node instance of the current operation
         :return:
         """
-        return self._actor
+        return self.model.node_instance.get(self._actor_id)
 
 
 class RelationshipOperationContext(BaseOperationContext):
@@ -84,7 +84,7 @@ class RelationshipOperationContext(BaseOperationContext):
         The source node
         :return:
         """
-        return self.model.node.get(self.relationship.source_id)
+        return self.relationship.source_node
 
     @property
     def source_node_instance(self):
@@ -92,7 +92,7 @@ class RelationshipOperationContext(BaseOperationContext):
         The source node instance
         :return:
         """
-        return self.model.node_instance.get(self.relationship_instance.source_id)
+        return self.relationship_instance.source_node_instance
 
     @property
     def target_node(self):
@@ -100,7 +100,7 @@ class RelationshipOperationContext(BaseOperationContext):
         The target node
         :return:
         """
-        return self.model.node.get(self.relationship.target_id)
+        return self.relationship.target_node
 
     @property
     def target_node_instance(self):
@@ -108,7 +108,7 @@ class RelationshipOperationContext(BaseOperationContext):
         The target node instance
         :return:
         """
-        return self.model.node_instance.get(self._actor.target_id)
+        return self.relationship_instance.target_node_instance
 
     @property
     def relationship(self):
@@ -116,7 +116,8 @@ class RelationshipOperationContext(BaseOperationContext):
         The relationship of the current operation
         :return:
         """
-        return self._actor.relationship
+
+        return self.relationship_instance.relationship
 
     @property
     def relationship_instance(self):
@@ -124,4 +125,4 @@ class RelationshipOperationContext(BaseOperationContext):
         The relationship instance of the current operation
         :return:
         """
-        return self._actor
+        return self.model.relationship_instance.get(self._actor_id)

@@ -18,18 +18,25 @@ import pytest
 from aria.orchestrator.workflows.api import task
 from aria.orchestrator.workflows.builtin.heal import heal
 
+from tests import mock, storage
+
 from . import (assert_node_install_operations,
-               assert_node_uninstall_operations,
-               ctx_with_basic_graph)
+               assert_node_uninstall_operations)
 
 
 @pytest.fixture
-def ctx():
-    return ctx_with_basic_graph()
+def ctx(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 def test_heal_dependent_node(ctx):
-    heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id='dependent_node_instance')
+    dependent_node_instance = \
+        ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
+    dependent_node_instance.host_id = dependent_node_instance.id
+    ctx.model.node_instance.update(dependent_node_instance)
+    heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id=dependent_node_instance.id)
 
     assert len(list(heal_graph.tasks)) == 2
     uninstall_subgraph, install_subgraph = list(heal_graph.topological_order(reverse=True))
@@ -54,7 +61,11 @@ def test_heal_dependent_node(ctx):
 
 
 def test_heal_dependency_node(ctx):
-    heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id='dependency_node_instance')
+    dependency_node_instance = \
+        ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    dependency_node_instance.host_id = dependency_node_instance.id
+    ctx.model.node_instance.update(dependency_node_instance)
+    heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id=dependency_node_instance.id)
     # both subgraphs should contain un\install for both the dependent and the dependency
     assert len(list(heal_graph.tasks)) == 2
     uninstall_subgraph, install_subgraph = list(heal_graph.topological_order(reverse=True))

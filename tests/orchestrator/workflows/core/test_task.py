@@ -26,26 +26,14 @@ from aria.orchestrator.workflows import (
     exceptions,
 )
 
-from tests import mock
+from tests import mock, storage
 
 
 @pytest.fixture
-def ctx():
-    simple_context = mock.context.simple()
-
-    blueprint = mock.models.get_blueprint()
-    deployment = mock.models.get_deployment()
-    node = mock.models.get_dependency_node()
-    node_instance = mock.models.get_dependency_node_instance(node)
-    execution = mock.models.get_execution()
-
-    simple_context.model.blueprint.store(blueprint)
-    simple_context.model.deployment.store(deployment)
-    simple_context.model.node.store(node)
-    simple_context.model.node_instance.store(node_instance)
-    simple_context.model.execution.store(execution)
-
-    return simple_context
+def ctx(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 class TestOperationTask(object):
@@ -62,9 +50,10 @@ class TestOperationTask(object):
         return api_task, core_task
 
     def test_operation_task_creation(self, ctx):
-        node_instance = ctx.model.node_instance.get(mock.models.DEPENDENCY_NODE_INSTANCE_ID)
+        node_instance = \
+            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
         api_task, core_task = self._create_operation_task(ctx, node_instance)
-        storage_task = ctx.model.task.get(core_task.id)
+        storage_task = ctx.model.task.get_by_name(core_task.name)
 
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
@@ -73,7 +62,8 @@ class TestOperationTask(object):
         assert core_task.inputs == api_task.inputs == storage_task.inputs
 
     def test_operation_task_edit_locked_attribute(self, ctx):
-        node_instance = ctx.model.node_instance.get(mock.models.DEPENDENCY_NODE_INSTANCE_ID)
+        node_instance = \
+            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
         _, core_task = self._create_operation_task(ctx, node_instance)
         now = datetime.utcnow()
@@ -89,7 +79,8 @@ class TestOperationTask(object):
             core_task.due_at = now
 
     def test_operation_task_edit_attributes(self, ctx):
-        node_instance = ctx.model.node_instance.get(mock.models.DEPENDENCY_NODE_INSTANCE_ID)
+        node_instance = \
+            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
         _, core_task = self._create_operation_task(ctx, node_instance)
         future_time = datetime.utcnow() + timedelta(seconds=3)
@@ -99,7 +90,7 @@ class TestOperationTask(object):
             core_task.started_at = future_time
             core_task.ended_at = future_time
             core_task.retry_count = 2
-            core_task.eta = future_time
+            core_task.due_at = future_time
             assert core_task.status != core_task.STARTED
             assert core_task.started_at != future_time
             assert core_task.ended_at != future_time
@@ -110,4 +101,4 @@ class TestOperationTask(object):
         assert core_task.started_at == future_time
         assert core_task.ended_at == future_time
         assert core_task.retry_count == 2
-        assert core_task.eta == future_time
+        assert core_task.due_at == future_time

@@ -21,7 +21,7 @@ from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import thread
 from aria.orchestrator.context.toolbelt import RelationshipToolBelt
 
-from tests import mock
+from tests import mock, storage
 from . import (
     op_path,
     op_name,
@@ -32,8 +32,10 @@ global_test_holder = {}
 
 
 @pytest.fixture
-def workflow_context():
-    return mock.context.simple()
+def workflow_context(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 @pytest.fixture
@@ -45,36 +47,39 @@ def executor():
         result.close()
 
 
-def _create_simple_model_in_storage(workflow_context):
-    dependency_node = mock.models.get_dependency_node()
-    dependency_node_instance = mock.models.get_dependency_node_instance(
-        dependency_node=dependency_node)
-    relationship = mock.models.get_relationship(target=dependency_node)
-    relationship_instance = mock.models.get_relationship_instance(
-        target_instance=dependency_node_instance, relationship=relationship)
-    dependent_node = mock.models.get_dependent_node()
-    dependent_node_instance = mock.models.get_dependent_node_instance(
-        relationship_instance=relationship_instance, dependent_node=dependency_node)
-    workflow_context.model.node.store(dependency_node)
-    workflow_context.model.node_instance.store(dependency_node_instance)
-    workflow_context.model.relationship.store(relationship)
-    workflow_context.model.relationship_instance.store(relationship_instance)
-    workflow_context.model.node.store(dependent_node)
-    workflow_context.model.node_instance.store(dependent_node_instance)
-    return dependency_node, dependency_node_instance, \
-           dependent_node, dependent_node_instance, \
-           relationship, relationship_instance
+def _get_elements(workflow_context):
+    dependency_node = workflow_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    dependency_node.host_id = dependency_node.id
+    workflow_context.model.node.update(dependency_node)
+
+    dependency_node_instance = workflow_context.model.node_instance.get_by_name(
+        mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    dependency_node_instance.host_id = dependency_node_instance.id
+    workflow_context.model.node_instance.update(dependency_node_instance)
+
+    dependent_node = workflow_context.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+    dependent_node.host_id = dependency_node.id
+    workflow_context.model.node.update(dependent_node)
+
+    dependent_node_instance = workflow_context.model.node_instance.get_by_name(
+        mock.models.DEPENDENT_NODE_INSTANCE_NAME)
+    dependent_node_instance.host_id = dependent_node_instance.id
+    workflow_context.model.node_instance.update(dependent_node_instance)
+
+    relationship = workflow_context.model.relationship.list()[0]
+    relationship_instance = workflow_context.model.relationship_instance.list()[0]
+    return dependency_node, dependency_node_instance, dependent_node, dependent_node_instance, \
+        relationship, relationship_instance
 
 
 def test_host_ip(workflow_context, executor):
     operation_name = 'aria.interfaces.lifecycle.create'
-    dependency_node, dependency_node_instance, _, _, _, _ = \
-        _create_simple_model_in_storage(workflow_context)
+    dependency_node, dependency_node_instance, _, _, _, _ = _get_elements(workflow_context)
     dependency_node.operations[operation_name] = {
         'operation': op_path(host_ip, module_path=__name__)
 
     }
-    workflow_context.model.node.store(dependency_node)
+    workflow_context.model.node.put(dependency_node)
     inputs = {'putput': True}
 
     @workflow
@@ -93,41 +98,14 @@ def test_host_ip(workflow_context, executor):
            dependency_node_instance.runtime_properties.get('ip')
 
 
-def test_dependent_node_instances(workflow_context, executor):
-    operation_name = 'aria.interfaces.lifecycle.create'
-    dependency_node, dependency_node_instance, _, dependent_node_instance, _, _ = \
-        _create_simple_model_in_storage(workflow_context)
-    dependency_node.operations[operation_name] = {
-        'operation': op_path(dependent_nodes, module_path=__name__)
-
-    }
-    workflow_context.model.node.store(dependency_node)
-    inputs = {'putput': True}
-
-    @workflow
-    def basic_workflow(graph, **_):
-        graph.add_tasks(
-            api.task.OperationTask.node_instance(
-                instance=dependency_node_instance,
-                name=operation_name,
-                inputs=inputs
-            )
-        )
-
-    execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
-
-    assert list(global_test_holder.get('dependent_node_instances', [])) == \
-           list([dependent_node_instance])
-
-
 def test_relationship_tool_belt(workflow_context, executor):
     operation_name = 'aria.interfaces.relationship_lifecycle.postconfigure'
     _, _, _, _, relationship, relationship_instance = \
-        _create_simple_model_in_storage(workflow_context)
+        _get_elements(workflow_context)
     relationship.source_operations[operation_name] = {
         'operation': op_path(relationship_operation, module_path=__name__)
     }
-    workflow_context.model.relationship.store(relationship)
+    workflow_context.model.relationship.put(relationship)
 
     inputs = {'putput': True}
 
@@ -152,14 +130,10 @@ def test_wrong_model_toolbelt():
     with pytest.raises(RuntimeError):
         context.toolbelt(None)
 
+
 @operation(toolbelt=True)
 def host_ip(toolbelt, **_):
     global_test_holder['host_ip'] = toolbelt.host_ip
-
-
-@operation(toolbelt=True)
-def dependent_nodes(toolbelt, **_):
-    global_test_holder['dependent_node_instances'] = list(toolbelt.dependent_node_instances)
 
 
 @operation(toolbelt=True)

@@ -106,32 +106,34 @@ class OperationTask(BaseTask):
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
-        task_model = api_task._workflow_context.model.task.model_cls
-        operation_task = task_model(
-            id=api_task.id,
-            name=api_task.name,
-            operation_mapping=api_task.operation_mapping,
-            actor=api_task.actor,
-            inputs=api_task.inputs,
-            status=task_model.PENDING,
-            execution_id=self._workflow_context._execution_id,
-            max_attempts=api_task.max_attempts,
-            retry_interval=api_task.retry_interval,
-            ignore_failure=api_task.ignore_failure
-        )
+        base_task_model = api_task._workflow_context.model.task.model_cls
 
         if isinstance(api_task.actor, models.NodeInstance):
             context_class = operation_context.NodeOperationContext
+            task_model_cls = base_task_model.as_node_instance
         elif isinstance(api_task.actor, models.RelationshipInstance):
             context_class = operation_context.RelationshipOperationContext
+            task_model_cls = base_task_model.as_relationship_instance
         else:
-            raise RuntimeError('No operation context could be created for {0}'
-                               .format(api_task.actor.model_cls))
+            raise RuntimeError('No operation context could be created for {actor.model_cls}'
+                               .format(actor=api_task.actor))
+
+        operation_task = task_model_cls(
+            name=api_task.name,
+            operation_mapping=api_task.operation_mapping,
+            instance_id=api_task.actor.id,
+            inputs=api_task.inputs,
+            status=base_task_model.PENDING,
+            max_attempts=api_task.max_attempts,
+            retry_interval=api_task.retry_interval,
+            ignore_failure=api_task.ignore_failure,
+        )
+        self._workflow_context.model.task.put(operation_task)
 
         self._ctx = context_class(name=api_task.name,
                                   workflow_context=self._workflow_context,
-                                  task=operation_task)
-        self._workflow_context.model.task.store(operation_task)
+                                  task=operation_task,
+                                  actor=operation_task.actor)
         self._task_id = operation_task.id
         self._update_fields = None
 
@@ -161,7 +163,7 @@ class OperationTask(BaseTask):
 
     @model_task.setter
     def model_task(self, value):
-        self._workflow_context.model.task.store(value)
+        self._workflow_context.model.task.put(value)
 
     @property
     def context(self):

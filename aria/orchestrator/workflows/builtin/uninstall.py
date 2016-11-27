@@ -27,7 +27,7 @@ from ..api import task
 def uninstall(ctx, graph, node_instances=(), node_instance_sub_workflows=None):
     """
     The uninstall workflow
-    :param WorkflowContext context: the workflow context
+    :param WorkflowContext ctx: the workflow context
     :param TaskGraph graph: the graph which will describe the workflow.
     :param node_instances: the node instances on which to run the workflow
     :param dict node_instance_sub_workflows: a dictionary of subworkflows  with id as key and
@@ -47,6 +47,7 @@ def uninstall(ctx, graph, node_instances=(), node_instance_sub_workflows=None):
     # create dependencies between the node instance sub workflow
     for node_instance in node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
-        for relationship_instance in reversed(node_instance.relationship_instances):
-            graph.add_dependency(node_instance_sub_workflows[relationship_instance.target_id],
+        for relationship_instance in reversed(node_instance.outbound_relationship_instances):
+            target_id = relationship_instance.target_node_instance.id
+            graph.add_dependency(node_instance_sub_workflows[target_id],
                                  node_instance_sub_workflow)

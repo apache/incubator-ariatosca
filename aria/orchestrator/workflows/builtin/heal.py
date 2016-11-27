@@ -84,16 +84,19 @@ def heal_uninstall(ctx, graph, failing_node_instances, targeted_node_instances):
     # create dependencies between the node instance sub workflow
     for node_instance in failing_node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
-        for relationship_instance in reversed(node_instance.relationship_instances):
-            graph.add_dependency(node_instance_sub_workflows[relationship_instance.target_id],
-                                 node_instance_sub_workflow)
+        for relationship_instance in reversed(node_instance.outbound_relationship_instances):
+            graph.add_dependency(
+                node_instance_sub_workflows[relationship_instance.target_node_instance.id],
+                node_instance_sub_workflow)
 
     # Add operations for intact nodes depending on a node instance belonging to node_instances
     for node_instance in targeted_node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
 
-        for relationship_instance in reversed(node_instance.relationship_instances):
-            target_node_instance = ctx.model.node_instance.get(relationship_instance.target_id)
+        for relationship_instance in reversed(node_instance.outbound_relationship_instances):
+
+            target_node_instance = \
+                ctx.model.node_instance.get(relationship_instance.target_node_instance.id)
             target_node_instance_subgraph = node_instance_sub_workflows[target_node_instance.id]
             graph.add_dependency(target_node_instance_subgraph, node_instance_sub_workflow)
 
@@ -134,9 +137,10 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
     # create dependencies between the node instance sub workflow
     for node_instance in failing_node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
-        if node_instance.relationship_instances:
-            dependencies = [node_instance_sub_workflows[relationship_instance.target_id]
-                            for relationship_instance in node_instance.relationship_instances]
+        if node_instance.outbound_relationship_instances:
+            dependencies = \
+                [node_instance_sub_workflows[relationship_instance.target_node_instance.id]
+                 for relationship_instance in node_instance.outbound_relationship_instances]
             graph.add_dependency(node_instance_sub_workflow, dependencies)
 
     # Add operations for intact nodes depending on a node instance
@@ -144,8 +148,9 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
     for node_instance in targeted_node_instances:
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
 
-        for relationship_instance in node_instance.relationship_instances:
-            target_node_instance = ctx.model.node_instance.get(relationship_instance.target_id)
+        for relationship_instance in node_instance.outbound_relationship_instances:
+            target_node_instance = ctx.model.node_instance.get(
+                relationship_instance.target_node_instance.id)
             target_node_instance_subworkflow = node_instance_sub_workflows[target_node_instance.id]
             graph.add_dependency(node_instance_sub_workflow, target_node_instance_subworkflow)
 

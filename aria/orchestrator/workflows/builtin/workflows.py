@@ -37,7 +37,6 @@ __all__ = (
 def install_node_instance(graph, node_instance, **kwargs):
     """
     A workflow which installs a node instance.
-    :param WorkflowContext ctx: the workflow context
     :param TaskGraph graph: the tasks graph of which to edit
     :param node_instance: the node instance to install
     :return:
@@ -68,7 +67,6 @@ def install_node_instance(graph, node_instance, **kwargs):
 def preconfigure_relationship(graph, node_instance, **kwargs):
     """
 
-    :param context:
     :param graph:
     :param node_instance:
     :return:
@@ -82,7 +80,6 @@ def preconfigure_relationship(graph, node_instance, **kwargs):
 def postconfigure_relationship(graph, node_instance, **kwargs):
     """
 
-    :param context:
     :param graph:
     :param node_instance:
     :return:
@@ -96,7 +93,6 @@ def postconfigure_relationship(graph, node_instance, **kwargs):
 def establish_relationship(graph, node_instance, **kwargs):
     """
 
-    :param context:
     :param graph:
     :param node_instance:
     :return:
@@ -113,7 +109,6 @@ def establish_relationship(graph, node_instance, **kwargs):
 def uninstall_node_instance(graph, node_instance, **kwargs):
     """
     A workflow which uninstalls a node instance.
-    :param WorkflowContext context: the workflow context
     :param TaskGraph graph: the tasks graph of which to edit
     :param node_instance: the node instance to uninstall
     :return:
@@ -135,7 +130,6 @@ def uninstall_node_instance(graph, node_instance, **kwargs):
 def unlink_relationship(graph, node_instance):
     """
 
-    :param context:
     :param graph:
     :param node_instance:
     :return:
@@ -179,8 +173,8 @@ def relationships_tasks(graph, operation_name, node_instance):
     :return:
     """
     relationships_groups = groupby(
-        node_instance.relationship_instances,
-        key=lambda relationship_instance: relationship_instance.relationship.target_id)
+        node_instance.outbound_relationship_instances,
+        key=lambda relationship_instance: relationship_instance.target_node_instance.id)
 
     sub_tasks = []
     for _, (_, relationship_group) in enumerate(relationships_groups):
@@ -196,11 +190,8 @@ def relationships_tasks(graph, operation_name, node_instance):
 def relationship_tasks(relationship_instance, operation_name):
     """
     Creates a relationship task source and target.
-    :param NodeInstance node_instance: the node instance of the relationship
     :param RelationshipInstance relationship_instance: the relationship instance itself
-    :param WorkflowContext context:
     :param operation_name:
-    :param index: the relationship index - enables pretty print
     :return:
     """
     source_operation = task.OperationTask.relationship_instance(

@@ -18,16 +18,21 @@ import pytest
 from aria.orchestrator.workflows.api import task
 from aria.orchestrator.workflows.builtin.uninstall import uninstall
 
-from . import (assert_node_uninstall_operations,
-               ctx_with_basic_graph)
+from tests import mock
+from tests import storage
+
+from . import assert_node_uninstall_operations
 
 
 @pytest.fixture
-def ctx():
-    return ctx_with_basic_graph()
+def ctx(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 def test_uninstall(ctx):
+
     uninstall_tasks = list(task.WorkflowTask(uninstall, ctx=ctx).topological_order(True))
 
     assert len(uninstall_tasks) == 2

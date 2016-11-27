@@ -19,8 +19,7 @@ Workflow and operation contexts
 
 import threading
 from contextlib import contextmanager
-
-from aria import storage
+from datetime import datetime
 
 from .exceptions import ContextException
 from .common import BaseContext
@@ -30,53 +29,73 @@ class WorkflowContext(BaseContext):
     """
     Context object used during workflow creation and execution
     """
-    def __init__(self, parameters=None, *args, **kwargs):
+    def __init__(self, parameters=None, execution_id=None, *args, **kwargs):
         super(WorkflowContext, self).__init__(*args, **kwargs)
         self.parameters = parameters or {}
         # TODO: execution creation should happen somewhere else
         # should be moved there, when such logical place exists
-        try:
-            self.model.execution.get(self._execution_id)
-        except storage.exceptions.StorageError:
-            self._create_execution()
+        self._execution_id = self._create_execution() if execution_id is None else execution_id
 
     def __repr__(self):
         return (
             '{name}(deployment_id={self._deployment_id}, '
-            'workflow_id={self._workflow_id}, '
-            'execution_id={self._execution_id})'.format(
+            'workflow_name={self._workflow_name}'.format(
                 name=self.__class__.__name__, self=self))
 
     def _create_execution(self):
         execution_cls = self.model.execution.model_cls
+        now = datetime.utcnow()
         execution = self.model.execution.model_cls(
-            id=self._execution_id,
-            deployment_id=self.deployment.id,
-            workflow_id=self._workflow_id,
             blueprint_id=self.blueprint.id,
+            deployment_id=self.deployment.id,
+            workflow_name=self._workflow_name,
+            created_at=now,
             status=execution_cls.PENDING,
             parameters=self.parameters,
         )
-        self.model.execution.store(execution)
+        self.model.execution.put(execution)
+        return execution.id
+
+    @property
+    def execution(self):
+        """
+        The execution model
+        """
+        return self.model.execution.get(self._execution_id)
+
+    @execution.setter
+    def execution(self, value):
+        """
+        Store the execution in the model storage
+        """
+        self.model.execution.put(value)
 
     @property
     def nodes(self):
         """
         Iterator over nodes
         """
-        return self.model.node.iter(filters={'blueprint_id': self.blueprint.id})
+        return self.model.node.iter(
+            filters={
+                'deployment_id': self.deployment.id
+            }
+        )
 
     @property
     def node_instances(self):
         """
         Iterator over node instances
         """
-        return self.model.node_instance.iter(filters={'deployment_id': self.deployment.id})
+        return self.model.node_instance.iter(
+            filters={
+                'deployment_id': self.deployment.id
+            }
+        )
 
 
 class _CurrentContext(threading.local):
     """
-    Provides thread-level context, which sugarcoats the task api.
+    Provides thread-level context, which sugarcoats the task mapi.
     """
 
     def __init__(self):

@@ -23,7 +23,7 @@ from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import thread
 
-from tests import mock
+from tests import mock, storage
 from . import (
     op_path,
     op_name,
@@ -34,8 +34,10 @@ global_test_holder = {}
 
 
 @pytest.fixture
-def ctx():
-    return mock.context.simple()
+def ctx(tmpdir):
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    yield context
+    storage.release_sqlite_storage(context.model)
 
 
 @pytest.fixture
@@ -50,14 +52,13 @@ def executor():
 def test_node_operation_task_execution(ctx, executor):
     operation_name = 'aria.interfaces.lifecycle.create'
 
-    node = mock.models.get_dependency_node()
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     node.operations[operation_name] = {
         'operation': op_path(my_operation, module_path=__name__)
 
     }
-    node_instance = mock.models.get_dependency_node_instance(node)
-    ctx.model.node.store(node)
-    ctx.model.node_instance.store(node_instance)
+    ctx.model.node.update(node)
+    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
     inputs = {'putput': True}
 
@@ -90,26 +91,19 @@ def test_node_operation_task_execution(ctx, executor):
 
 def test_relationship_operation_task_execution(ctx, executor):
     operation_name = 'aria.interfaces.relationship_lifecycle.postconfigure'
-
-    dependency_node = mock.models.get_dependency_node()
-    dependency_node_instance = mock.models.get_dependency_node_instance()
-    relationship = mock.models.get_relationship(target=dependency_node)
+    relationship = ctx.model.relationship.list()[0]
     relationship.source_operations[operation_name] = {
         'operation': op_path(my_operation, module_path=__name__)
     }
-    relationship_instance = mock.models.get_relationship_instance(
-        target_instance=dependency_node_instance,
-        relationship=relationship)
-    dependent_node = mock.models.get_dependent_node()
-    dependent_node_instance = mock.models.get_dependent_node_instance(
-        relationship_instance=relationship_instance,
-        dependent_node=dependency_node)
-    ctx.model.node.store(dependency_node)
-    ctx.model.node_instance.store(dependency_node_instance)
-    ctx.model.relationship.store(relationship)
-    ctx.model.relationship_instance.store(relationship_instance)
-    ctx.model.node.store(dependent_node)
-    ctx.model.node_instance.store(dependent_node_instance)
+    ctx.model.relationship.update(relationship)
+    relationship_instance = ctx.model.relationship_instance.list()[0]
+
+    dependency_node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    dependency_node_instance = \
+        ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    dependent_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+    dependent_node_instance = \
+        ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
 
     inputs = {'putput': True}
 
@@ -146,9 +140,47 @@ def test_relationship_operation_task_execution(ctx, executor):
     assert operation_context.source_node_instance == dependent_node_instance
 
 
+def test_invalid_task_operation_id(ctx, executor):
+    """
+    Checks that the right id is used. The task created with id == 1, thus running the task on
+    node_instance with id == 2. will check that indeed the node_instance uses the correct id.
+    :param ctx:
+    :param executor:
+    :return:
+    """
+    operation_name = 'aria.interfaces.lifecycle.create'
+    other_node_instance, node_instance = ctx.model.node_instance.list()
+    assert other_node_instance.id == 1
+    assert node_instance.id == 2
+
+    node = node_instance.node
+    node.operations[operation_name] = {
+        'operation': op_path(get_node_instance_id, module_path=__name__)
+
+    }
+    ctx.model.node.update(node)
+
+    @workflow
+    def basic_workflow(graph, **_):
+        graph.add_tasks(
+            api.task.OperationTask.node_instance(name=operation_name, instance=node_instance)
+        )
+
+    execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
+
+    op_node_instance_id = global_test_holder[op_name(node_instance, operation_name)]
+    assert op_node_instance_id == node_instance.id
+    assert op_node_instance_id != other_node_instance.id
+
+
 @operation
 def my_operation(ctx, **_):
     global_test_holder[ctx.name] = ctx
+
+
+@operation
+def get_node_instance_id(ctx, **_):
+    global_test_holder[ctx.name] = ctx.node_instance.id
 
 
 @pytest.fixture(autouse=True)
