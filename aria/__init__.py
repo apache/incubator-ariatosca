@@ -67,7 +67,9 @@ def application_model_storage(driver):
     if driver not in _model_storage:
         _model_storage[driver] = ModelStorage(
             driver, model_classes=[
+                models.Relationship,
                 models.Node,
+                models.RelationshipInstance,
                 models.NodeInstance,
                 models.Plugin,
                 models.Blueprint,
@@ -75,6 +77,7 @@ def application_model_storage(driver):
                 models.Deployment,
                 models.DeploymentUpdate,
                 models.DeploymentModification,
+                models.DeploymentUpdateStep,
                 models.Execution,
                 models.ProviderContext,
                 models.Task,

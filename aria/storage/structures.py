@@ -29,6 +29,10 @@ classes:
 import json
 from itertools import count
 from uuid import uuid4
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 from .exceptions import StorageError
 from ..logger import LoggerMixin
@@ -236,7 +240,18 @@ class Model(object):
         :return: all fields in dict format.
         :rtype dict
         """
-        return dict((name, getattr(self, name)) for name in self.fields)
+        return self._fields_dict(self)
+
+    def _fields_dict(self, obj):
+        dict_to_return = {}
+        for name in obj.fields:
+            value = getattr(obj, name)
+            if isinstance(value, Model) and isinstance(getattr(self.__class__, name), PointerField):
+                dict_to_return[name] = self._fields_dict(value)
+            else:
+                dict_to_return[name] = value
+
+        return dict_to_return.copy()
 
     @property
     def json(self):
@@ -260,8 +275,21 @@ class Model(object):
         missing = []
         for field_name in self.fields:
             try:
-                field_obj = input_fields.pop(field_name)
-                setattr(self, field_name, field_obj)
+                field_value = input_fields.pop(field_name)
+                field = getattr(self.__class__, field_name)
+                field_obj = None
+                if isinstance(field, IterPointerField):
+                    if all(isinstance(item, Model) for item in field_value):
+                        field_obj = field_value
+                    else:
+                        field_obj = [field.type(**field_dict) for field_dict in field_value]
+                elif isinstance(field, PointerField):
+                    if isinstance(field_value, Model):
+                        field_obj = field_value
+                    else:
+                        field_obj = field.type(**field_value)
+
+                setattr(self, field_name, field_obj or field_value)
             except KeyError:
                 field = getattr(self.__class__, field_name)
                 if field.default == field.NO_DEFAULT:
@@ -277,20 +305,20 @@ class Storage(LoggerMixin):
     """
     def __init__(self, driver, items=(), **kwargs):
         super(Storage, self).__init__(**kwargs)
-        self.driver = driver
-        self.registered = {}
+        self._driver = driver
+        self._registered = OrderedDict()
         for item in items:
             self.register(item)
         self.logger.debug('{name} object is ready: {0!r}'.format(
             self, name=self.__class__.__name__))
 
     def __repr__(self):
-        return '{name}(driver={self.driver})'.format(
+        return '{name}(driver={self._driver})'.format(
             name=self.__class__.__name__, self=self)
 
     def __getattr__(self, item):
         try:
-            return self.registered[item]
+            return self._registered[item]
         except KeyError:
             return super(Storage, self).__getattribute__(item)
 
@@ -298,7 +326,7 @@ class Storage(LoggerMixin):
         """
         Setup and create all storage items
         """
-        for name, api in self.registered.iteritems():
+        for name, api in self._registered.items():
             try:
                 api.create()
                 self.logger.debug(

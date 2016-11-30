@@ -23,10 +23,10 @@ from . import InMemoryModelDriver
 
 def test_models_api_base():
     driver = InMemoryModelDriver()
-    driver.create('provider_context')
+    driver.create(name='provider_context', model_cls=models.ProviderContext)
     table = _ModelApi('provider_context', driver, models.ProviderContext)
     assert repr(table) == (
-        '{table.name}(driver={table.driver}, '
+        '{table.name}(driver={table._driver}, '
         'model={table.model_cls})'.format(table=table))
     provider_context = models.ProviderContext(context={}, name='context_name', id='id')
 
@@ -44,8 +44,8 @@ def test_models_api_base():
 
 def test_iterable_model_api():
     driver = InMemoryModelDriver()
-    driver.create('deployment_update')
-    driver.create('deployment_update_step')
+    driver.create('deployment_update', model_cls=models.DeploymentUpdate)
+    driver.create('deployment_update_step', model_cls=models.DeploymentUpdateStep)
     model_api = _ModelApi('deployment_update', driver, models.DeploymentUpdate)
     deployment_update = models.DeploymentUpdate(
         id='id',

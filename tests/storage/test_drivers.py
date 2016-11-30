@@ -16,17 +16,22 @@
 import os
 import pytest
 
+from aria.storage import Model, Field
 from aria.storage.drivers import FileSystemModelDriver, Driver, ModelDriver, ResourceDriver
 from aria.storage.exceptions import StorageError
 
 from . import InMemoryModelDriver, TestFileSystem
 
 
+class BasicModel(Model):
+    field = Field()
+
+
 def test_base_storage_driver():
     driver = Driver()
     driver.connect()
     driver.disconnect()
-    driver.create('name')
+    driver.create('name', BasicModel)
     with driver as connection:
         assert driver is connection
     with pytest.raises(StorageError):
@@ -59,22 +64,28 @@ def test_resource_base_driver():
 
 
 def test_custom_driver():
+
+    class Entry(Model):
+        id = Field()
+        entry_value = Field()
+
     entry_dict = {
         'id': 'entry_id',
         'entry_value': 'entry_value'
     }
 
     with InMemoryModelDriver() as driver:
-        driver.create('entry')
+        driver.create('entry', Entry)
         assert driver.storage['entry'] == {}
+        entry = Entry(**entry_dict)
 
-        driver.store(name='entry', entry=entry_dict, entry_id=entry_dict['id'])
-        assert driver.get(name='entry', entry_id='entry_id') == entry_dict
+        driver.store(name='entry', entry=entry, entry_id=entry.id)
+        assert driver.get(name='entry', entry_id='entry_id') == entry
 
-        assert list(node for node in driver.iter('entry')) == [entry_dict]
+        assert list(node for node in driver.iter('entry')) == [entry]
 
-        driver.update(name='entry', entry_id=entry_dict['id'], entry_value='new_value')
-        assert driver.get(name='entry', entry_id='entry_id') == entry_dict
+        driver.update(name='entry', entry_id=entry.id, entry_value='new_value')
+        assert driver.get(name='entry', entry_id='entry_id').entry_value == 'new_value'
 
         driver.delete(name='entry', entry_id='entry_id')
 

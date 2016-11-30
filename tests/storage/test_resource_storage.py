@@ -47,7 +47,7 @@ class TestResourceStorage(TestFileSystem):
         assert repr(storage) == 'ResourceStorage(driver={driver})'.format(
             driver=driver
         )
-        assert repr(storage.registered['blueprint']) == (
+        assert repr(storage._registered['blueprint']) == (
             'ResourceApi(driver={driver}, resource={resource_name})'.format(
                 driver=driver,
                 resource_name='blueprint'))
