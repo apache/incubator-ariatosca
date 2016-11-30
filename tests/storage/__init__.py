@@ -50,4 +50,4 @@ class TestFileSystem(object):
         self.path = mkdtemp('{0}'.format(self.__class__.__name__))
 
     def teardown_method(self):
-        rmtree(self.path)
+        rmtree(self.path, ignore_errors=True)

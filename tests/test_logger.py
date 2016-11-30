@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import tempfile
 
 from aria.logger import (create_logger,
                          create_console_log_handler,
@@ -70,40 +69,40 @@ def test_create_console_log_handler(capsys):
     assert err.count(info_test_string) == 1
 
 
-def test_create_file_log_handler():
+def test_create_file_log_handler(tmpdir):
 
     test_string = 'create_file_log_test_string'
 
-    with tempfile.NamedTemporaryFile() as temp_file:
-        handler = create_file_log_handler(file_path=temp_file.name)
-        assert handler.baseFilename == temp_file.name
-        assert handler.maxBytes == 5 * 1000 * 1024
-        assert handler.backupCount == 10
-        assert handler.stream is None
-        assert handler.level == logging.DEBUG
-        assert handler.formatter == _default_file_formatter
+    debug_log = tmpdir.join('debug.log')
+    handler = create_file_log_handler(file_path=str(debug_log))
+    assert handler.baseFilename == str(debug_log)
+    assert handler.maxBytes == 5 * 1000 * 1024
+    assert handler.backupCount == 10
+    assert handler.stream is None
+    assert handler.level == logging.DEBUG
+    assert handler.formatter == _default_file_formatter
 
-        logger = create_logger(handlers=[handler])
-        logger.debug(test_string)
-        assert test_string in temp_file.read()
+    logger = create_logger(handlers=[handler])
+    logger.debug(test_string)
+    assert test_string in debug_log.read()
 
-    with tempfile.NamedTemporaryFile() as temp_file:
-        handler = create_file_log_handler(
-            file_path=temp_file.name,
-            level=logging.INFO,
-            max_bytes=1000,
-            backup_count=2,
-            formatter=logging.Formatter()
-        )
-        assert handler.baseFilename == temp_file.name
-        assert handler.level == logging.INFO
-        assert handler.maxBytes == 1000
-        assert handler.backupCount == 2
-        assert isinstance(handler.formatter, logging.Formatter)
+    info_log = tmpdir.join('info.log')
+    handler = create_file_log_handler(
+        file_path=str(info_log),
+        level=logging.INFO,
+        max_bytes=1000,
+        backup_count=2,
+        formatter=logging.Formatter()
+    )
+    assert handler.baseFilename == str(info_log)
+    assert handler.level == logging.INFO
+    assert handler.maxBytes == 1000
+    assert handler.backupCount == 2
+    assert isinstance(handler.formatter, logging.Formatter)
 
-        logger = create_logger(handlers=[handler])
-        logger.info(test_string)
-        assert test_string in temp_file.read()
+    logger = create_logger(handlers=[handler])
+    logger.info(test_string)
+    assert test_string in info_log.read()
 
 
 def test_loggermixin(capsys):
