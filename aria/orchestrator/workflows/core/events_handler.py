@@ -26,33 +26,23 @@ from datetime import (
     timedelta,
 )
 
-from . import (
-    start_workflow_signal,
-    on_success_workflow_signal,
-    on_failure_workflow_signal,
-    on_cancelled_workflow_signal,
-    on_cancelling_workflow_signal,
-    sent_task_signal,
-    start_task_signal,
-    on_success_task_signal,
-    on_failure_task_signal,
-)
+from ... import events
 
 
-@sent_task_signal.connect
+@events.sent_task_signal.connect
 def _task_sent(task, *args, **kwargs):
     with task._update():
         task.status = task.SENT
 
 
-@start_task_signal.connect
+@events.start_task_signal.connect
 def _task_started(task, *args, **kwargs):
     with task._update():
         task.started_at = datetime.utcnow()
         task.status = task.STARTED
 
 
-@on_failure_task_signal.connect
+@events.on_failure_task_signal.connect
 def _task_failed(task, *args, **kwargs):
     with task._update():
         should_retry = (
@@ -70,14 +60,14 @@ def _task_failed(task, *args, **kwargs):
             task.status = task.FAILED
 
 
-@on_success_task_signal.connect
+@events.on_success_task_signal.connect
 def _task_succeeded(task, *args, **kwargs):
     with task._update():
         task.ended_at = datetime.utcnow()
         task.status = task.SUCCESS
 
 
-@start_workflow_signal.connect
+@events.start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     execution.status = execution.STARTED
@@ -85,7 +75,7 @@ def _workflow_started(workflow_context, *args, **kwargs):
     workflow_context.execution = execution
 
 
-@on_failure_workflow_signal.connect
+@events.on_failure_workflow_signal.connect
 def _workflow_failed(workflow_context, exception, *args, **kwargs):
     execution = workflow_context.execution
     execution.error = str(exception)
@@ -94,7 +84,7 @@ def _workflow_failed(workflow_context, exception, *args, **kwargs):
     workflow_context.execution = execution
 
 
-@on_success_workflow_signal.connect
+@events.on_success_workflow_signal.connect
 def _workflow_succeeded(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     execution.status = execution.TERMINATED
@@ -102,7 +92,7 @@ def _workflow_succeeded(workflow_context, *args, **kwargs):
     workflow_context.execution = execution
 
 
-@on_cancelled_workflow_signal.connect
+@events.on_cancelled_workflow_signal.connect
 def _workflow_cancelled(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     # _workflow_cancelling function may have called this function
@@ -114,7 +104,7 @@ def _workflow_cancelled(workflow_context, *args, **kwargs):
     workflow_context.execution = execution
 
 
-@on_cancelling_workflow_signal.connect
+@events.on_cancelling_workflow_signal.connect
 def _workflow_cancelling(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     if execution.status == execution.PENDING:

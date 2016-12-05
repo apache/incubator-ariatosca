@@ -106,10 +106,10 @@ class _MutableType(TypeDecorator):
     def python_type(self):
         raise NotImplementedError
 
+    impl = VARCHAR
+
     def process_literal_param(self, value, dialect):
         pass
-
-    impl = VARCHAR
 
     def process_bind_param(self, value, dialect):
         if value is not None:

@@ -21,54 +21,45 @@ Path: aria.events.storage_event_handler
 Implementation of logger handlers for workflow and operation events.
 """
 
-from . import (
-    start_task_signal,
-    on_success_task_signal,
-    on_failure_task_signal,
-    start_workflow_signal,
-    on_success_workflow_signal,
-    on_failure_workflow_signal,
-    on_cancelled_workflow_signal,
-    on_cancelling_workflow_signal,
-)
+from .. import events
 
 
-@start_task_signal.connect
+@events.start_task_signal.connect
 def _start_task_handler(task, **kwargs):
     task.logger.debug('Event: Starting task: {task.name}'.format(task=task))
 
 
-@on_success_task_signal.connect
+@events.on_success_task_signal.connect
 def _success_task_handler(task, **kwargs):
     task.logger.debug('Event: Task success: {task.name}'.format(task=task))
 
 
-@on_failure_task_signal.connect
+@events.on_failure_task_signal.connect
 def _failure_operation_handler(task, **kwargs):
     task.logger.error('Event: Task failure: {task.name}'.format(task=task),
                       exc_info=kwargs.get('exception', True))
 
 
-@start_workflow_signal.connect
+@events.start_workflow_signal.connect
 def _start_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Starting workflow: {context.name}'.format(context=context))
 
 
-@on_failure_workflow_signal.connect
+@events.on_failure_workflow_signal.connect
 def _failure_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Workflow failure: {context.name}'.format(context=context))
 
 
-@on_success_workflow_signal.connect
+@events.on_success_workflow_signal.connect
 def _success_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Workflow success: {context.name}'.format(context=context))
 
 
-@on_cancelled_workflow_signal.connect
+@events.on_cancelled_workflow_signal.connect
 def _cancel_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Workflow cancelled: {context.name}'.format(context=context))
 
 
-@on_cancelling_workflow_signal.connect
+@events.on_cancelling_workflow_signal.connect
 def _cancelling_workflow_handler(context, **kwargs):
     context.logger.debug('Event: Workflow cancelling: {context.name}'.format(context=context))

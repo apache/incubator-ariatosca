@@ -12,3 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import pytest
+
+import aria
+
+
+@pytest.fixture(scope='session', autouse=True)
+def install_aria_extensions():
+    aria.install_aria_extensions()

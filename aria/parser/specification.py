@@ -15,12 +15,10 @@
 
 import re
 
+from ..extension import parser
 from ..utils.collections import OrderedDict
 from ..utils.formatting import full_type_name
 
-
-DSL_SPECIFICATION_PACKAGES = []
-DSL_SPECIFICATION_URLS = {}
 _DSL_SPECIFICATIONS = {}
 
 
@@ -84,7 +82,7 @@ def _section_key(value):
 def _fix_details(details, spec):
     code = details.get('code')
     doc = details.get('doc')
-    url = DSL_SPECIFICATION_URLS.get(spec)
+    url = parser.specification_url().get(spec)
 
     if (url is not None) and (doc is not None):
         # Look for a URL in ReST docstring that begins with our url

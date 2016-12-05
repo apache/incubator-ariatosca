@@ -18,7 +18,7 @@ from .exceptions import PresenterException, PresenterNotFoundError
 from .context import PresentationContext
 from .presenter import Presenter
 from .presentation import Value, PresentationBase, Presentation, AsIsPresentation
-from .source import PRESENTER_CLASSES, PresenterSource, DefaultPresenterSource
+from .source import PresenterSource, DefaultPresenterSource
 from .null import NULL, none_to_null, null_to_none
 from .fields import (Field, has_fields, short_form_field, allow_unknown_fields, primitive_field,
                      primitive_list_field, primitive_dict_field, primitive_dict_unknown_fields,
@@ -42,7 +42,6 @@ __all__ = (
     'Presentation',
     'AsIsPresentation',
     'PresenterSource',
-    'PRESENTER_CLASSES',
     'DefaultPresenterSource',
     'NULL',
     'none_to_null',

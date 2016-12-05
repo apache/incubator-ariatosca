@@ -90,7 +90,7 @@ class FixedThreadPoolExecutor(object):
     _CYANIDE = object()  # Special task marker used to kill worker threads.
 
     def __init__(self,
-                 size=multiprocessing.cpu_count() * 2 + 1,
+                 size=None,
                  timeout=None,
                  print_exceptions=False):
         """
@@ -100,6 +100,11 @@ class FixedThreadPoolExecutor(object):
         :param print_exceptions: Set to true in order to
                print exceptions from tasks. (Defaults to false)
         """
+        if not size:
+            try:
+                size = multiprocessing.cpu_count() * 2 + 1
+            except NotImplementedError:
+                size = 3
 
         self.size = size
         self.timeout = timeout

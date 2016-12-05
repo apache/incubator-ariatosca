@@ -17,13 +17,18 @@
 Aria top level package
 """
 
-import sys
 import pkgutil
+
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
 
 from .VERSION import version as __version__
 
 from .orchestrator.decorators import workflow, operation
 from . import (
+    extension,
     utils,
     parser,
     storage,
@@ -41,19 +46,17 @@ _resource_storage = {}
 
 def install_aria_extensions():
     """
-    Iterates all Python packages with names beginning with :code:`aria_extension_` and calls
-    their :code:`install_aria_extension` function if they have it.
+    Iterates all Python packages with names beginning with :code:`aria_extension_` and all
+    :code:`aria_extension` entry points and loads them.
+    It then invokes all registered extension functions.
     """
-
     for loader, module_name, _ in pkgutil.iter_modules():
         if module_name.startswith('aria_extension_'):
-            module = loader.find_module(module_name).load_module(module_name)
-
-            if hasattr(module, 'install_aria_extension'):
-                module.install_aria_extension()
-
-            # Loading the module has contaminated sys.modules, so we'll clean it up
-            del sys.modules[module_name]
+            loader.find_module(module_name).load_module(module_name)
+    if pkg_resources:
+        for entry_point in pkg_resources.iter_entry_points(group='aria_extension'):
+            entry_point.load()
+    extension.init()
 
 
 def application_model_storage(api, api_kwargs=None):

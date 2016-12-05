@@ -15,34 +15,38 @@
 
 import os.path
 
-from aria.parser import (DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION_URLS)
-from aria.parser.presentation import PRESENTER_CLASSES
-from aria.parser.loading import URI_LOADER_PREFIXES
+from aria import extension
 
 from .simple_v1_0 import ToscaSimplePresenter1_0
 from .simple_nfv_v1_0 import ToscaSimpleNfvPresenter1_0
 
-def install_aria_extension():
-    '''
-    Installs the TOSCA extension to ARIA.
-    '''
 
-    global PRESENTER_CLASSES # pylint: disable=global-statement
-    PRESENTER_CLASSES += (ToscaSimplePresenter1_0, ToscaSimpleNfvPresenter1_0)
+@extension.parser
+class ParserExtensions(object):
 
-    # DSL specification
-    DSL_SPECIFICATION_PACKAGES.append('aria_extension_tosca')
-    DSL_SPECIFICATION_URLS['yaml-1.1'] = \
-        'http://yaml.org'
-    DSL_SPECIFICATION_URLS['tosca-simple-1.0'] = \
-        'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01' \
-        '/TOSCA-Simple-Profile-YAML-v1.0-cos01.html'
-    DSL_SPECIFICATION_URLS['tosca-simple-nfv-1.0'] = \
-        'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/tosca-nfv-v1.0.html'
+    @staticmethod
+    def presenter_class():
+        return ToscaSimplePresenter1_0, ToscaSimpleNfvPresenter1_0
 
-    # Imports
-    the_dir = os.path.dirname(__file__)
-    URI_LOADER_PREFIXES.append(os.path.join(the_dir, 'profiles'))
+    @staticmethod
+    def specification_package():
+        return 'aria_extension_tosca'
+
+    @staticmethod
+    def specification_url():
+        return {
+            'yaml-1.1': 'http://yaml.org',
+            'tosca-simple-1.0': 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/'
+                                'cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html',
+            'tosca-simple-nfv-1.0': 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/'
+                                    'tosca-nfv-v1.0.html'
+        }
+
+    @staticmethod
+    def uri_loader_prefix():
+        the_dir = os.path.dirname(__file__)
+        return os.path.join(the_dir, 'profiles')
+
 
 MODULES = (
     'simple_v1_0',

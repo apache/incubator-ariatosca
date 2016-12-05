@@ -28,13 +28,14 @@ from importlib import import_module
 
 from yaml import safe_load, YAMLError
 
+from .. import extension
 from .. import (application_model_storage, application_resource_storage)
 from ..logger import LoggerMixin
 from ..storage import (FileSystemModelDriver, FileSystemResourceDriver)
 from ..orchestrator.context.workflow import WorkflowContext
 from ..orchestrator.workflows.core.engine import Engine
 from ..orchestrator.workflows.executor.thread import ThreadExecutor
-from ..parser import (DSL_SPECIFICATION_PACKAGES, iter_specifications)
+from ..parser import iter_specifications
 from ..parser.consumption import (
     ConsumptionContext,
     ConsumerChain,
@@ -45,7 +46,7 @@ from ..parser.consumption import (
     Inputs,
     Instance
 )
-from ..parser.loading import (LiteralLocation, UriLocation, URI_LOADER_PREFIXES)
+from ..parser.loading import LiteralLocation, UriLocation
 from ..utils.application import StorageManager
 from ..utils.caching import cachedmethod
 from ..utils.console import (puts, Colored, indent)
@@ -315,7 +316,7 @@ class ParseCommand(BaseCommand):
 
         if args_namespace.prefix:
             for prefix in args_namespace.prefix:
-                URI_LOADER_PREFIXES.append(prefix)
+                extension.parser.uri_loader_prefix().append(prefix)
 
         cachedmethod.ENABLED = args_namespace.cached_methods
 
@@ -376,7 +377,7 @@ class SpecCommand(BaseCommand):
         super(SpecCommand, self).__call__(args_namespace, unknown_args)
 
         # Make sure that all @dsl_specification decorators are processed
-        for pkg in DSL_SPECIFICATION_PACKAGES:
+        for pkg in extension.parser.specification_package():
             import_modules(pkg)
 
         # TODO: scan YAML documents as well

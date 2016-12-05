@@ -20,6 +20,14 @@ from contextlib import contextmanager
 import pytest
 import retrying
 
+try:
+    import celery as _celery
+    app = _celery.Celery()
+    app.conf.update(CELERY_RESULT_BACKEND='amqp://')
+except ImportError:
+    _celery = None
+    app = None
+
 from aria.storage import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
@@ -28,14 +36,6 @@ from aria.orchestrator.workflows.executor import (
     blocking,
     # celery
 )
-
-try:
-    import celery as _celery
-    app = _celery.Celery()
-    app.conf.update(CELERY_RESULT_BACKEND='amqp://')
-except ImportError:
-    _celery = None
-    app = None
 
 
 class TestExecutor(object):

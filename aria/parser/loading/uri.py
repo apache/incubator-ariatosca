@@ -16,14 +16,13 @@
 import os
 from urlparse import urljoin
 
+from ...extension import parser
 from ...utils.collections import StrictList
 from ...utils.uris import as_file
 from .loader import Loader
 from .file import FileTextLoader
 from .request import RequestTextLoader
 from .exceptions import DocumentNotFoundException
-
-URI_LOADER_PREFIXES = StrictList(value_class=basestring)
 
 
 class UriTextLoader(Loader):
@@ -58,7 +57,7 @@ class UriTextLoader(Loader):
             add_prefix(origin_location.prefix)
 
         add_prefixes(context.prefixes)
-        add_prefixes(URI_LOADER_PREFIXES)
+        add_prefixes(parser.uri_loader_prefix())
 
     def open(self):
         try:

@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .specification import (DSL_SPECIFICATION_PACKAGES, DSL_SPECIFICATION_URLS, dsl_specification,
-                            iter_specifications)
+from .specification import dsl_specification, iter_specifications
 
 
 MODULES = (
@@ -27,7 +26,5 @@ MODULES = (
 
 __all__ = (
     'MODULES',
-    'DSL_SPECIFICATION_PACKAGES',
-    'DSL_SPECIFICATION_URLS',
     'dsl_specification',
     'iter_specifications')

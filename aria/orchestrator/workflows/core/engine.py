@@ -29,6 +29,8 @@ from aria.orchestrator import events
 from .. import exceptions
 from . import task as engine_task
 from . import translation
+# Import required so all signals are registered
+from . import events_handler  # pylint: disable=unused-import
 
 
 class Engine(logger.LoggerMixin):

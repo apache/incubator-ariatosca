@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .exceptions import PresenterNotFoundError
 
-PRESENTER_CLASSES = []
+from ...extension import parser
+
+from .exceptions import PresenterNotFoundError
 
 
 class PresenterSource(object):
@@ -36,7 +37,7 @@ class DefaultPresenterSource(PresenterSource):
 
     def __init__(self, classes=None):
         if classes is None:
-            classes = PRESENTER_CLASSES
+            classes = parser.presenter_class()
         self.classes = classes
 
     def get_presenter(self, raw):

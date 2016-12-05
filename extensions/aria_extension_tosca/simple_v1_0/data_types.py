@@ -14,8 +14,11 @@
 # limitations under the License.
 
 import re
-from functools import total_ordering
 from datetime import datetime, tzinfo, timedelta
+try:
+    from functools import total_ordering
+except ImportError:
+    from total_ordering import total_ordering
 
 from aria.parser import dsl_specification
 from aria.utils.collections import StrictDict, OrderedDict
