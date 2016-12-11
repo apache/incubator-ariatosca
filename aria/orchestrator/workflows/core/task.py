@@ -24,7 +24,7 @@ from functools import (
 )
 
 from aria import logger
-from aria.storage import models
+from aria.storage import model
 from aria.orchestrator.context import operation as operation_context
 
 from .. import exceptions
@@ -66,7 +66,7 @@ class StubTask(BaseTask):
 
     def __init__(self, *args, **kwargs):
         super(StubTask, self).__init__(*args, **kwargs)
-        self.status = models.Task.PENDING
+        self.status = model.Task.PENDING
         self.due_at = datetime.utcnow()
 
 
@@ -106,36 +106,36 @@ class OperationTask(BaseTask):
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
-        model = api_task._workflow_context.model
+        model_storage = api_task._workflow_context.model
 
-        base_task_model = model.task.model_cls
-        if isinstance(api_task.actor, models.NodeInstance):
+        base_task_model = model_storage.task.model_cls
+        if isinstance(api_task.actor, model.NodeInstance):
             context_class = operation_context.NodeOperationContext
             task_model_cls = base_task_model.as_node_instance
-        elif isinstance(api_task.actor, models.RelationshipInstance):
+        elif isinstance(api_task.actor, model.RelationshipInstance):
             context_class = operation_context.RelationshipOperationContext
             task_model_cls = base_task_model.as_relationship_instance
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
         plugin = api_task.plugin
-        plugins = model.plugin.list(filters={'package_name': plugin.get('package_name', ''),
-                                             'package_version': plugin.get('package_version', '')},
-                                    include=['id'])
+        plugins = model_storage.plugin.list(filters={
+            'package_name': plugin.get('package_name', ''),
+            'package_version': plugin.get('package_version', '')
+        })
         # Validation during installation ensures that at most one plugin can exists with provided
         # package_name and package_version
-        plugin_id = plugins[0].id if plugins else None
         operation_task = task_model_cls(
             name=api_task.name,
             operation_mapping=api_task.operation_mapping,
-            instance_id=api_task.actor.id,
+            instance=api_task.actor,
             inputs=api_task.inputs,
             status=base_task_model.PENDING,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
-            plugin_id=plugin_id,
-            execution_id=self._workflow_context.execution.id
+            plugin=plugins[0] if plugins else None,
+            execution=self._workflow_context.execution
         )
         self._workflow_context.model.task.put(operation_task)
 

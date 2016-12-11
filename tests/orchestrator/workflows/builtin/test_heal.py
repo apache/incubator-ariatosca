@@ -34,7 +34,7 @@ def ctx(tmpdir):
 def test_heal_dependent_node(ctx):
     dependent_node_instance = \
         ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
-    dependent_node_instance.host_id = dependent_node_instance.id
+    dependent_node_instance.host_fk = dependent_node_instance.id
     ctx.model.node_instance.update(dependent_node_instance)
     heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id=dependent_node_instance.id)
 
@@ -63,7 +63,7 @@ def test_heal_dependent_node(ctx):
 def test_heal_dependency_node(ctx):
     dependency_node_instance = \
         ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    dependency_node_instance.host_id = dependency_node_instance.id
+    dependency_node_instance.host_fk = dependency_node_instance.id
     ctx.model.node_instance.update(dependency_node_instance)
     heal_graph = task.WorkflowTask(heal, ctx=ctx, node_instance_id=dependency_node_instance.id)
     # both subgraphs should contain un\install for both the dependent and the dependency

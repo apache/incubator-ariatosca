@@ -15,7 +15,7 @@
 
 from datetime import datetime
 
-from aria.storage import models
+from aria.storage import model
 
 from . import operations
 
@@ -35,7 +35,7 @@ RELATIONSHIP_INSTANCE_NAME = 'relationship_instance'
 
 
 def get_dependency_node(deployment):
-    return models.Node(
+    return model.Node(
         name=DEPENDENCY_NODE_NAME,
         type='test_node_type',
         type_hierarchy=[],
@@ -46,26 +46,25 @@ def get_dependency_node(deployment):
         operations=dict((key, {}) for key in operations.NODE_OPERATIONS),
         min_number_of_instances=1,
         max_number_of_instances=1,
-        deployment_id=deployment.id
+        deployment_fk=deployment.id
     )
 
 
 def get_dependency_node_instance(dependency_node):
-    return models.NodeInstance(
+    return model.NodeInstance(
         name=DEPENDENCY_NODE_INSTANCE_NAME,
         runtime_properties={'ip': '1.1.1.1'},
         version=None,
-        node_id=dependency_node.id,
-        deployment_id=dependency_node.deployment.id,
+        node_fk=dependency_node.id,
         state='',
-        scaling_groups={}
+        scaling_groups=[]
     )
 
 
 def get_relationship(source=None, target=None):
-    return models.Relationship(
-        source_node_id=source.id,
-        target_node_id=target.id,
+    return model.Relationship(
+        source_node_fk=source.id,
+        target_node_fk=target.id,
         source_interfaces={},
         source_operations=dict((key, {}) for key in operations.RELATIONSHIP_OPERATIONS),
         target_interfaces={},
@@ -77,17 +76,17 @@ def get_relationship(source=None, target=None):
 
 
 def get_relationship_instance(source_instance, target_instance, relationship):
-    return models.RelationshipInstance(
-        relationship_id=relationship.id,
-        target_node_instance_id=target_instance.id,
-        source_node_instance_id=source_instance.id,
+    return model.RelationshipInstance(
+        relationship_fk=relationship.id,
+        target_node_instance_fk=target_instance.id,
+        source_node_instance_fk=source_instance.id,
     )
 
 
 def get_dependent_node(deployment):
-    return models.Node(
+    return model.Node(
         name=DEPENDENT_NODE_NAME,
-        deployment_id=deployment.id,
+        deployment_fk=deployment.id,
         type='test_node_type',
         type_hierarchy=[],
         number_of_instances=1,
@@ -101,20 +100,19 @@ def get_dependent_node(deployment):
 
 
 def get_dependent_node_instance(dependent_node):
-    return models.NodeInstance(
+    return model.NodeInstance(
         name=DEPENDENT_NODE_INSTANCE_NAME,
         runtime_properties={},
         version=None,
-        node_id=dependent_node.id,
-        deployment_id=dependent_node.deployment.id,
+        node_fk=dependent_node.id,
         state='',
-        scaling_groups={}
+        scaling_groups=[]
     )
 
 
 def get_blueprint():
     now = datetime.now()
-    return models.Blueprint(
+    return model.Blueprint(
         plan={},
         name=BLUEPRINT_NAME,
         description=None,
@@ -125,10 +123,9 @@ def get_blueprint():
 
 
 def get_execution(deployment):
-    return models.Execution(
-        deployment_id=deployment.id,
-        blueprint_id=deployment.blueprint.id,
-        status=models.Execution.STARTED,
+    return model.Execution(
+        deployment_fk=deployment.id,
+        status=model.Execution.STARTED,
         workflow_name=WORKFLOW_NAME,
         started_at=datetime.utcnow(),
         parameters=None
@@ -137,9 +134,9 @@ def get_execution(deployment):
 
 def get_deployment(blueprint):
     now = datetime.utcnow()
-    return models.Deployment(
+    return model.Deployment(
         name=DEPLOYMENT_NAME,
-        blueprint_id=blueprint.id,
+        blueprint_fk=blueprint.id,
         description='',
         created_at=now,
         updated_at=now,
@@ -155,7 +152,7 @@ def get_deployment(blueprint):
 
 
 def get_plugin(package_name='package', package_version='0.1'):
-    return models.Plugin(
+    return model.Plugin(
         archive_name='archive_name',
         distribution='distribution',
         distribution_release='dist_release',

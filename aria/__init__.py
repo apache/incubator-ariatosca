@@ -62,22 +62,21 @@ def application_model_storage(api, api_kwargs=None):
     Initiate model storage
     """
     models = [
-        storage.models.Plugin,
-        storage.models.ProviderContext,
+        storage.model.Plugin,
 
-        storage.models.Blueprint,
-        storage.models.Deployment,
-        storage.models.DeploymentUpdate,
-        storage.models.DeploymentUpdateStep,
-        storage.models.DeploymentModification,
+        storage.model.Blueprint,
+        storage.model.Deployment,
+        storage.model.DeploymentUpdate,
+        storage.model.DeploymentUpdateStep,
+        storage.model.DeploymentModification,
 
-        storage.models.Node,
-        storage.models.NodeInstance,
-        storage.models.Relationship,
-        storage.models.RelationshipInstance,
+        storage.model.Node,
+        storage.model.NodeInstance,
+        storage.model.Relationship,
+        storage.model.RelationshipInstance,
 
-        storage.models.Execution,
-        storage.models.Task,
+        storage.model.Execution,
+        storage.model.Task,
     ]
     # if api not in _model_storage:
     return storage.ModelStorage(api, items=models, api_kwargs=api_kwargs or {})

@@ -23,7 +23,7 @@ from datetime import datetime
 import networkx
 
 from aria import logger
-from aria.storage import models
+from aria.storage import model
 from aria.orchestrator import events
 
 from .. import exceptions
@@ -82,18 +82,18 @@ class Engine(logger.LoggerMixin):
         events.on_cancelling_workflow_signal.send(self._workflow_context)
 
     def _is_cancel(self):
-        return self._workflow_context.execution.status in [models.Execution.CANCELLING,
-                                                           models.Execution.CANCELLED]
+        return self._workflow_context.execution.status in [model.Execution.CANCELLING,
+                                                           model.Execution.CANCELLED]
 
     def _executable_tasks(self):
         now = datetime.utcnow()
         return (task for task in self._tasks_iter()
-                if task.status in models.Task.WAIT_STATES and
+                if task.status in model.Task.WAIT_STATES and
                 task.due_at <= now and
                 not self._task_has_dependencies(task))
 
     def _ended_tasks(self):
-        return (task for task in self._tasks_iter() if task.status in models.Task.END_STATES)
+        return (task for task in self._tasks_iter() if task.status in model.Task.END_STATES)
 
     def _task_has_dependencies(self, task):
         return len(self._execution_graph.pred.get(task.id, {})) > 0
@@ -105,18 +105,19 @@ class Engine(logger.LoggerMixin):
         for _, data in self._execution_graph.nodes_iter(data=True):
             task = data['task']
             if isinstance(task, engine_task.OperationTask):
-                self._workflow_context.model.task.refresh(task.model_task)
+                if task.model_task.status not in model.Task.END_STATES:
+                    self._workflow_context.model.task.refresh(task.model_task)
             yield task
 
     def _handle_executable_task(self, task):
         if isinstance(task, engine_task.StubTask):
-            task.status = models.Task.SUCCESS
+            task.status = model.Task.SUCCESS
         else:
             events.sent_task_signal.send(task)
             self._executor.execute(task)
 
     def _handle_ended_tasks(self, task):
-        if task.status == models.Task.FAILED and not task.ignore_failure:
+        if task.status == model.Task.FAILED and not task.ignore_failure:
             raise exceptions.ExecutorException('Workflow failed')
         else:
             self._execution_graph.remove_node(task.id)

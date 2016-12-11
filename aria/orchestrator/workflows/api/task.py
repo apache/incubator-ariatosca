@@ -18,7 +18,7 @@ Provides the tasks to be entered into the task graph
 """
 from uuid import uuid4
 
-from aria.storage import models
+from aria.storage import model
 
 from ... import context
 from .. import exceptions
@@ -75,8 +75,8 @@ class OperationTask(BaseTask):
         :param actor: the operation host on which this operation is registered.
         :param inputs: operation inputs.
         """
-        assert isinstance(actor, (models.NodeInstance,
-                                  models.RelationshipInstance))
+        assert isinstance(actor, (model.NodeInstance,
+                                  model.RelationshipInstance))
         super(OperationTask, self).__init__()
         self.actor = actor
         self.name = '{name}.{actor.id}'.format(name=name, actor=actor)
@@ -98,7 +98,7 @@ class OperationTask(BaseTask):
         :param instance: the node of which this operation belongs to.
         :param name: the name of the operation.
         """
-        assert isinstance(instance, models.NodeInstance)
+        assert isinstance(instance, model.NodeInstance)
         return cls._instance(instance=instance,
                              name=name,
                              operation_details=instance.node.operations[name],
@@ -118,7 +118,7 @@ class OperationTask(BaseTask):
         with 'source_operations' and 'target_operations'
         :param inputs any additional inputs to the operation
         """
-        assert isinstance(instance, models.RelationshipInstance)
+        assert isinstance(instance, model.RelationshipInstance)
         if operation_end not in [cls.TARGET_OPERATION, cls.SOURCE_OPERATION]:
             raise exceptions.TaskException('The operation end should be {0} or {1}'.format(
                 cls.TARGET_OPERATION, cls.SOURCE_OPERATION

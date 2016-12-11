@@ -45,19 +45,19 @@ from .core import (
 from . import (
     exceptions,
     api,
-    structures,
+    structure,
     core,
     filesystem_rapi,
     sql_mapi,
-    models
+    model
 )
 
 __all__ = (
     'exceptions',
-    'structures',
-    # 'Storage',
-    # 'ModelStorage',
-    # 'ResourceStorage',
+    'structure',
+    'Storage',
+    'ModelStorage',
+    'ResourceStorage',
     'filesystem_rapi',
     'sql_mapi',
     'api'

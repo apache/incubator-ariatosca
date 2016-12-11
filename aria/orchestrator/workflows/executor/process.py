@@ -111,7 +111,7 @@ class ProcessExecutor(base.BaseExecutor):
 
         env = os.environ.copy()
         # See _update_env for plugin_prefix usage
-        if task.plugin_id and self._plugin_manager:
+        if task.plugin_fk and self._plugin_manager:
             plugin_prefix = self._plugin_manager.get_plugin_prefix(task.plugin)
         else:
             plugin_prefix = None

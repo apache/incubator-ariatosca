@@ -12,19 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from contextlib import contextmanager
 from datetime import datetime
+from contextlib import contextmanager
+
 import pytest
 
 from aria import application_model_storage
-from aria.storage import exceptions
-from aria.storage import sql_mapi
-from aria.storage.models import (
+from aria.storage import (
+    exceptions,
+    sql_mapi,
+)
+from aria.storage.model import (
     DeploymentUpdateStep,
     Blueprint,
     Execution,
     Task,
-    ProviderContext,
     Plugin,
     Deployment,
     Node,
@@ -73,7 +75,7 @@ def _deployment_storage():
 def _deployment_update_storage():
     storage = _deployment_storage()
     deployment_update = DeploymentUpdate(
-        deployment_id=storage.deployment.list()[0].id,
+        deployment=storage.deployment.list()[0],
         created_at=now,
         deployment_plan={},
     )
@@ -194,15 +196,15 @@ class TestBlueprint(object):
     )
     def test_blueprint_model_creation(self, empty_storage, is_valid, plan, description, created_at,
                                       updated_at, main_file_name):
-        if not is_valid:
-            with pytest.raises(exceptions.StorageError):
-                empty_storage.blueprint.put(Blueprint(plan=plan, description=description,
-                                                      created_at=created_at, updated_at=updated_at,
-                                                      main_file_name=main_file_name))
-        else:
-            empty_storage.blueprint.put(Blueprint(plan=plan, description=description,
-                                                  created_at=created_at, updated_at=updated_at,
-                                                  main_file_name=main_file_name))
+        _test_model(is_valid=is_valid,
+                    storage=empty_storage,
+                    model_name='blueprint',
+                    model_cls=Blueprint,
+                    model_kwargs=dict(plan=plan,
+                                      description=description,
+                                      created_at=created_at,
+                                      updated_at=updated_at,
+                                      main_file_name=main_file_name))
 
 
 class TestDeployment(object):
@@ -249,7 +251,7 @@ class TestDeployment(object):
                                  model_cls=Deployment,
                                  model_kwargs=dict(
                                      name=name,
-                                     blueprint_id=deployment_storage.blueprint.list()[0].id,
+                                     blueprint=deployment_storage.blueprint.list()[0],
                                      created_at=created_at,
                                      description=description,
                                      inputs=inputs,
@@ -295,8 +297,7 @@ class TestExecution(object):
                                 model_name='execution',
                                 model_cls=Execution,
                                 model_kwargs=dict(
-                                    deployment_id=deployment_storage.deployment.list()[0].id,
-                                    blueprint_id=deployment_storage.blueprint.list()[0].id,
+                                    deployment=deployment_storage.deployment.list()[0],
                                     created_at=created_at,
                                     started_at=started_at,
                                     ended_at=ended_at,
@@ -380,20 +381,20 @@ class TestDeploymentUpdate(object):
         'is_valid, created_at, deployment_plan, deployment_update_node_instances, '
         'deployment_update_deployment, deployment_update_nodes, modified_entity_ids, state',
         [
-            (False, m_cls, {}, {}, {}, {}, {}, 'state'),
-            (False, now, m_cls, {}, {}, {}, {}, 'state'),
-            (False, now, {}, m_cls, {}, {}, {}, 'state'),
-            (False, now, {}, {}, m_cls, {}, {}, 'state'),
+            (False, m_cls, {}, {}, {}, [], {}, 'state'),
+            (False, now, m_cls, {}, {}, [], {}, 'state'),
+            (False, now, {}, m_cls, {}, [], {}, 'state'),
+            (False, now, {}, {}, m_cls, [], {}, 'state'),
             (False, now, {}, {}, {}, m_cls, {}, 'state'),
-            (False, now, {}, {}, {}, {}, m_cls, 'state'),
-            (False, now, {}, {}, {}, {}, {}, m_cls),
+            (False, now, {}, {}, {}, [], m_cls, 'state'),
+            (False, now, {}, {}, {}, [], {}, m_cls),
 
-            (True, now, {}, {}, {}, {}, {}, 'state'),
-            (True, now, {}, None, {}, {}, {}, 'state'),
-            (True, now, {}, {}, None, {}, {}, 'state'),
+            (True, now, {}, {}, {}, [], {}, 'state'),
+            (True, now, {}, None, {}, [], {}, 'state'),
+            (True, now, {}, {}, None, [], {}, 'state'),
             (True, now, {}, {}, {}, None, {}, 'state'),
-            (True, now, {}, {}, {}, {}, None, 'state'),
-            (True, now, {}, {}, {}, {}, {}, None),
+            (True, now, {}, {}, {}, [], None, 'state'),
+            (True, now, {}, {}, {}, [], {}, None),
         ]
     )
     def test_deployment_update_model_creation(self, deployment_storage, is_valid, created_at,
@@ -406,7 +407,7 @@ class TestDeploymentUpdate(object):
             model_name='deployment_update',
             model_cls=DeploymentUpdate,
             model_kwargs=dict(
-                deployment_id=deployment_storage.deployment.list()[0].id,
+                deployment=deployment_storage.deployment.list()[0],
                 created_at=created_at,
                 deployment_plan=deployment_plan,
                 deployment_update_node_instances=deployment_update_node_instances,
@@ -441,7 +442,7 @@ class TestDeploymentUpdateStep(object):
             model_name='deployment_update_step',
             model_cls=DeploymentUpdateStep,
             model_kwargs=dict(
-                deployment_update_id=deployment_update_storage.deployment_update.list()[0].id,
+                deployment_update=deployment_update_storage.deployment_update.list()[0],
                 action=action,
                 entity_id=entity_id,
                 entity_type=entity_type
@@ -517,7 +518,7 @@ class TestDeploymentModification(object):
             model_name='deployment_modification',
             model_cls=DeploymentModification,
             model_kwargs=dict(
-                deployment_id=deployment_storage.deployment.list()[0].id,
+                deployment=deployment_storage.deployment.list()[0],
                 context=context,
                 created_at=created_at,
                 ended_at=ended_at,
@@ -576,7 +577,7 @@ class TestNode(object):
                 operations=operations,
                 type=type,
                 type_hierarchy=type_hierarchy,
-                deployment_id=deployment_storage.deployment.list()[0].id
+                deployment=deployment_storage.deployment.list()[0]
             ))
         if is_valid:
             assert node.deployment == deployment_storage.deployment.list()[0]
@@ -611,8 +612,8 @@ class TestRelationship(object):
             model_name='relationship',
             model_cls=Relationship,
             model_kwargs=dict(
-                source_node_id=nodes_storage.node.list()[1].id,
-                target_node_id=nodes_storage.node.list()[0].id,
+                source_node=nodes_storage.node.list()[1],
+                target_node=nodes_storage.node.list()[0],
                 source_interfaces=source_interfaces,
                 source_operations=source_operations,
                 target_interfaces=target_interfaces,
@@ -630,17 +631,17 @@ class TestNodeInstance(object):
     @pytest.mark.parametrize(
         'is_valid, name, runtime_properties, scaling_groups, state, version',
         [
-            (False, m_cls, {}, {}, 'state', 1),
-            (False, 'name', m_cls, {}, 'state', 1),
+            (False, m_cls, {}, [], 'state', 1),
+            (False, 'name', m_cls, [], 'state', 1),
             (False, 'name', {}, m_cls, 'state', 1),
-            (False, 'name', {}, {}, m_cls, 1),
-            (False, m_cls, {}, {}, 'state', m_cls),
+            (False, 'name', {}, [], m_cls, 1),
+            (False, m_cls, {}, [], 'state', m_cls),
 
-            (True, 'name', {}, {}, 'state', 1),
-            (True, None, {}, {}, 'state', 1),
-            (True, 'name', None, {}, 'state', 1),
+            (True, 'name', {}, [], 'state', 1),
+            (True, None, {}, [], 'state', 1),
+            (True, 'name', None, [], 'state', 1),
             (True, 'name', {}, None, 'state', 1),
-            (True, 'name', {}, {}, 'state', None),
+            (True, 'name', {}, [], 'state', None),
         ]
     )
     def test_node_instance_model_creation(self, node_storage, is_valid, name, runtime_properties,
@@ -651,8 +652,7 @@ class TestNodeInstance(object):
             model_name='node_instance',
             model_cls=NodeInstance,
             model_kwargs=dict(
-                node_id=node_storage.node.list()[0].id,
-                deployment_id=node_storage.deployment.list()[0].id,
+                node=node_storage.node.list()[0],
                 name=name,
                 runtime_properties=runtime_properties,
                 scaling_groups=scaling_groups,
@@ -681,31 +681,13 @@ class TestRelationshipInstance(object):
             model_name='relationship_instance',
             model_cls=RelationshipInstance,
             model_kwargs=dict(
-                relationship_id=relationship.id,
-                source_node_instance_id=source_node_instance.id,
-                target_node_instance_id=target_node_instance.id
+                relationship=relationship,
+                source_node_instance=source_node_instance,
+                target_node_instance=target_node_instance
             ))
         assert relationship_instance.relationship == relationship
         assert relationship_instance.source_node_instance == source_node_instance
         assert relationship_instance.target_node_instance == target_node_instance
-
-
-class TestProviderContext(object):
-    @pytest.mark.parametrize(
-        'is_valid, name, context',
-        [
-            (False, None, {}),
-            (False, 'name', None),
-            (True, 'name', {}),
-        ]
-    )
-    def test_provider_context_model_creation(self, empty_storage, is_valid, name, context):
-        _test_model(is_valid=is_valid,
-                    storage=empty_storage,
-                    model_name='provider_context',
-                    model_cls=ProviderContext,
-                    model_kwargs=dict(name=name, context=context)
-                   )
 
 
 class TestPlugin(object):
@@ -715,48 +697,48 @@ class TestPlugin(object):
         'package_version, supported_platform, supported_py_versions, uploaded_at, wheels',
         [
             (False, m_cls, 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', m_cls, 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', m_cls, 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', m_cls, 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', m_cls, 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', m_cls, 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', m_cls,
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
              'pak_ver', m_cls, [], now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', m_cls, now, []),
+             'pak_ver', 'sup_plat', m_cls, now, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', [], m_cls, []),
+             'pak_ver', 'sup_plat', [], m_cls, []),
             (False, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', [], now, m_cls),
+             'pak_ver', 'sup_plat', [], now, m_cls),
 
-            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', [], now, []),
+            (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
+             'sup_plat', [], now, []),
             (True, 'arc_name', None, 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', None, 'dis_ver', 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', None, 'pak_name', 'pak_src', 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', [], now, []),
+             'pak_ver', 'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', None, 'pak_ver',
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src', None,
-             'sup_pla', [], now, []),
+             'sup_plat', [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
              'pak_ver', None, [], now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', None, now, []),
+             'pak_ver', 'sup_plat', None, now, []),
             (True, 'arc_name', 'dis_name', 'dis_rel', 'dis_ver', 'pak_name', 'pak_src',
-             'pak_ver', 'sup_pla', [], now, []),
+             'pak_ver', 'sup_plat', [], now, []),
         ]
     )
     def test_plugin_model_creation(self, empty_storage, is_valid, archive_name, distribution,
@@ -823,7 +805,7 @@ class TestTask(object):
             model_cls=Task,
             model_kwargs=dict(
                 status=status,
-                execution_id=execution_storage.execution.list()[0].id,
+                execution=execution_storage.execution.list()[0],
                 due_at=due_at,
                 started_at=started_at,
                 ended_at=ended_at,
@@ -834,16 +816,16 @@ class TestTask(object):
                 name=name,
                 operation_mapping=operation_mapping,
                 inputs=inputs,
-                plugin_id=plugin_id,
+                plugin_fk=plugin_id,
             ))
         if is_valid:
             assert task.execution == execution_storage.execution.list()[0]
-            if task.plugin_id:
+            if task.plugin:
                 assert task.plugin == execution_storage.plugin.list()[0]
 
     def test_task_max_attempts_validation(self):
         def create_task(max_attempts):
-            Task(execution_id='eid',
+            Task(execution_fk='eid',
                  name='name',
                  operation_mapping='',
                  inputs={},
@@ -855,23 +837,3 @@ class TestTask(object):
             create_task(max_attempts=0)
         with pytest.raises(ValueError):
             create_task(max_attempts=-2)
-
-
-def test_inner_dict_update(empty_storage):
-    inner_dict = {'inner_value': 1}
-    pc = ProviderContext(name='name', context={
-        'inner_dict': {'inner_value': inner_dict},
-        'value': 0
-    })
-    empty_storage.provider_context.put(pc)
-
-    storage_pc = empty_storage.provider_context.get(pc.id)
-    assert storage_pc == pc
-
-    storage_pc.context['inner_dict']['inner_value'] = 2
-    storage_pc.context['value'] = -1
-    empty_storage.provider_context.update(storage_pc)
-    storage_pc = empty_storage.provider_context.get(pc.id)
-
-    assert storage_pc.context['inner_dict']['inner_value'] == 2
-    assert storage_pc.context['value'] == -1

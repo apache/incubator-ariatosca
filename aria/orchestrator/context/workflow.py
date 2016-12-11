@@ -57,8 +57,7 @@ class WorkflowContext(BaseContext):
         execution_cls = self.model.execution.model_cls
         now = datetime.utcnow()
         execution = self.model.execution.model_cls(
-            blueprint_id=self.blueprint.id,
-            deployment_id=self.deployment.id,
+            deployment=self.deployment,
             workflow_name=self._workflow_name,
             created_at=now,
             status=execution_cls.PENDING,
@@ -86,9 +85,11 @@ class WorkflowContext(BaseContext):
         """
         Iterator over nodes
         """
+        key = 'deployment_{0}'.format(self.model.node.model_cls.name_column_name())
+
         return self.model.node.iter(
             filters={
-                'deployment_id': self.deployment.id
+                key: getattr(self.deployment, self.deployment.name_column_name())
             }
         )
 
@@ -97,9 +98,10 @@ class WorkflowContext(BaseContext):
         """
         Iterator over node instances
         """
+        key = 'deployment_{0}'.format(self.model.node_instance.model_cls.name_column_name())
         return self.model.node_instance.iter(
             filters={
-                'deployment_id': self.deployment.id
+                key: getattr(self.deployment, self.deployment.name_column_name())
             }
         )
 

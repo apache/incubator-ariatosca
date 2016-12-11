@@ -33,16 +33,14 @@ classes:
     * Relationship - relationship implementation model.
     * NodeInstance - node instance implementation model.
     * RelationshipInstance - relationship instance implementation model.
-    * ProviderContext - provider context implementation model.
     * Plugin - plugin implementation model.
 """
 from collections import namedtuple
 from datetime import datetime
 
-from sqlalchemy.ext.declarative.base import declared_attr
-
-from .structures import (
-    SQLModelBase,
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy import (
     Column,
     Integer,
     Text,
@@ -51,39 +49,40 @@ from .structures import (
     Enum,
     String,
     Float,
-    List,
-    Dict,
-    foreign_key,
-    one_to_many_relationship,
-    relationship_to_self,
-    orm)
-
-__all__ = (
-    'Blueprint',
-    'Deployment',
-    'DeploymentUpdateStep',
-    'DeploymentUpdate',
-    'DeploymentModification',
-    'Execution',
-    'Node',
-    'Relationship',
-    'NodeInstance',
-    'RelationshipInstance',
-    'ProviderContext',
-    'Plugin',
+    orm,
 )
 
+from .structure import ModelMixin
 
-#pylint: disable=no-self-argument
+from .type import (
+    List,
+    Dict
+)
+
+__all__ = (
+    'BlueprintBase',
+    'DeploymentBase',
+    'DeploymentUpdateStepBase',
+    'DeploymentUpdateBase',
+    'DeploymentModificationBase',
+    'ExecutionBase',
+    'NodeBase',
+    'RelationshipBase',
+    'NodeInstanceBase',
+    'RelationshipInstanceBase',
+    'PluginBase',
+    'TaskBase'
+)
+
+#pylint: disable=no-self-argument, abstract-method
 
 
-class Blueprint(SQLModelBase):
+class BlueprintBase(ModelMixin):
     """
     Blueprint model representation.
     """
     __tablename__ = 'blueprints'
 
-    name = Column(Text, index=True)
     created_at = Column(DateTime, nullable=False, index=True)
     main_file_name = Column(Text, nullable=False)
     plan = Column(Dict, nullable=False)
@@ -91,17 +90,14 @@ class Blueprint(SQLModelBase):
     description = Column(Text)
 
 
-class Deployment(SQLModelBase):
+class DeploymentBase(ModelMixin):
     """
     Deployment model representation.
     """
     __tablename__ = 'deployments'
 
-    _private_fields = ['blueprint_id']
+    _private_fields = ['blueprint_fk']
 
-    blueprint_id = foreign_key(Blueprint.id)
-
-    name = Column(Text, index=True)
     created_at = Column(DateTime, nullable=False, index=True)
     description = Column(Text)
     inputs = Column(Dict)
@@ -115,15 +111,25 @@ class Deployment(SQLModelBase):
     workflows = Column(Dict)
 
     @declared_attr
+    def blueprint_fk(cls):
+        return cls.foreign_key(BlueprintBase, nullable=False)
+
+    @declared_attr
     def blueprint(cls):
-        return one_to_many_relationship(cls, Blueprint, cls.blueprint_id)
+        return cls.one_to_many_relationship('blueprint_fk')
+
+    @declared_attr
+    def blueprint_name(cls):
+        return association_proxy('blueprint', cls.name_column_name())
 
 
-class Execution(SQLModelBase):
+class ExecutionBase(ModelMixin):
     """
     Execution model representation.
     """
+    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
     __tablename__ = 'executions'
+    _private_fields = ['deployment_fk']
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -150,7 +156,7 @@ class Execution(SQLModelBase):
             current_status = getattr(self, key)
         except AttributeError:
             return
-        valid_transitions = Execution.VALID_TRANSITIONS.get(current_status, [])
+        valid_transitions = ExecutionBase.VALID_TRANSITIONS.get(current_status, [])
         if all([current_status is not None,
                 current_status != value,
                 value not in valid_transitions]):
@@ -159,10 +165,6 @@ class Execution(SQLModelBase):
                 new=value))
         return value
 
-    deployment_id = foreign_key(Deployment.id)
-    blueprint_id = foreign_key(Blueprint.id)
-    _private_fields = ['deployment_id', 'blueprint_id']
-
     created_at = Column(DateTime, index=True)
     started_at = Column(DateTime, nullable=True, index=True)
     ended_at = Column(DateTime, nullable=True, index=True)
@@ -170,62 +172,94 @@ class Execution(SQLModelBase):
     is_system_workflow = Column(Boolean, nullable=False, default=False)
     parameters = Column(Dict)
     status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
-    workflow_name = Column(Text, nullable=False)
-
-    @declared_attr
-    def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+    workflow_name = Column(Text)
 
     @declared_attr
     def blueprint(cls):
-        return one_to_many_relationship(cls, Blueprint, cls.blueprint_id)
+        return association_proxy('deployment', 'blueprint')
+
+    @declared_attr
+    def deployment_fk(cls):
+        return cls.foreign_key(DeploymentBase, nullable=True)
+
+    @declared_attr
+    def deployment(cls):
+        return cls.one_to_many_relationship('deployment_fk')
+
+    @declared_attr
+    def deployment_name(cls):
+        return association_proxy('deployment', cls.name_column_name())
+
+    @declared_attr
+    def blueprint_name(cls):
+        return association_proxy('deployment', 'blueprint_name')
 
     def __str__(self):
         return '<{0} id=`{1}` (status={2})>'.format(
             self.__class__.__name__,
-            self.id,
+            getattr(self, self.name_column_name()),
             self.status
         )
 
 
-class DeploymentUpdate(SQLModelBase):
+class DeploymentUpdateBase(ModelMixin):
     """
     Deployment update model representation.
     """
+    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
+    steps = None
+
     __tablename__ = 'deployment_updates'
 
-    deployment_id = foreign_key(Deployment.id)
-    execution_id = foreign_key(Execution.id, nullable=True)
-    _private_fields = ['execution_id', 'deployment_id']
+    _private_fields = ['execution_fk', 'deployment_fk']
 
     created_at = Column(DateTime, nullable=False, index=True)
     deployment_plan = Column(Dict, nullable=False)
     deployment_update_node_instances = Column(Dict)
     deployment_update_deployment = Column(Dict)
-    deployment_update_nodes = Column(Dict)
+    deployment_update_nodes = Column(List)
     modified_entity_ids = Column(Dict)
     state = Column(Text)
 
     @declared_attr
+    def execution_fk(cls):
+        return cls.foreign_key(ExecutionBase, nullable=True)
+
+    @declared_attr
     def execution(cls):
-        return one_to_many_relationship(cls, Execution, cls.execution_id)
+        return cls.one_to_many_relationship('execution_fk')
+
+    @declared_attr
+    def execution_name(cls):
+        return association_proxy('execution', cls.name_column_name())
+
+    @declared_attr
+    def deployment_fk(cls):
+        return cls.foreign_key(DeploymentBase)
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+        return cls.one_to_many_relationship('deployment_fk')
+
+    @declared_attr
+    def deployment_name(cls):
+        return association_proxy('deployment', cls.name_column_name())
 
     def to_dict(self, suppress_error=False, **kwargs):
-        dep_update_dict = super(DeploymentUpdate, self).to_dict(suppress_error)
-        # Taking care of the fact the DeploymentSteps are objects
+        dep_update_dict = super(DeploymentUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
+        # Taking care of the fact the DeploymentSteps are _BaseModels
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         return dep_update_dict
 
 
-class DeploymentUpdateStep(SQLModelBase):
+class DeploymentUpdateStepBase(ModelMixin):
     """
     Deployment update step model representation.
     """
+    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
     __tablename__ = 'deployment_update_steps'
+    _private_fields = ['deployment_update_fk']
+
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
     _entity_types = namedtuple(
@@ -246,22 +280,24 @@ class DeploymentUpdateStep(SQLModelBase):
         PLUGIN='plugin'
     )
 
-    deployment_update_id = foreign_key(DeploymentUpdate.id)
-    _private_fields = ['deployment_update_id']
-
     action = Column(Enum(*ACTION_TYPES, name='action_type'), nullable=False)
     entity_id = Column(Text, nullable=False)
     entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
 
     @declared_attr
+    def deployment_update_fk(cls):
+        return cls.foreign_key(DeploymentUpdateBase)
+
+    @declared_attr
     def deployment_update(cls):
-        return one_to_many_relationship(cls,
-                                        DeploymentUpdate,
-                                        cls.deployment_update_id,
-                                        backreference='steps')
+        return cls.one_to_many_relationship('deployment_update_fk', backreference='steps')
+
+    @declared_attr
+    def deployment_update_name(cls):
+        return association_proxy('deployment_update', cls.name_column_name())
 
     def __hash__(self):
-        return hash((self.id, self.entity_id))
+        return hash((getattr(self, self.id_column_name()), self.entity_id))
 
     def __lt__(self, other):
         """
@@ -288,11 +324,12 @@ class DeploymentUpdateStep(SQLModelBase):
         return False
 
 
-class DeploymentModification(SQLModelBase):
+class DeploymentModificationBase(ModelMixin):
     """
     Deployment modification model representation.
     """
     __tablename__ = 'deployment_modifications'
+    _private_fields = ['deployment_fk']
 
     STARTED = 'started'
     FINISHED = 'finished'
@@ -300,9 +337,6 @@ class DeploymentModification(SQLModelBase):
 
     STATES = [STARTED, FINISHED, ROLLEDBACK]
     END_STATES = [FINISHED, ROLLEDBACK]
-
-    deployment_id = foreign_key(Deployment.id)
-    _private_fields = ['deployment_id']
 
     context = Column(Dict)
     created_at = Column(DateTime, nullable=False, index=True)
@@ -312,14 +346,19 @@ class DeploymentModification(SQLModelBase):
     status = Column(Enum(*STATES, name='deployment_modification_status'))
 
     @declared_attr
+    def deployment_fk(cls):
+        return cls.foreign_key(DeploymentBase)
+
+    @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls,
-                                        Deployment,
-                                        cls.deployment_id,
-                                        backreference='modifications')
+        return cls.one_to_many_relationship('deployment_fk', backreference='modifications')
+
+    @declared_attr
+    def deployment_name(cls):
+        return association_proxy('deployment', cls.name_column_name())
 
 
-class Node(SQLModelBase):
+class NodeBase(ModelMixin):
     """
     Node model representation.
     """
@@ -328,18 +367,37 @@ class Node(SQLModelBase):
     # See base class for an explanation on these properties
     is_id_unique = False
 
-    name = Column(Text, index=True)
-    _private_fields = ['deployment_id', 'host_id']
-    deployment_id = foreign_key(Deployment.id)
-    host_id = foreign_key('nodes.id', nullable=True)
+    _private_fields = ['blueprint_fk', 'host_fk']
+
+    @declared_attr
+    def host_fk(cls):
+        return cls.foreign_key(NodeBase, nullable=True)
+
+    @declared_attr
+    def host(cls):
+        return cls.relationship_to_self('host_fk')
+
+    @declared_attr
+    def host_name(cls):
+        return association_proxy('host', cls.name_column_name())
+
+    @declared_attr
+    def deployment_fk(cls):
+        return cls.foreign_key(DeploymentBase)
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
+        return cls.one_to_many_relationship('deployment_fk')
+
+    @declared_attr
+    def deployment_name(cls):
+        return association_proxy('deployment', cls.name_column_name())
+
+    @declared_attr
+    def blueprint_name(cls):
+        return association_proxy('deployment', 'blueprint_{0}'.format(cls.name_column_name()))
 
     deploy_number_of_instances = Column(Integer, nullable=False)
-    # TODO: This probably should be a foreign key, but there's no guarantee
-    # in the code, currently, that the host will be created beforehand
     max_number_of_instances = Column(Integer, nullable=False)
     min_number_of_instances = Column(Integer, nullable=False)
     number_of_instances = Column(Integer, nullable=False)
@@ -350,35 +408,39 @@ class Node(SQLModelBase):
     type = Column(Text, nullable=False, index=True)
     type_hierarchy = Column(List)
 
-    @declared_attr
-    def host(cls):
-        return relationship_to_self(cls, cls.host_id, cls.id)
 
-
-class Relationship(SQLModelBase):
+class RelationshipBase(ModelMixin):
     """
     Relationship model representation.
     """
     __tablename__ = 'relationships'
 
-    _private_fields = ['source_node_id', 'target_node_id']
+    _private_fields = ['source_node_fk', 'target_node_fk']
 
-    source_node_id = foreign_key(Node.id)
-    target_node_id = foreign_key(Node.id)
+    @declared_attr
+    def source_node_fk(cls):
+        return cls.foreign_key(NodeBase)
 
     @declared_attr
     def source_node(cls):
-        return one_to_many_relationship(cls,
-                                        Node,
-                                        cls.source_node_id,
-                                        'outbound_relationships')
+        return cls.one_to_many_relationship('source_node_fk',
+                                            backreference='outbound_relationships')
+
+    @declared_attr
+    def source_name(cls):
+        return association_proxy('source_node', cls.name_column_name())
+
+    @declared_attr
+    def target_node_fk(cls):
+        return cls.foreign_key(NodeBase)
 
     @declared_attr
     def target_node(cls):
-        return one_to_many_relationship(cls,
-                                        Node,
-                                        cls.target_node_id,
-                                        'inbound_relationships')
+        return cls.one_to_many_relationship('target_node_fk', backreference='inbound_relationships')
+
+    @declared_attr
+    def target_name(cls):
+        return association_proxy('target_node', cls.name_column_name())
 
     source_interfaces = Column(Dict)
     source_operations = Column(Dict, nullable=False)
@@ -389,81 +451,100 @@ class Relationship(SQLModelBase):
     properties = Column(Dict)
 
 
-class NodeInstance(SQLModelBase):
+class NodeInstanceBase(ModelMixin):
     """
     Node instance model representation.
     """
     __tablename__ = 'node_instances'
+    _private_fields = ['node_fk', 'host_fk']
 
-    node_id = foreign_key(Node.id)
-    deployment_id = foreign_key(Deployment.id)
-    host_id = foreign_key('node_instances.id', nullable=True)
-
-    _private_fields = ['node_id', 'host_id']
-
-    name = Column(Text, index=True)
     runtime_properties = Column(Dict)
-    scaling_groups = Column(Dict)
+    scaling_groups = Column(List)
     state = Column(Text, nullable=False)
     version = Column(Integer, default=1)
 
     @declared_attr
-    def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_id)
-
-    @declared_attr
-    def node(cls):
-        return one_to_many_relationship(cls, Node, cls.node_id)
+    def host_fk(cls):
+        return cls.foreign_key(NodeInstanceBase, nullable=True)
 
     @declared_attr
     def host(cls):
-        return relationship_to_self(cls, cls.host_id, cls.id)
+        return cls.relationship_to_self('host_fk')
+
+    @declared_attr
+    def host_name(cls):
+        return association_proxy('host', cls.name_column_name())
+
+    @declared_attr
+    def deployment(cls):
+        return association_proxy('node', 'deployment')
+
+    @declared_attr
+    def deployment_name(cls):
+        return association_proxy('node', 'deployment_name')
+
+    @declared_attr
+    def node_fk(cls):
+        return cls.foreign_key(NodeBase, nullable=True)
+
+    @declared_attr
+    def node(cls):
+        return cls.one_to_many_relationship('node_fk')
+
+    @declared_attr
+    def node_name(cls):
+        return association_proxy('node', cls.name_column_name())
 
 
-class RelationshipInstance(SQLModelBase):
+class RelationshipInstanceBase(ModelMixin):
     """
     Relationship instance model representation.
     """
     __tablename__ = 'relationship_instances'
+    _private_fields = ['relationship_storage_fk',
+                       'source_node_instance_fk',
+                       'target_node_instance_fk']
 
-    relationship_id = foreign_key(Relationship.id)
-    source_node_instance_id = foreign_key(NodeInstance.id)
-    target_node_instance_id = foreign_key(NodeInstance.id)
-
-    _private_fields = ['relationship_storage_id',
-                       'source_node_instance_id',
-                       'target_node_instance_id']
+    @declared_attr
+    def source_node_instance_fk(cls):
+        return cls.foreign_key(NodeInstanceBase)
 
     @declared_attr
     def source_node_instance(cls):
-        return one_to_many_relationship(cls,
-                                        NodeInstance,
-                                        cls.source_node_instance_id,
-                                        'outbound_relationship_instances')
+        return cls.one_to_many_relationship('source_node_instance_fk',
+                                            backreference='outbound_relationship_instances')
+
+    @declared_attr
+    def source_node_instance_name(cls):
+        return association_proxy('source_node_instance', cls.name_column_name())
+
+    @declared_attr
+    def target_node_instance_fk(cls):
+        return cls.foreign_key(NodeInstanceBase)
 
     @declared_attr
     def target_node_instance(cls):
-        return one_to_many_relationship(cls,
-                                        NodeInstance,
-                                        cls.target_node_instance_id,
-                                        'inbound_relationship_instances')
+        return cls.one_to_many_relationship('target_node_instance_fk',
+                                            backreference='inbound_relationship_instances')
+
+    @declared_attr
+    def target_node_instance_name(cls):
+        return association_proxy('target_node_instance', cls.name_column_name())
+
+    @declared_attr
+    def relationship_fk(cls):
+        return cls.foreign_key(RelationshipBase)
 
     @declared_attr
     def relationship(cls):
-        return one_to_many_relationship(cls, Relationship, cls.relationship_id)
+        return cls.one_to_many_relationship('relationship_fk')
+
+    @declared_attr
+    def relationship_name(cls):
+        return association_proxy('relationship', cls.name_column_name())
 
 
-class ProviderContext(SQLModelBase):
-    """
-    Provider context model representation.
-    """
-    __tablename__ = 'provider_context'
-
-    name = Column(Text, nullable=False)
-    context = Column(Dict, nullable=False)
-
-
-class Plugin(SQLModelBase):
+class PluginBase(ModelMixin):
     """
     Plugin model representation.
     """
@@ -482,29 +563,60 @@ class Plugin(SQLModelBase):
     wheels = Column(List, nullable=False)
 
 
-class Task(SQLModelBase):
+class TaskBase(ModelMixin):
     """
     A Model which represents an task
     """
+    __tablename__ = 'tasks'
+    _private_fields = ['node_instance_fk', 'relationship_instance_fk', 'execution_fk']
 
-    __tablename__ = 'task'
-    node_instance_id = foreign_key(NodeInstance.id, nullable=True)
-    relationship_instance_id = foreign_key(RelationshipInstance.id, nullable=True)
-    execution_id = foreign_key(Execution.id, nullable=True)
+    @declared_attr
+    def node_instance_fk(cls):
+        return cls.foreign_key(NodeInstanceBase, nullable=True)
 
-    _private_fields = ['node_instance_id',
-                       'relationship_instance_id',
-                       'execution_id']
+    @declared_attr
+    def node_instance_name(cls):
+        return association_proxy('node_instance', cls.name_column_name())
 
     @declared_attr
     def node_instance(cls):
-        return one_to_many_relationship(cls, NodeInstance, cls.node_instance_id)
+        return cls.one_to_many_relationship('node_instance_fk')
+
+    @declared_attr
+    def relationship_instance_fk(cls):
+        return cls.foreign_key(RelationshipInstanceBase, nullable=True)
+
+    @declared_attr
+    def relationship_instance_name(cls):
+        return association_proxy('relationship_instance', cls.name_column_name())
 
     @declared_attr
     def relationship_instance(cls):
-        return one_to_many_relationship(cls,
-                                        RelationshipInstance,
-                                        cls.relationship_instance_id)
+        return cls.one_to_many_relationship('relationship_instance_fk')
+
+    @declared_attr
+    def plugin_fk(cls):
+        return cls.foreign_key(PluginBase, nullable=True)
+
+    @declared_attr
+    def plugin(cls):
+        return cls.one_to_many_relationship('plugin_fk')
+
+    @declared_attr
+    def plugin_name(cls):
+        return association_proxy('plugin', 'name')
+
+    @declared_attr
+    def execution_fk(cls):
+        return cls.foreign_key(ExecutionBase, nullable=True)
+
+    @declared_attr
+    def execution(cls):
+        return cls.one_to_many_relationship('execution_fk')
+
+    @declared_attr
+    def execution_name(cls):
+        return association_proxy('execution', cls.name_column_name())
 
     PENDING = 'pending'
     RETRYING = 'retrying'
@@ -527,7 +639,7 @@ class Task(SQLModelBase):
     @orm.validates('max_attempts')
     def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
         """Validates that max attempts is either -1 or a positive number"""
-        if value < 1 and value != Task.INFINITE_RETRIES:
+        if value < 1 and value != TaskBase.INFINITE_RETRIES:
             raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
                              'Got {value}'.format(value=value))
         return value
@@ -545,18 +657,8 @@ class Task(SQLModelBase):
     ignore_failure = Column(Boolean, default=False)
 
     # Operation specific fields
-    name = Column(String)
     operation_mapping = Column(String)
     inputs = Column(Dict)
-    plugin_id = foreign_key(Plugin.id, nullable=True)
-
-    @declared_attr
-    def plugin(cls):
-        return one_to_many_relationship(cls, Plugin, cls.plugin_id)
-
-    @declared_attr
-    def execution(cls):
-        return one_to_many_relationship(cls, Execution, cls.execution_id)
 
     @property
     def actor(self):
@@ -567,9 +669,9 @@ class Task(SQLModelBase):
         return self.node_instance or self.relationship_instance
 
     @classmethod
-    def as_node_instance(cls, instance_id, **kwargs):
-        return cls(node_instance_id=instance_id, **kwargs)
+    def as_node_instance(cls, instance, **kwargs):
+        return cls(node_instance=instance, **kwargs)
 
     @classmethod
-    def as_relationship_instance(cls, instance_id, **kwargs):
-        return cls(relationship_instance_id=instance_id, **kwargs)
+    def as_relationship_instance(cls, instance, **kwargs):
+        return cls(relationship_instance=instance, **kwargs)

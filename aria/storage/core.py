@@ -53,9 +53,9 @@ class Storage(LoggerMixin):
     Represents the storage
     """
     def __init__(self, api_cls, api_kwargs=None, items=(), **kwargs):
-        self._api_kwargs = api_kwargs or {}
         super(Storage, self).__init__(**kwargs)
         self.api = api_cls
+        self._api_kwargs = api_kwargs or {}
         self.registered = {}
         for item in items:
             self.register(item)

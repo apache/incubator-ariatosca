@@ -15,21 +15,40 @@
 
 import pytest
 
+from sqlalchemy import Column, Text, Integer
+
 from aria.storage import (
     ModelStorage,
-    models,
+    model,
     exceptions,
     sql_mapi,
+    structure,
+    type as aria_type,
 )
 from aria import application_model_storage
-from tests.storage import get_sqlite_api_kwargs, release_sqlite_storage
+from ..storage import get_sqlite_api_kwargs, release_sqlite_storage
+from ..mock import context as mock_context
+
+
+class MockModel(model.DeclarativeBase, structure.ModelMixin): #pylint: disable=abstract-method
+    __tablename__ = 'mock_models'
+    model_dict = Column(aria_type.Dict)
+    model_list = Column(aria_type.List)
+    value = Column(Integer)
+    name = Column(Text)
 
 
 @pytest.fixture
 def storage():
     base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI, api_kwargs=get_sqlite_api_kwargs())
+    base_storage.register(MockModel)
     yield base_storage
     release_sqlite_storage(base_storage)
+
+
+@pytest.fixture(scope='module', autouse=True)
+def module_cleanup():
+    model.DeclarativeBase.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
 
 
 def test_storage_base(storage):
@@ -38,41 +57,77 @@ def test_storage_base(storage):
 
 
 def test_model_storage(storage):
-    storage.register(models.ProviderContext)
+    mock_model = MockModel(value=0, name='model_name')
+    storage.mock_model.put(mock_model)
 
-    pc = models.ProviderContext(context={}, name='context_name')
-    storage.provider_context.put(pc)
+    assert storage.mock_model.get_by_name('model_name') == mock_model
 
-    assert storage.provider_context.get_by_name('context_name') == pc
+    assert [mm_from_storage for mm_from_storage in storage.mock_model.iter()] == [mock_model]
+    assert [mm_from_storage for mm_from_storage in storage.mock_model] == [mock_model]
 
-    assert [pc_from_storage for pc_from_storage in storage.provider_context.iter()] == [pc]
-    assert [pc_from_storage for pc_from_storage in storage.provider_context] == [pc]
-
-    new_context = {'update_key': 0}
-    pc.context = new_context
-    storage.provider_context.update(pc)
-    assert storage.provider_context.get(pc.id).context == new_context
-
-    storage.provider_context.delete(pc)
+    storage.mock_model.delete(mock_model)
     with pytest.raises(exceptions.StorageError):
-        storage.provider_context.get(pc.id)
+        storage.mock_model.get(mock_model.id)
 
 
-def test_storage_driver(storage):
-    storage.register(models.ProviderContext)
+def test_inner_dict_update(storage):
+    inner_dict = {'inner_value': 1}
 
-    pc = models.ProviderContext(context={}, name='context_name')
-    storage.registered['provider_context'].put(entry=pc)
+    mock_model = MockModel(model_dict={'inner_dict': inner_dict, 'value': 0})
+    storage.mock_model.put(mock_model)
 
-    assert storage.registered['provider_context'].get_by_name('context_name') == pc
+    storage_mm = storage.mock_model.get(mock_model.id)
+    assert storage_mm == mock_model
 
-    assert next(i for i in storage.registered['provider_context'].iter()) == pc
-    assert [i for i in storage.provider_context] == [pc]
+    storage_mm.model_dict['inner_dict']['inner_value'] = 2
+    storage_mm.model_dict['value'] = -1
+    storage.mock_model.update(storage_mm)
+    storage_mm = storage.mock_model.get(storage_mm.id)
 
-    storage.registered['provider_context'].delete(pc)
+    assert storage_mm.model_dict['inner_dict']['inner_value'] == 2
+    assert storage_mm.model_dict['value'] == -1
 
-    with pytest.raises(exceptions.StorageError):
-        storage.registered['provider_context'].get(pc.id)
+
+def test_inner_list_update(storage):
+    mock_model = MockModel(model_list=[0, [1]])
+    storage.mock_model.put(mock_model)
+
+    storage_mm = storage.mock_model.get(mock_model.id)
+    assert storage_mm == mock_model
+
+    storage_mm.model_list[1][0] = 'new_inner_value'
+    storage_mm.model_list[0] = 'new_value'
+    storage.mock_model.update(storage_mm)
+    storage_mm = storage.mock_model.get(storage_mm.id)
+
+    assert storage_mm.model_list[1][0] == 'new_inner_value'
+    assert storage_mm.model_list[0] == 'new_value'
+
+
+def test_model_to_dict():
+    context = mock_context.simple(get_sqlite_api_kwargs())
+    deployment = context.deployment
+    deployment_dict = deployment.to_dict()
+
+    expected_keys = [
+        'created_at',
+        'description',
+        'inputs',
+        'groups',
+        'permalink',
+        'policy_triggers',
+        'policy_types',
+        'outputs',
+        'scaling_groups',
+        'updated_at',
+        'workflows',
+        'blueprint_name',
+    ]
+
+    for expected_key in expected_keys:
+        assert expected_key in deployment_dict
+
+    assert 'blueprint_fk' not in deployment_dict
 
 
 def test_application_storage_factory():
@@ -87,6 +142,5 @@ def test_application_storage_factory():
     assert storage.deployment_update_step
     assert storage.deployment_modification
     assert storage.execution
-    assert storage.provider_context
 
     release_sqlite_storage(storage)

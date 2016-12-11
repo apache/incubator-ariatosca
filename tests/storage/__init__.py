@@ -17,13 +17,12 @@ import platform
 from tempfile import mkdtemp
 from shutil import rmtree
 
+from aria.storage import model
 from sqlalchemy import (
     create_engine,
     orm)
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.pool import StaticPool
-
-from aria.storage import structures
 
 
 class TestFileSystem(object):
@@ -60,7 +59,7 @@ def get_sqlite_api_kwargs(base_dir=None, filename='db.sqlite'):
     session_factory = orm.sessionmaker(bind=engine)
     session = scoped_session(session_factory=session_factory) if base_dir else session_factory()
 
-    structures.Model.metadata.create_all(engine)
+    model.DeclarativeBase.metadata.create_all(bind=engine)
     return dict(engine=engine, session=session)
 
 
@@ -77,4 +76,4 @@ def release_sqlite_storage(storage):
             session.rollback()
             session.close()
         for engine in set(mapi._engine for mapi in mapis):
-            structures.Model.metadata.drop_all(engine)
+            model.DeclarativeBase.metadata.drop_all(engine)

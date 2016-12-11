@@ -49,21 +49,21 @@ def executor():
 
 def _get_elements(workflow_context):
     dependency_node = workflow_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    dependency_node.host_id = dependency_node.id
+    dependency_node.host = dependency_node
     workflow_context.model.node.update(dependency_node)
 
     dependency_node_instance = workflow_context.model.node_instance.get_by_name(
         mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    dependency_node_instance.host_id = dependency_node_instance.id
+    dependency_node_instance.host_fk = dependency_node_instance.id
     workflow_context.model.node_instance.update(dependency_node_instance)
 
     dependent_node = workflow_context.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
-    dependent_node.host_id = dependency_node.id
+    dependent_node.host_fk = dependency_node.id
     workflow_context.model.node.update(dependent_node)
 
     dependent_node_instance = workflow_context.model.node_instance.get_by_name(
         mock.models.DEPENDENT_NODE_INSTANCE_NAME)
-    dependent_node_instance.host_id = dependent_node_instance.id
+    dependent_node_instance.host_fk = dependent_node_instance.id
     workflow_context.model.node_instance.update(dependent_node_instance)
 
     relationship = workflow_context.model.relationship.list()[0]

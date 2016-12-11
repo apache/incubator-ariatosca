@@ -22,7 +22,7 @@ from contextlib import contextmanager
 import pytest
 
 from aria import application_model_storage
-from aria.storage import models
+from aria.storage import model as aria_model
 from aria.utils.plugin import create as create_plugin
 from aria.storage.sql_mapi import SQLAlchemyModelAPI
 from aria.orchestrator import events
@@ -117,7 +117,7 @@ class MockContext(object):
 
 class MockTask(object):
 
-    INFINITE_RETRIES = models.Task.INFINITE_RETRIES
+    INFINITE_RETRIES = aria_model.Task.INFINITE_RETRIES
 
     def __init__(self, plugin, operation):
         self.id = str(uuid.uuid4())
@@ -128,10 +128,10 @@ class MockTask(object):
         self.context = MockContext()
         self.retry_count = 0
         self.max_attempts = 1
-        self.plugin_id = plugin.id
+        self.plugin_fk = plugin.id
         self.plugin = plugin
 
-        for state in models.Task.STATES:
+        for state in aria_model.Task.STATES:
             setattr(self, state.upper(), state)
 
     @contextmanager

@@ -34,7 +34,7 @@ def heal(ctx, graph, node_instance_id):
     :return:
     """
     failing_node = ctx.model.node_instance.get(node_instance_id)
-    host_node = ctx.model.node_instance.get(failing_node.host_id)
+    host_node = ctx.model.node_instance.get(failing_node.host.id)
     failed_node_instance_subgraph = _get_contained_subgraph(ctx, host_node)
     failed_node_instance_ids = list(n.id for n in failed_node_instance_subgraph)
 
@@ -165,8 +165,8 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
 def _get_contained_subgraph(context, host_node_instance):
     contained_instances = [node_instance
                            for node_instance in context.node_instances
-                           if node_instance.host_id == host_node_instance.id and
-                           node_instance.id != node_instance.host_id]
+                           if node_instance.host_fk == host_node_instance.id and
+                           node_instance.host_fk != node_instance.id]
     result = [host_node_instance]
 
     if not contained_instances:

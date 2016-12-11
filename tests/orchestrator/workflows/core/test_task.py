@@ -60,7 +60,7 @@ class TestOperationTask(object):
         node.operations['aria.interfaces.lifecycle.create'] = {'plugin': 'plugin1'}
         api_task, core_task = self._create_operation_task(ctx, node_instance)
         storage_task = ctx.model.task.get_by_name(core_task.name)
-        assert storage_task.execution_id == ctx.execution.id
+        assert storage_task.execution_name == ctx.execution.name
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
         assert core_task.operation_mapping == api_task.operation_mapping

@@ -23,7 +23,7 @@ from aria.orchestrator import (
     workflow,
     operation,
 )
-from aria.storage import models
+from aria.storage import model
 from aria.orchestrator.workflows import (
     api,
     exceptions,
@@ -146,7 +146,7 @@ class TestEngine(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is None
-        assert execution.status == models.Execution.TERMINATED
+        assert execution.status == model.Execution.TERMINATED
 
     def test_single_task_successful_execution(self, workflow_context, executor):
         @workflow
@@ -175,7 +175,7 @@ class TestEngine(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is not None
-        assert execution.status == models.Execution.FAILED
+        assert execution.status == model.Execution.FAILED
 
     def test_two_tasks_execution_order(self, workflow_context, executor):
         @workflow
@@ -236,7 +236,7 @@ class TestCancel(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is None
-        assert execution.status == models.Execution.CANCELLED
+        assert execution.status == model.Execution.CANCELLED
 
     def test_cancel_pending_execution(self, workflow_context, executor):
         @workflow
@@ -247,7 +247,7 @@ class TestCancel(BaseTest):
                            executor=executor)
         eng.cancel_execution()
         execution = workflow_context.execution
-        assert execution.status == models.Execution.CANCELLED
+        assert execution.status == model.Execution.CANCELLED
 
 
 class TestRetries(BaseTest):
