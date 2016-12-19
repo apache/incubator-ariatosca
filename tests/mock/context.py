@@ -13,15 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria import application_model_storage
+import aria
 from aria.orchestrator import context
+from aria.storage.filesystem_rapi import FileSystemResourceAPI
 from aria.storage.sql_mapi import SQLAlchemyModelAPI
 
 from . import models
 
 
-def simple(api_kwargs, **kwargs):
-    model_storage = application_model_storage(SQLAlchemyModelAPI, api_kwargs=api_kwargs)
+def simple(mapi_kwargs, resources_dir=None, **kwargs):
+    model_storage = aria.application_model_storage(SQLAlchemyModelAPI, api_kwargs=mapi_kwargs)
     blueprint = models.get_blueprint()
     model_storage.blueprint.put(blueprint)
     deployment = models.get_deployment(blueprint)
@@ -56,10 +57,19 @@ def simple(api_kwargs, **kwargs):
     )
     model_storage.relationship_instance.put(relationship_instance)
 
+    # pytest tmpdir
+    if resources_dir:
+        resource_storage = aria.application_resource_storage(
+            FileSystemResourceAPI,
+            api_kwargs={'directory': resources_dir}
+        )
+    else:
+        resource_storage = None
+
     final_kwargs = dict(
         name='simple_context',
         model_storage=model_storage,
-        resource_storage=None,
+        resource_storage=resource_storage,
         deployment_id=deployment.id,
         workflow_name=models.WORKFLOW_NAME,
         task_max_attempts=models.TASK_MAX_ATTEMPTS,

@@ -41,6 +41,7 @@ import jsonpickle
 
 from aria.utils import imports
 from aria.orchestrator.workflows.executor import base
+from aria.orchestrator.context import serialization
 
 _IS_WIN = os.name == 'nt'
 
@@ -106,12 +107,7 @@ class ProcessExecutor(base.BaseExecutor):
         file_descriptor, arguments_json_path = tempfile.mkstemp(prefix='executor-', suffix='.json')
         os.close(file_descriptor)
         with open(arguments_json_path, 'wb') as f:
-            f.write(jsonpickle.dumps({
-                'task_id': task.id,
-                'operation_mapping': task.operation_mapping,
-                'operation_inputs': task.inputs,
-                'port': self._server_port
-            }))
+            f.write(jsonpickle.dumps(self._create_arguments_dict(task)))
 
         env = os.environ.copy()
         # See _update_env for plugin_prefix usage
@@ -175,6 +171,15 @@ class ProcessExecutor(base.BaseExecutor):
     def _check_closed(self):
         if self._stopped:
             raise RuntimeError('Executor closed')
+
+    def _create_arguments_dict(self, task):
+        return {
+            'task_id': task.id,
+            'operation_mapping': task.operation_mapping,
+            'operation_inputs': task.inputs,
+            'port': self._server_port,
+            'context': serialization.operation_context_to_dict(task.context),
+        }
 
     def _update_env(self, env, plugin_prefix):
         pythonpath_dirs = []
@@ -261,12 +266,13 @@ def _main():
     task_id = arguments['task_id']
     port = arguments['port']
     messenger = _Messenger(task_id=task_id, port=port)
+    messenger.started()
 
     operation_mapping = arguments['operation_mapping']
     operation_inputs = arguments['operation_inputs']
-    ctx = None
-    messenger.started()
+    context_dict = arguments['context']
     try:
+        ctx = serialization.operation_context_from_dict(context_dict)
         task_func = imports.load_attribute(operation_mapping)
         task_func(ctx=ctx, **operation_inputs)
         messenger.succeeded()

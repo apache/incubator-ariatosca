@@ -29,13 +29,9 @@ class BaseContext(logger.LoggerMixin):
     def __init__(
             self,
             name,
+            deployment_id,
             model_storage,
             resource_storage,
-            deployment_id,
-            workflow_name,
-            task_max_attempts=1,
-            task_retry_interval=0,
-            task_ignore_failure=False,
             **kwargs):
         super(BaseContext, self).__init__(**kwargs)
         self._name = name
@@ -43,16 +39,11 @@ class BaseContext(logger.LoggerMixin):
         self._model = model_storage
         self._resource = resource_storage
         self._deployment_id = deployment_id
-        self._workflow_name = workflow_name
-        self._task_max_attempts = task_max_attempts
-        self._task_retry_interval = task_retry_interval
-        self._task_ignore_failure = task_ignore_failure
 
     def __repr__(self):
         return (
             '{name}(name={self.name}, '
             'deployment_id={self._deployment_id}, '
-            'workflow_name={self._workflow_name}, '
             .format(name=self.__class__.__name__, self=self))
 
     @property
