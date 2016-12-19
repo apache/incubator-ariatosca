@@ -26,17 +26,22 @@ class BaseOperationContext(BaseContext):
     Context object used during operation creation and execution
     """
 
-    def __init__(self, name, workflow_context, task, actor, **kwargs):
+    def __init__(self,
+                 name,
+                 model_storage,
+                 resource_storage,
+                 deployment_id,
+                 task_id,
+                 actor_id,
+                 **kwargs):
         super(BaseOperationContext, self).__init__(
             name=name,
-            model_storage=workflow_context.model,
-            resource_storage=workflow_context.resource,
-            deployment_id=workflow_context._deployment_id,
-            workflow_name=workflow_context._workflow_name,
+            model_storage=model_storage,
+            resource_storage=resource_storage,
+            deployment_id=deployment_id,
             **kwargs)
-        self._task_model = task
-        self._task_id = task.id
-        self._actor_id = actor.id
+        self._task_id = task_id
+        self._actor_id = actor_id
 
     def __repr__(self):
         details = 'operation_mapping={task.operation_mapping}; ' \

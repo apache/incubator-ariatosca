@@ -41,8 +41,6 @@ __all__ = (
     'operation',
 )
 
-_resource_storage = {}
-
 
 def install_aria_extensions():
     """
@@ -61,7 +59,7 @@ def install_aria_extensions():
 
 def application_model_storage(api, api_kwargs=None):
     """
-    Initiate model storage for the supplied storage driver
+    Initiate model storage
     """
     models = [
         storage.models.Plugin,
@@ -85,17 +83,15 @@ def application_model_storage(api, api_kwargs=None):
     return storage.ModelStorage(api, items=models, api_kwargs=api_kwargs or {})
 
 
-def application_resource_storage(driver):
+def application_resource_storage(api, api_kwargs=None):
     """
-    Initiate resource storage for the supplied storage driver
+    Initiate resource storage
     """
-    if driver not in _resource_storage:
-        _resource_storage[driver] = storage.ResourceStorage(
-            driver,
-            resources=[
-                'blueprint',
-                'deployment',
-                'plugin',
-                'snapshot',
-            ])
-    return _resource_storage[driver]
+    return storage.ResourceStorage(
+        api,
+        api_kwargs=api_kwargs or {},
+        items=[
+            'blueprint',
+            'deployment',
+            'plugin',
+        ])

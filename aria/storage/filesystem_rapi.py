@@ -87,7 +87,10 @@ class FileSystemResourceAPI(api.ResourceAPI):
             os.makedirs(self.directory)
         except (OSError, IOError):
             pass
-        os.makedirs(self.base_path)
+        try:
+            os.makedirs(self.base_path)
+        except (OSError, IOError):
+            pass
 
     def read(self, entry_id, path=None, **_):
         """

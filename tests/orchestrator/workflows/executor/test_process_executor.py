@@ -106,6 +106,15 @@ def mock_plugin(plugin_manager, tmpdir):
     return plugin_manager.install(source=plugin_path)
 
 
+class MockContext(object):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, item):
+        return None
+
+
 class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
@@ -116,7 +125,7 @@ class MockTask(object):
         self.logger = logging.getLogger()
         self.name = operation
         self.inputs = {}
-        self.context = None
+        self.context = MockContext()
         self.retry_count = 0
         self.max_attempts = 1
         self.plugin_id = plugin.id

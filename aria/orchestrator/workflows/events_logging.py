@@ -35,9 +35,9 @@ def _success_task_handler(task, **kwargs):
 
 
 @events.on_failure_task_signal.connect
-def _failure_operation_handler(task, **kwargs):
-    task.logger.error('Event: Task failure: {task.name}'.format(task=task),
-                      exc_info=kwargs.get('exception', True))
+def _failure_operation_handler(task, exception, **kwargs):
+    error = '{0}: {1}'.format(type(exception).__name__, exception)
+    task.logger.error('Event: Task failure: {task.name} [{error}]'.format(task=task, error=error))
 
 
 @events.start_workflow_signal.connect
