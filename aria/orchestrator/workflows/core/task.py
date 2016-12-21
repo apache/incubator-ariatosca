@@ -134,14 +134,17 @@ class OperationTask(BaseTask):
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
-            plugin_id=plugin_id
+            plugin_id=plugin_id,
+            execution_id=self._workflow_context.execution.id
         )
         self._workflow_context.model.task.put(operation_task)
 
         self._ctx = context_class(name=api_task.name,
-                                  workflow_context=self._workflow_context,
-                                  task=operation_task,
-                                  actor=operation_task.actor)
+                                  model_storage=self._workflow_context.model,
+                                  resource_storage=self._workflow_context.resource,
+                                  deployment_id=self._workflow_context._deployment_id,
+                                  task_id=operation_task.id,
+                                  actor_id=api_task.actor.id)
         self._task_id = operation_task.id
         self._update_fields = None
 

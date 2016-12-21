@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import os
 import uuid
 from contextlib import contextmanager
 
@@ -29,7 +28,6 @@ except ImportError:
     _celery = None
     app = None
 
-import aria
 from aria.storage import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
@@ -37,6 +35,8 @@ from aria.orchestrator.workflows.executor import (
     process,
     # celery
 )
+
+import tests
 
 
 def test_execute(executor):
@@ -80,11 +80,20 @@ class MockException(Exception):
     pass
 
 
+class MockContext(object):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, item):
+        return None
+
+
 class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
-    def __init__(self, func, inputs=None, ctx=None):
+    def __init__(self, func, inputs=None):
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())
@@ -94,7 +103,7 @@ class MockTask(object):
         self.logger = logging.getLogger()
         self.name = name
         self.inputs = inputs or {}
-        self.context = ctx
+        self.context = MockContext()
         self.retry_count = 0
         self.max_attempts = 1
         self.plugin_id = None
@@ -112,7 +121,7 @@ class MockTask(object):
     (thread.ThreadExecutor, {'pool_size': 2}),
     # subprocess needs to load a tests module so we explicitly add the root directory as if
     # the project has been installed in editable mode
-    (process.ProcessExecutor, {'python_path': [os.path.dirname(os.path.dirname(aria.__file__))]}),
+    (process.ProcessExecutor, {'python_path': [tests.ROOT_DIR]}),
     # (celery.CeleryExecutor, {'app': app})
 ])
 def executor(request):
