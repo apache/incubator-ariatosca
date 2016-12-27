@@ -46,7 +46,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
         if not result:
             raise exceptions.StorageError(
-                'Requested {0} with ID `{1}` was not found'
+                'Requested `{0}` with ID `{1}` was not found'
                 .format(self.model_cls.__name__, entry_id)
             )
         return result
