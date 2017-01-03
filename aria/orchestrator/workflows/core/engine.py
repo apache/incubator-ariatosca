@@ -52,7 +52,6 @@ class Engine(logger.LoggerMixin):
         """
         try:
             events.start_workflow_signal.send(self._workflow_context)
-            cancel = False
             while True:
                 cancel = self._is_cancel()
                 if cancel:

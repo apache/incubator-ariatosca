@@ -109,13 +109,16 @@ def test_loggermixin(capsys):
 
     test_string = 'loggermixing_test_string'
 
-    create_logger(handlers=[create_console_log_handler()])
+    logger = create_logger(handlers=[create_console_log_handler()])
 
     custom_class = type('CustomClass', (LoggerMixin,), {}).with_logger()
     custom_class.logger.debug(test_string)
 
     _, err = capsys.readouterr()
     assert test_string in err
+
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
 
     # TODO: figure out what up with pickle
     # class_pickled = pickle.dumps(custom_class)

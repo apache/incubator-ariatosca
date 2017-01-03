@@ -113,9 +113,7 @@ class BaseContext(logger.LoggerMixin):
         template using the provided variables. ctx is available to the template without providing it
         explicitly.
         """
-        self.download_resource(destination=destination, path=path)
-        with open(destination, 'rb') as f:
-            resource_content = f.read()
+        resource_content = self.get_resource(path=path)
         resource_content = self._render_resource(resource_content=resource_content,
                                                  variables=variables)
         with open(destination, 'wb') as f:

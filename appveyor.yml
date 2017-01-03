@@ -3,7 +3,7 @@ environment:
   TOX_ENV: pywin
 
   matrix:
-    - PYTHON: C:\Python27
+    - PYTHON: "C:\\Python27"
       PYTHON_VERSION: 2.7.8
       PYTHON_ARCH: 32
 

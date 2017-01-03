@@ -132,7 +132,7 @@ class FileSystemResourceAPI(api.ResourceAPI):
         if os.path.isfile(resource):
             shutil.copy2(resource, destination)
         else:
-            dir_util.copy_tree(resource, destination)                                     # pylint: disable=no-member
+            dir_util.copy_tree(resource, destination)  # pylint: disable=no-member
 
     def upload(self, entry_id, source, path=None, **_):
         """

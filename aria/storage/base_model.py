@@ -695,8 +695,13 @@ class TaskBase(ModelMixin):
     WAIT_STATES = [PENDING, RETRYING]
     END_STATES = [SUCCESS, FAILED]
 
+    RUNS_ON_SOURCE = 'source'
+    RUNS_ON_TARGET = 'target'
+    RUNS_ON_NODE_INSTANCE = 'node_instance'
+    RUNS_ON = (RUNS_ON_NODE_INSTANCE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
+
     @orm.validates('max_attempts')
-    def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
+    def validate_max_attempts(self, _, value):  # pylint: disable=no-self-use
         """Validates that max attempts is either -1 or a positive number"""
         if value < 1 and value != TaskBase.INFINITE_RETRIES:
             raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
@@ -718,6 +723,7 @@ class TaskBase(ModelMixin):
     # Operation specific fields
     operation_mapping = Column(String)
     inputs = Column(Dict)
+    _runs_on = Column(Enum(*RUNS_ON, name='runs_on'), name='runs_on')
 
     @property
     def actor(self):
@@ -727,13 +733,23 @@ class TaskBase(ModelMixin):
         """
         return self.node_instance or self.relationship_instance
 
-    @classmethod
-    def as_node_instance(cls, instance, **kwargs):
-        return cls(node_instance=instance, **kwargs)
+    @property
+    def runs_on(self):
+        if self._runs_on == self.RUNS_ON_NODE_INSTANCE:
+            return self.node_instance
+        elif self._runs_on == self.RUNS_ON_SOURCE:
+            return self.relationship_instance.source_node_instance  # pylint: disable=no-member
+        elif self._runs_on == self.RUNS_ON_TARGET:
+            return self.relationship_instance.target_node_instance  # pylint: disable=no-member
+        return None
 
     @classmethod
-    def as_relationship_instance(cls, instance, **kwargs):
-        return cls(relationship_instance=instance, **kwargs)
+    def as_node_instance(cls, instance, runs_on, **kwargs):
+        return cls(node_instance=instance, _runs_on=runs_on, **kwargs)
+
+    @classmethod
+    def as_relationship_instance(cls, instance, runs_on, **kwargs):
+        return cls(relationship_instance=instance, _runs_on=runs_on, **kwargs)
 
     @staticmethod
     def abort(message=None):

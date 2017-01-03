@@ -42,6 +42,7 @@ class BaseOperationContext(BaseContext):
             **kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
+        self._task = None
 
     def __repr__(self):
         details = 'operation_mapping={task.operation_mapping}; ' \
@@ -55,7 +56,9 @@ class BaseOperationContext(BaseContext):
         The task in the model storage
         :return: Task model
         """
-        return self.model.task.get(self._task_id)
+        if not self._task:
+            self._task = self.model.task.get(self._task_id)
+        return self._task
 
 
 class NodeOperationContext(BaseOperationContext):

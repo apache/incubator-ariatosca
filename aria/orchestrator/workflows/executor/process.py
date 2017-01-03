@@ -40,6 +40,7 @@ import Queue
 import jsonpickle
 
 from aria.utils import imports
+from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.orchestrator.context import serialization
 from aria.storage import instrumentation
@@ -255,7 +256,7 @@ class _Messenger(object):
             data = jsonpickle.dumps({
                 'type': type,
                 'task_id': self.task_id,
-                'exception': exception,
+                'exception': exceptions.wrap_if_needed(exception),
                 'tracked_changes': tracked_changes
             })
             sock.send(struct.pack(_INT_FMT, len(data)))

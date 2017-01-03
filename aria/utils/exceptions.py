@@ -16,6 +16,8 @@
 import sys
 import linecache
 
+import jsonpickle
+
 from clint.textui import indent
 from .console import (puts, Colored)
 
@@ -38,6 +40,7 @@ def print_exception(e, full=True, cause=False, traceback=None):
     if hasattr(e, 'cause') and e.cause:
         traceback = e.cause_traceback if hasattr(e, 'cause_traceback') else None
         print_exception(e.cause, full=full, cause=True, traceback=traceback)
+
 
 def print_traceback(traceback=None):
     """
@@ -62,3 +65,19 @@ def print_traceback(traceback=None):
                 with indent(2):
                     puts(Colored.black(line.strip()))
         traceback = traceback.tb_next
+
+
+class _WrappedException(Exception):
+
+    def __init__(self, exception_type, exception_str):
+        super(_WrappedException, self).__init__(exception_type, exception_str)
+        self.exception_type = exception_type
+        self.exception_str = exception_str
+
+
+def wrap_if_needed(exception):
+    try:
+        jsonpickle.loads(jsonpickle.dumps(exception))
+        return exception
+    except BaseException:
+        return _WrappedException(type(exception).__name__, str(exception))

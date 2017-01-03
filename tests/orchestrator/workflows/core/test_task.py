@@ -38,7 +38,7 @@ def ctx(tmpdir):
 
 class TestOperationTask(object):
 
-    def _create_operation_task(self, ctx, node_instance):
+    def _create_node_operation_task(self, ctx, node_instance):
         with workflow_context.current.push(ctx):
             api_task = api.task.OperationTask.node_instance(
                 instance=node_instance,
@@ -46,21 +46,31 @@ class TestOperationTask(object):
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
-    def test_operation_task_creation(self, ctx):
+    def _create_relationship_operation_task(self, ctx, relationship_instance, operation_end):
+        with workflow_context.current.push(ctx):
+            api_task = api.task.OperationTask.relationship_instance(
+                instance=relationship_instance,
+                name='aria.interfaces.relationship_lifecycle.preconfigure',
+                operation_end=operation_end)
+            core_task = core.task.OperationTask(api_task=api_task)
+        return api_task, core_task
+
+    def test_node_operation_task_creation(self, ctx):
         storage_plugin = mock.models.get_plugin(package_name='p1', package_version='0.1')
         storage_plugin_other = mock.models.get_plugin(package_name='p0', package_version='0.0')
         ctx.model.plugin.put(storage_plugin_other)
         ctx.model.plugin.put(storage_plugin)
-        node_instance = \
-            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node_instance = ctx.model.node_instance.get_by_name(
+            mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
         node = node_instance.node
         node.plugins = [{'name': 'plugin1',
                          'package_name': 'p1',
                          'package_version': '0.1'}]
         node.operations['aria.interfaces.lifecycle.create'] = {'plugin': 'plugin1'}
-        api_task, core_task = self._create_operation_task(ctx, node_instance)
+        api_task, core_task = self._create_node_operation_task(ctx, node_instance)
         storage_task = ctx.model.task.get_by_name(core_task.name)
         assert storage_task.execution_name == ctx.execution.name
+        assert storage_task.runs_on.id == core_task.context.node_instance.id
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
         assert core_task.operation_mapping == api_task.operation_mapping
@@ -68,11 +78,25 @@ class TestOperationTask(object):
         assert core_task.inputs == api_task.inputs == storage_task.inputs
         assert core_task.plugin == storage_plugin
 
+    def test_source_relationship_operation_task_creation(self, ctx):
+        relationship_instance = ctx.model.relationship_instance.list()[0]
+        _, core_task = self._create_relationship_operation_task(
+            ctx, relationship_instance,
+            api.task.OperationTask.SOURCE_OPERATION)
+        assert core_task.model_task.runs_on.id == relationship_instance.source_node_instance.id
+
+    def test_target_relationship_operation_task_creation(self, ctx):
+        relationship_instance = ctx.model.relationship_instance.list()[0]
+        _, core_task = self._create_relationship_operation_task(
+            ctx, relationship_instance,
+            api.task.OperationTask.TARGET_OPERATION)
+        assert core_task.model_task.runs_on.id == relationship_instance.target_node_instance.id
+
     def test_operation_task_edit_locked_attribute(self, ctx):
         node_instance = \
             ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
-        _, core_task = self._create_operation_task(ctx, node_instance)
+        _, core_task = self._create_node_operation_task(ctx, node_instance)
         now = datetime.utcnow()
         with pytest.raises(exceptions.TaskException):
             core_task.status = core_task.STARTED
@@ -89,7 +113,7 @@ class TestOperationTask(object):
         node_instance = \
             ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
-        _, core_task = self._create_operation_task(ctx, node_instance)
+        _, core_task = self._create_node_operation_task(ctx, node_instance)
         future_time = datetime.utcnow() + timedelta(seconds=3)
 
         with core_task._update():

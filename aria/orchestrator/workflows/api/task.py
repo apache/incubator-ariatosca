@@ -68,7 +68,8 @@ class OperationTask(BaseTask):
                  retry_interval=None,
                  ignore_failure=None,
                  inputs=None,
-                 plugin=None):
+                 plugin=None,
+                 runs_on=None):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
         :param name: the operation of the name.
@@ -89,6 +90,7 @@ class OperationTask(BaseTask):
                                if retry_interval is None else retry_interval)
         self.ignore_failure = (self.workflow_context._task_ignore_failure
                                if ignore_failure is None else ignore_failure)
+        self.runs_on = runs_on
 
     @classmethod
     def node_instance(cls, instance, name, inputs=None, *args, **kwargs):
@@ -104,6 +106,7 @@ class OperationTask(BaseTask):
                              operation_details=instance.node.operations[name],
                              inputs=inputs,
                              plugins=instance.node.plugins or [],
+                             runs_on=model.Task.RUNS_ON_NODE_INSTANCE,
                              *args,
                              **kwargs)
 
@@ -126,18 +129,22 @@ class OperationTask(BaseTask):
         operation_details = getattr(instance.relationship, operation_end)[name]
         if operation_end == cls.SOURCE_OPERATION:
             plugins = instance.relationship.source_node.plugins
+            runs_on = model.Task.RUNS_ON_SOURCE
         else:
             plugins = instance.relationship.target_node.plugins
+            runs_on = model.Task.RUNS_ON_TARGET
         return cls._instance(instance=instance,
                              name=name,
                              operation_details=operation_details,
                              inputs=inputs,
                              plugins=plugins or [],
+                             runs_on=runs_on,
                              *args,
                              **kwargs)
 
     @classmethod
-    def _instance(cls, instance, name, operation_details, inputs, plugins, *args, **kwargs):
+    def _instance(cls, instance, name, operation_details, inputs, plugins, runs_on, *args,
+                  **kwargs):
         operation_mapping = operation_details.get('operation')
         operation_inputs = operation_details.get('inputs', {})
         operation_inputs.update(inputs or {})
@@ -151,6 +158,7 @@ class OperationTask(BaseTask):
                    operation_mapping=operation_mapping,
                    inputs=operation_inputs,
                    plugin=plugin,
+                   runs_on=runs_on,
                    *args,
                    **kwargs)
 

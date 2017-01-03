@@ -16,6 +16,7 @@
 
 import pytest
 
+from aria.storage import model
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 
@@ -72,6 +73,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
+        assert api_task.runs_on == model.Task.RUNS_ON_NODE_INSTANCE
 
     def test_source_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
@@ -104,6 +106,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
+        assert api_task.runs_on == model.Task.RUNS_ON_SOURCE
 
     def test_target_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
@@ -136,6 +139,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
+        assert api_task.runs_on == model.Task.RUNS_ON_TARGET
 
     def test_operation_task_default_values(self, ctx):
         dependency_node_instance = ctx.model.node_instance.get_by_name(
@@ -151,6 +155,7 @@ class TestOperationTask(object):
         assert task.max_attempts == ctx._task_max_attempts
         assert task.ignore_failure == ctx._task_ignore_failure
         assert task.plugin == {}
+        assert task.runs_on is None
 
 
 class TestWorkflowTask(object):

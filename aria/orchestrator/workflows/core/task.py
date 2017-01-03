@@ -135,7 +135,8 @@ class OperationTask(BaseTask):
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
             plugin=plugins[0] if plugins else None,
-            execution=self._workflow_context.execution
+            execution=self._workflow_context.execution,
+            runs_on=api_task.runs_on
         )
         self._workflow_context.model.task.put(operation_task)
 
