@@ -1,6 +1,11 @@
 ARIA
 ====
 
+[![Build Status](https://travis-ci.org/apache/incubator-ariatosca.svg?branch=master)](https://travis-ci.org/apache/incubator-ariatosca)
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/ltv89jk63ahiu306?svg=true)](https://ci.appveyor.com/project/ApacheSoftwareFoundation/incubator-ariatosca/history)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 [ARIA](http://ariatosca.org/) is a minimal TOSCA orchestrator, as well as a platform for building
 TOSCA-based products. Its features can be accessed via a well-documented Python API.
 
