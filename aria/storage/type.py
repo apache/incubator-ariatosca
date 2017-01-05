@@ -60,63 +60,29 @@ class List(_MutableType):
         return list
 
 
-class _MutableDict(mutable.Mutable, dict):
+class _MutableDict(mutable.MutableDict):
     """
     Enables tracking for dict values.
     """
     @classmethod
     def coerce(cls, key, value):
         "Convert plain dictionaries to MutableDict."
-
-        if not isinstance(value, cls):
-            if isinstance(value, dict):
-                return cls(value)
-
-            # this call will raise ValueError
-            try:
-                return mutable.Mutable.coerce(key, value)
-            except ValueError as e:
-                raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
-        else:
-            return value
-
-    def __setitem__(self, key, value):
-        "Detect dictionary set events and emit change events."
-
-        dict.__setitem__(self, key, value)
-        self.changed()
-
-    def __delitem__(self, key):
-        "Detect dictionary del events and emit change events."
-
-        dict.__delitem__(self, key)
-        self.changed()
+        try:
+            return mutable.MutableDict.coerce(key, value)
+        except ValueError as e:
+            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
 
 
-class _MutableList(mutable.Mutable, list):
+class _MutableList(mutable.MutableList):
 
     @classmethod
     def coerce(cls, key, value):
         "Convert plain dictionaries to MutableDict."
+        try:
+            return mutable.MutableList.coerce(key, value)
+        except ValueError as e:
+            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
 
-        if not isinstance(value, cls):
-            if isinstance(value, list):
-                return cls(value)
-
-            # this call will raise ValueError
-            try:
-                return mutable.Mutable.coerce(key, value)
-            except ValueError as e:
-                raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
-        else:
-            return value
-
-    def __setitem__(self, key, value):
-        list.__setitem__(self, key, value)
-        self.changed()
-
-    def __delitem__(self, key):
-        list.__delitem__(self, key)
 
 _MutableList.associate_with(List)
 _MutableDict.associate_with(Dict)

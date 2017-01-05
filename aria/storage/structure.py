@@ -124,25 +124,29 @@ class ModelMixin(object):
                             remote_side=remote_side_str,
                             post_update=True)
 
-    def to_dict(self, suppress_error=False):
+    def to_dict(self, fields=None, suppress_error=False):
         """Return a dict representation of the model
 
         :param suppress_error: If set to True, sets `None` to attributes that
         it's unable to retrieve (e.g., if a relationship wasn't established
         yet, and so it's impossible to access a property through it)
         """
-        if suppress_error:
-            res = dict()
-            for field in self.fields():
-                try:
-                    field_value = getattr(self, field)
-                except AttributeError:
+        res = dict()
+        fields = fields or self.fields()
+        for field in fields:
+            try:
+                field_value = getattr(self, field)
+            except AttributeError:
+                if suppress_error:
                     field_value = None
-                res[field] = field_value
-        else:
-            # Can't simply call here `self.to_response()` because inheriting
-            # class might override it, but we always need the same code here
-            res = dict((f, getattr(self, f)) for f in self.fields())
+                else:
+                    raise
+            if isinstance(field_value, list):
+                field_value = list(field_value)
+            elif isinstance(field_value, dict):
+                field_value = dict(field_value)
+            res[field] = field_value
+
         return res
 
     @classmethod
