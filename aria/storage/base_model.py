@@ -495,6 +495,18 @@ class NodeInstanceBase(ModelMixin):
     def node_name(cls):
         return association_proxy('node', cls.name_column_name())
 
+    @property
+    def ip(self):
+        if not self.host_fk:
+            return None
+        host_node_instance = self.host
+        if 'ip' in host_node_instance.runtime_properties:  # pylint: disable=no-member
+            return host_node_instance.runtime_properties['ip']  # pylint: disable=no-member
+        host_node = host_node_instance.node  # pylint: disable=no-member
+        if 'ip' in host_node.properties:
+            return host_node.properties['ip']
+        return None
+
 
 class RelationshipInstanceBase(ModelMixin):
     """

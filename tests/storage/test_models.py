@@ -664,6 +664,86 @@ class TestNodeInstance(object):
             assert node_instance.deployment == node_storage.deployment.list()[0]
 
 
+class TestNodeInstanceIP(object):
+
+    ip = '1.1.1.1'
+
+    def test_ip_on_none_hosted_node_instance(self, deployment_storage):
+        node = self._node(deployment_storage, ip='not considered')
+        node_instance = self._node_instance(deployment_storage, node,
+                                            is_host=False,
+                                            ip='not considered')
+        assert node_instance.ip is None
+
+    def test_property_ip_on_host_node_instance(self, deployment_storage):
+        node = self._node(deployment_storage, ip=self.ip)
+        node_instance = self._node_instance(deployment_storage, node,
+                                            is_host=True,
+                                            ip=None)
+        assert node_instance.ip == self.ip
+
+    def test_runtime_property_ip_on_host_node_instance(self, deployment_storage):
+        node = self._node(deployment_storage, ip='not considered')
+        node_instance = self._node_instance(deployment_storage, node,
+                                            is_host=True,
+                                            ip=self.ip)
+        assert node_instance.ip == self.ip
+
+    def test_no_ip_configured_on_host_node_instance(self, deployment_storage):
+        node = self._node(deployment_storage, ip=None)
+        node_instance = self._node_instance(deployment_storage, node,
+                                            is_host=True,
+                                            ip=None)
+        assert node_instance.ip is None
+
+    def test_runtime_property_on_hosted_node_instance(self, deployment_storage):
+        host_node = self._node(deployment_storage, ip=None)
+        host_node_instance = self._node_instance(deployment_storage, host_node,
+                                                 is_host=True,
+                                                 ip=self.ip)
+        node = self._node(deployment_storage, ip=None)
+        node_instance = self._node_instance(deployment_storage, node,
+                                            is_host=False,
+                                            ip=None,
+                                            host_fk=host_node_instance.id)
+        assert node_instance.ip == self.ip
+
+    def _node(self, storage, ip):
+        kwargs = dict(
+            name='node',
+            deploy_number_of_instances=1,
+            max_number_of_instances=1,
+            min_number_of_instances=1,
+            number_of_instances=1,
+            planned_number_of_instances=1,
+            properties={},
+            type='',
+            deployment=storage.deployment.list()[0]
+        )
+        if ip:
+            kwargs['properties']['ip'] = ip
+        node = Node(**kwargs)
+        storage.node.put(node)
+        return node
+
+    def _node_instance(self, storage, node, is_host, ip, host_fk=None):
+        kwargs = dict(
+            name='node_instance',
+            node=node,
+            runtime_properties={},
+            state=''
+        )
+        if ip:
+            kwargs['runtime_properties']['ip'] = ip
+        if is_host:
+            kwargs['host_fk'] = 1
+        elif host_fk:
+            kwargs['host_fk'] = host_fk
+        node_instance = NodeInstance(**kwargs)
+        storage.node_instance.put(node_instance)
+        return node_instance
+
+
 class TestRelationshipInstance(object):
     def test_relatiship_instance_model_creation(self, node_instances_storage):
         relationship = mock.models.get_relationship(
