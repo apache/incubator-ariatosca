@@ -146,7 +146,7 @@ class ExecutionBase(ModelMixin):
     VALID_TRANSITIONS = {
         PENDING: [STARTED, CANCELLED],
         STARTED: END_STATES + [CANCELLING],
-        CANCELLING: END_STATES
+        CANCELLING: END_STATES + [FORCE_CANCELLING]
     }
 
     @orm.validates('status')
@@ -156,7 +156,7 @@ class ExecutionBase(ModelMixin):
             current_status = getattr(self, key)
         except AttributeError:
             return
-        valid_transitions = ExecutionBase.VALID_TRANSITIONS.get(current_status, [])
+        valid_transitions = self.VALID_TRANSITIONS.get(current_status, [])
         if all([current_status is not None,
                 current_status != value,
                 value not in valid_transitions]):
