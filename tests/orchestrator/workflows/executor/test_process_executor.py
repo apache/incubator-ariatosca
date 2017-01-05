@@ -130,6 +130,7 @@ class MockTask(object):
         self.max_attempts = 1
         self.plugin_fk = plugin.id
         self.plugin = plugin
+        self.ignore_failure = False
 
         for state in aria_model.Task.STATES:
             setattr(self, state.upper(), state)

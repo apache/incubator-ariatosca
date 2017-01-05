@@ -27,7 +27,7 @@ from datetime import (
 )
 
 from ... import events
-
+from ... import exceptions
 
 @events.sent_task_signal.connect
 def _task_sent(task, *args, **kwargs):
@@ -43,18 +43,25 @@ def _task_started(task, *args, **kwargs):
 
 
 @events.on_failure_task_signal.connect
-def _task_failed(task, *args, **kwargs):
+def _task_failed(task, exception, *args, **kwargs):
     with task._update():
-        should_retry = (
-            (task.retry_count < task.max_attempts - 1 or
-             task.max_attempts == task.INFINITE_RETRIES) and
-            # ignore_failure check here means the task will not be retries and it will be marked as
-            # failed. The engine will also look at ignore_failure so it won't fail the workflow.
-            not task.ignore_failure)
+        should_retry = all([
+            not isinstance(exception, exceptions.TaskAbortException),
+            task.retry_count < task.max_attempts - 1 or task.max_attempts == task.INFINITE_RETRIES,
+            # ignore_failure check here means the task will not be retries and it will be marked
+            # as failed. The engine will also look at ignore_failure so it won't fail the
+            # workflow.
+            not task.ignore_failure
+        ])
         if should_retry:
+            retry_interval = None
+            if isinstance(exception, exceptions.TaskRetryException):
+                retry_interval = exception.retry_interval
+            if retry_interval is None:
+                retry_interval = task.retry_interval
             task.status = task.RETRYING
             task.retry_count += 1
-            task.due_at = datetime.utcnow() + timedelta(seconds=task.retry_interval)
+            task.due_at = datetime.utcnow() + timedelta(seconds=retry_interval)
         else:
             task.ended_at = datetime.utcnow()
             task.status = task.FAILED

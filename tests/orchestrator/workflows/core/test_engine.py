@@ -382,6 +382,78 @@ class TestRetries(BaseTest):
         assert global_test_holder.get('sent_task_signal_calls') == 1
 
 
+class TestTaskRetryAndAbort(BaseTest):
+    message = 'EXPECTED_ERROR'
+
+    def test_task_retry_default_interval(self, workflow_context, executor):
+        default_retry_interval = 0.1
+
+        @workflow
+        def mock_workflow(ctx, graph):
+            op = self._op(mock_task_retry, ctx,
+                          inputs={'message': self.message},
+                          retry_interval=default_retry_interval,
+                          max_attempts=2)
+            graph.add_tasks(op)
+        with pytest.raises(exceptions.ExecutorException):
+            self._execute(
+                workflow_func=mock_workflow,
+                workflow_context=workflow_context,
+                executor=executor)
+        assert workflow_context.states == ['start', 'failure']
+        assert isinstance(workflow_context.exception, exceptions.ExecutorException)
+        invocations = global_test_holder.get('invocations', [])
+        assert len(invocations) == 2
+        invocation1, invocation2 = invocations
+        assert invocation2 - invocation1 >= default_retry_interval
+        assert global_test_holder.get('sent_task_signal_calls') == 2
+
+    def test_task_retry_custom_interval(self, workflow_context, executor):
+        default_retry_interval = 100
+        custom_retry_interval = 0.1
+
+        @workflow
+        def mock_workflow(ctx, graph):
+            op = self._op(mock_task_retry, ctx,
+                          inputs={'message': self.message,
+                                  'retry_interval': custom_retry_interval},
+                          retry_interval=default_retry_interval,
+                          max_attempts=2)
+            graph.add_tasks(op)
+        execution_start = time.time()
+        with pytest.raises(exceptions.ExecutorException):
+            self._execute(
+                workflow_func=mock_workflow,
+                workflow_context=workflow_context,
+                executor=executor)
+        execution_end = time.time()
+        assert workflow_context.states == ['start', 'failure']
+        assert isinstance(workflow_context.exception, exceptions.ExecutorException)
+        invocations = global_test_holder.get('invocations', [])
+        assert len(invocations) == 2
+        assert (execution_end - execution_start) < default_retry_interval
+        assert global_test_holder.get('sent_task_signal_calls') == 2
+
+    def test_task_abort(self, workflow_context, executor):
+        @workflow
+        def mock_workflow(ctx, graph):
+            op = self._op(mock_task_abort, ctx,
+                          inputs={'message': self.message},
+                          retry_interval=100,
+                          max_attempts=100)
+            graph.add_tasks(op)
+        with pytest.raises(exceptions.ExecutorException):
+            self._execute(
+                workflow_func=mock_workflow,
+                workflow_context=workflow_context,
+                executor=executor)
+        assert workflow_context.states == ['start', 'failure']
+        assert isinstance(workflow_context.exception, exceptions.ExecutorException)
+        invocations = global_test_holder.get('invocations', [])
+        assert len(invocations) == 1
+        assert global_test_holder.get('sent_task_signal_calls') == 1
+
+
 @operation
 def mock_success_task(**_):
     pass
@@ -408,7 +480,27 @@ def mock_conditional_failure_task(failure_count, **_):
         invocations.append(time.time())
 
 
+@operation
 def mock_sleep_task(seconds, **_):
+    _add_invocation_timestamp()
+    time.sleep(seconds)
+
+
+@operation
+def mock_task_retry(ctx, message, retry_interval=None, **_):
+    _add_invocation_timestamp()
+    retry_kwargs = {}
+    if retry_interval is not None:
+        retry_kwargs['retry_interval'] = retry_interval
+    ctx.task.retry(message, **retry_kwargs)
+
+
+@operation
+def mock_task_abort(ctx, message, **_):
+    _add_invocation_timestamp()
+    ctx.task.abort(message)
+
+
+def _add_invocation_timestamp():
     invocations = global_test_holder.setdefault('invocations', [])
     invocations.append(time.time())
-    time.sleep(seconds)

@@ -52,8 +52,8 @@ from sqlalchemy import (
     orm,
 )
 
+from ..orchestrator.exceptions import TaskAbortException, TaskRetryException
 from .structure import ModelMixin
-
 from .type import (
     List,
     Dict
@@ -675,3 +675,11 @@ class TaskBase(ModelMixin):
     @classmethod
     def as_relationship_instance(cls, instance, **kwargs):
         return cls(relationship_instance=instance, **kwargs)
+
+    @staticmethod
+    def abort(message=None):
+        raise TaskAbortException(message)
+
+    @staticmethod
+    def retry(message=None, retry_interval=None):
+        raise TaskRetryException(message, retry_interval=retry_interval)

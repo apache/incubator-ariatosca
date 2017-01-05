@@ -107,6 +107,7 @@ class MockTask(object):
         self.retry_count = 0
         self.max_attempts = 1
         self.plugin_fk = None
+        self.ignore_failure = False
 
         for state in model.Task.STATES:
             setattr(self, state.upper(), state)

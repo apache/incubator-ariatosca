@@ -30,3 +30,19 @@ class PluginAlreadyExistsError(AriaError):
     Raised when a plugin with the same package name and package version already exists
     """
     pass
+
+
+class TaskRetryException(RuntimeError):
+    """
+    Used internally when ctx.task.retry is called
+    """
+    def __init__(self, message, retry_interval):
+        super(TaskRetryException, self).__init__(message)
+        self.retry_interval = retry_interval
+
+
+class TaskAbortException(RuntimeError):
+    """
+    Used internally when ctx.task.abort is called
+    """
+    pass
