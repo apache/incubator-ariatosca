@@ -17,6 +17,8 @@ A common context for both workflow and operation
 """
 from uuid import uuid4
 
+import jinja2
+
 from aria import logger
 from aria.storage import exceptions
 
@@ -97,19 +99,49 @@ class BaseContext(logger.LoggerMixin):
         Download a blueprint resource from the resource storage
         """
         try:
-            return self.resource.deployment.download(entry_id=self.deployment.id,
-                                                     destination=destination,
-                                                     path=path)
+            self.resource.deployment.download(entry_id=str(self.deployment.id),
+                                              destination=destination,
+                                              path=path)
         except exceptions.StorageError:
-            return self.resource.blueprint.download(entry_id=self.blueprint.id,
-                                                    destination=destination,
-                                                    path=path)
+            self.resource.blueprint.download(entry_id=str(self.blueprint.id),
+                                             destination=destination,
+                                             path=path)
+
+    def download_resource_and_render(self, destination, path=None, variables=None):
+        """
+        Download a blueprint resource from the resource storage render its content as a jinja
+        template using the provided variables. ctx is available to the template without providing it
+        explicitly.
+        """
+        self.download_resource(destination=destination, path=path)
+        with open(destination, 'rb') as f:
+            resource_content = f.read()
+        resource_content = self._render_resource(resource_content=resource_content,
+                                                 variables=variables)
+        with open(destination, 'wb') as f:
+            f.write(resource_content)
 
     def get_resource(self, path=None):
         """
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.read(entry_id=self.deployment.id, path=path)
+            return self.resource.deployment.read(entry_id=str(self.deployment.id), path=path)
         except exceptions.StorageError:
-            return self.resource.blueprint.read(entry_id=self.blueprint.id, path=path)
+            return self.resource.blueprint.read(entry_id=str(self.blueprint.id), path=path)
+
+    def get_resource_and_render(self, path=None, variables=None):
+        """
+        Read a deployment resource as string from the resource storage and render it as a jinja
+        template using the provided variables. ctx is available to the template without providing it
+        explicitly.
+        """
+        resource_content = self.get_resource(path=path)
+        return self._render_resource(resource_content=resource_content, variables=variables)
+
+    def _render_resource(self, resource_content, variables):
+        variables = variables or {}
+        if 'ctx' not in variables:
+            variables['ctx'] = self
+        resource_template = jinja2.Template(resource_content)
+        return resource_template.render(variables)
