@@ -29,6 +29,7 @@ class Type(object):
 
         self.name = name
         self.description = None
+        self.role = None
         self.children = StrictList(value_class=Type)
 
     def get_parent(self, name):
@@ -40,6 +41,13 @@ class Type(object):
                 return parent
         return None
 
+    def is_descendant(self, base_name, name):
+        base = self.get_descendant(base_name)
+        if base is not None:
+            if base.get_descendant(name) is not None:
+                return True
+        return False
+
     def get_descendant(self, name):
         if self.name == name:
             return self
@@ -49,24 +57,28 @@ class Type(object):
                 return found
         return None
 
-    def is_descendant(self, base_name, name):
-        base = self.get_descendant(base_name)
-        if base is not None:
-            if base.get_descendant(name) is not None:
-                return True
-        return False
-
     def iter_descendants(self):
         for child in self.children:
             yield child
             for descendant in child.iter_descendants():
                 yield descendant
 
+    def get_role(self, name):
+        def _get_role(the_type):
+            if the_type is None:
+                return None
+            elif the_type.role is None:
+                return _get_role(self.get_parent(the_type.name))
+            return the_type.role
+
+        return _get_role(self.get_descendant(name))
+
     @property
     def as_raw(self):
         return OrderedDict((
             ('name', self.name),
-            ('description', self.description)))
+            ('description', self.description),
+            ('role', self.role)))
 
     def dump(self, context):
         if self.name:

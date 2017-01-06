@@ -192,6 +192,12 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         # InterfaceDefinition:
         relationship_interface_definitions = OrderedDict(relationship_type._get_interfaces(context))
 
+        # Convert interface definitions to templates
+        convert_requirement_interface_definitions_from_type_to_raw_template(
+            context,
+            raw['relationship'],
+            relationship_interface_definitions)
+
         if relationship_definition:
             # Merge extra interface definitions
             # InterfaceDefinition:
@@ -207,12 +213,6 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
                 raw['relationship']['interfaces'] = OrderedDict()
                 for interface_name, interface in interfaces.iteritems():
                     raw['relationship']['interfaces'][interface_name] = interface._raw
-        else:
-            # Convert interface definitions to templates
-            convert_requirement_interface_definitions_from_type_to_raw_template(
-                context,
-                raw['relationship'],
-                relationship_interface_definitions)
 
     return \
         RequirementAssignment(name=requirement_definition._name, raw=raw, container=container), \

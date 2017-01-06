@@ -51,6 +51,7 @@ from sqlalchemy import (
     Float,
     orm,
 )
+from sqlalchemy.ext.orderinglist import ordering_list
 
 from ..orchestrator.exceptions import TaskAbortException, TaskRetryException
 from .structure import ModelMixin
@@ -415,7 +416,14 @@ class RelationshipBase(ModelMixin):
     """
     __tablename__ = 'relationships'
 
-    _private_fields = ['source_node_fk', 'target_node_fk']
+    _private_fields = ['source_node_fk', 'target_node_fk', 'source_position', 'target_position']
+
+    source_position = Column(Integer)
+    target_position = Column(Integer)
+
+    @declared_attr
+    def deployment_id(self):
+        return association_proxy('source_node', 'deployment_id')
 
     @declared_attr
     def source_node_fk(cls):
@@ -423,8 +431,14 @@ class RelationshipBase(ModelMixin):
 
     @declared_attr
     def source_node(cls):
-        return cls.one_to_many_relationship('source_node_fk',
-                                            backreference='outbound_relationships')
+        return cls.one_to_many_relationship(
+            'source_node_fk',
+            backreference='outbound_relationships',
+            backref_kwargs=dict(
+                order_by=cls.source_position,
+                collection_class=ordering_list('source_position', count_from=0)
+            )
+        )
 
     @declared_attr
     def source_name(cls):
@@ -432,11 +446,18 @@ class RelationshipBase(ModelMixin):
 
     @declared_attr
     def target_node_fk(cls):
-        return cls.foreign_key(NodeBase)
+        return cls.foreign_key(NodeBase, nullable=True)
 
     @declared_attr
     def target_node(cls):
-        return cls.one_to_many_relationship('target_node_fk', backreference='inbound_relationships')
+        return cls.one_to_many_relationship(
+            'target_node_fk',
+            backreference='inbound_relationships',
+            backref_kwargs=dict(
+                order_by=cls.target_position,
+                collection_class=ordering_list('target_position', count_from=0)
+            )
+        )
 
     @declared_attr
     def target_name(cls):
@@ -503,33 +524,58 @@ class RelationshipInstanceBase(ModelMixin):
     __tablename__ = 'relationship_instances'
     _private_fields = ['relationship_storage_fk',
                        'source_node_instance_fk',
-                       'target_node_instance_fk']
+                       'target_node_instance_fk',
+                       'source_position',
+                       'target_position']
+
+    source_position = Column(Integer)
+    target_position = Column(Integer)
 
     @declared_attr
     def source_node_instance_fk(cls):
-        return cls.foreign_key(NodeInstanceBase)
+        return cls.foreign_key(NodeInstanceBase, nullable=True)
 
     @declared_attr
     def source_node_instance(cls):
-        return cls.one_to_many_relationship('source_node_instance_fk',
-                                            backreference='outbound_relationship_instances')
+        return cls.one_to_many_relationship(
+            'source_node_instance_fk',
+            backreference='outbound_relationship_instances',
+            backref_kwargs=dict(
+                order_by=cls.source_position,
+                collection_class=ordering_list('source_position', count_from=0)
+            )
+        )
 
     @declared_attr
     def source_node_instance_name(cls):
+        return association_proxy('source_node_instance', 'node_{0}'.format(cls.name_column_name()))
+
+    @declared_attr
+    def source_node_name(cls):
         return association_proxy('source_node_instance', cls.name_column_name())
 
     @declared_attr
     def target_node_instance_fk(cls):
-        return cls.foreign_key(NodeInstanceBase)
+        return cls.foreign_key(NodeInstanceBase, nullable=True)
 
     @declared_attr
     def target_node_instance(cls):
-        return cls.one_to_many_relationship('target_node_instance_fk',
-                                            backreference='inbound_relationship_instances')
+        return cls.one_to_many_relationship(
+            'target_node_instance_fk',
+            backreference='inbound_relationship_instances',
+            backref_kwargs=dict(
+                order_by=cls.target_position,
+                collection_class=ordering_list('target_position', count_from=0)
+            )
+        )
 
     @declared_attr
     def target_node_instance_name(cls):
         return association_proxy('target_node_instance', cls.name_column_name())
+
+    @declared_attr
+    def target_node_name(cls):
+        return association_proxy('target_node_instance', 'node_{0}'.format(cls.name_column_name()))
 
     @declared_attr
     def relationship_fk(cls):
@@ -542,6 +588,7 @@ class RelationshipInstanceBase(ModelMixin):
     @declared_attr
     def relationship_name(cls):
         return association_proxy('relationship', cls.name_column_name())
+
 
 
 class PluginBase(ModelMixin):
@@ -646,7 +693,7 @@ class TaskBase(ModelMixin):
 
     INFINITE_RETRIES = -1
 
-    status = Column(Enum(*STATES), name='status', default=PENDING)
+    status = Column(Enum(*STATES, name='status'), default=PENDING)
 
     due_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, default=None)

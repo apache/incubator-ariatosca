@@ -24,6 +24,9 @@ from ..modeling import ModelingContext
 from .style import Style
 
 
+_thread_locals = threading.local()
+
+
 class ConsumptionContext(object):
     """
     Properties:
@@ -44,8 +47,7 @@ class ConsumptionContext(object):
         Gets the context attached to the current thread if there is one.
         """
 
-        thread_locals = threading.local()
-        return getattr(thread_locals, 'aria_consumption_context', None)
+        return getattr(_thread_locals, 'aria_consumption_context', None)
 
     def __init__(self, set_thread_local=True):
         self.args = []
@@ -65,8 +67,7 @@ class ConsumptionContext(object):
         Attaches this context to the current thread.
         """
 
-        thread_locals = threading.local()
-        thread_locals.aria_consumption_context = self
+        _thread_locals.aria_consumption_context = self
 
     def write(self, string):
         """

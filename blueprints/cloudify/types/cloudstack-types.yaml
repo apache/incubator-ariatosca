@@ -1,0 +1,82 @@
+node_types:
+
+  ###########################################################
+  # We define a type that inherits CloudStack's default
+  # virtual machine, and adds monitoring
+  # capabilities on top of it.
+  #
+  # Two things to note here:
+  #
+  #  - We use our 'management_network_resource_id' input
+  #    as the default value for the management network name.
+  #
+  #    This will be used for letting the management machine
+  #    know which IP it should connect to when installing
+  #    agents.
+  #
+  #  - We use our 'nodecellar_network_resource_id' input
+  #    as the default value for the host network.
+  #
+  ###########################################################
+
+  nodecellar.nodes.MonitoredServer:
+    derived_from: cloudify.cloudstack.nodes.VirtualMachine
+    properties:
+      management_network_name:
+
+        #####################################################
+        # This is needed for identification of which NIC
+        # to look for when obtaining the VM IP address
+        #####################################################
+
+        default: { get_input: management_network_resource_id }
+      cloudify_agent:
+        default:
+          user: { get_input: agent_user }
+      server:
+        default:
+          image_id: { get_input: image }
+          size: { get_input: size }
+      # Uncomment network definition for cloudstack-vpc
+      # network:
+      #   default:
+      #     default_network: { get_input: nodecellar_network_resource_id }
+
+    interfaces:
+
+      ###########################################################
+      # We are telling Cloudify to install a Diamond
+      # monitoring agent on the server.
+      #
+      # (see https://github.com/BrightcoveOS/Diamond)
+      ###########################################################
+
+      cloudify.interfaces.monitoring_agent:
+        install:
+          implementation: diamond.diamond_agent.tasks.install
+          inputs:
+            diamond_config:
+              default:
+                interval: 1
+        start: diamond.diamond_agent.tasks.start
+        stop: diamond.diamond_agent.tasks.stop
+        uninstall: diamond.diamond_agent.tasks.uninstall
+
+      ###########################################################
+      # Adding some collectors. These collectors are necessary
+      # for the Cloudify UI to display the deafult metrics.
+      ###########################################################
+
+      cloudify.interfaces.monitoring:
+        start:
+          implementation: diamond.diamond_agent.tasks.add_collectors
+          inputs:
+            collectors_config:
+              default:
+                CPUCollector: {}
+                MemoryCollector: {}
+                LoadAverageCollector: {}
+                DiskUsageCollector:
+                  config:
+                    devices: x?vd[a-z]+[0-9]*$
+                NetworkCollector: {}

@@ -1,0 +1,22 @@
+
+node_types:
+
+  nodecellar.nodes.Host:
+    derived_from: cloudify.hostpool.nodes.LinuxHost
+    properties:
+      filters:
+        default:
+          tags:
+            - 'ubuntu'
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: hostpool.cloudify_hostpool_plugin.tasks.acquire
+          inputs:
+            service_url:
+              default: { get_input: host_pool_service_endpoint }
+        delete:
+          implementation: hostpool.cloudify_hostpool_plugin.tasks.release
+          inputs:
+            service_url:
+              default: { get_input: host_pool_service_endpoint }

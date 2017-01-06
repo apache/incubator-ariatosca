@@ -80,7 +80,9 @@ class ModelMixin(object):
     @classmethod
     def one_to_many_relationship(cls,
                                  foreign_key_column,
-                                 backreference=None):
+                                 backreference=None,
+                                 backref_kwargs=None,
+                                 **kwargs):
         """Return a one-to-many SQL relationship object
         Meant to be used from inside the *child* object
 
@@ -89,6 +91,7 @@ class ModelMixin(object):
         :param foreign_key_column: The column of the foreign key (from the child table)
         :param backreference: The name to give to the reference to the child (on the parent table)
         """
+        backref_kwargs = backref_kwargs or {}
         parent_table = cls._get_cls_by_tablename(
             getattr(cls, foreign_key_column).__remote_table_name)
         primaryjoin_str = '{parent_class_name}.{parent_unique_id} == ' \
@@ -105,7 +108,8 @@ class ModelMixin(object):
             foreign_keys=[getattr(cls, foreign_key_column)],
             # The following line make sure that when the *parent* is
             # deleted, all its connected children are deleted as well
-            backref=backref(backreference or cls.__tablename__, cascade='all'),
+            backref=backref(backreference or cls.__tablename__, cascade='all', **backref_kwargs),
+            **kwargs
         )
 
     @classmethod
@@ -145,6 +149,8 @@ class ModelMixin(object):
                 field_value = list(field_value)
             elif isinstance(field_value, dict):
                 field_value = dict(field_value)
+            elif isinstance(field_value, ModelMixin):
+                field_value = field_value.to_dict()
             res[field] = field_value
 
         return res

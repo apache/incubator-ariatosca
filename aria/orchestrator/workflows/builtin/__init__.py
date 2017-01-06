@@ -19,13 +19,17 @@ A set of builtin workflows
 
 from .install import install
 from .uninstall import uninstall
-from .execute_operation import execute_operation
-from .heal import heal
+from .start import start
+from .stop import stop
+
+
+BUILTIN_WORKFLOWS = ('install', 'uninstall', 'start', 'stop')
 
 
 __all__ = [
+    'BUILTIN_WORKFLOWS',
     'install',
     'uninstall',
-    'execute_operation',
-    'heal',
+    'start',
+    'stop'
 ]

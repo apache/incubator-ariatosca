@@ -1,0 +1,168 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+description: |
+  This blueprint installs the Node Cellar application
+  on hosts with known IP addresses.
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/4.0m2/types.yaml
+  - http://www.getcloudify.org/spec/diamond-plugin/1.3.4/plugin.yaml
+  - types/nodecellar.yaml
+  - types/simple-types.yaml
+
+#####################################################################################
+# The inputs section allows the user to use same blueprint for creating different
+# deployments, each one with its own parameters.
+#
+# To specify deployment inputs run:
+#   - cfy deployments create -b <blueprint_id> -d <deployment_id> -i inputs.yaml
+#####################################################################################
+
+inputs:
+
+  nodejs_host_ip:
+    description: >
+      IP address of nodejs_host
+
+  mongod_host_ip:
+    description: >
+      IP address of mongod_host
+
+  agent_user:
+      description: >
+        Username for SSH connections to hosts from Cloudify Manager
+      default: admin # ARIA
+
+  agent_private_key_path:
+      description: >
+        Path to private key used for SSH connections to hosts
+        (must be accessible by Cloudify Manager)
+
+node_templates:
+
+  nodecellar:
+    type: nodecellar.nodes.NodecellarApplicationModule
+    relationships:
+
+      ################################
+      # Connected to mongod node
+      ################################
+
+      - type: node_connected_to_mongo
+        target: mongod
+
+      ################################
+      # Contained in nodejs node
+      ################################
+
+      - type: node_contained_in_nodejs
+        target: nodejs
+
+    capabilities: # ARIA
+      scalable:
+        properties:
+          default_instances: 2
+          min_instances: 2
+          max_instances: 4
+    #instances:
+    #  deploy: 3
+
+  nodejs:
+    type: nodecellar.nodes.NodeJSServer
+    relationships:
+
+      ################################
+      # Contained in nodejs host
+      ################################
+
+      - type: cloudify.relationships.contained_in
+        target: nodejs_host
+
+  mongod:
+    type: nodecellar.nodes.MonitoredMongoDatabase
+    relationships:
+
+      ################################
+      # Contained in mongod host
+      ################################
+
+      - type: cloudify.relationships.contained_in
+        target: mongod_host
+
+  ############
+  # Hosts
+  ############
+
+  nodejs_host:
+    type: nodecellar.nodes.MonitoredServer
+    properties:
+      ip: { get_input: nodejs_host_ip }
+      agent_config:
+        user: { get_input: agent_user }
+        key: { get_input: agent_private_key_path }
+
+  mongod_host:
+    type: nodecellar.nodes.MonitoredServer
+    properties:
+      ip: { get_input: mongod_host_ip }
+      agent_config:
+        user: { get_input: agent_user }
+        key: { get_input: agent_private_key_path }
+
+###########################################################
+# The outputs section exposes the application endpoint.
+#
+# You can access it by running:
+#   - cfy deployments -d <deployment_id> outputs
+###########################################################
+
+outputs:
+  endpoint:
+    description: Web application endpoint
+    value:
+      ip_address: { get_property: [ nodejs_host, ip ] }
+      port: { get_property: [ nodecellar, port ] }
+
+# ARIA
+
+policy_types:
+  HostFailure:
+    source: policies/host_failure.sh
+    properties:
+      check_interval:
+        description: Interval in seconds
+        type: integer
+        default: 60
+
+policy_triggers:
+  Dead:
+    source: triggers/host_dead.sh
+    parameters:
+      port:
+        type: integer
+        default: 8080
+
+policies:
+  host_failure:
+    type: HostFailure
+    properties:
+      check_interval: 120
+    targets:
+      - host_group
+
+groups:
+  host_group:
+    members:
+      - nodejs_host
+      - mongod_host
+    policies:
+      failure:
+        type: HostFailure
+        properties:
+          check_interval: 140
+        triggers:
+          dead:
+            type: Dead
+            parameters:
+              port: 8081
+
