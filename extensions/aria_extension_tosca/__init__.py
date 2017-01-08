@@ -53,5 +53,4 @@ MODULES = (
     'simple_nfv_v1_0')
 
 __all__ = (
-    'MODULES',
-    'install_aria_extension')
+    'MODULES',)
