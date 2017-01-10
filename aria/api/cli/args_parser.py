@@ -20,7 +20,7 @@ Argument parsing configuration and functions
 import argparse
 from functools import partial
 
-from ..utils.argparse import ArgumentParser
+from ...utils.argparse import ArgumentParser
 
 NO_VERBOSE = 0
 
@@ -111,6 +111,9 @@ def add_parse_parser(parse):
     parse.add_argument(
         '--prefix', nargs='*',
         help='prefixes for imports')
+    parse.add_argument(
+        '--inputs',
+        help='inputs for instence creation, format: key1=value1;key2=value2')
     parse.add_flag_argument(
         'debug',
         help_true='print debug info',

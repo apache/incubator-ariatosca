@@ -32,8 +32,7 @@ from . import (
     utils,
     parser,
     storage,
-    orchestrator,
-    cli
+    orchestrator
 )
 __all__ = (
     '__version__',
@@ -48,6 +47,7 @@ def install_aria_extensions():
     :code:`aria_extension` entry points and loads them.
     It then invokes all registered extension functions.
     """
+
     for loader, module_name, _ in pkgutil.iter_modules():
         if module_name.startswith('aria_extension_'):
             loader.find_module(module_name).load_module(module_name)

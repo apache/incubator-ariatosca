@@ -13,34 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-CLI configuration
-"""
-
-import os
-import logging
-from getpass import getuser
-from tempfile import gettempdir
-
-from yaml import safe_load
-
-from .storage import config_file_path
-
-# path to a file where cli logs will be saved.
-logging_filename = os.path.join(gettempdir(), 'aria_cli_{0}.log'.format(getuser()))
-# loggers log level to show
-logger_level = logging.INFO
-# loggers log level to show
-colors = True
-
-import_resolver = None
+from ..components import Api
 
 
-def load_configurations():
+class AriaCliApi(Api):
     """
-    Dynamically load attributes into the config module from the ``config.yaml`` defined in the user
-    configuration directory
+    ARIA command line API
     """
-    config_path = config_file_path()
-    with open(config_path) as config_file:
-        globals().update(safe_load(config_file) or {})
+
+    def __init__(self, receiver, args_parser, *args, **kwargs):
+        super(AriaCliApi, self).__init__(*args, **kwargs)
+        self.args_parser = args_parser
+        self.receiver = receiver
+
+    def run(self):
+        data, unknown_args = self.args_parser.parse_known_args()
+        super(AriaCliApi, self).execute(data.command, data, self.receiver, *unknown_args)

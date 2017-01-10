@@ -78,6 +78,9 @@ class Types(Consumer):
     Used to just dump the types.
     """
 
+    def consume(self):
+        pass
+
     def dump(self):
         if self.context.has_arg_switch('yaml'):
             indent = self.context.get_arg_value_int('indent', 2)

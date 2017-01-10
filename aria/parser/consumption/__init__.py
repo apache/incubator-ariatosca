@@ -15,17 +15,19 @@
 
 
 from .exceptions import ConsumerException
-from .context import ConsumptionContext
+from .context import ConsumptionContext, ConsumptionContextBuilder
 from .style import Style
 from .consumer import Consumer, ConsumerChain
 from .presentation import Read
 from .validation import Validate
 from .modeling import Model, Types, Instance
 from .inputs import Inputs
+from .utils import ConsumerChainBuilder
 
 __all__ = (
     'ConsumerException',
     'ConsumptionContext',
+    'ConsumptionContextBuilder',
     'Style',
     'Consumer',
     'ConsumerChain',
@@ -34,4 +36,5 @@ __all__ = (
     'Model',
     'Types',
     'Instance',
-    'Inputs')
+    'Inputs',
+    'ConsumerChainBuilder')

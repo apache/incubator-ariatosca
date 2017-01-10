@@ -19,6 +19,14 @@ from ...utils.exceptions import print_exception
 from ..validation import Issue
 
 
+class DumpUnableError(NotImplementedError):
+    """
+    Exception, used to control `Consumer` dump behaviour.
+    """
+
+    pass
+
+
 class Consumer(object):
     """
     Base class for ARIA consumers.
@@ -30,10 +38,12 @@ class Consumer(object):
         self.context = context
 
     def consume(self):
-        pass
+        raise NotImplementedError("Method 'consume' must be defined for Consumer subclass: {0}"
+                                  .format(self.__class__.__name__))
 
     def dump(self):
-        pass
+        raise DumpUnableError("Method 'dump' is not defined for {0} class"
+                              .format(self.__class__.__name__))
 
     def _handle_exception(self, e):
         if hasattr(e, 'issue') and isinstance(e.issue, Issue):
@@ -75,6 +85,15 @@ class ConsumerChain(Consumer):
                     raise e
             if self.context.validation.has_issues:
                 break
+
+    def dump(self):
+        for consumer in self.consumers[::-1]:
+            try:
+                consumer.dump()
+            except DumpUnableError:
+                continue
+
+            break
 
 
 def handle_exception(consumer, e):
