@@ -484,6 +484,14 @@ class RelationshipType(ExtensiblePresentation):
                                        'relationship_types')
 
     @cachedmethod
+    def _is_descendant(self, context, the_type):
+        if the_type is None:
+            return False
+        elif the_type._name == self._name:
+            return True
+        return self._is_descendant(context, the_type._get_parent(context))
+
+    @cachedmethod
     def _get_properties(self, context):
         return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
 
