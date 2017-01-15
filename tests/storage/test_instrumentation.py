@@ -22,7 +22,8 @@ from aria.storage import (
     type as aria_type,
     ModelStorage,
     sql_mapi,
-    instrumentation
+    instrumentation,
+    exceptions
 )
 from ..storage import get_sqlite_api_kwargs, release_sqlite_storage
 
@@ -275,6 +276,47 @@ class TestInstrumentation(object):
         instruments_holder.append(instrument)
         return instrument
 
+    def test_track_changes_to_strict_dict(self, storage):
+        model_kwargs = dict(strict_dict={'key': 'value'},
+                            strict_list=['item'])
+        mode_instance = StrictMockModel(**model_kwargs)
+        storage.strict_mock_model.put(mode_instance)
+
+        instrument = self._track_changes({
+            StrictMockModel.strict_dict: dict,
+            StrictMockModel.strict_list: list,
+        })
+
+        assert not instrument.tracked_changes
+
+        storage_model_instance = storage.strict_mock_model.get(mode_instance.id)
+
+        with pytest.raises(exceptions.StorageError):
+            storage_model_instance.strict_dict = {1: 1}
+
+        with pytest.raises(exceptions.StorageError):
+            storage_model_instance.strict_dict = {'hello': 1}
+
+        with pytest.raises(exceptions.StorageError):
+            storage_model_instance.strict_dict = {1: 'hello'}
+
+        storage_model_instance.strict_dict = {'hello': 'world'}
+        assert storage_model_instance.strict_dict == {'hello': 'world'}
+
+        with pytest.raises(exceptions.StorageError):
+            storage_model_instance.strict_list = [1]
+        storage_model_instance.strict_list = ['hello']
+        assert storage_model_instance.strict_list == ['hello']
+
+        assert instrument.tracked_changes == {
+            'strict_mock_model': {
+                mode_instance.id: {
+                    'strict_dict': Value(STUB, {'hello': 'world'}),
+                    'strict_list': Value(STUB, ['hello']),
+                }
+            },
+        }
+
 
 @pytest.fixture(autouse=True)
 def restore_instrumentation():
@@ -289,7 +331,7 @@ def storage():
     result = ModelStorage(
         api_cls=sql_mapi.SQLAlchemyModelAPI,
         api_kwargs=get_sqlite_api_kwargs(),
-        items=(MockModel1, MockModel2))
+        items=(MockModel1, MockModel2, StrictMockModel))
     yield result
     release_sqlite_storage(result)
 
@@ -311,3 +353,10 @@ class MockModel1(model.DeclarativeBase, _MockModel):
 
 class MockModel2(model.DeclarativeBase, _MockModel):
     __tablename__ = 'mock_model2'
+
+
+class StrictMockModel(model.DeclarativeBase):
+    __tablename__ = 'strict_mock_model'
+
+    strict_dict = Column(aria_type.StrictDict(basestring, basestring))
+    strict_list = Column(aria_type.StrictList(basestring))

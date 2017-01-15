@@ -17,12 +17,30 @@ import platform
 from tempfile import mkdtemp
 from shutil import rmtree
 
-from aria.storage import model
 from sqlalchemy import (
     create_engine,
-    orm)
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.pool import StaticPool
+    orm,
+    Column,
+    Text,
+    Integer,
+    pool
+)
+
+
+from aria.storage import (
+    model,
+    structure,
+    type as aria_type,
+)
+
+
+class MockModel(model.DeclarativeBase, structure.ModelMixin): #pylint: disable=abstract-method
+    __tablename__ = 'mock_models'
+    model_dict = Column(aria_type.Dict)
+    model_list = Column(aria_type.List)
+    value = Column(Integer)
+    name = Column(Text)
+
 
 
 class TestFileSystem(object):
@@ -53,11 +71,11 @@ def get_sqlite_api_kwargs(base_dir=None, filename='db.sqlite'):
     else:
         uri = 'sqlite:///:memory:'
         engine_kwargs = dict(connect_args={'check_same_thread': False},
-                             poolclass=StaticPool)
+                             poolclass=pool.StaticPool)
 
     engine = create_engine(uri, **engine_kwargs)
     session_factory = orm.sessionmaker(bind=engine)
-    session = scoped_session(session_factory=session_factory) if base_dir else session_factory()
+    session = orm.scoped_session(session_factory=session_factory) if base_dir else session_factory()
 
     model.DeclarativeBase.metadata.create_all(bind=engine)
     return dict(engine=engine, session=session)
