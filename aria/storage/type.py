@@ -16,7 +16,8 @@ import json
 
 from sqlalchemy import (
     TypeDecorator,
-    VARCHAR
+    VARCHAR,
+    event
 )
 
 from sqlalchemy.ext import mutable
@@ -84,5 +85,36 @@ class _MutableList(mutable.MutableList):
             raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
 
 
-_MutableList.associate_with(List)
-_MutableDict.associate_with(Dict)
+def _mutable_association_listener(mapper, cls):
+    for prop in mapper.column_attrs:
+        column_type = prop.columns[0].type
+        if isinstance(column_type, Dict):
+            _MutableDict.associate_with_attribute(getattr(cls, prop.key))
+        if isinstance(column_type, List):
+            _MutableList.associate_with_attribute(getattr(cls, prop.key))
+_LISTENER_ARGS = (mutable.mapper, 'mapper_configured', _mutable_association_listener)
+
+
+def _register_mutable_association_listener():
+    event.listen(*_LISTENER_ARGS)
+
+
+def remove_mutable_association_listener():
+    """
+    Remove the event listener that associates ``Dict`` and ``List`` column types with
+    ``MutableDict`` and ``MutableList``, respectively.
+
+    This call must happen before any model instance is instantiated.
+    This is because once it does, that would trigger the listener we are trying to remove.
+    Once it is triggered, many other listeners will then be registered.
+    At that point, it is too late.
+
+    The reason this function exists is that the association listener, interferes with ARIA change
+    tracking instrumentation, so a way to disable it is required.
+
+    Note that the event listener this call removes is registered by default.
+    """
+    if event.contains(*_LISTENER_ARGS):
+        event.remove(*_LISTENER_ARGS)
+
+_register_mutable_association_listener()

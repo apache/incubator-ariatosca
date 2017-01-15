@@ -42,6 +42,8 @@ import jsonpickle
 from aria.utils import imports
 from aria.orchestrator.workflows.executor import base
 from aria.orchestrator.context import serialization
+from aria.storage import instrumentation
+from aria.storage import type as storage_type
 
 _IS_WIN = os.name == 'nt'
 
@@ -139,10 +141,17 @@ class ProcessExecutor(base.BaseExecutor):
                 if message_type == 'started':
                     self._task_started(self._tasks[task_id])
                 elif message_type == 'succeeded':
-                    self._task_succeeded(self._remove_task(task_id))
+                    task = self._remove_task(task_id)
+                    instrumentation.apply_tracked_changes(
+                        tracked_changes=message['tracked_changes'],
+                        model=task.context.model)
+                    self._task_succeeded(task)
                 elif message_type == 'failed':
-                    self._task_failed(self._remove_task(task_id),
-                                      exception=message['exception'])
+                    task = self._remove_task(task_id)
+                    instrumentation.apply_tracked_changes(
+                        tracked_changes=message['tracked_changes'],
+                        model=task.context.model)
+                    self._task_failed(task, exception=message['exception'])
                 else:
                     raise RuntimeError('Invalid state')
             except BaseException as e:
@@ -227,26 +236,27 @@ class _Messenger(object):
         """Task started message"""
         self._send_message(type='started')
 
-    def succeeded(self):
+    def succeeded(self, tracked_changes):
         """Task succeeded message"""
-        self._send_message(type='succeeded')
+        self._send_message(type='succeeded', tracked_changes=tracked_changes)
 
-    def failed(self, exception):
+    def failed(self, tracked_changes, exception):
         """Task failed message"""
-        self._send_message(type='failed', exception=exception)
+        self._send_message(type='failed', tracked_changes=tracked_changes, exception=exception)
 
     def closed(self):
         """Executor closed message"""
         self._send_message(type='closed')
 
-    def _send_message(self, type, exception=None):
+    def _send_message(self, type, tracked_changes=None, exception=None):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(('localhost', self.port))
         try:
             data = jsonpickle.dumps({
                 'type': type,
                 'task_id': self.task_id,
-                'exception': exception
+                'exception': exception,
+                'tracked_changes': tracked_changes
             })
             sock.send(struct.pack(_INT_FMT, len(data)))
             sock.sendall(data)
@@ -271,13 +281,19 @@ def _main():
     operation_mapping = arguments['operation_mapping']
     operation_inputs = arguments['operation_inputs']
     context_dict = arguments['context']
-    try:
-        ctx = serialization.operation_context_from_dict(context_dict)
-        task_func = imports.load_attribute(operation_mapping)
-        task_func(ctx=ctx, **operation_inputs)
-        messenger.succeeded()
-    except BaseException as e:
-        messenger.failed(exception=e)
+
+    # This is required for the instrumentation work properly.
+    # See docstring of `remove_mutable_association_listener` for further details
+    storage_type.remove_mutable_association_listener()
+
+    with instrumentation.track_changes() as instrument:
+        try:
+            ctx = serialization.operation_context_from_dict(context_dict)
+            task_func = imports.load_attribute(operation_mapping)
+            task_func(ctx=ctx, **operation_inputs)
+            messenger.succeeded(tracked_changes=instrument.tracked_changes)
+        except BaseException as e:
+            messenger.failed(exception=e, tracked_changes=instrument.tracked_changes)
 
 if __name__ == '__main__':
     _main()
