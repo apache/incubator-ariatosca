@@ -11,9 +11,6 @@ def maintenance(ctx, graph, enabled):
 
     operation = 'Maintenance.enable' if enabled else 'Maintenance.disable'
 
-    for node_instance in ctx.model.node_instance.iter():
-        if operation in node_instance.node.operations:
-            task = OperationTask.node_instance(
-                instance=node_instance,
-                name=operation)
-            graph.add_tasks(task)
+    for node in ctx.model.node.iter():
+        for interface in node.interfaces.filter_by(name='Maintenance', type_name='Maintenance'):
+            graph.add_tasks(OperationTask.node(instance=node, name=operation))

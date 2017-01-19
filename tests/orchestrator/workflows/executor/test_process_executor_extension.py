@@ -30,15 +30,18 @@ def test_decorate_extension(context, executor):
     inputs = {'input1': 1, 'input2': 2}
 
     def get_node_instance(ctx):
-        return ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
     @workflow
     def mock_workflow(ctx, graph):
         node_instance = get_node_instance(ctx)
         op = 'test.op'
-        op_dict = {'operation': '{0}.{1}'.format(__name__, _mock_operation.__name__)}
-        node_instance.node.operations['test.op'] = op_dict
-        task = api.task.OperationTask.node_instance(instance=node_instance, name=op, inputs=inputs)
+        node_instance.interfaces = [mock.models.get_interface(
+            op,
+            operation_kwargs=dict(implementation='{0}.{1}'.format(__name__,
+                                                                  _mock_operation.__name__))
+        )]
+        task = api.task.OperationTask.node(instance=node_instance, name=op, inputs=inputs)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
@@ -55,7 +58,7 @@ class MockProcessExecutorExtension(object):
     def decorate(self):
         def decorator(function):
             def wrapper(ctx, **operation_inputs):
-                ctx.node_instance.runtime_properties['out'] = {'wrapper_inputs': operation_inputs}
+                ctx.node.runtime_properties['out'] = {'wrapper_inputs': operation_inputs}
                 function(ctx=ctx, **operation_inputs)
             return wrapper
         return decorator
@@ -63,7 +66,7 @@ class MockProcessExecutorExtension(object):
 
 @operation
 def _mock_operation(ctx, **operation_inputs):
-    ctx.node_instance.runtime_properties['out']['function_inputs'] = operation_inputs
+    ctx.node.runtime_properties['out']['function_inputs'] = operation_inputs
 
 
 @pytest.fixture

@@ -23,7 +23,7 @@ from datetime import datetime
 import networkx
 
 from aria import logger
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator import events
 
 from .. import exceptions

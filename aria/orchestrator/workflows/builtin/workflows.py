@@ -17,122 +17,157 @@
 A set of builtin workflows.
 """
 
-from .utils import (create_node_instance_task, create_relationship_instance_tasks)
+from .utils import (create_node_task, create_relationship_tasks)
 from ... import workflow
 
 
+NORMATIVE_STANDARD_INTERFACE = 'Standard' # 'tosca.interfaces.node.lifecycle.Standard'
+NORMATIVE_CONFIGURE_INTERFACE = 'Configure' # 'tosca.interfaces.relationship.Configure'
+
+NORMATIVE_CREATE = NORMATIVE_STANDARD_INTERFACE + '.create'
+NORMATIVE_START = NORMATIVE_STANDARD_INTERFACE + '.start'
+NORMATIVE_STOP = NORMATIVE_STANDARD_INTERFACE + '.stop'
+NORMATIVE_DELETE = NORMATIVE_STANDARD_INTERFACE + '.delete'
+
+NORMATIVE_CONFIGURE = NORMATIVE_STANDARD_INTERFACE + '.configure'
+NORMATIVE_PRE_CONFIGURE_SOURCE = NORMATIVE_CONFIGURE_INTERFACE + '.pre_configure_source'
+NORMATIVE_PRE_CONFIGURE_TARGET = NORMATIVE_CONFIGURE_INTERFACE + '.pre_configure_target'
+NORMATIVE_POST_CONFIGURE_SOURCE = NORMATIVE_CONFIGURE_INTERFACE + '.post_configure_source'
+NORMATIVE_POST_CONFIGURE_TARGET = NORMATIVE_CONFIGURE_INTERFACE + '.post_configure_target'
+
+NORMATIVE_ADD_SOURCE = NORMATIVE_CONFIGURE_INTERFACE + '.add_source'
+NORMATIVE_ADD_TARGET = NORMATIVE_CONFIGURE_INTERFACE + '.add_target'
+NORMATIVE_REMOVE_TARGET = NORMATIVE_CONFIGURE_INTERFACE + '.remove_target'
+NORMATIVE_TARGET_CHANGED = NORMATIVE_CONFIGURE_INTERFACE + '.target_changed'
+
+
 __all__ = (
-    'install_node_instance',
-    'uninstall_node_instance',
-    'start_node_instance',
-    'stop_node_instance',
+    'NORMATIVE_STANDARD_INTERFACE',
+    'NORMATIVE_CONFIGURE_INTERFACE',
+    'NORMATIVE_CREATE',
+    'NORMATIVE_START',
+    'NORMATIVE_STOP',
+    'NORMATIVE_DELETE',
+    'NORMATIVE_CONFIGURE',
+    'NORMATIVE_PRE_CONFIGURE_SOURCE',
+    'NORMATIVE_PRE_CONFIGURE_TARGET',
+    'NORMATIVE_POST_CONFIGURE_SOURCE',
+    'NORMATIVE_POST_CONFIGURE_TARGET',
+    'NORMATIVE_ADD_SOURCE',
+    'NORMATIVE_ADD_TARGET',
+    'NORMATIVE_REMOVE_TARGET',
+    'NORMATIVE_TARGET_CHANGED',
+    'install_node',
+    'uninstall_node',
+    'start_node',
+    'stop_node',
 )
 
 
-@workflow(suffix_template='{node_instance.id}')
-def install_node_instance(graph, node_instance, **kwargs):
+@workflow(suffix_template='{node.id}')
+def install_node(graph, node, **kwargs):
     sequence = []
 
     # Create
     sequence.append(
-        create_node_instance_task(
-            'tosca.interfaces.node.lifecycle.Standard.create',
-            node_instance))
+        create_node_task(
+            NORMATIVE_CREATE,
+            node))
 
     # Configure
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.pre_configure_source',
-            'source_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_PRE_CONFIGURE_SOURCE,
+            'source',
+            node)
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.pre_configure_target',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_PRE_CONFIGURE_TARGET,
+            'target',
+            node)
     sequence.append(
-        create_node_instance_task(
-            'tosca.interfaces.node.lifecycle.Standard.configure',
-            node_instance))
+        create_node_task(
+            NORMATIVE_CONFIGURE,
+            node))
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.post_configure_source',
-            'source_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_POST_CONFIGURE_SOURCE,
+            'source',
+            node)
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.post_configure_target',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_POST_CONFIGURE_TARGET,
+            'target',
+            node)
 
     # Start
-    sequence += _create_start_tasks(node_instance)
+    sequence += _create_start_tasks(node)
 
     graph.sequence(*sequence)
 
 
-@workflow(suffix_template='{node_instance.id}')
-def uninstall_node_instance(graph, node_instance, **kwargs):
+@workflow(suffix_template='{node.id}')
+def uninstall_node(graph, node, **kwargs):
     # Stop
-    sequence = _create_stop_tasks(node_instance)
+    sequence = _create_stop_tasks(node)
 
     # Delete
     sequence.append(
-        create_node_instance_task(
-            'tosca.interfaces.node.lifecycle.Standard.delete',
-            node_instance))
+        create_node_task(
+            NORMATIVE_DELETE,
+            node))
 
     graph.sequence(*sequence)
 
 
-@workflow(suffix_template='{node_instance.id}')
-def start_node_instance(graph, node_instance, **kwargs):
-    graph.sequence(*_create_start_tasks(node_instance))
+@workflow(suffix_template='{node.id}')
+def start_node(graph, node, **kwargs):
+    graph.sequence(*_create_start_tasks(node))
 
 
-@workflow(suffix_template='{node_instance.id}')
-def stop_node_instance(graph, node_instance, **kwargs):
-    graph.sequence(*_create_stop_tasks(node_instance))
+@workflow(suffix_template='{node.id}')
+def stop_node(graph, node, **kwargs):
+    graph.sequence(*_create_stop_tasks(node))
 
 
-def _create_start_tasks(node_instance):
+def _create_start_tasks(node):
     sequence = []
     sequence.append(
-        create_node_instance_task(
-            'tosca.interfaces.node.lifecycle.Standard.start',
-            node_instance))
+        create_node_task(
+            NORMATIVE_START,
+            node))
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.add_source',
-            'source_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_ADD_SOURCE,
+            'source',
+            node)
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.add_target',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_ADD_TARGET,
+            'target',
+            node)
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.target_changed',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_TARGET_CHANGED,
+            'target',
+            node)
     return sequence
 
 
-def _create_stop_tasks(node_instance):
+def _create_stop_tasks(node):
     sequence = []
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.remove_target',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_REMOVE_TARGET,
+            'target',
+            node)
     sequence += \
-        create_relationship_instance_tasks(
-            'tosca.interfaces.relationship.Configure.target_changed',
-            'target_operations',
-            node_instance)
+        create_relationship_tasks(
+            NORMATIVE_TARGET_CHANGED,
+            'target',
+            node)
     sequence.append(
-        create_node_instance_task(
-            'tosca.interfaces.node.lifecycle.Standard.stop',
-            node_instance))
+        create_node_task(
+            NORMATIVE_STOP,
+            node))
     return sequence

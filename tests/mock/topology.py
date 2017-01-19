@@ -13,84 +13,74 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime
-
 from aria.storage import model
 
 from . import models
 
 
-def create_simple_topology_single_node(model_storage, deployment_id, create_operation):
-    now = datetime.utcnow()
+def create_simple_topology_single_node(model_storage, create_operation):
+    service_template = models.get_blueprint()
+    model_storage.service_template.put(service_template)
 
-    blueprint = model.Blueprint(name='mock-blueprint',
-                                created_at=now,
-                                updated_at=now,
-                                plan={},
-                                main_file_name='mock-file')
-    model_storage.blueprint.put(blueprint)
+    service_instance = models.get_deployment(service_template)
+    model_storage.service_instance.put(service_instance)
 
-    deployment = model.Deployment(name='mock-deployment-%d' % deployment_id,
-                                  blueprint_fk=blueprint.id,
-                                  created_at=now,
-                                  updated_at=now)
-    model_storage.deployment.put(deployment)
+    node_template = models.get_dependency_node(service_instance)
+    node_template.interface_templates = [models.get_interface_template(
+        'tosca.interfaces.node.lifecycle.Standard.create',
+        operation_kwargs=dict(
+            implementation=create_operation,
+            inputs=[model.Parameter(name='key', str_value='create', type='str'),
+                    model.Parameter(name='value', str_value=str(True), type='bool')]
+        )
+    )]
+    model_storage.node_template.put(node_template)
 
-    node = model.Node(name='mock-node',
-                      type='tosca.nodes.Compute',
-                      operations={
-                          'tosca.interfaces.node.lifecycle.Standard.create': {
-                              'operation': create_operation,
-                              'inputs': {
-                                  'key': 'create',
-                                  'value': True}}},
-                      number_of_instances=1,
-                      planned_number_of_instances=1,
-                      deploy_number_of_instances=1,
-                      min_number_of_instances=1,
-                      max_number_of_instances=1,
-                      deployment_fk=deployment.id)
+    node = models.get_dependency_node_instance(node_template, service_instance)
+    node.interfaces = [models.get_interface(
+        'tosca.interfaces.node.lifecycle.Standard.create',
+        operation_kwargs=dict(
+            implementation=create_operation,
+            inputs=[model.Parameter(name='key', str_value='create', type='str'),
+                    model.Parameter(name='value', str_value=str(True), type='bool')])
+    )]
     model_storage.node.put(node)
-
-    node_instance = model.NodeInstance(name='mock-node-instance',
-                                       state='',
-                                       node_fk=node.id)
-    model_storage.node_instance.put(node_instance)
 
 
 def create_simple_topology_two_nodes(model_storage):
     blueprint = models.get_blueprint()
-    model_storage.blueprint.put(blueprint)
+    model_storage.service_template.put(blueprint)
     deployment = models.get_deployment(blueprint)
-    model_storage.deployment.put(deployment)
+    model_storage.service_instance.put(deployment)
 
     #################################################################################
     # Creating a simple deployment with node -> node as a graph
 
     dependency_node = models.get_dependency_node(deployment)
-    model_storage.node.put(dependency_node)
-    storage_dependency_node = model_storage.node.get(dependency_node.id)
+    model_storage.node_template.put(dependency_node)
+    storage_dependency_node = model_storage.node_template.get(dependency_node.id)
 
-    dependency_node_instance = models.get_dependency_node_instance(storage_dependency_node)
-    model_storage.node_instance.put(dependency_node_instance)
-    storage_dependency_node_instance = model_storage.node_instance.get(dependency_node_instance.id)
+    dependency_node_instance = models.get_dependency_node_instance(storage_dependency_node,
+                                                                   deployment)
+    model_storage.node.put(dependency_node_instance)
+    storage_dependency_node_instance = model_storage.node.get(dependency_node_instance.id)
 
-    dependent_node = models.get_dependent_node(deployment)
-    model_storage.node.put(dependent_node)
-    storage_dependent_node = model_storage.node.get(dependent_node.id)
+    req_template, cap_template = models.get_relationship(storage_dependency_node)
+    model_storage.requirement_template.put(req_template)
+    model_storage.capability_template.put(cap_template)
 
-    dependent_node_instance = models.get_dependent_node_instance(storage_dependent_node)
-    model_storage.node_instance.put(dependent_node_instance)
-    storage_dependent_node_instance = model_storage.node_instance.get(dependent_node_instance.id)
+    dependent_node = models.get_dependent_node(deployment, req_template, cap_template)
+    model_storage.node_template.put(dependent_node)
+    storage_dependent_node = model_storage.node_template.get(dependent_node.id)
 
-    relationship = models.get_relationship(storage_dependent_node, storage_dependency_node)
-    model_storage.relationship.put(relationship)
-    storage_relationship = model_storage.relationship.get(relationship.id)
+    dependent_node_instance = models.get_dependent_node_instance(storage_dependent_node, deployment)
+    model_storage.node.put(dependent_node_instance)
+    storage_dependent_node_instance = model_storage.node.get(dependent_node_instance.id)
+
     relationship_instance = models.get_relationship_instance(
-        relationship=storage_relationship,
         target_instance=storage_dependency_node_instance,
         source_instance=storage_dependent_node_instance
     )
-    model_storage.relationship_instance.put(relationship_instance)
+    model_storage.relationship.put(relationship_instance)
 
     return deployment.id

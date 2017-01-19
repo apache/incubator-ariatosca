@@ -23,7 +23,7 @@ from aria.orchestrator import (
     workflow,
     operation,
 )
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator.workflows import (
     api,
     exceptions,
@@ -60,13 +60,14 @@ class BaseTest(object):
             max_attempts=None,
             retry_interval=None,
             ignore_failure=None):
-        node_instance = \
-            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-        node_instance.node.operations['aria.interfaces.lifecycle.create'] = {
-            'operation': '{name}.{func.__name__}'.format(name=__name__, func=func)
-        }
-        return api.task.OperationTask.node_instance(
-            instance=node_instance,
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node.interfaces = [mock.models.get_interface(
+            'aria.interfaces.lifecycle.create',
+            operation_kwargs=dict(implementation='{name}.{func.__name__}'.format(name=__name__,
+                                                                                 func=func))
+        )]
+        return api.task.OperationTask.node(
+            instance=node,
             name='aria.interfaces.lifecycle.create',
             inputs=inputs,
             max_attempts=max_attempts,
@@ -219,8 +220,12 @@ class TestCancel(BaseTest):
 
         @workflow
         def mock_workflow(ctx, graph):
-            return graph.sequence(*(self._op(mock_sleep_task, ctx, inputs={'seconds': 0.1})
-                                    for _ in range(number_of_tasks)))
+            operations = (
+                self._op(mock_sleep_task, ctx, inputs=dict(seconds=0.1))
+                for _ in range(number_of_tasks)
+            )
+            return graph.sequence(*operations)
+
         eng = self._engine(workflow_func=mock_workflow,
                            workflow_context=workflow_context,
                            executor=executor)

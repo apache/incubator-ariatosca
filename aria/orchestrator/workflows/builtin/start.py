@@ -17,12 +17,12 @@
 Builtin start workflow
 """
 
-from .workflows import start_node_instance
+from .workflows import start_node
 from ..api.task import WorkflowTask
 from ... import workflow
 
 
 @workflow
 def start(ctx, graph):
-    for node_instance in ctx.model.node_instance.iter():
-        graph.add_tasks(WorkflowTask(start_node_instance, node_instance=node_instance))
+    for node in ctx.model.node.iter():
+        graph.add_tasks(WorkflowTask(start_node, node=node))

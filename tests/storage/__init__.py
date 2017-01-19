@@ -14,8 +14,8 @@
 # limitations under the License.
 import os
 import platform
-from tempfile import mkdtemp
 from shutil import rmtree
+from tempfile import mkdtemp
 
 from sqlalchemy import (
     create_engine,
@@ -29,13 +29,14 @@ from sqlalchemy import (
 
 from aria.storage import (
     model,
-    structure,
     type as aria_type,
+    structure,
+    modeling
 )
 
 
-class MockModel(model.DeclarativeBase, structure.ModelMixin): #pylint: disable=abstract-method
-    __tablename__ = 'mock_models'
+class MockModel(model.aria_declarative_base, structure.ModelMixin): #pylint: disable=abstract-method
+    __tablename__ = 'mock_model'
     model_dict = Column(aria_type.Dict)
     model_list = Column(aria_type.List)
     value = Column(Integer)
@@ -64,7 +65,7 @@ def release_sqlite_storage(storage):
             session.rollback()
             session.close()
         for engine in set(mapi._engine for mapi in mapis):
-            model.DeclarativeBase.metadata.drop_all(engine)
+            model.aria_declarative_base.metadata.drop_all(engine)
 
 
 def init_inmemory_model_storage():

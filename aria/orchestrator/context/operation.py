@@ -31,7 +31,7 @@ class BaseOperationContext(BaseContext):
                  name,
                  model_storage,
                  resource_storage,
-                 deployment_id,
+                 service_instance_id,
                  task_id,
                  actor_id,
                  **kwargs):
@@ -39,7 +39,7 @@ class BaseOperationContext(BaseContext):
             name=name,
             model_storage=model_storage,
             resource_storage=resource_storage,
-            deployment_id=deployment_id,
+            service_instance_id=service_instance_id,
             **kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
@@ -69,7 +69,7 @@ class BaseOperationContext(BaseContext):
         if not self.task.plugin_name:
             return None
         plugin_workdir = '{0}/plugins/{1}/{2}'.format(self._workdir,
-                                                      self.deployment.id,
+                                                      self.service_instance.id,
                                                       self.task.plugin_name)
         file.makedirs(plugin_workdir)
         return plugin_workdir
@@ -79,7 +79,7 @@ class BaseOperationContext(BaseContext):
         context_cls = self.__class__
         context_dict = {
             'name': self.name,
-            'deployment_id': self._deployment_id,
+            'service_instance_id': self._service_instance_id,
             'task_id': self._task_id,
             'actor_id': self._actor_id,
             'workdir': self._workdir,
@@ -106,20 +106,20 @@ class NodeOperationContext(BaseOperationContext):
     Context for node based operations.
     """
     @property
-    def node(self):
+    def node_template(self):
         """
         the node of the current operation
         :return:
         """
-        return self.node_instance.node
+        return self.node.node_template
 
     @property
-    def node_instance(self):
+    def node(self):
         """
         The node instance of the current operation
         :return:
         """
-        return self.model.node_instance.get(self._actor_id)
+        return self.model.node.get(self._actor_id)
 
 
 class RelationshipOperationContext(BaseOperationContext):
@@ -127,50 +127,41 @@ class RelationshipOperationContext(BaseOperationContext):
     Context for relationship based operations.
     """
     @property
-    def source_node(self):
+    def source_node_template(self):
         """
         The source node
+        :return:
+        """
+        return self.source_node.node_template
+
+    @property
+    def source_node(self):
+        """
+        The source node instance
         :return:
         """
         return self.relationship.source_node
 
     @property
-    def source_node_instance(self):
+    def target_node_template(self):
         """
-        The source node instance
+        The target node
         :return:
         """
-        return self.relationship_instance.source_node_instance
+        return self.target_node.node_template
 
     @property
     def target_node(self):
         """
-        The target node
+        The target node instance
         :return:
         """
         return self.relationship.target_node
 
     @property
-    def target_node_instance(self):
-        """
-        The target node instance
-        :return:
-        """
-        return self.relationship_instance.target_node_instance
-
-    @property
     def relationship(self):
-        """
-        The relationship of the current operation
-        :return:
-        """
-
-        return self.relationship_instance.relationship
-
-    @property
-    def relationship_instance(self):
         """
         The relationship instance of the current operation
         :return:
         """
-        return self.model.relationship_instance.get(self._actor_id)
+        return self.model.relationship.get(self._actor_id)

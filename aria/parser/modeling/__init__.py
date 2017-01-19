@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .exceptions import CannotEvaluateFunctionException
 from .context import IdType, ModelingContext
 from .elements import Element, ModelElement, Function, Parameter, Metadata
 from .instance_elements import (ServiceInstance, Node, Capability, Relationship, Artifact, Group,
@@ -24,10 +23,10 @@ from .model_elements import (ServiceModel, NodeTemplate, RequirementTemplate, Ca
                              GroupPolicyTemplate, GroupPolicyTriggerTemplate, MappingTemplate,
                              SubstitutionTemplate, InterfaceTemplate, OperationTemplate)
 from .types import TypeHierarchy, Type, RelationshipType, PolicyType, PolicyTriggerType
-from .storage import initialize_storage
+from .exceptions import CannotEvaluateFunctionException
+
 
 __all__ = (
-    'CannotEvaluateFunctionException',
     'IdType',
     'ModelingContext',
     'Element',
@@ -67,4 +66,5 @@ __all__ = (
     'RelationshipType',
     'PolicyType',
     'PolicyTriggerType',
-    'initialize_storage')
+    'CannotEvaluateFunctionException',
+)

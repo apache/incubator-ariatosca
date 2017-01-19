@@ -124,10 +124,10 @@ class TestWithActualSSHServer(object):
 
     def test_run_script_download_resource_and_render(self, tmpdir):
         resource = tmpdir.join('resource')
-        resource.write('{{ctx.deployment.name}}')
+        resource.write('{{ctx.service_instance.name}}')
         self._upload(str(resource), 'test_resource')
         props = self._execute()
-        assert props['test_value'] == self._workflow_context.deployment.name
+        assert props['test_value'] == self._workflow_context.service_instance.name
 
     @pytest.mark.parametrize('value', ['string-value', [1, 2, 3], {'key': 'value'}])
     def test_run_script_inputs_as_env_variables_no_override(self, value):
@@ -217,12 +217,13 @@ class TestWithActualSSHServer(object):
         @workflow
         def mock_workflow(ctx, graph):
             op = 'test.op'
-            node_instance = ctx.model.node_instance.get_by_name(
-                mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-            node_instance.node.operations[op] = {
-                'operation': '{0}.{1}'.format(operations.__name__, operation.__name__)}
-            graph.sequence(*[api.task.OperationTask.node_instance(
-                instance=node_instance,
+            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+            node.interfaces = [mock.models.get_interface(
+                op,
+                dict(implementation='{0}.{1}'.format(operations.__name__, operation.__name__))
+            )]
+            graph.sequence(*[api.task.OperationTask.node(
+                instance=node,
                 name=op,
                 inputs={
                     'script_path': script_path,
@@ -241,7 +242,7 @@ class TestWithActualSSHServer(object):
             workflow_context=self._workflow_context,
             tasks_graph=tasks_graph)
         eng.execute()
-        return self._workflow_context.model.node_instance.get_by_name(
+        return self._workflow_context.model.node.get_by_name(
             mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties
 
     def _execute_and_get_task_exception(self, *args, **kwargs):
@@ -253,7 +254,7 @@ class TestWithActualSSHServer(object):
 
     def _upload(self, source, path):
         self._workflow_context.resource.deployment.upload(
-            entry_id=str(self._workflow_context.deployment.id),
+            entry_id=str(self._workflow_context.service_instance.id),
             source=source,
             path=path)
 

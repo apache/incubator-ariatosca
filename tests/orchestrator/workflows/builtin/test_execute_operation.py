@@ -30,8 +30,9 @@ def ctx(tmpdir):
 
 
 def test_execute_operation(ctx):
-    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    node.interfaces = [mock.models.get_interface(mock.operations.NODE_OPERATIONS_INSTALL[0])]
+    ctx.model.node.update(node)
     operation_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
 
     execute_tasks = list(
@@ -43,13 +44,13 @@ def test_execute_operation(ctx):
             allow_kwargs_override=False,
             run_by_dependency_order=False,
             type_names=[],
-            node_ids=[],
-            node_instance_ids=[node_instance.id]
+            node_template_ids=[],
+            node_ids=[node.id]
         ).topological_order()
     )
 
     assert len(execute_tasks) == 1
-    assert execute_tasks[0].name == '{0}.{1}'.format(operation_name, node_instance.id)
+    assert execute_tasks[0].name == '{0}.{1}'.format(operation_name, node.id)
 
 
 

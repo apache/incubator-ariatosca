@@ -17,18 +17,16 @@
 Builtin install workflow
 """
 
-from .workflows import install_node_instance
-from .utils import create_node_instance_task_dependencies
+from .workflows import install_node
+from .utils import create_node_task_dependencies
 from ..api.task import WorkflowTask
 from ... import workflow
 
 
 @workflow
 def install(ctx, graph):
-    tasks_and_node_instances = []
-    for node_instance in ctx.model.node_instance.iter():
-        tasks_and_node_instances.append((
-            WorkflowTask(install_node_instance, node_instance=node_instance),
-            node_instance))
-    graph.add_tasks([task for task, _ in tasks_and_node_instances])
-    create_node_instance_task_dependencies(graph, tasks_and_node_instances)
+    tasks_and_nodes = []
+    for node in ctx.nodes:
+        tasks_and_nodes.append((WorkflowTask(install_node, node=node), node))
+    graph.add_tasks([task for task, _ in tasks_and_nodes])
+    create_node_task_dependencies(graph, tasks_and_nodes)

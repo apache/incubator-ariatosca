@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext import mutable
 
-from . import exceptions
+from .. import exceptions
 
 
 class _MutableType(TypeDecorator):
@@ -192,10 +192,12 @@ class _StrictDict(object):
     def __call__(self, key_cls=None, value_cls=None):
         strict_dict_map_key = _StrictDictID(key_cls=key_cls, value_cls=value_cls)
         if strict_dict_map_key not in self._strict_map:
+            key_cls_name = getattr(key_cls, '__name__', str(key_cls))
+            value_cls_name = getattr(value_cls, '__name__', str(value_cls))
             # Creating the type class itself. this class would be returned (used by the sqlalchemy
             # Column).
             strict_dict_cls = type(
-                'StrictDict_{0}_{1}'.format(key_cls.__name__, value_cls.__name__),
+                'StrictDict_{0}_{1}'.format(key_cls_name, value_cls_name),
                 (Dict, ),
                 {}
             )
@@ -203,7 +205,7 @@ class _StrictDict(object):
             # The new class inherits from both the _MutableDict class and the _StrictDictMixin,
             # while setting the necessary _key_cls and _value_cls as class attributes.
             listener_cls = type(
-                'StrictMutableDict_{0}_{1}'.format(key_cls.__name__, value_cls.__name__),
+                'StrictMutableDict_{0}_{1}'.format(key_cls_name, value_cls_name),
                 (_StrictDictMixin, _MutableDict),
                 {'_key_cls': key_cls, '_value_cls': value_cls}
             )
@@ -226,10 +228,11 @@ class _StrictList(object):
     def __call__(self, item_cls=None):
 
         if item_cls not in self._strict_map:
+            item_cls_name = getattr(item_cls, '__name__', str(item_cls))
             # Creating the type class itself. this class would be returned (used by the sqlalchemy
             # Column).
             strict_list_cls = type(
-                'StrictList_{0}'.format(item_cls.__name__),
+                'StrictList_{0}'.format(item_cls_name),
                 (List, ),
                 {}
             )
@@ -237,7 +240,7 @@ class _StrictList(object):
             # The new class inherits from both the _MutableList class and the _StrictListMixin,
             # while setting the necessary _item_cls as class attribute.
             listener_cls = type(
-                'StrictMutableList_{0}'.format(item_cls.__name__),
+                'StrictMutableList_{0}'.format(item_cls_name),
                 (_StrictListMixin, _MutableList),
                 {'_item_cls': item_cls}
             )

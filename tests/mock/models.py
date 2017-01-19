@@ -15,8 +15,7 @@
 
 from datetime import datetime
 
-from aria.storage import model
-
+from aria.storage.modeling import model
 from . import operations
 
 DEPLOYMENT_NAME = 'test_deployment_id'
@@ -35,84 +34,78 @@ RELATIONSHIP_INSTANCE_NAME = 'relationship_instance'
 
 
 def get_dependency_node(deployment):
-    return model.Node(
+    return model.NodeTemplate(
         name=DEPENDENCY_NODE_NAME,
-        type='test_node_type',
+        type_name='test_node_type',
         type_hierarchy=[],
-        number_of_instances=1,
-        planned_number_of_instances=1,
-        deploy_number_of_instances=1,
-        properties={},
-        operations=dict((key, {}) for key in operations.NODE_OPERATIONS),
-        min_number_of_instances=1,
-        max_number_of_instances=1,
-        deployment_fk=deployment.id
+        default_instances=1,
+        min_instances=1,
+        max_instances=1,
+        service_template=deployment.service_template,
     )
 
 
-def get_dependency_node_instance(dependency_node):
-    return model.NodeInstance(
+def get_dependency_node_instance(dependency_node, deployment):
+    return model.Node(
         name=DEPENDENCY_NODE_INSTANCE_NAME,
+        service_instance=deployment,
         runtime_properties={'ip': '1.1.1.1'},
         version=None,
-        node_fk=dependency_node.id,
+        node_template=dependency_node,
         state='',
         scaling_groups=[]
     )
 
 
-def get_relationship(source=None, target=None):
+def get_relationship(target):
+    requirement_template = model.RequirementTemplate(target_node_template_name=target.name)
+    capability_template = model.CapabilityTemplate()
+
+    return requirement_template, capability_template
+
+
+def get_relationship_instance(source_instance, target_instance):
     return model.Relationship(
-        source_node_fk=source.id,
-        target_node_fk=target.id,
-        source_interfaces={},
-        source_operations=dict((key, {}) for key in operations.RELATIONSHIP_OPERATIONS),
-        target_interfaces={},
-        target_operations=dict((key, {}) for key in operations.RELATIONSHIP_OPERATIONS),
-        type='rel_type',
-        type_hierarchy=[],
-        properties={},
+        target_node=target_instance,
+        source_node=source_instance,
     )
 
 
-def get_relationship_instance(source_instance, target_instance, relationship):
-    return model.RelationshipInstance(
-        relationship_fk=relationship.id,
-        target_node_instance_fk=target_instance.id,
-        source_node_instance_fk=source_instance.id,
-    )
+def get_dependent_node(deployment, requirement_template, capability_template):
+    operation_templates = [model.OperationTemplate(implementation=op,
+                                                   service_template=deployment.service_template)
+                           for op in operations.NODE_OPERATIONS]
+    interface_template = model.InterfaceTemplate(operation_templates=operation_templates)
 
-
-def get_dependent_node(deployment):
-    return model.Node(
+    return model.NodeTemplate(
         name=DEPENDENT_NODE_NAME,
-        deployment_fk=deployment.id,
-        type='test_node_type',
+        type_name='test_node_type',
         type_hierarchy=[],
-        number_of_instances=1,
-        planned_number_of_instances=1,
-        deploy_number_of_instances=1,
-        properties={},
-        operations=dict((key, {}) for key in operations.NODE_OPERATIONS),
-        min_number_of_instances=1,
-        max_number_of_instances=1,
+        default_instances=1,
+        min_instances=1,
+        max_instances=1,
+        service_template=deployment.service_template,
+        interface_templates=[interface_template],
+        requirement_templates=[requirement_template],
+        capability_templates=[capability_template],
     )
 
 
-def get_dependent_node_instance(dependent_node):
-    return model.NodeInstance(
+def get_dependent_node_instance(dependent_node, deployment):
+    return model.Node(
         name=DEPENDENT_NODE_INSTANCE_NAME,
+        service_instance=deployment,
         runtime_properties={},
         version=None,
-        node_fk=dependent_node.id,
+        node_template=dependent_node,
         state='',
-        scaling_groups=[]
+        scaling_groups=[],
     )
 
 
 def get_blueprint():
     now = datetime.now()
-    return model.Blueprint(
+    return model.ServiceTemplate(
         plan={},
         name=BLUEPRINT_NAME,
         description=None,
@@ -124,7 +117,7 @@ def get_blueprint():
 
 def get_execution(deployment):
     return model.Execution(
-        deployment_fk=deployment.id,
+        service_instance=deployment,
         status=model.Execution.STARTED,
         workflow_name=WORKFLOW_NAME,
         started_at=datetime.utcnow(),
@@ -134,19 +127,16 @@ def get_execution(deployment):
 
 def get_deployment(blueprint):
     now = datetime.utcnow()
-    return model.Deployment(
+    return model.ServiceInstance(
         name=DEPLOYMENT_NAME,
-        blueprint_fk=blueprint.id,
+        service_template=blueprint,
         description='',
         created_at=now,
         updated_at=now,
         workflows={},
-        inputs={},
-        groups={},
         permalink='',
         policy_triggers={},
         policy_types={},
-        outputs={},
         scaling_groups={},
     )
 
@@ -165,3 +155,28 @@ def get_plugin(package_name='package', package_version='0.1'):
         uploaded_at=datetime.now(),
         wheels=[],
     )
+
+
+def get_interface_template(operation_name, operation_kwargs=None, interface_kwargs=None):
+    operation_template = model.OperationTemplate(
+        name=operation_name,
+        **(operation_kwargs or {})
+
+    )
+    return model.InterfaceTemplate(
+        operation_templates=[operation_template],
+        name=operation_name.rsplit('.', 1)[0],
+        **(interface_kwargs or {})
+    )
+
+
+def get_interface(operation_name,
+                  operation_kwargs=None,
+                  interface_kwargs=None,
+                  edge=None):
+    operation = model.Operation(name=operation_name, **(operation_kwargs or {}))
+    interface_name = operation_name.rsplit('.', 1)[0]
+    return model.Interface(operations=[operation],
+                           name=interface_name,
+                           edge=edge,
+                           **(interface_kwargs or {}))

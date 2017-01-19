@@ -29,9 +29,11 @@ class TestWorkflowContext(object):
     def test_execution_creation_on_workflow_context_creation(self, storage):
         ctx = self._create_ctx(storage)
         execution = storage.execution.get(ctx.execution.id)             # pylint: disable=no-member
-        assert execution.deployment == storage.deployment.get_by_name(models.DEPLOYMENT_NAME)
+        assert execution.service_instance == storage.service_instance.get_by_name(
+            models.DEPLOYMENT_NAME)
         assert execution.workflow_name == models.WORKFLOW_NAME
-        assert execution.blueprint == storage.blueprint.get_by_name(models.BLUEPRINT_NAME)
+        assert execution.service_template == storage.service_template.get_by_name(
+            models.BLUEPRINT_NAME)
         assert execution.status == storage.execution.model_cls.PENDING
         assert execution.parameters == {}
         assert execution.created_at <= datetime.utcnow()
@@ -51,7 +53,7 @@ class TestWorkflowContext(object):
             name='simple_context',
             model_storage=storage,
             resource_storage=None,
-            deployment_id=storage.deployment.get_by_name(models.DEPLOYMENT_NAME).id,
+            service_instance_id=storage.service_instance.get_by_name(models.DEPLOYMENT_NAME).id,
             workflow_name=models.WORKFLOW_NAME,
             task_max_attempts=models.TASK_MAX_ATTEMPTS,
             task_retry_interval=models.TASK_RETRY_INTERVAL
@@ -62,8 +64,8 @@ class TestWorkflowContext(object):
 def storage():
     workflow_storage = application_model_storage(
         sql_mapi.SQLAlchemyModelAPI, initiator=test_storage.init_inmemory_model_storage)
-    workflow_storage.blueprint.put(models.get_blueprint())
-    blueprint = workflow_storage.blueprint.get_by_name(models.BLUEPRINT_NAME)
-    workflow_storage.deployment.put(models.get_deployment(blueprint))
+    workflow_storage.service_template.put(models.get_blueprint())
+    blueprint = workflow_storage.service_template.get_by_name(models.BLUEPRINT_NAME)
+    workflow_storage.service_instance.put(models.get_deployment(blueprint))
     yield workflow_storage
     test_storage.release_sqlite_storage(workflow_storage)

@@ -17,9 +17,9 @@ import pytest
 
 from aria.storage import (
     ModelStorage,
-    model,
     exceptions,
     sql_mapi,
+    modeling,
 )
 from aria import application_model_storage
 from ..storage import release_sqlite_storage, init_inmemory_model_storage
@@ -38,7 +38,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    model.DeclarativeBase.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.model.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
 
 
 def test_storage_base(storage):
@@ -63,14 +63,41 @@ def test_model_storage(storage):
 def test_application_storage_factory():
     storage = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
                                         initiator=init_inmemory_model_storage)
+
+    assert storage.parameter
+    assert storage.mapping_template
+    assert storage.substitution_template
+    assert storage.service_template
+    assert storage.node_template
+    assert storage.group_template
+    assert storage.interface_template
+    assert storage.operation_template
+    assert storage.artifact_template
+    assert storage.policy_template
+    assert storage.group_policy_template
+    assert storage.group_policy_trigger_template
+    assert storage.requirement_template
+    assert storage.capability_template
+
+    assert storage.mapping
+    assert storage.substitution
+    assert storage.service_instance
     assert storage.node
-    assert storage.node_instance
-    assert storage.plugin
-    assert storage.blueprint
-    assert storage.deployment
-    assert storage.deployment_update
-    assert storage.deployment_update_step
-    assert storage.deployment_modification
+    assert storage.group
+    assert storage.interface
+    assert storage.operation
+    assert storage.capability
+    assert storage.artifact
+    assert storage.policy
+    assert storage.group_policy
+    assert storage.group_policy_trigger
+    assert storage.relationship
+
     assert storage.execution
+    assert storage.service_instance_update
+    assert storage.service_instance_update_step
+    assert storage.service_instance_modification
+    assert storage.plugin
+    assert storage.task
 
     release_sqlite_storage(storage)

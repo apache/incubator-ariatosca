@@ -33,7 +33,7 @@ class NodeToolBelt(object):
         :return:
         """
         assert isinstance(self._op_context, operation.NodeOperationContext)
-        host = self._op_context.node_instance.host
+        host = self._op_context.node.host
         return host.runtime_properties.get('ip')
 
 

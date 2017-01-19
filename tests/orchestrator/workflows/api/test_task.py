@@ -16,10 +16,9 @@
 
 import pytest
 
-from aria.storage import model
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
-
+from aria.storage.modeling import model
 from tests import mock, storage
 
 
@@ -31,7 +30,7 @@ def ctx(tmpdir):
     :return:
     """
     simple_context = mock.context.simple(str(tmpdir), inmemory=False)
-    simple_context.model.execution.put(mock.models.get_execution(simple_context.deployment))
+    simple_context.model.execution.put(mock.models.get_execution(simple_context.service_instance))
     yield simple_context
     storage.release_sqlite_storage(simple_context.model)
 
@@ -40,32 +39,33 @@ class TestOperationTask(object):
 
     def test_node_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.lifecycle.create'
-        op_details = {'operation': True, 'plugin': 'plugin'}
-        node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
-        node.operations[operation_name] = op_details
+        interface = mock.models.get_interface(
+            operation_name,
+            operation_kwargs=dict(plugin='plugin', implementation='op_path'))
+
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
+        node.interfaces = [interface]
         node.plugins = [{'name': 'plugin',
                          'package_name': 'package',
                          'package_version': '0.1'}]
-        ctx.model.node.update(node)
-        node_instance = \
-            ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
-        inputs = {'inputs': True}
+        ctx.model.node_template.update(node)
+        inputs = {'name': True}
         max_attempts = 10
         retry_interval = 10
         ignore_failure = True
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.node_instance(
+            api_task = api.task.OperationTask.node(
                 name=operation_name,
-                instance=node_instance,
+                instance=node,
                 inputs=inputs,
                 max_attempts=max_attempts,
                 retry_interval=retry_interval,
                 ignore_failure=ignore_failure)
 
-        assert api_task.name == '{0}.{1}'.format(operation_name, node_instance.id)
-        assert api_task.operation_mapping is True
-        assert api_task.actor == node_instance
+        assert api_task.name == '{0}.{1}'.format(operation_name, node.id)
+        assert api_task.implementation == 'op_path'
+        assert api_task.actor == node
         assert api_task.inputs == inputs
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
@@ -77,29 +77,34 @@ class TestOperationTask(object):
 
     def test_source_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
-        op_details = {'operation': True, 'plugin': 'plugin'}
+
+        interface = mock.models.get_interface(
+            operation_name,
+            operation_kwargs=dict(implementation='op_path', plugin='plugin'),
+            edge='source'
+        )
+
         relationship = ctx.model.relationship.list()[0]
-        relationship.source_operations[operation_name] = op_details
+        relationship.interfaces = [interface]
         relationship.source_node.plugins = [{'name': 'plugin',
                                              'package_name': 'package',
                                              'package_version': '0.1'}]
-        relationship_instance = ctx.model.relationship_instance.list()[0]
-        inputs = {'inputs': True}
+        inputs = {'name': True}
         max_attempts = 10
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.relationship_instance(
+            api_task = api.task.OperationTask.relationship(
                 name=operation_name,
-                instance=relationship_instance,
-                operation_end=api.task.OperationTask.SOURCE_OPERATION,
+                instance=relationship,
+                edge='source',
                 inputs=inputs,
                 max_attempts=max_attempts,
                 retry_interval=retry_interval)
 
-        assert api_task.name == '{0}.{1}'.format(operation_name, relationship_instance.id)
-        assert api_task.operation_mapping is True
-        assert api_task.actor == relationship_instance
+        assert api_task.name == '{0}.{1}'.format(operation_name, relationship.id)
+        assert api_task.implementation == 'op_path'
+        assert api_task.actor == relationship
         assert api_task.inputs == inputs
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
@@ -110,29 +115,33 @@ class TestOperationTask(object):
 
     def test_target_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
-        op_details = {'operation': True, 'plugin': 'plugin'}
+        interface = mock.models.get_interface(
+            operation_name,
+            operation_kwargs=dict(implementation='op_path', plugin='plugin'),
+            edge='target'
+        )
+
         relationship = ctx.model.relationship.list()[0]
-        relationship.target_operations[operation_name] = op_details
+        relationship.interfaces = [interface]
         relationship.target_node.plugins = [{'name': 'plugin',
                                              'package_name': 'package',
                                              'package_version': '0.1'}]
-        relationship_instance = ctx.model.relationship_instance.list()[0]
-        inputs = {'inputs': True}
+        inputs = {'name': True}
         max_attempts = 10
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.relationship_instance(
+            api_task = api.task.OperationTask.relationship(
                 name=operation_name,
-                instance=relationship_instance,
-                operation_end=api.task.OperationTask.TARGET_OPERATION,
+                instance=relationship,
+                edge='target',
                 inputs=inputs,
                 max_attempts=max_attempts,
                 retry_interval=retry_interval)
 
-        assert api_task.name == '{0}.{1}'.format(operation_name, relationship_instance.id)
-        assert api_task.operation_mapping is True
-        assert api_task.actor == relationship_instance
+        assert api_task.name == '{0}.{1}'.format(operation_name, relationship.id)
+        assert api_task.implementation == 'op_path'
+        assert api_task.actor == relationship
         assert api_task.inputs == inputs
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
@@ -142,12 +151,12 @@ class TestOperationTask(object):
         assert api_task.runs_on == model.Task.RUNS_ON_TARGET
 
     def test_operation_task_default_values(self, ctx):
-        dependency_node_instance = ctx.model.node_instance.get_by_name(
+        dependency_node_instance = ctx.model.node.get_by_name(
             mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
         with context.workflow.current.push(ctx):
             task = api.task.OperationTask(
                 name='stub',
-                operation_mapping='',
+                implementation='',
                 actor=dependency_node_instance)
 
         assert task.inputs == {}

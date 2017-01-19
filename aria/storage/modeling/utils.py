@@ -17,11 +17,8 @@ from random import randrange
 
 from shortuuid import ShortUUID
 
-from ...utils.collections import OrderedDict
 from ...utils.console import puts
-from ..exceptions import InvalidValueError
-from ..presentation import Value
-from .exceptions import CannotEvaluateFunctionException
+
 
 # UUID = ShortUUID() # default alphabet is base57, which is alphanumeric without visually ambiguous
 # characters; ID length is 22
@@ -49,31 +46,10 @@ def generate_hex_string():
     return '%05x' % randrange(16 ** 5)
 
 
-def coerce_value(context, container, value, report_issues=False):
-    if isinstance(value, Value):
-        value = value.value
-
-    if isinstance(value, list):
-        return [coerce_value(context, container, v, report_issues) for v in value]
-    elif isinstance(value, dict):
-        return OrderedDict((k, coerce_value(context, container, v, report_issues))
-                           for k, v in value.items())
-    elif hasattr(value, '_evaluate'):
-        try:
-            value = value._evaluate(context, container)
-            value = coerce_value(context, container, value, report_issues)
-        except CannotEvaluateFunctionException:
-            pass
-        except InvalidValueError as e:
-            if report_issues:
-                context.validation.report(e.issue)
-    return value
-
-
 def validate_dict_values(context, the_dict):
     if not the_dict:
         return
-    validate_list_values(context, the_dict.values())
+    validate_list_values(context, the_dict.itervalues())
 
 
 def validate_list_values(context, the_list):
@@ -144,3 +120,20 @@ def dump_interfaces(context, interfaces, name='Interfaces'):
     with context.style.indent:
         for interface in interfaces.itervalues():
             interface.dump(context)
+
+
+def pluralize(noun):
+    if noun.endswith('s'):
+        return '{0}es'.format(noun)
+    elif noun.endswith('y'):
+        return '{0}ies'.format(noun[:-1])
+    else:
+        return '{0}s'.format(noun)
+
+
+class classproperty(object):                                                                        # pylint: disable=invalid-name
+    def __init__(self, f):
+        self._func = f
+
+    def __get__(self, instance, owner):
+        return self._func(owner)
