@@ -24,7 +24,7 @@ from functools import (
 )
 
 from aria import logger
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator.context import operation as operation_context
 
 from .. import exceptions
@@ -109,11 +109,11 @@ class OperationTask(BaseTask):
         model_storage = api_task._workflow_context.model
 
         base_task_model = model_storage.task.model_cls
-        if isinstance(api_task.actor, model.NodeInstance):
-            context_class = operation_context.NodeOperationContext
+        if isinstance(api_task.actor, model.Node):
+            context_cls = operation_context.NodeOperationContext
             task_model_cls = base_task_model.as_node_instance
-        elif isinstance(api_task.actor, model.RelationshipInstance):
-            context_class = operation_context.RelationshipOperationContext
+        elif isinstance(api_task.actor, model.Relationship):
+            context_cls = operation_context.RelationshipOperationContext
             task_model_cls = base_task_model.as_relationship_instance
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
@@ -127,7 +127,7 @@ class OperationTask(BaseTask):
         # package_name and package_version
         operation_task = task_model_cls(
             name=api_task.name,
-            operation_mapping=api_task.operation_mapping,
+            implementation=api_task.implementation,
             instance=api_task.actor,
             inputs=api_task.inputs,
             status=base_task_model.PENDING,
@@ -141,13 +141,13 @@ class OperationTask(BaseTask):
         )
         self._workflow_context.model.task.put(operation_task)
 
-        self._ctx = context_class(name=api_task.name,
-                                  model_storage=self._workflow_context.model,
-                                  resource_storage=self._workflow_context.resource,
-                                  deployment_id=self._workflow_context._deployment_id,
-                                  task_id=operation_task.id,
-                                  actor_id=api_task.actor.id,
-                                  workdir=self._workflow_context._workdir)
+        self._ctx = context_cls(name=api_task.name,
+                                model_storage=self._workflow_context.model,
+                                resource_storage=self._workflow_context.resource,
+                                service_instance_id=self._workflow_context._service_instance_id,
+                                task_id=operation_task.id,
+                                actor_id=api_task.actor.id,
+                                workdir=self._workflow_context._workdir)
         self._task_id = operation_task.id
         self._update_fields = None
 

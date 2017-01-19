@@ -19,8 +19,8 @@ Subprocess based executor
 
 # pylint: disable=wrong-import-position
 
-import sys
 import os
+import sys
 
 # As part of the process executor implementation, subprocess are started with this module as their
 # entry point. We thus remove this module's directory from the python path if it happens to be
@@ -47,7 +47,7 @@ from aria.utils import imports
 from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.storage import instrumentation
-from aria.storage import type as storage_type
+from aria.storage.modeling import type as storage_type
 
 _IS_WIN = os.name == 'nt'
 
@@ -190,7 +190,7 @@ class ProcessExecutor(base.BaseExecutor):
     def _create_arguments_dict(self, task):
         return {
             'task_id': task.id,
-            'operation_mapping': task.operation_mapping,
+            'implementation': task.implementation,
             'operation_inputs': task.inputs,
             'port': self._server_port,
             'context': task.context.serialization_dict,
@@ -281,9 +281,9 @@ def _patch_session(ctx, messenger, instrument):
     if not ctx.model:
         return
 
-    # We arbitrarily select the ``node_instance`` mapi to extract the session from it.
+    # We arbitrarily select the ``node`` mapi to extract the session from it.
     # could have been any other mapi just as well
-    session = ctx.model.node_instance._session
+    session = ctx.model.node._session
     original_refresh = session.refresh
 
     def patched_refresh(target):
@@ -317,7 +317,7 @@ def _main():
     messenger = _Messenger(task_id=task_id, port=port)
     messenger.started()
 
-    operation_mapping = arguments['operation_mapping']
+    implementation = arguments['implementation']
     operation_inputs = arguments['operation_inputs']
     context_dict = arguments['context']
 
@@ -329,7 +329,7 @@ def _main():
         try:
             ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
             _patch_session(ctx=ctx, messenger=messenger, instrument=instrument)
-            task_func = imports.load_attribute(operation_mapping)
+            task_func = imports.load_attribute(implementation)
             aria.install_aria_extensions()
             for decorate in process_executor.decorate():
                 task_func = decorate(task_func)

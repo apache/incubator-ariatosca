@@ -38,13 +38,13 @@ def simple(tmpdir, inmemory=False, context_kwargs=None):
         api_kwargs=dict(directory=os.path.join(tmpdir, 'resources'))
     )
 
-    deployment_id = create_simple_topology_two_nodes(model_storage)
+    service_instance_id = create_simple_topology_two_nodes(model_storage)
 
     final_kwargs = dict(
         name='simple_context',
         model_storage=model_storage,
         resource_storage=resource_storage,
-        deployment_id=deployment_id,
+        service_instance_id=service_instance_id,
         workflow_name=models.WORKFLOW_NAME,
         task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL

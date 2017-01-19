@@ -58,92 +58,94 @@ def executor():
 def test_node_operation_task_execution(ctx, executor):
     operation_name = 'aria.interfaces.lifecycle.create'
 
-    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    node.operations[operation_name] = {
-        'operation': op_path(my_operation, module_path=__name__)
-
-    }
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    interface = mock.models.get_interface(
+        operation_name,
+        operation_kwargs=dict(implementation=op_path(my_operation, module_path=__name__))
+    )
+    node.interfaces = [interface]
     ctx.model.node.update(node)
-    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-
     inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.node_instance(
+            api.task.OperationTask.node(
                 name=operation_name,
-                instance=node_instance,
+                instance=node,
                 inputs=inputs
             )
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
 
-    operation_context = global_test_holder[op_name(node_instance, operation_name)]
+    operation_context = global_test_holder[op_name(node, operation_name)]
 
     assert isinstance(operation_context, context.operation.NodeOperationContext)
 
     # Task bases assertions
-    assert operation_context.task.actor == node_instance
-    assert operation_context.task.name == op_name(node_instance, operation_name)
-    assert operation_context.task.operation_mapping == node.operations[operation_name]['operation']
+    assert operation_context.task.actor == node
+    assert operation_context.task.name == op_name(node, operation_name)
+    operations = interface.operations.filter_by(name=operation_name)                                # pylint: disable=no-member
+    assert operations.count() == 1
+    assert operation_context.task.implementation == operations[0].implementation
     assert operation_context.task.inputs == inputs
 
     # Context based attributes (sugaring)
-    assert operation_context.node == node_instance.node
-    assert operation_context.node_instance == node_instance
+    assert operation_context.node_template == node.node_template
+    assert operation_context.node == node
 
 
 def test_relationship_operation_task_execution(ctx, executor):
-    operation_name = 'aria.interfaces.relationship_lifecycle.postconfigure'
+    operation_name = 'aria.interfaces.relationship_lifecycle.post_configure'
     relationship = ctx.model.relationship.list()[0]
-    relationship.source_operations[operation_name] = {
-        'operation': op_path(my_operation, module_path=__name__)
-    }
+
+    interface = mock.models.get_interface(
+        operation_name=operation_name,
+        operation_kwargs=dict(implementation=op_path(my_operation, module_path=__name__)),
+        edge='source'
+    )
+
+    relationship.interfaces = [interface]
     ctx.model.relationship.update(relationship)
-    relationship_instance = ctx.model.relationship_instance.list()[0]
-
-    dependency_node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    dependency_node_instance = \
-        ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    dependent_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
-    dependent_node_instance = \
-        ctx.model.node_instance.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
-
     inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.relationship_instance(
-                instance=relationship_instance,
+            api.task.OperationTask.relationship(
+                instance=relationship,
                 name=operation_name,
-                operation_end=api.task.OperationTask.SOURCE_OPERATION,
-                inputs=inputs
+                inputs=inputs,
+                edge='source'
             )
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
 
-    operation_context = global_test_holder[op_name(relationship_instance, operation_name)]
+    operation_context = global_test_holder[op_name(relationship,
+                                                   operation_name)]
 
     assert isinstance(operation_context, context.operation.RelationshipOperationContext)
 
     # Task bases assertions
-    assert operation_context.task.actor == relationship_instance
-    assert operation_context.task.name == op_name(relationship_instance, operation_name)
-    assert operation_context.task.operation_mapping == \
-           relationship.source_operations[operation_name]['operation']
+    assert operation_context.task.actor == relationship
+    assert operation_context.task.name.startswith(operation_name)
+    operation = interface.operations.filter_by(name=operation_name)                                 # pylint: disable=no-member
+    assert operation_context.task.implementation == operation.all()[0].implementation
     assert operation_context.task.inputs == inputs
 
     # Context based attributes (sugaring)
+    dependency_node_template = ctx.model.node_template.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    dependency_node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    dependent_node_template = ctx.model.node_template.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+    dependent_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
+
+    assert operation_context.target_node_template == dependency_node_template
     assert operation_context.target_node == dependency_node
-    assert operation_context.target_node_instance == dependency_node_instance
     assert operation_context.relationship == relationship
-    assert operation_context.relationship_instance == relationship_instance
+    assert operation_context.source_node_template == dependent_node_template
     assert operation_context.source_node == dependent_node
-    assert operation_context.source_node_instance == dependent_node_instance
 
 
 def test_invalid_task_operation_id(ctx, executor):
@@ -155,39 +157,42 @@ def test_invalid_task_operation_id(ctx, executor):
     :return:
     """
     operation_name = 'aria.interfaces.lifecycle.create'
-    other_node_instance, node_instance = ctx.model.node_instance.list()
-    assert other_node_instance.id == 1
-    assert node_instance.id == 2
+    other_node, node = ctx.model.node.list()
+    assert other_node.id == 1
+    assert node.id == 2
 
-    node = node_instance.node
-    node.operations[operation_name] = {
-        'operation': op_path(get_node_instance_id, module_path=__name__)
-
-    }
+    interface = mock.models.get_interface(
+        operation_name=operation_name,
+        operation_kwargs=dict(implementation=op_path(get_node_instance_id, module_path=__name__))
+    )
+    node.interfaces = [interface]
     ctx.model.node.update(node)
 
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.node_instance(name=operation_name, instance=node_instance)
+            api.task.OperationTask.node(name=operation_name, instance=node)
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
 
-    op_node_instance_id = global_test_holder[op_name(node_instance, operation_name)]
-    assert op_node_instance_id == node_instance.id
-    assert op_node_instance_id != other_node_instance.id
+    op_node_instance_id = global_test_holder[op_name(node, operation_name)]
+    assert op_node_instance_id == node.id
+    assert op_node_instance_id != other_node.id
 
 
 def test_plugin_workdir(ctx, executor, tmpdir):
     op = 'test.op'
     plugin_name = 'mock_plugin'
-    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    node.operations[op] = {'operation': '{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
-                           'plugin': plugin_name}
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    node.interfaces = [mock.models.get_interface(
+        op,
+        operation_kwargs=dict(
+            implementation='{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
+            plugin=plugin_name)
+    )]
     node.plugins = [{'name': plugin_name}]
     ctx.model.node.update(node)
-    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
     filename = 'test_file'
     content = 'file content'
@@ -195,11 +200,13 @@ def test_plugin_workdir(ctx, executor, tmpdir):
 
     @workflow
     def basic_workflow(graph, **_):
-        graph.add_tasks(api.task.OperationTask.node_instance(
-            name=op, instance=node_instance, inputs=inputs))
+        graph.add_tasks(api.task.OperationTask.node(
+            name=op, instance=node, inputs=inputs))
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
-    expected_file = tmpdir.join('workdir', 'plugins', str(ctx.deployment.id), plugin_name, filename)
+    expected_file = tmpdir.join('workdir', 'plugins', str(ctx.service_instance.id),
+                                plugin_name,
+                                filename)
     assert expected_file.read() == content
 
 
@@ -210,7 +217,7 @@ def my_operation(ctx, **_):
 
 @operation
 def get_node_instance_id(ctx, **_):
-    global_test_holder[ctx.name] = ctx.node_instance.id
+    global_test_holder[ctx.name] = ctx.node.id
 
 
 @operation

@@ -18,7 +18,7 @@ Provides the tasks to be entered into the task graph
 """
 from uuid import uuid4
 
-from aria.storage import model
+from aria.storage.modeling import model
 
 from ... import context
 from .. import exceptions
@@ -57,13 +57,13 @@ class OperationTask(BaseTask):
     Represents an operation task in the task_graph
     """
 
-    SOURCE_OPERATION = 'source_operations'
-    TARGET_OPERATION = 'target_operations'
+    SOURCE_OPERATION = 'source'
+    TARGET_OPERATION = 'target'
 
     def __init__(self,
                  name,
                  actor,
-                 operation_mapping,
+                 implementation,
                  max_attempts=None,
                  retry_interval=None,
                  ignore_failure=None,
@@ -76,12 +76,12 @@ class OperationTask(BaseTask):
         :param actor: the operation host on which this operation is registered.
         :param inputs: operation inputs.
         """
-        assert isinstance(actor, (model.NodeInstance,
-                                  model.RelationshipInstance))
+        assert isinstance(actor, (model.Node,
+                                  model.Relationship))
         super(OperationTask, self).__init__()
         self.actor = actor
         self.name = '{name}.{actor.id}'.format(name=name, actor=actor)
-        self.operation_mapping = operation_mapping
+        self.implementation = implementation
         self.inputs = inputs or {}
         self.plugin = plugin or {}
         self.max_attempts = (self.workflow_context._task_max_attempts
@@ -93,70 +93,133 @@ class OperationTask(BaseTask):
         self.runs_on = runs_on
 
     @classmethod
-    def node_instance(cls, instance, name, inputs=None, *args, **kwargs):
+    def _merge_inputs(cls, operation_inputs, additional_inputs=None):
+        final_inputs = dict((p.name, p.as_raw['value']) for p in operation_inputs)
+        final_inputs.update(additional_inputs or {})
+        return final_inputs
+
+    @classmethod
+    def node(cls, instance, name, inputs=None, *args, **kwargs):
         """
         Represents a node based operation
 
         :param instance: the node of which this operation belongs to.
         :param name: the name of the operation.
         """
-        assert isinstance(instance, model.NodeInstance)
-        return cls._instance(instance=instance,
-                             name=name,
-                             operation_details=instance.node.operations[name],
-                             inputs=inputs,
-                             plugins=instance.node.plugins or [],
-                             runs_on=model.Task.RUNS_ON_NODE_INSTANCE,
-                             *args,
-                             **kwargs)
+        assert isinstance(instance, model.Node)
+        interface_name = _get_interface_name(name)
+        interfaces = instance.interfaces.filter_by(name=interface_name)
+        if interfaces.count() > 1:
+            raise exceptions.TaskException(
+                "More than one interface with the same name `{0}` found".format(name)
+            )
+        elif interfaces.count() == 0:
+            raise exceptions.TaskException(
+                "No Interface with the name `{interface_name}` found".format(
+                    interface_name=interface_name)
+            )
+
+        operation_templates = interfaces[0].operations.filter_by(name=name)
+        if operation_templates.count() > 1:
+            raise exceptions.TaskException(
+                "More than one operation with the same name `{0}` were found".format(name)
+            )
+
+        elif operation_templates.count() == 0:
+            raise exceptions.TaskException(
+                "No interface with the name `{operation_name}` found".format(
+                    operation_name=name)
+            )
+
+        return cls._instance(
+            instance=instance,
+            name=name,
+            operation_template=operation_templates[0],
+            plugins=instance.plugins or [],
+            runs_on=model.Task.RUNS_ON_NODE_INSTANCE,
+            inputs=cls._merge_inputs(operation_templates[0].inputs, inputs),
+            *args,
+            **kwargs)
 
     @classmethod
-    def relationship_instance(cls, instance, name, operation_end, inputs=None, *args, **kwargs):
+    def relationship(cls, instance, name, edge, runs_on=None, inputs=None, *args,
+                     **kwargs):
         """
         Represents a relationship based operation
 
         :param instance: the relationship of which this operation belongs to.
         :param name: the name of the operation.
-        :param operation_end: source or target end of the relationship, this corresponds directly
-        with 'source_operations' and 'target_operations'
+        :param edge: the edge of the interface ("source" or "target").
+        :param runs_on: where to run the operation ("source" or "target"); if None defaults to the
+                        interface edge.
         :param inputs any additional inputs to the operation
         """
-        assert isinstance(instance, model.RelationshipInstance)
-        if operation_end not in [cls.TARGET_OPERATION, cls.SOURCE_OPERATION]:
-            raise exceptions.TaskException('The operation end should be {0} or {1}'.format(
-                cls.TARGET_OPERATION, cls.SOURCE_OPERATION
-            ))
-        operation_details = getattr(instance.relationship, operation_end)[name]
-        if operation_end == cls.SOURCE_OPERATION:
-            plugins = instance.relationship.source_node.plugins
-            runs_on = model.Task.RUNS_ON_SOURCE
+        assert isinstance(instance, model.Relationship)
+        interface_name = _get_interface_name(name)
+        interfaces = instance.interfaces.filter_by(name=interface_name, edge=edge)
+        count = interfaces.count()
+        if count > 1:
+            raise exceptions.TaskException(
+                "More than one interface with the same name `{interface_name}` found at `{edge}`"
+                + " edge".format(
+                    interface_name=interface_name, edge=edge)
+            )
+        elif count == 0:
+            raise exceptions.TaskException(
+                "No interface with the name `{interface_name}` found at `{edge}` edge".format(
+                    interface_name=interface_name, edge=edge)
+            )
+
+        operations = interfaces.all()[0].operations.filter_by(name=name)
+        count = operations.count()
+        if count > 1:
+            raise exceptions.TaskException(
+                "More than one operation with the same name `{0}` found".format(name)
+            )
+        elif count == 0:
+            raise exceptions.TaskException(
+                "No operation with the name `{operation_name}` found".format(
+                    operation_name=name)
+            )
+
+        if not runs_on:
+            if edge == cls.SOURCE_OPERATION:
+                runs_on = model.Task.RUNS_ON_SOURCE
+            else:
+                runs_on = model.Task.RUNS_ON_TARGET
+
+        if runs_on == model.Task.RUNS_ON_SOURCE:
+            plugins = instance.source_node.plugins
         else:
-            plugins = instance.relationship.target_node.plugins
-            runs_on = model.Task.RUNS_ON_TARGET
+            plugins = instance.target_node.plugins
+
         return cls._instance(instance=instance,
                              name=name,
-                             operation_details=operation_details,
-                             inputs=inputs,
+                             operation_template=operations[0],
                              plugins=plugins or [],
                              runs_on=runs_on,
+                             inputs=cls._merge_inputs(operations[0].inputs, inputs),
                              *args,
                              **kwargs)
 
     @classmethod
-    def _instance(cls, instance, name, operation_details, inputs, plugins, runs_on, *args,
+    def _instance(cls,
+                  instance,
+                  name,
+                  operation_template,
+                  inputs,
+                  plugins,
+                  runs_on,
+                  *args,
                   **kwargs):
-        operation_mapping = operation_details.get('operation')
-        operation_inputs = operation_details.get('inputs', {})
-        operation_inputs.update(inputs or {})
-        plugin_name = operation_details.get('plugin')
-        matching_plugins = [p for p in plugins if p['name'] == plugin_name]
+        matching_plugins = [p for p in plugins if p['name'] == operation_template.plugin]
         # All matching plugins should have identical package_name/package_version, so it's safe to
         # take the first found.
         plugin = matching_plugins[0] if matching_plugins else {}
         return cls(actor=instance,
                    name=name,
-                   operation_mapping=operation_mapping,
-                   inputs=operation_inputs,
+                   implementation=operation_template.implementation,
+                   inputs=inputs,
                    plugin=plugin,
                    runs_on=runs_on,
                    *args,
@@ -197,3 +260,7 @@ class StubTask(BaseTask):
     Enables creating empty tasks.
     """
     pass
+
+
+def _get_interface_name(operation_name):
+    return operation_name.rsplit('.', 1)[0]

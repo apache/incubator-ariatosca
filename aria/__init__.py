@@ -61,26 +61,47 @@ def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kw
     """
     Initiate model storage
     """
-    models = [
-        storage.model.Plugin,
+    models_to_register = [
+        storage.modeling.model.Parameter,
 
-        storage.model.Blueprint,
-        storage.model.Deployment,
-        storage.model.DeploymentUpdate,
-        storage.model.DeploymentUpdateStep,
-        storage.model.DeploymentModification,
+        storage.modeling.model.MappingTemplate,
+        storage.modeling.model.SubstitutionTemplate,
+        storage.modeling.model.ServiceTemplate,
+        storage.modeling.model.NodeTemplate,
+        storage.modeling.model.GroupTemplate,
+        storage.modeling.model.InterfaceTemplate,
+        storage.modeling.model.OperationTemplate,
+        storage.modeling.model.ArtifactTemplate,
+        storage.modeling.model.PolicyTemplate,
+        storage.modeling.model.GroupPolicyTemplate,
+        storage.modeling.model.GroupPolicyTriggerTemplate,
+        storage.modeling.model.RequirementTemplate,
+        storage.modeling.model.CapabilityTemplate,
 
-        storage.model.Node,
-        storage.model.NodeInstance,
-        storage.model.Relationship,
-        storage.model.RelationshipInstance,
+        storage.modeling.model.Mapping,
+        storage.modeling.model.Substitution,
+        storage.modeling.model.ServiceInstance,
+        storage.modeling.model.Node,
+        storage.modeling.model.Group,
+        storage.modeling.model.Interface,
+        storage.modeling.model.Operation,
+        storage.modeling.model.Capability,
+        storage.modeling.model.Artifact,
+        storage.modeling.model.Policy,
+        storage.modeling.model.GroupPolicy,
+        storage.modeling.model.GroupPolicyTrigger,
+        storage.modeling.model.Relationship,
 
-        storage.model.Execution,
-        storage.model.Task,
+        storage.modeling.model.Execution,
+        storage.modeling.model.ServiceInstanceUpdate,
+        storage.modeling.model.ServiceInstanceUpdateStep,
+        storage.modeling.model.ServiceInstanceModification,
+        storage.modeling.model.Plugin,
+        storage.modeling.model.Task
     ]
     return storage.ModelStorage(api_cls=api,
                                 api_kwargs=api_kwargs,
-                                items=models,
+                                items=models_to_register,
                                 initiator=initiator,
                                 initiator_kwargs=initiator_kwargs or {})
 

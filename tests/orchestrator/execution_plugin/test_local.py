@@ -42,10 +42,10 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties map.key value
+            ctx node runtime-properties map.key value
             ''',
             windows_script='''
-            ctx node-instance runtime-properties map.key value
+            ctx node runtime-properties map.key value
         ''')
         props = self._run(
             executor, workflow_context,
@@ -56,12 +56,12 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties map.key1 $key1
-            ctx node-instance runtime-properties map.key2 $key2
+            ctx node runtime-properties map.key1 $key1
+            ctx node runtime-properties map.key2 $key2
             ''',
             windows_script='''
-            ctx node-instance runtime-properties map.key1 %key1%
-            ctx node-instance runtime-properties map.key2 %key2%
+            ctx node runtime-properties map.key1 %key1%
+            ctx node runtime-properties map.key2 %key2%
         ''')
         props = self._run(
             executor, workflow_context,
@@ -80,10 +80,10 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties map.cwd $PWD
+            ctx node runtime-properties map.cwd $PWD
             ''',
             windows_script='''
-            ctx node-instance runtime-properties map.cwd %CD%
+            ctx node runtime-properties map.cwd %CD%
             ''')
         tmpdir = str(tmpdir)
         props = self._run(
@@ -96,7 +96,7 @@ class TestLocalRunScript(object):
         assert p_map['cwd'] == tmpdir
 
     def test_process_command_prefix(self, executor, workflow_context, tmpdir):
-        use_ctx = 'ctx node-instance runtime-properties map.key value'
+        use_ctx = 'ctx node runtime-properties map.key value'
         python_script = ['import subprocess',
                          'subprocess.Popen("{0}".split(' ')).communicate()[0]'.format(use_ctx)]
         python_script = '\n'.join(python_script)
@@ -120,12 +120,12 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties map.arg1 "$1"
-            ctx node-instance runtime-properties map.arg2 $2
+            ctx node runtime-properties map.arg1 "$1"
+            ctx node runtime-properties map.arg2 $2
             ''',
             windows_script='''
-            ctx node-instance runtime-properties map.arg1 %1
-            ctx node-instance runtime-properties map.arg2 %2
+            ctx node runtime-properties map.arg1 %1
+            ctx node runtime-properties map.arg2 %2
             ''')
         props = self._run(
             executor, workflow_context,
@@ -186,7 +186,7 @@ class TestLocalRunScript(object):
         script = '''
 from aria.orchestrator.execution_plugin import ctx, inputs
 if __name__ == '__main__':
-    ctx.node_instance.runtime_properties['key'] = inputs['key']
+    ctx.node.runtime_properties['key'] = inputs['key']
 '''
         suffix = '.py'
         script_path = self._create_script(
@@ -208,10 +208,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties key "${input_as_env_var}"
+            ctx node runtime-properties key "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node-instance runtime-properties key "%input_as_env_var%"
+            ctx node runtime-properties key "%input_as_env_var%"
         ''')
         props = self._run(
             executor, workflow_context,
@@ -226,10 +226,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties key "${input_as_env_var}"
+            ctx node runtime-properties key "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node-instance runtime-properties key "%input_as_env_var%"
+            ctx node runtime-properties key "%input_as_env_var%"
         ''')
 
         props = self._run(
@@ -248,10 +248,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node-instance runtime-properties nonexistent
+            ctx node runtime-properties nonexistent
             ''',
             windows_script='''
-            ctx node-instance runtime-properties nonexistent
+            ctx node runtime-properties nonexistent
         ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -462,7 +462,7 @@ if __name__ == '__main__':
         script_path = os.path.basename(local_script_path) if local_script_path else None
         if script_path:
             workflow_context.resource.deployment.upload(
-                entry_id=str(workflow_context.deployment.id),
+                entry_id=str(workflow_context.service_instance.id),
                 source=local_script_path,
                 path=script_path)
 
@@ -476,13 +476,18 @@ if __name__ == '__main__':
         @workflow
         def mock_workflow(ctx, graph):
             op = 'test.op'
-            node_instance = ctx.model.node_instance.get_by_name(
-                mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-            node_instance.node.operations[op] = {
-                'operation': '{0}.{1}'.format(operations.__name__,
-                                              operations.run_script_locally.__name__)}
-            graph.add_tasks(api.task.OperationTask.node_instance(
-                instance=node_instance,
+            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+            node.interfaces = [mock.models.get_interface(
+                op,
+                operation_kwargs=dict(implementation='{0}.{1}'.format(
+                    operations.__name__,
+                    operations.run_script_locally.__name__))
+            )]
+            # node.operations[op] = {
+            #     'operation': '{0}.{1}'.format(operations.__name__,
+            #                                   operations.run_script_locally.__name__)}
+            graph.add_tasks(api.task.OperationTask.node(
+                instance=node,
                 name=op,
                 inputs=inputs))
             return graph
@@ -492,7 +497,7 @@ if __name__ == '__main__':
             workflow_context=workflow_context,
             tasks_graph=tasks_graph)
         eng.execute()
-        return workflow_context.model.node_instance.get_by_name(
+        return workflow_context.model.node.get_by_name(
             mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties
 
     @pytest.fixture

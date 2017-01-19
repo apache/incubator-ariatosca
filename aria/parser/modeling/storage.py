@@ -13,167 +13,129 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+This solution is temporary, as we plan to combine aria.parser.modeling and aria.storage.modeling
+into one package (aria.modeling?).
+"""
+
 from datetime import datetime
 from threading import RLock
 
-from ...storage import model
-from ...orchestrator import operation
+from ...storage.modeling import model
+from ...orchestrator.decorators import operation
 from ...utils.console import puts, Colored
 from ...utils.formatting import safe_repr
 
 
-def initialize_storage(context, model_storage, deployment_id):
-    blueprint = create_blueprint(context)
-    model_storage.blueprint.put(blueprint)
+def initialize_storage(context, model_storage, service_instance_id):
+    s_service_template = create_service_template(context)
+    model_storage.service_template.put(s_service_template)
 
-    deployment = create_deployment(context, blueprint, deployment_id)
-    model_storage.deployment.put(deployment)
+    s_service_instance = create_service_instance(context, s_service_template, service_instance_id)
+    model_storage.service_instance.put(s_service_instance)
 
-    # Create nodes and node instances
+    # Create node templates and nodes
     for node_template in context.modeling.model.node_templates.itervalues():
-        node = create_node(context, deployment, node_template)
-        model_storage.node.put(node)
+        s_node_template = create_node_template(s_service_template, node_template)
+        model_storage.node_template.put(s_node_template)
 
-        for a_node in context.modeling.instance.find_nodes(node_template.name):
-            node_instance = create_node_instance(node, a_node)
-            model_storage.node_instance.put(node_instance)
+        for node in context.modeling.instance.find_nodes(node_template.name):
+            s_node = create_node(s_service_instance, s_node_template, node)
+            model_storage.node.put(s_node)
+            create_interfaces(context, model_storage, node.interfaces,
+                              s_node, 'node', None, '_dry_node')
 
-    # Create relationships
-    for node_template in context.modeling.model.node_templates.itervalues():
-        for index, requirement_template in enumerate(node_template.requirement_templates):
-            # We are currently limited only to requirements for specific node templates!
-            if requirement_template.target_node_template_name:
-                source = model_storage.node.get_by_name(node_template.name)
-                target = model_storage.node.get_by_name(
-                    requirement_template.target_node_template_name)
-                relationship = create_relationship(context, source, target,
-                                                   requirement_template.relationship_template)
-                model_storage.relationship.put(relationship)
-
-                for node in context.modeling.instance.find_nodes(node_template.name):
-                    for relationship_model in node.relationships:
-                        if relationship_model.source_requirement_index == index:
-                            source_instance = \
-                                model_storage.node_instance.get_by_name(node.id)
-                            target_instance = \
-                                model_storage.node_instance.get_by_name(
-                                    relationship_model.target_node_id)
-                            relationship_instance = \
-                                create_relationship_instance(relationship, source_instance,
-                                                             target_instance)
-                            model_storage.relationship_instance.put(relationship_instance)
+    # Create relationships between nodes
+    for source_node in context.modeling.instance.nodes.itervalues():
+        for relationship in source_node.relationships:
+            s_source_node = model_storage.node.get_by_name(source_node.id)
+            s_target_node = model_storage.node.get_by_name(relationship.target_node_id)
+            s_relationship = create_relationship(s_source_node, s_target_node)
+            model_storage.relationship.put(s_relationship)
+            # TOSCA always uses the "source" edge
+            create_interfaces(context, model_storage, relationship.source_interfaces,
+                              s_relationship, 'relationship', 'source', '_dry_relationship')
 
 
-def create_blueprint(context):
+def create_service_template(context):
     now = datetime.utcnow()
     main_file_name = unicode(context.presentation.location)
     try:
         name = context.modeling.model.metadata.values.get('template_name')
     except AttributeError:
         name = None
-    return model.Blueprint(
-        plan={},
+    return model.ServiceTemplate(
         name=name or main_file_name,
         description=context.modeling.model.description or '',
         created_at=now,
         updated_at=now,
-        main_file_name=main_file_name)
+        main_file_name=main_file_name,
+        plan={}
+    )
 
 
-def create_deployment(context, blueprint, deployment_id):
+def create_service_instance(context, service_template, service_instance_id):
     now = datetime.utcnow()
-    return model.Deployment(
-        name='%s_%s' % (blueprint.name, deployment_id),
-        blueprint_fk=blueprint.id,
+    return model.ServiceInstance(
+        name='{0}_{1}'.format(service_template.name, service_instance_id),
+        service_template=service_template,
         description=context.modeling.instance.description or '',
         created_at=now,
-        updated_at=now,
-        workflows={},
-        inputs={},
-        groups={},
-        permalink='',
-        policy_triggers={},
-        policy_types={},
-        outputs={},
-        scaling_groups={})
+        updated_at=now)
 
 
-def create_node(context, deployment, node_template):
-    operations = create_operations(context, node_template.interface_templates, '_dry_node')
-    return model.Node(
+def create_node_template(service_template, node_template):
+    return model.NodeTemplate(
         name=node_template.name,
-        type=node_template.type_name,
-        type_hierarchy=[],
-        number_of_instances=node_template.default_instances,
-        planned_number_of_instances=node_template.default_instances,
-        deploy_number_of_instances=node_template.default_instances,
-        properties={},
-        operations=operations,
-        min_number_of_instances=node_template.min_instances,
-        max_number_of_instances=node_template.max_instances or 100,
-        deployment_fk=deployment.id)
+        type_name=node_template.type_name,
+        default_instances=node_template.default_instances,
+        min_instances=node_template.min_instances,
+        max_instances=node_template.max_instances or 100,
+        service_template=service_template)
 
 
-def create_relationship(context, source, target, relationship_template):
-    if relationship_template:
-        source_operations = create_operations(context,
-                                              relationship_template.source_interface_templates,
-                                              '_dry_relationship')
-        target_operations = create_operations(context,
-                                              relationship_template.target_interface_templates,
-                                              '_dry_relationship')
-    else:
-        source_operations = {}
-        target_operations = {}
-    return model.Relationship(
-        source_node_fk=source.id,
-        target_node_fk=target.id,
-        source_interfaces={},
-        source_operations=source_operations,
-        target_interfaces={},
-        target_operations=target_operations,
-        type='rel_type',
-        type_hierarchy=[],
-        properties={})
-
-
-def create_node_instance(node, node_model):
-    return model.NodeInstance(
-        name=node_model.id,
-        runtime_properties={},
-        version=None,
-        node_fk=node.id,
+def create_node(service_instance, node_template, node):
+    return model.Node(
+        name=node.id,
         state='',
-        scaling_groups=[])
+        node_template=node_template,
+        service_instance=service_instance)
 
 
-def create_relationship_instance(relationship, source_instance, target_instance):
-    return model.RelationshipInstance(
-        relationship_fk=relationship.id,
-        source_node_instance_fk=source_instance.id,
-        target_node_instance_fk=target_instance.id)
+def create_relationship(source_node, target_node):
+    return model.Relationship(
+        source_node=source_node,
+        target_node=target_node)
 
 
-def create_operations(context, interfaces, fn_name):
-    operations = {}
-    for interface in interfaces.itervalues():
-        operations[interface.type_name] = {}
-        for oper in interface.operation_templates.itervalues():
-            name = '%s.%s' % (interface.type_name, oper.name)
-            operations[name] = {
-                'operation': '%s.%s' % (__name__, fn_name),
-                'inputs': {
-                    '_plugin': None,
-                    '_implementation': None}}
-            if oper.implementation:
-                plugin, implementation = _parse_implementation(context, oper.implementation)
-                operations[name]['inputs']['_plugin'] = plugin
-                operations[name]['inputs']['_implementation'] = implementation
-
-    return operations
+def create_interfaces(context, model_storage, interfaces, node_or_relationship, type_name, edge,
+                      fn_name):
+    for interface_name, interface in interfaces.iteritems():
+        s_interface = model.Interface(name=interface_name,
+                                      type_name=interface.type_name,
+                                      edge=edge)
+        setattr(s_interface, type_name, node_or_relationship)
+        model_storage.interface.put(s_interface)
+        for operation_name, oper in interface.operations.iteritems():
+            operation_name = '{0}.{1}'.format(interface_name, operation_name)
+            s_operation = model.Operation(name=operation_name,
+                                          implementation='{0}.{1}'.format(__name__, fn_name),
+                                          interface=s_interface)
+            plugin, implementation = _parse_implementation(context, oper.implementation)
+            # TODO: operation's user inputs
+            s_operation.inputs.append(model.Parameter(name='_plugin', # pylint: disable=no-member
+                                                      str_value=str(plugin),
+                                                      type='str'))
+            s_operation.inputs.append(model.Parameter(name='_implementation', # pylint: disable=no-member
+                                                      str_value=str(implementation),
+                                                      type='str'))
+            model_storage.operation.put(s_operation)
 
 
 def _parse_implementation(context, implementation):
+    if not implementation:
+        return '', ''
+
     index = implementation.find('>')
     if index == -1:
         return 'execution', implementation
@@ -204,7 +166,7 @@ _TERMINAL_LOCK = RLock()
 @operation
 def _dry_node(ctx, _plugin, _implementation, **kwargs):
     with _TERMINAL_LOCK:
-        print '> node instance: %s' % Colored.red(ctx.node_instance.name)
+        print '> node instance: %s' % Colored.red(ctx.node.name)
         _dump_implementation(_plugin, _implementation)
 
 
@@ -212,8 +174,8 @@ def _dry_node(ctx, _plugin, _implementation, **kwargs):
 def _dry_relationship(ctx, _plugin, _implementation, **kwargs):
     with _TERMINAL_LOCK:
         puts('> relationship instance: %s -> %s' % (
-            Colored.red(ctx.relationship_instance.source_node_instance.name),
-            Colored.red(ctx.relationship_instance.target_node_instance.name)))
+            Colored.red(ctx.relationship.source_node.name),
+            Colored.red(ctx.relationship.target_node.name)))
         _dump_implementation(_plugin, _implementation)
 
 

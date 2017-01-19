@@ -44,7 +44,7 @@ class ModelAPI(StorageAPI):
         """
         super(ModelAPI, self).__init__(**kwargs)
         self._model_cls = model_cls
-        self._name = name or generate_lower_name(model_cls)
+        self._name = name or model_cls.__modelname__
 
     @property
     def name(self):
@@ -178,6 +178,4 @@ def generate_lower_name(model_cls):
     :return: lower name
     :rtype: basestring
     """
-    return ''.join(
-        character if character.islower() else '_{0}'.format(character.lower())
-        for character in model_cls.__name__)[1:]
+    return getattr(model_cls, '__mapiname__', model_cls.__tablename__)

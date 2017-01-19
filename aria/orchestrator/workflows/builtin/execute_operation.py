@@ -30,8 +30,8 @@ def execute_operation(
         allow_kwargs_override,
         run_by_dependency_order,
         type_names,
+        node_template_ids,
         node_ids,
-        node_instance_ids,
         **kwargs):
     """
     The execute_operation workflow
@@ -43,32 +43,32 @@ def execute_operation(
     :param bool allow_kwargs_override:
     :param bool run_by_dependency_order:
     :param type_names:
+    :param node_template_ids:
     :param node_ids:
-    :param node_instance_ids:
     :param kwargs:
     :return:
     """
     subgraphs = {}
     # filtering node instances
-    filtered_node_instances = list(_filter_node_instances(
+    filtered_nodes = list(_filter_node_instances(
         context=ctx,
+        node_template_ids=node_template_ids,
         node_ids=node_ids,
-        node_instance_ids=node_instance_ids,
         type_names=type_names))
 
     if run_by_dependency_order:
         filtered_node_instances_ids = set(node_instance.id
-                                          for node_instance in filtered_node_instances)
-        for node_instance in ctx.node_instances:
-            if node_instance.id not in filtered_node_instances_ids:
-                subgraphs[node_instance.id] = ctx.task_graph(
-                    name='execute_operation_stub_{0}'.format(node_instance.id))
+                                          for node_instance in filtered_nodes)
+        for node in ctx.node_instances:
+            if node.id not in filtered_node_instances_ids:
+                subgraphs[node.id] = ctx.task_graph(
+                    name='execute_operation_stub_{0}'.format(node.id))
 
     # registering actual tasks to sequences
-    for node_instance in filtered_node_instances:
+    for node in filtered_nodes:
         graph.add_tasks(
             _create_node_instance_task(
-                node_instance=node_instance,
+                nodes=node,
                 operation=operation,
                 operation_kwargs=operation_kwargs,
                 allow_kwargs_override=allow_kwargs_override
@@ -80,37 +80,37 @@ def execute_operation(
 
     # adding tasks dependencies if required
     if run_by_dependency_order:
-        for node_instance in ctx.node_instances:
-            for relationship_instance in node_instance.relationship_instances:
-                graph.add_dependency(source_task=subgraphs[node_instance.id],
-                                     after=[subgraphs[relationship_instance.target_id]])
+        for node in ctx.nodes:
+            for relationship in node.relationships:
+                graph.add_dependency(
+                    source_task=subgraphs[node.id], after=[subgraphs[relationship.target_id]])
 
 
-def _filter_node_instances(context, node_ids=(), node_instance_ids=(), type_names=()):
+def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_names=()):
     def _is_node_by_id(node_id):
-        return not node_ids or node_id in node_ids
+        return not node_template_ids or node_id in node_template_ids
 
     def _is_node_instance_by_id(node_instance_id):
-        return not node_instance_ids or node_instance_id in node_instance_ids
+        return not node_ids or node_instance_id in node_ids
 
     def _is_node_by_type(node_type_hierarchy):
         return not type_names or node_type_hierarchy in type_names
 
-    for node_instance in context.node_instances:
-        if all((_is_node_by_id(node_instance.node.id),
-                _is_node_instance_by_id(node_instance.id),
-                _is_node_by_type(node_instance.node.type_hierarchy))):
-            yield node_instance
+    for node in context.nodes:
+        if all((_is_node_by_id(node.node_template.id),
+                _is_node_instance_by_id(node.id),
+                _is_node_by_type(node.node_template.type_hierarchy))):
+            yield node
 
 
 def _create_node_instance_task(
-        node_instance,
+        nodes,
         operation,
         operation_kwargs,
         allow_kwargs_override):
     """
     A workflow which executes a single operation
-    :param node_instance: the node instance to install
+    :param nodes: the node instance to install
     :param basestring operation: the operation name
     :param dict operation_kwargs:
     :param bool allow_kwargs_override:
@@ -120,7 +120,7 @@ def _create_node_instance_task(
     if allow_kwargs_override is not None:
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
-    return OperationTask.node_instance(
-        instance=node_instance,
+    return OperationTask.node(
+        instance=nodes,
         name=operation,
         inputs=operation_kwargs)

@@ -47,10 +47,10 @@ def test_runner_no_tasks():
 def test_runner_tasks():
     @workflow
     def workflow_fn(ctx, graph):
-        for node_instance in ctx.model.node_instance.iter():
+        for node in ctx.model.node:
             graph.add_tasks(
-                OperationTask.node_instance(instance=node_instance,
-                                            name='tosca.interfaces.node.lifecycle.Standard.create'))
+                OperationTask.node(instance=node,
+                                   name='tosca.interfaces.node.lifecycle.Standard.create'))
 
     _test_runner(workflow_fn)
 
@@ -60,8 +60,7 @@ def test_runner_tasks():
 def _initialize_model_storage_fn(model_storage):
     mock.topology.create_simple_topology_single_node(
         model_storage,
-        1,
-        '%s.%s' % (__name__, mock_create_operation.__name__)
+        '{0}.{1}'.format(__name__, mock_create_operation.__name__)
     )
 
 
@@ -70,5 +69,5 @@ def _test_runner(workflow_fn):
                     workflow_fn=workflow_fn,
                     inputs={},
                     initialize_model_storage_fn=_initialize_model_storage_fn,
-                    deployment_id=1)
+                    service_instance_id=1)
     runner.run()

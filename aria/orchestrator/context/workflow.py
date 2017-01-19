@@ -49,18 +49,16 @@ class WorkflowContext(BaseContext):
 
     def __repr__(self):
         return (
-            '{name}(deployment_id={self._deployment_id}, '
+            '{name}(deployment_id={self._service_instance_id}, '
             'workflow_name={self._workflow_name}'.format(
                 name=self.__class__.__name__, self=self))
 
     def _create_execution(self):
-        execution_cls = self.model.execution.model_cls
         now = datetime.utcnow()
         execution = self.model.execution.model_cls(
-            deployment=self.deployment,
+            service_instance=self.service_instance,
             workflow_name=self._workflow_name,
             created_at=now,
-            status=execution_cls.PENDING,
             parameters=self.parameters,
         )
         self.model.execution.put(execution)
@@ -81,27 +79,27 @@ class WorkflowContext(BaseContext):
         self.model.execution.put(value)
 
     @property
-    def nodes(self):
+    def node_templates(self):
         """
         Iterator over nodes
         """
-        key = 'deployment_{0}'.format(self.model.node.model_cls.name_column_name())
+        key = 'service_instance_{0}'.format(self.model.node_template.model_cls.name_column_name())
 
-        return self.model.node.iter(
+        return self.model.node_template.iter(
             filters={
-                key: getattr(self.deployment, self.deployment.name_column_name())
+                key: getattr(self.service_instance, self.service_instance.name_column_name())
             }
         )
 
     @property
-    def node_instances(self):
+    def nodes(self):
         """
         Iterator over node instances
         """
-        key = 'deployment_{0}'.format(self.model.node_instance.model_cls.name_column_name())
-        return self.model.node_instance.iter(
+        key = 'service_instance_{0}'.format(self.model.node.model_cls.name_column_name())
+        return self.model.node.iter(
             filters={
-                key: getattr(self.deployment, self.deployment.name_column_name())
+                key: getattr(self.service_instance, self.service_instance.name_column_name())
             }
         )
 

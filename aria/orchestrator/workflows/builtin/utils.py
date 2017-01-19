@@ -16,50 +16,49 @@
 from ..api.task import OperationTask
 
 
-def create_node_instance_task(operation_name, node_instance):
+def create_node_task(operation_name, node):
     """
-    Returns a new operation task if the operation exists in the node instance, otherwise returns
-    None.
+    Returns a new operation task if the operation exists in the node, otherwise returns None.
     """
 
-    if operation_name in node_instance.node.operations:
-        return OperationTask.node_instance(instance=node_instance,
-                                           name=operation_name)
+    if _has_operation(node.interfaces, operation_name):
+        return OperationTask.node(instance=node,
+                                  name=operation_name)
     return None
 
 
-def create_relationship_instance_tasks(operation_name, operations_attr, node_instance):
+def create_relationship_tasks(operation_name, runs_on, node):
     """
-    Returns a list of operation tasks for each outbound relationship of the node instance if
-    the operation exists there.
+    Returns a list of operation tasks for each outbound relationship of the node if the operation
+    exists there.
     """
 
     sequence = []
-    for relationship_instance in node_instance.outbound_relationship_instances:
-        if operation_name in getattr(relationship_instance.relationship, operations_attr):
+    for relationship in node.outbound_relationships:
+        if _has_operation(relationship.interfaces, operation_name):
             sequence.append(
-                OperationTask.relationship_instance(instance=relationship_instance,
-                                                    name=operation_name,
-                                                    operation_end=operations_attr))
+                OperationTask.relationship(instance=relationship,
+                                           name=operation_name,
+                                           edge='source',
+                                           runs_on=runs_on))
     return sequence
 
 
-def create_node_instance_task_dependencies(graph, tasks_and_node_instances, reverse=False):
+def create_node_task_dependencies(graph, tasks_and_nodes, reverse=False):
     """
-    Creates dependencies between tasks if there is an outbound relationship between their node
-    instances.
+    Creates dependencies between tasks if there is a relationship (outbound) between their nodes.
     """
 
-    def get_task(node_instance_id):
-        for task, node_instance in tasks_and_node_instances:
-            if node_instance.id == node_instance_id:
+    def get_task(node_id):
+        for task, node in tasks_and_nodes:
+            if node.id == node_id:
                 return task
         return None
 
-    for task, node_instance in tasks_and_node_instances:
+    for task, node in tasks_and_nodes:
         dependencies = []
-        for relationship_instance in node_instance.outbound_relationship_instances:
-            dependency = get_task(relationship_instance.target_node_instance.id)
+        for relationship in node.outbound_relationships:
+            dependency = get_task(relationship.target_node.id)
             if dependency:
                 dependencies.append(dependency)
         if dependencies:
@@ -68,3 +67,10 @@ def create_node_instance_task_dependencies(graph, tasks_and_node_instances, reve
                     graph.add_dependency(dependency, task)
             else:
                 graph.add_dependency(task, dependencies)
+
+
+def _has_operation(interfaces, operation_name):
+    for interface in interfaces:
+        if interface.operations.filter_by(name=operation_name).count() == 1:
+            return True
+    return False

@@ -28,7 +28,7 @@ except ImportError:
     _celery = None
     app = None
 
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
     thread,
@@ -43,7 +43,7 @@ def test_execute(executor):
     expected_value = 'value'
     successful_task = MockTask(mock_successful_task)
     failing_task = MockTask(mock_failing_task)
-    task_with_inputs = MockTask(mock_task_with_input, inputs={'input': expected_value})
+    task_with_inputs = MockTask(mock_task_with_input, inputs=dict(input='value'))
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -105,8 +105,9 @@ class MockTask(object):
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
-        operation = 'tests.orchestrator.workflows.executor.test_executor.{name}'.format(name=name)
-        self.operation_mapping = operation
+        implementation = 'tests.orchestrator.workflows.executor.test_executor.{name}'.format(
+            name=name)
+        self.implementation = implementation
         self.logger = logging.getLogger()
         self.name = name
         self.inputs = inputs or {}

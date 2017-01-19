@@ -40,16 +40,16 @@ def test_serialize_operation_context(context, executor, tmpdir):
     eng.execute()
 
 
-
 @workflow
 def _mock_workflow(ctx, graph):
-    op = 'test.op'
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
     plugin_name = 'mock_plugin'
-    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    node = node_instance.node
-    node.operations[op] = {'operation': _operation_mapping(), 'plugin': plugin_name}
+    node.interfaces = [mock.models.get_interface(
+        'test.op',
+        operation_kwargs=dict(implementation=_operation_mapping(), plugin=plugin_name)
+    )]
     node.plugins = [{'name': plugin_name}]
-    task = api.task.OperationTask.node_instance(instance=node_instance, name=op)
+    task = api.task.OperationTask.node(instance=node, name='test.op')
     graph.add_tasks(task)
     return graph
 
@@ -59,14 +59,14 @@ def _mock_operation(ctx):
     # We test several things in this operation
     # ctx.task, ctx.node, etc... tell us that the model storage was properly re-created
     # a correct ctx.task.operation_mapping tells us we kept the correct task_id
-    assert ctx.task.operation_mapping == _operation_mapping()
+    assert ctx.task.implementation == _operation_mapping()
     # a correct ctx.node.name tells us we kept the correct actor_id
-    assert ctx.node.name == mock.models.DEPENDENCY_NODE_NAME
+    assert ctx.node.name == mock.models.DEPENDENCY_NODE_INSTANCE_NAME
     # a correct ctx.name tells us we kept the correct name
     assert ctx.name is not None
     assert ctx.name == ctx.task.name
     # a correct ctx.deployment.name tells us we kept the correct deployment_id
-    assert ctx.deployment.name == mock.models.DEPLOYMENT_NAME
+    assert ctx.service_instance.name == mock.models.DEPLOYMENT_NAME
     # Here we test that the resource storage was properly re-created
     test_file_content = ctx.resource.blueprint.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
     assert test_file_content == TEST_FILE_CONTENT

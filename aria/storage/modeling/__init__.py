@@ -13,16 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Builtin stop workflow
-"""
+from collections import namedtuple
 
-from .workflows import stop_node
-from ..api.task import WorkflowTask
-from ... import workflow
+from . import (
+    model,
+    instance_elements as _instance_base,
+    orchestrator_elements as _orchestrator_base,
+    template_elements as _template_base,
+)
 
+_ModelBaseCls = namedtuple('ModelBase', 'instance_elements,'
+                                        'orchestrator_elements,'
+                                        'template_elements')
+model_base = _ModelBaseCls(instance_elements=_instance_base,
+                           orchestrator_elements=_orchestrator_base,
+                           template_elements=_template_base)
 
-@workflow
-def stop(ctx, graph):
-    for node in ctx.model.node.iter():
-        graph.add_tasks(WorkflowTask(stop_node, node=node))
+__all__ = (
+    'model',
+    'model_base',
+)

@@ -21,7 +21,7 @@ Builtin heal workflow
 
 from aria import workflow
 
-from .workflows import (install_node_instance, uninstall_node_instance)
+from .workflows import (install_node, uninstall_node)
 from ..api import task
 
 
@@ -35,8 +35,8 @@ def heal(ctx, graph, node_instance_id):
     :param node_instance_id: the id of the node instance to heal
     :return:
     """
-    failing_node = ctx.model.node_instance.get(node_instance_id)
-    host_node = ctx.model.node_instance.get(failing_node.host.id)
+    failing_node = ctx.model.node.get(node_instance_id)
+    host_node = ctx.model.node.get(failing_node.host.id)
     failed_node_instance_subgraph = _get_contained_subgraph(ctx, host_node)
     failed_node_instance_ids = list(n.id for n in failed_node_instance_subgraph)
 
@@ -78,7 +78,7 @@ def heal_uninstall(ctx, graph, failing_node_instances, targeted_node_instances):
 
     # create install sub workflow for every node instance
     for node_instance in failing_node_instances:
-        node_instance_sub_workflow = task.WorkflowTask(uninstall_node_instance,
+        node_instance_sub_workflow = task.WorkflowTask(uninstall_node,
                                                        node_instance=node_instance)
         node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
         graph.add_tasks(node_instance_sub_workflow)
@@ -98,7 +98,7 @@ def heal_uninstall(ctx, graph, failing_node_instances, targeted_node_instances):
         for relationship_instance in reversed(node_instance.outbound_relationship_instances):
 
             target_node_instance = \
-                ctx.model.node_instance.get(relationship_instance.target_node_instance.id)
+                ctx.model.node.get(relationship_instance.target_node_instance.id)
             target_node_instance_subgraph = node_instance_sub_workflows[target_node_instance.id]
             graph.add_dependency(target_node_instance_subgraph, node_instance_sub_workflow)
 
@@ -131,7 +131,7 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
 
     # create install sub workflow for every node instance
     for node_instance in failing_node_instances:
-        node_instance_sub_workflow = task.WorkflowTask(install_node_instance,
+        node_instance_sub_workflow = task.WorkflowTask(install_node,
                                                        node_instance=node_instance)
         node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
         graph.add_tasks(node_instance_sub_workflow)
@@ -151,7 +151,7 @@ def heal_install(ctx, graph, failing_node_instances, targeted_node_instances):
         node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
 
         for relationship_instance in node_instance.outbound_relationship_instances:
-            target_node_instance = ctx.model.node_instance.get(
+            target_node_instance = ctx.model.node.get(
                 relationship_instance.target_node_instance.id)
             target_node_instance_subworkflow = node_instance_sub_workflows[target_node_instance.id]
             graph.add_dependency(node_instance_sub_workflow, target_node_instance_subworkflow)

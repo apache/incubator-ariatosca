@@ -28,30 +28,43 @@ from aria.orchestrator.workflows import (
 
 from tests import mock, storage
 
+OP_NAME = 'tosca.interfaces.node.lifecycle.Standard.create'
+RELATIONSHIP_OP_NAME = 'tosca.interfaces.relationship.Configure.pre_configure'
+
 
 @pytest.fixture
 def ctx(tmpdir):
     context = mock.context.simple(str(tmpdir))
+
+    relationship = context.model.relationship.list()[0]
+    relationship.interfaces = [
+        mock.models.get_interface(RELATIONSHIP_OP_NAME, edge='source'),
+        mock.models.get_interface(RELATIONSHIP_OP_NAME, edge='target')
+    ]
+    context.model.relationship.update(relationship)
+
+    dependent_node = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    dependent_node.interfaces = [mock.models.get_interface(OP_NAME)]
+    context.model.node.update(dependent_node)
+
     yield context
     storage.release_sqlite_storage(context.model)
 
 
 class TestOperationTask(object):
 
-    def _create_node_operation_task(self, ctx, node_instance):
+    def _create_node_operation_task(self, ctx, node):
         with workflow_context.current.push(ctx):
-            api_task = api.task.OperationTask.node_instance(
-                instance=node_instance,
+            api_task = api.task.OperationTask.node(
+                instance=node,
                 name='tosca.interfaces.node.lifecycle.Standard.create')
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
-    def _create_relationship_operation_task(self, ctx, relationship_instance, operation_end):
+    def _create_relationship_operation_task(self, ctx, relationship, operation_name, edge):
         with workflow_context.current.push(ctx):
-            api_task = api.task.OperationTask.relationship_instance(
-                instance=relationship_instance,
-                name='tosca.interfaces.relationship.Configure.pre_configure_source',
-                operation_end=operation_end)
+            api_task = api.task.OperationTask.relationship(
+                instance=relationship, name=operation_name, edge=edge)
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
@@ -60,45 +73,47 @@ class TestOperationTask(object):
         storage_plugin_other = mock.models.get_plugin(package_name='p0', package_version='0.0')
         ctx.model.plugin.put(storage_plugin_other)
         ctx.model.plugin.put(storage_plugin)
-        node_instance = ctx.model.node_instance.get_by_name(
-            mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-        node = node_instance.node
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node_template = node.node_template
         plugin_name = 'plugin1'
-        node.plugins = [{'name': plugin_name,
-                         'package_name': 'p1',
-                         'package_version': '0.1'}]
-        node.operations['tosca.interfaces.node.lifecycle.Standard.create'] = {'plugin': plugin_name}
-        api_task, core_task = self._create_node_operation_task(ctx, node_instance)
+        node_template.plugins = [{'name': 'plugin1',
+                                  'package_name': 'p1',
+                                  'package_version': '0.1'}]
+        node.interfaces = [mock.models.get_interface(
+            'tosca.interfaces.node.lifecycle.Standard.create',
+            operation_kwargs=dict(plugin='plugin1')
+        )]
+        ctx.model.node_template.update(node_template)
+        ctx.model.node.update(node)
+        api_task, core_task = self._create_node_operation_task(ctx, node)
         storage_task = ctx.model.task.get_by_name(core_task.name)
         assert storage_task.plugin_name == plugin_name
         assert storage_task.execution_name == ctx.execution.name
-        assert storage_task.runs_on.id == core_task.context.node_instance.id
+        assert storage_task.runs_on == core_task.context.node
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
-        assert core_task.operation_mapping == api_task.operation_mapping
-        assert core_task.actor == api_task.actor == node_instance
+        assert core_task.implementation == api_task.implementation
+        assert core_task.actor == api_task.actor == node
         assert core_task.inputs == api_task.inputs == storage_task.inputs
         assert core_task.plugin == storage_plugin
 
     def test_source_relationship_operation_task_creation(self, ctx):
-        relationship_instance = ctx.model.relationship_instance.list()[0]
+        relationship = ctx.model.relationship.list()[0]
+        ctx.model.relationship.update(relationship)
         _, core_task = self._create_relationship_operation_task(
-            ctx, relationship_instance,
-            api.task.OperationTask.SOURCE_OPERATION)
-        assert core_task.model_task.runs_on.id == relationship_instance.source_node_instance.id
+            ctx, relationship, RELATIONSHIP_OP_NAME, 'source')
+        assert core_task.model_task.runs_on == relationship.source_node
 
     def test_target_relationship_operation_task_creation(self, ctx):
-        relationship_instance = ctx.model.relationship_instance.list()[0]
+        relationship = ctx.model.relationship.list()[0]
         _, core_task = self._create_relationship_operation_task(
-            ctx, relationship_instance,
-            api.task.OperationTask.TARGET_OPERATION)
-        assert core_task.model_task.runs_on.id == relationship_instance.target_node_instance.id
+            ctx, relationship, RELATIONSHIP_OP_NAME, 'target')
+        assert core_task.model_task.runs_on == relationship.target_node
 
     def test_operation_task_edit_locked_attribute(self, ctx):
-        node_instance = \
-            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
-        _, core_task = self._create_node_operation_task(ctx, node_instance)
+        _, core_task = self._create_node_operation_task(ctx, node)
         now = datetime.utcnow()
         with pytest.raises(exceptions.TaskException):
             core_task.status = core_task.STARTED
@@ -112,10 +127,9 @@ class TestOperationTask(object):
             core_task.due_at = now
 
     def test_operation_task_edit_attributes(self, ctx):
-        node_instance = \
-            ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
 
-        _, core_task = self._create_node_operation_task(ctx, node_instance)
+        _, core_task = self._create_node_operation_task(ctx, node)
         future_time = datetime.utcnow() + timedelta(seconds=3)
 
         with core_task._update():

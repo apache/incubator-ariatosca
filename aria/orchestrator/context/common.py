@@ -31,7 +31,7 @@ class BaseContext(logger.LoggerMixin):
     def __init__(
             self,
             name,
-            deployment_id,
+            service_instance_id,
             model_storage,
             resource_storage,
             workdir=None,
@@ -41,13 +41,13 @@ class BaseContext(logger.LoggerMixin):
         self._id = str(uuid4())
         self._model = model_storage
         self._resource = resource_storage
-        self._deployment_id = deployment_id
+        self._service_instance_id = service_instance_id
         self._workdir = workdir
 
     def __repr__(self):
         return (
             '{name}(name={self.name}, '
-            'deployment_id={self._deployment_id}, '
+            'deployment_id={self._service_instance_id}, '
             .format(name=self.__class__.__name__, self=self))
 
     @property
@@ -67,18 +67,18 @@ class BaseContext(logger.LoggerMixin):
         return self._resource
 
     @property
-    def blueprint(self):
+    def service_template(self):
         """
         The blueprint model
         """
-        return self.deployment.blueprint
+        return self.service_instance.service_template
 
     @property
-    def deployment(self):
+    def service_instance(self):
         """
         The deployment model
         """
-        return self.model.deployment.get(self._deployment_id)
+        return self.model.service_instance.get(self._service_instance_id)
 
     @property
     def name(self):
@@ -101,11 +101,11 @@ class BaseContext(logger.LoggerMixin):
         Download a blueprint resource from the resource storage
         """
         try:
-            self.resource.deployment.download(entry_id=str(self.deployment.id),
+            self.resource.deployment.download(entry_id=str(self.service_instance.id),
                                               destination=destination,
                                               path=path)
         except exceptions.StorageError:
-            self.resource.blueprint.download(entry_id=str(self.blueprint.id),
+            self.resource.blueprint.download(entry_id=str(self.service_template.id),
                                              destination=destination,
                                              path=path)
 
@@ -126,9 +126,9 @@ class BaseContext(logger.LoggerMixin):
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.read(entry_id=str(self.deployment.id), path=path)
+            return self.resource.deployment.read(entry_id=str(self.service_instance.id), path=path)
         except exceptions.StorageError:
-            return self.resource.blueprint.read(entry_id=str(self.blueprint.id), path=path)
+            return self.resource.deployment.read(entry_id=str(self.service_template.id), path=path)
 
     def get_resource_and_render(self, path=None, variables=None):
         """
