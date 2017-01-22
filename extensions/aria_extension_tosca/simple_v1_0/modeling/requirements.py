@@ -159,12 +159,21 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
             relationship_template = relationship_type
             relationship_type = relationship_template._get_type(context)
 
+    definition_relationship_type = None
+    relationship_definition = requirement_definition.relationship # RelationshipDefinition
+    if relationship_definition is not None:
+        definition_relationship_type = relationship_definition._get_type(context)
+
     # If not exists, try at the node type
-    relationship_definition = None
     if relationship_type is None:
-        relationship_definition = requirement_definition.relationship # RelationshipDefinition
-        if relationship_definition is not None:
-            relationship_type = relationship_definition._get_type(context)
+        relationship_type = definition_relationship_type
+    else:
+        # Make sure the type is derived
+        if not definition_relationship_type._is_descendant(context, relationship_type):
+            context.validation.report(
+                'assigned relationship type "%s" is not a descendant of declared relationship type "%s"'
+                % (relationship_type._name, definition_relationship_type._name),
+                locator=container._locator, level=Issue.BETWEEN_TYPES)
 
     if relationship_type is not None:
         raw['relationship'] = OrderedDict()
