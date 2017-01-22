@@ -135,6 +135,7 @@ class OperationTask(BaseTask):
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
             plugin=plugins[0] if plugins else None,
+            plugin_name=plugin.get('name'),
             execution=self._workflow_context.execution,
             runs_on=api_task.runs_on
         )

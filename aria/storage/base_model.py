@@ -662,10 +662,6 @@ class TaskBase(ModelMixin):
         return cls.one_to_many_relationship('plugin_fk')
 
     @declared_attr
-    def plugin_name(cls):
-        return association_proxy('plugin', 'name')
-
-    @declared_attr
     def execution_fk(cls):
         return cls.foreign_key(ExecutionBase, nullable=True)
 
@@ -723,6 +719,7 @@ class TaskBase(ModelMixin):
     # Operation specific fields
     operation_mapping = Column(String)
     inputs = Column(Dict)
+    plugin_name = Column(String)
     _runs_on = Column(Enum(*RUNS_ON, name='runs_on'), name='runs_on')
 
     @property

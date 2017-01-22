@@ -63,12 +63,14 @@ class TestOperationTask(object):
         node_instance = ctx.model.node_instance.get_by_name(
             mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
         node = node_instance.node
-        node.plugins = [{'name': 'plugin1',
+        plugin_name = 'plugin1'
+        node.plugins = [{'name': plugin_name,
                          'package_name': 'p1',
                          'package_version': '0.1'}]
-        node.operations['aria.interfaces.lifecycle.create'] = {'plugin': 'plugin1'}
+        node.operations['aria.interfaces.lifecycle.create'] = {'plugin': plugin_name}
         api_task, core_task = self._create_node_operation_task(ctx, node_instance)
         storage_task = ctx.model.task.get_by_name(core_task.name)
+        assert storage_task.plugin_name == plugin_name
         assert storage_task.execution_name == ctx.execution.name
         assert storage_task.runs_on.id == core_task.context.node_instance.id
         assert core_task.model_task == storage_task
