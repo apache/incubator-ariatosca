@@ -39,6 +39,8 @@ import Queue
 
 import jsonpickle
 
+import aria
+from aria.extension import process_executor
 from aria.utils import imports
 from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
@@ -291,6 +293,9 @@ def _main():
         try:
             ctx = serialization.operation_context_from_dict(context_dict)
             task_func = imports.load_attribute(operation_mapping)
+            aria.install_aria_extensions()
+            for decorate in process_executor.decorate():
+                task_func = decorate(task_func)
             task_func(ctx=ctx, **operation_inputs)
             messenger.succeeded(tracked_changes=instrument.tracked_changes)
         except BaseException as e:

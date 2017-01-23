@@ -118,8 +118,23 @@ class _ParserExtensionRegistration(_ExtensionRegistration):
 parser = _ParserExtensionRegistration()
 
 
+class _ProcessExecutorExtensionRegistration(_ExtensionRegistration):
+    """Process executor extension class decorator"""
+
+    @_registrar
+    def decorate(self):
+        """
+        The operation function executed by the process executor will be decorated with the function
+        returned from decorate().
+        """
+        return []
+
+process_executor = _ProcessExecutorExtensionRegistration()
+
+
 def init():
     """
     Initialize all registrars by calling all registered functions
     """
     parser.init()
+    process_executor.init()

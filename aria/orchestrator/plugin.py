@@ -39,14 +39,17 @@ class PluginManager(object):
         """
         metadata = wagon.show(source)
         cls = self._model.plugin.model_cls
+
+        os_props = metadata['build_server_os_properties']
+
         plugin = cls(
             archive_name=metadata['archive_name'],
             supported_platform=metadata['supported_platform'],
             supported_py_versions=metadata['supported_python_versions'],
             # Remove suffix colon after upgrading wagon to > 0.5.0
-            distribution=metadata['build_server_os_properties']['distribution:'],
-            distribution_release=metadata['build_server_os_properties']['distribution_version'],
-            distribution_version=metadata['build_server_os_properties']['distribution_release'],
+            distribution=os_props.get('distribution:') or os_props.get('distribution'),
+            distribution_release=os_props['distribution_version'],
+            distribution_version=os_props['distribution_release'],
             package_name=metadata['package_name'],
             package_version=metadata['package_version'],
             package_source=metadata['package_source'],
