@@ -1,0 +1,172 @@
+tosca_definitions_version: tosca_simple_profile_for_nfv_1_0
+
+description: >-
+  Ping-Pong VNF example (draft 5).
+  
+  A simple VNF composed of two VDU templates, "ping" and "pong". For simplicity, we are
+  not defining any scalability, so there will always be single instances of each VDU.
+  
+  "Ping" will generate traffic and "pong" will consume and process it. As part of a service chain,
+  the VNF exposes a connection point out of "pong" whereby the result of the processing can be
+  forwarded onward.
+
+metadata:
+  template_name: pingpong
+  template_author: Ping Pong Inc.
+  template_version: '1.0.0'
+
+imports:
+
+  # The versioned types for our suggested extensions to the NFV profile:
+  
+  - vnfsdk-profile-1.0.yaml
+  
+  # Sensible compute profiles are provided with the VNF SDK, but both VNF vendors and operators
+  # can replace these with their own:
+  
+  - compute-profiles.yaml
+
+topology_template:
+
+  # The substition mapping exposes this blueprint as a complete VNF:  
+  
+  substitution_mappings:
+    node_type: tosca.nodes.nfv.VNF
+    requirements:
+      virtual_link: [ egress_route, virtual_link ]
+
+  node_templates:
+  
+    # Our VDUs are logical nodes. In TOSCA they are currently defined separately from the physical
+    # Compute nodes. We relate the logical to the physical via a dependency that can optionally be
+    # configured with compute dependencies:
+  
+    ping_vdu:
+      description: >-
+        The "ping" VDU generates traffic.
+      type: tosca.nodes.nfv.VDU
+      interfaces:
+        Standard:
+          configure: scripts/vdu/ping_configure.sh # included in the CSAR
+      requirements:
+        - dependency:
+            node: ping_host # our Compute node
+            relationship:
+              type: vnfsdk.DependsOn
+              properties:
+                # For the "ping" VDU we are choosing a profile that already includes
+                # various compute dependencies:
+                compute_profile: dpdk
+                # We'll expose two indicators from "ping" that can be used by monitoring tools:
+                indicators:
+                  hits:
+                    type: int
+                    implementation: scripts/vdu/ping_get_hits.sh # included in the CSAR
+                  connectivity:
+                    type: string
+                    implementation: { get_input: ping.connectivity.indicator }
+
+    pong_vdu:
+      description: >-
+        The "pong" VDU consumes traffic.
+      type: tosca.nodes.nfv.VDU
+      interfaces:
+        Standard:
+          configure: scripts/vdu/pong_configure.sh # included in the CSAR
+      requirements:
+        - dependency:
+            node: pong_host # our Compute node
+            relationship:
+              type: vnfsdk.DependsOn
+              properties:
+                # For the "pong" VDU we are specifying our compute dependencies explicitly
+                # (instead of using a ready-made profile):
+                compute_dependencies:
+                  cpu_allocation:
+                    string_map:
+                      cpu_affinity: { get_input: pong.cpu_affinity }
+                      thread_alocation: isolate
+                  container:
+                    boolean: false
+        - dependency: ping_vdu # indicates that "ping" needs to exist for "pong" to function
+
+    # These are the physical Compute nodes:
+
+    ping_host:
+      type: tosca.nodes.Compute
+      artifacts:
+        image:
+          type: tosca.artifacts.Deployment.Image.VM
+          file: images/ping_vdu.qcow2 # included in the CSAR
+      
+    pong_host:
+      type: tosca.nodes.Compute
+      artifacts:
+        image:
+          type: tosca.artifacts.Deployment.Image.VM
+          file: images/pong_vdu.qcow2 # included in the CSAR
+
+    # The E-line for the traffic coming out of "pong": 
+    
+    egress_vlan:
+      description: >-
+        Egress VLAN.
+      type: tosca.nodes.nfv.VL.ELine
+      properties:
+        cidr: 10.2.10.0/24
+        gateway_ip: 10.2.10.1
+        network_type: vlan
+        physical_network: phynet2
+        segmentation_id: '1001'
+        vendor: TheCarrier
+
+    # The exposed connection point of this VNF:
+
+    egress_route:
+      description: >-
+        Egress connection point bound to the "pong" VDU.
+      type: tosca.nodes.nfv.CP
+      properties:
+        type: vPort
+      requirements:
+        - binding: egress_vlan
+        - link: pong_vdu
+        - virtual_binding: egress_vlan
+        - virtual_link: pong_vdu
+    
+  # TOSCA "inputs" are a way for the operator to override values in the blueprint and in the compute
+  # profiles. Note that the VNF vendor gets to decide which values are overridable and exposed:
+  
+  inputs:
+    dpdk.version:
+      description: >-
+        Allows operators to override version in the dpdk compute profile.
+      type: string
+      default: "16.07"
+    ping.connectivity.indicator:
+      description: >-
+        Allows operators to override the connectivity indicator script for the "ping" VDU.
+      default: scripts/vdu/ping_get_connectivity.sh # included in the CSAR
+    pong.cpu_affinity:
+      description: >-
+        Allows operators to override the cpu_affinity dependency for the "pong" VDU.
+      type: string
+      default: dedicated
+
+  # It is optional to assign policies: if they are not assigned, sensible defaults will be chosen
+  # based on existing VDUs and hosts in the blueprint. We are assigning them here explicitly just
+  # for demonstration:
+  
+  policies:
+  
+    allocation:
+      type: vnfsdk.Allocation
+      targets:
+        - ping_vdu
+        - pong_vdu
+  
+    placement:
+      type: vnfsdk.Placement
+      targets:
+        - ping_host
+        - pong_host

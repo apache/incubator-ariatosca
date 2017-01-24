@@ -1,0 +1,201 @@
+#
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+
+imports:
+  - os.yaml
+
+dsl_definitions:
+
+  openstack:
+    uuid_constraints: &OPENSTACK_UUID_CONSTRAINTS
+      - pattern: '^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
+
+node_types:
+
+  openstack.Instance:
+    description: >-
+      OpenStack instance.
+
+      You may assign an image_id or attach an openstack.Image artifact (the artifact
+      will take precedence).
+    
+      You may assign either flavor_id or flavor_name (flavor_id will take precedence).
+      If neither are assigned, flavor_name has a default value.
+    derived_from: tosca.nodes.Compute
+    properties:
+      image_id:
+        description: >-
+          See: https://s3itwiki.uzh.ch/display/clouddoc/Supported+Images
+        type: openstack.UUID
+        default: 5d62e82c-924e-4fa9-b1e4-c133867596f7
+      flavor_id:
+        type: openstack.UUID
+        required: false
+      flavor_name:
+        type: string
+        default: m1.medium
+        required: false
+      availability_zone:
+        description: >-
+          OpenStack availability zone.
+        type: string
+        required: false
+      os_users:
+        type: map
+        entry_schema: os.UserInfo
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        inputs:
+          openstack_credential:
+            description: The OpenStack API credential for all operations.
+            type: openstack.Credential
+        create:
+          implementation:
+            primary: openstack/create_instance.sh
+            dependencies:
+              - openstack/utils/api.sh
+              - utils/os.sh
+    requirements:
+      - local_storage: # @override
+          capability: tosca.capabilities.Attachment
+          node: openstack.Volume
+          relationship: tosca.relationships.AttachesTo
+#          relationship:
+#            type: tosca.relationships.AttachesTo
+#            interfaces:
+#              Standard:
+#                inputs:
+#                  xxx:
+#                    type: string
+#                    default: { concat: [ a, b ] }
+          occurrences: [ 0, UNBOUNDED ]
+
+  openstack.Volume:
+    description: >-
+      OpenStack volume.
+      
+      See: http://developer.openstack.org/api-ref-blockstorage-v2.html
+    derived_from: tosca.nodes.BlockStorage
+    properties:
+      tenant_id:
+        type: openstack.UUID
+        required: false
+      availability_zone:
+        type: string
+        required: false
+      source_volid:
+        type: openstack.UUID
+        required: false
+      description:
+        type: string
+        required: false
+      multiattach:
+        type: boolean
+        default: false
+      #snapshot_id: # @override
+      #  type: openstack.UUID
+      #  required: false
+      name:
+        type: string
+        required: false
+      volume_type:
+        type: string
+        required: false
+      metadata:
+        type: map
+        entry_schema: string
+        required: false
+      source_replica:
+        type: openstack.UUID
+        required: false
+      consistencygroup_id:
+        type: openstack.UUID
+        required: false
+      scheduler_hints:
+        type: map
+        entry_schema: string
+        required: false
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        inputs:
+          openstack_credential:
+            description: The OpenStack API credential for all operations.
+            type: openstack.Credential
+        create:
+          implementation:
+            primary: openstack/create_volume.sh
+            dependencies:
+              - openstack/utils/api.sh
+              - utils/os.sh
+
+group_types:
+
+  openstack.Secured:
+    description: >-
+      OpenStack secured group.
+    derived_from: tosca.groups.Root
+    members:
+      - openstack.Instance
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        inputs:
+          openstack_credential:
+            description: The OpenStack API credential for all operations.
+            type: openstack.Credential
+        create:
+          implementation:
+            primary: openstack/create_secured_group.sh
+            dependencies:
+              - openstack/utils/api.sh
+              - utils/os.sh
+
+policy_types:
+
+  openstack.Scaling:
+    description: >-
+      OpenStack scaling policy.
+    derived_from: tosca.policies.Scaling
+    properties:
+      bandwidth_threshold:
+        type: scalar-unit.size
+        default: 1 GB
+    targets:
+      - openstack.Instance
+      - openstack.Secured
+
+data_types:
+
+  openstack.Credential:
+    derived_from: tosca.datatypes.Credential
+
+  openstack.UUID:
+    description: >-
+      OpenStack UUID (in GUID format).
+    derived_from: string
+    constraints: *OPENSTACK_UUID_CONSTRAINTS
+
+artifact_types:
+
+  openstack.Image:
+    description: >-
+      OpenStack image artifact.
+    derived_from: tosca.artifacts.Deployment.Image.VM
+    file_ext:
+      - img
+      - iso

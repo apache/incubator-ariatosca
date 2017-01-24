@@ -63,7 +63,7 @@ def print_traceback(traceback=None):
             line = linecache.getline(filename, lineno, frame.f_globals)
             if line:
                 with indent(2):
-                    puts(Colored.black(line.strip()))
+                    puts(line.strip())
         traceback = traceback.tb_next
 
 

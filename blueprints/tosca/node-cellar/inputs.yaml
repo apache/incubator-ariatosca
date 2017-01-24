@@ -1,0 +1,3 @@
+openstack_credential:
+    user: username
+    token: password

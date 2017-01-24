@@ -1,0 +1,157 @@
+################################################################
+# Blueprint node types.
+#
+# Specific new types for the Node Cellar application.
+#
+# These types are mapped to scripts that are responsible
+# for the lifecycle operation.
+################################################################
+
+node_types:
+
+  ###########################################################
+  # MongoDB.
+  #
+  # Used as the data backend for the Node Cellar application.
+  #
+  # configurable properties:
+  #   - port
+  ###########################################################
+  
+  nodecellar.nodes.MongoDatabase:
+    derived_from: cloudify.nodes.DBMS
+    properties:
+      port:
+        description: MongoDB port
+        type: integer
+        default: 27017
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/mongo/install-mongo.sh
+        start: scripts/mongo/start-mongo.sh
+        stop: scripts/mongo/stop-mongo.sh
+
+  nodecellar.nodes.MonitoredMongoDatabase:
+    derived_from: nodecellar.nodes.MongoDatabase
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/mongo/install-mongo.sh
+        start: scripts/mongo/start-mongo.sh
+
+        ###########################################################
+        # The MongoDBCollector depends on a python library called
+        # PyMongo. We install this library in the 'configure'
+        # lifecycle hook of this node.
+        ###########################################################
+
+        configure: scripts/mongo/install-pymongo.sh
+        stop: scripts/mongo/stop-mongo.sh
+
+      ###########################################################
+      # Note that this node defines an additional collector
+      # to collect data on the MongoDB.
+      ###########################################################
+
+      cloudify.interfaces.monitoring:
+          start:
+            implementation: diamond.diamond_agent.tasks.add_collectors
+            inputs:
+              collectors_config:
+                default:
+                  MongoDBCollector:
+                    config:
+                      hosts: { concat: [ 'localhost:', { get_property: [ SELF, port ] } ] }
+
+  ###########################################################
+  # Node.js server.
+  #
+  # Used to host the Node Cellar application module.
+  ###########################################################
+
+  nodecellar.nodes.NodeJSServer:
+    derived_from: cloudify.nodes.ApplicationServer
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/nodejs/install-nodejs.sh
+
+
+  ###########################################################
+  # Node Cellar application.
+  #
+  # These are the actual application source files.
+  #
+  # configurable properties:
+  #   - port
+  #   - application url
+  #   - startup script
+  ###########################################################
+
+  nodecellar.nodes.NodecellarApplicationModule:
+    derived_from: cloudify.nodes.ApplicationModule
+    properties:
+      port:
+        description: Web application port
+        type: integer
+        default: 8080
+      application_url:
+        description: >
+          URL to an archive containing the application source.
+          The archive must contain one top level directory.
+        default: https://github.com/cloudify-cosmo/nodecellar/archive/master.tar.gz
+      startup_script:
+        description: >
+          This script will be used to start the Node.js application.
+          The path is relative to the top level single directory inside
+          the archive.
+        type: string
+        default: server.js
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure: scripts/nodecellar/install-nodecellar-app.sh
+        start: scripts/nodecellar/start-nodecellar-app.sh
+        stop: scripts/nodecellar/stop-nodecellar-app.sh
+
+################################################################
+# Blueprint relationships.
+#
+# Specific new relationships for the Node Cellar application.
+#
+# These relationships are mapped to scripts that are responsible
+# for the relationship operation.
+################################################################
+
+relationships:
+
+  ###########################################################
+  # This relationship is responsible for setting the MongoDB
+  # host IP on the source node as a runtime property.
+  #
+  # This will enable the source node to locate the MongoDB
+  # instance.
+  ###########################################################
+
+  node_connected_to_mongo:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        postconfigure:
+          implementation: scripts/mongo/set-mongo-url.sh
+          inputs:
+            mongo_ip_address:
+              description: >
+                The IP MongoDB is deployed on. If empty will be resolved at runtime to MongoDB\'s host IP.
+              default: ''
+
+  ###########################################################
+  # This relationship is responsible for setting the Node.js
+  # location on the source node.
+  #
+  # This will enable the source node to locate Node.js and
+  # use it to install depenencies with npm
+  ###########################################################
+
+  node_contained_in_nodejs:
+    derived_from: cloudify.relationships.contained_in
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: scripts/nodejs/set-nodejs-root.sh

@@ -12,14 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Aria orchestrator
-"""
-from .decorators import workflow, operation, WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
 
-from . import (
-    context,
-    events,
-    workflows,
-    decorators
-)
+"""
+Builtin stop workflow
+"""
+
+from .utils import create_node_tasks
+from ... import workflow
+
+
+@workflow
+def stop(ctx, graph):
+    create_node_tasks(ctx, graph,
+                      'tosca.interfaces.node.lifecycle.Standard.stop',
+                      'tosca.interfaces.relationship.Configure.target_changed',
+                      'tosca.interfaces.relationship.Configure.remove_target')
+
+    create_node_tasks(ctx, graph,
+                      'tosca.interfaces.node.lifecycle.Standard.delete')

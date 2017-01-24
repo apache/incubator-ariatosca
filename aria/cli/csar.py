@@ -19,7 +19,7 @@ import tempfile
 import zipfile
 
 import requests
-from ruamel import yaml
+from ruamel import yaml # @UnresolvedImport
 
 
 META_FILE = 'TOSCA-Metadata/TOSCA.meta'

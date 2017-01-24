@@ -1,0 +1,24 @@
+
+# compute-profiles (draft 5)
+
+topology_template:
+  policies:
+    compute_profiles:
+      type: vnfsdk.Compute
+      properties:
+        profiles:
+  
+          dpdk:
+            description: >-
+              DPDK compute profile.
+            compute_dependencies:
+              dpdk:
+                string: { get_input: dpdk.version }
+              mem_page_size:
+                string: large
+                optional: true
+              sr-iov:
+                boolean: true
+              cpu_allocation:
+                string_map:
+                  cpu_affinity: dedicated

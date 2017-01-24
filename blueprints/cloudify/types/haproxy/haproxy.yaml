@@ -1,0 +1,121 @@
+###########################################################
+# This file containes node type / relationship definitions
+# for installing, configuring and managing an haproxy
+# instance.
+###########################################################
+
+node_types:
+
+  haproxy.nodes.Proxy:
+    derived_from: cloudify.nodes.ApplicationServer
+    properties:
+      frontend_port:
+        description: The port for HAProxy to listen on.
+        type: integer
+        default: 8080
+      statistics_port:
+        description: The port HAProxy will listen on for statistics requests.
+        type: integer
+        default: 9000
+      global_maxconn:
+        description: Max number of connections at a time.
+        type: integer
+        default: 256
+      mode:
+        description: >
+          The protocol that will act as a proxy for.
+        type: string
+        default: http
+      timeout_connect:
+        description: >
+          Set the maximum time to wait for a connection attempt to a
+          server to succeed.
+        type: integer
+        default: 5000
+      timeout_client:
+        description: Set the maximum inactivity time on the client side.
+        type: integer
+        default: 50000
+      timeout_server:
+        description: Set the maximum inactivity time on the server side.
+        type: integer
+        default: 50000
+      default_backend:
+        description: >
+          The group name you choose for your backend targets.
+        default: servers
+      backend_app_port:
+        description: >
+          The port that your application listens on.
+          (This is the port that you will open on your backend application servers.)
+        type: integer
+        default: 8080
+      backend_max_conn:
+        description: >
+          The backend max connectons.
+        default: 32
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: scripts/haproxy/install-ubuntu.sh
+        configure:
+          implementation: scripts/haproxy/haproxy.py
+          inputs:
+            invocation:
+              default:
+                function: configure
+        start:
+          implementation: scripts/haproxy/haproxy.py
+          inputs:
+            invocation:
+              default:
+                function: start
+        stop:
+          implementation: scripts/haproxy/haproxy.py
+          inputs:
+            invocation:
+              default:
+                function: stop
+
+  nodecellar.nodes.MonitoredHAProxy:
+    derived_from: haproxy.nodes.Proxy
+    interfaces:
+
+      ###########################################################
+      # Notice that this node defines an additional collector
+      # to collect data on the haproxy instance.
+      # Also notice that in the URL, port 9000 is used. If you
+      # choose to change this port on the haproxy node template,
+      # this URL should be updated as well.
+      ###########################################################
+
+      cloudify.interfaces.monitoring:
+          start:
+            implementation: diamond.diamond_agent.tasks.add_collectors
+            inputs:
+              collectors_config:
+                default:
+                  HAProxyCollector:
+                    config:
+                      url: http://127.0.0.1:9000/haproxy_stats;csv
+
+relationships:
+  app_connected_to_haproxy:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: scripts/haproxy/haproxy.py
+          inputs:
+            invocation:
+              default:
+                function: add_backend
+                kwargs:
+                  port: { get_property: [ TARGET, backend_app_port ] }
+                  maxconn: { get_property: [ TARGET, backend_max_conn ] }
+                  # backend_address:  (optional, defaults to host_ip)
+        unlink:
+          implementation: scripts/haproxy/haproxy.py
+          inputs:
+            invocation:
+              default:
+                function: remove_backend

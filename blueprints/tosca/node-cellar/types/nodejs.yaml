@@ -1,0 +1,69 @@
+#
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+
+imports:
+  - os.yaml
+
+node_types:
+
+  nodejs.Server:
+    description: >-
+      Node.js server application.
+    derived_from: tosca.nodes.WebServer
+    artifacts:
+      nodejs:
+        description: >-
+          Node.js application package.
+        type: os.Archive
+        file: https://nodejs.org/dist/v4.4.7/node-v4.4.7-linux-x64.tar.xz
+        deploy_path: /opt/nodejs
+    capabilities:
+      data_endpoint: # @override 
+        type: tosca.capabilities.Endpoint
+        properties:
+          port:
+            type: tosca.datatypes.network.PortDef
+            default: 8080
+          url_path:
+            type: string
+            default: /
+      admin_endpoint: # @override
+        type: tosca.capabilities.Endpoint.Admin
+        properties:
+          port:
+            type: tosca.datatypes.network.PortDef
+            default: 8080
+          url_path:
+            type: string
+            default: /admin
+      host: # @override
+        type: tosca.capabilities.Container
+        valid_source_types: [ nodejs.Application ]
+
+  nodejs.Application:
+    derived_from: tosca.nodes.WebApplication
+    capabilities:
+      app_endpoint: # @override
+        type: tosca.capabilities.Endpoint
+        properties:
+          port:
+            type: tosca.datatypes.network.PortDef
+            default: 8080
+    requirements:
+      - host: # @override
+          capability: tosca.capabilities.Container
+          node: nodejs.Server
+          relationship: tosca.relationships.HostedOn

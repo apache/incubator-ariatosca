@@ -26,15 +26,10 @@ import tempfile
 from glob import glob
 from importlib import import_module
 
-from yaml import safe_load, YAMLError
+from ruamel import yaml # @UnresolvedImport
 
 from .. import extension
-from .. import (application_model_storage, application_resource_storage)
 from ..logger import LoggerMixin
-from ..storage import (FileSystemModelDriver, FileSystemResourceDriver)
-from ..orchestrator.context.workflow import WorkflowContext
-from ..orchestrator.workflows.core.engine import Engine
-from ..orchestrator.workflows.executor.process import ProcessExecutor
 from ..parser import iter_specifications
 from ..parser.consumption import (
     ConsumptionContext,
@@ -47,29 +42,27 @@ from ..parser.consumption import (
     Instance
 )
 from ..parser.loading import LiteralLocation, UriLocation
+from ..parser.modeling import initialize_storage
 from ..utils.application import StorageManager
 from ..utils.caching import cachedmethod
 from ..utils.console import (puts, Colored, indent)
 from ..utils.imports import (import_fullname, import_modules)
-from . import csar
+from ..utils.collections import OrderedDict
+from ..orchestrator import WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
+from ..orchestrator.runner import Runner
+from ..orchestrator.workflows.builtin import BUILTIN_WORKFLOWS
+
 from .exceptions import (
     AriaCliFormatInputsError,
     AriaCliYAMLInputsError,
     AriaCliInvalidInputsError
 )
-from .storage import (
-    local_resource_storage,
-    create_local_storage,
-    local_model_storage,
-    create_user_space,
-    user_space,
-    local_storage,
-)
+from . import csar
 
 
 class BaseCommand(LoggerMixin):
     """
-    Base class for CLI commands
+    Base class for CLI commands.
     """
 
     def __repr__(self):
@@ -101,9 +94,9 @@ class BaseCommand(LoggerMixin):
                 try:
                     parsed_dict.update(json.loads(input_string))
                 except BaseException:
-                    parsed_dict.update((input.split('=')
-                                        for input in input_string.split(';')
-                                        if input))
+                    parsed_dict.update((i.split('=')
+                                        for i in input_string.split(';')
+                                        if i))
             except Exception as exc:
                 raise AriaCliFormatInputsError(str(exc), inputs=input_string)
 
@@ -111,8 +104,8 @@ class BaseCommand(LoggerMixin):
             self.logger.info('Processing inputs source: {0}'.format(input_path))
             try:
                 with open(input_path) as input_file:
-                    content = safe_load(input_file)
-            except YAMLError as exc:
+                    content = yaml.safe_load(input_file)
+            except yaml.YAMLError as exc:
                 raise AriaCliYAMLInputsError(
                     '"{0}" is not a valid YAML. {1}'.format(input_path, str(exc)))
             if isinstance(content, dict):
@@ -136,9 +129,153 @@ class BaseCommand(LoggerMixin):
         return parsed_dict
 
 
+class ParseCommand(BaseCommand):
+    """
+    :code:`parse` command.
+    
+    Given a blueprint, emits information in human-readable, JSON, or YAML format from various phases
+    of the ARIA parser.
+    """
+    
+    def __call__(self, args_namespace, unknown_args):
+        super(ParseCommand, self).__call__(args_namespace, unknown_args)
+
+        if args_namespace.prefix:
+            for prefix in args_namespace.prefix:
+                extension.parser.uri_loader_prefix().append(prefix)
+
+        cachedmethod.ENABLED = args_namespace.cached_methods
+
+        context = ParseCommand.create_context_from_namespace(args_namespace)
+        context.args = unknown_args
+
+        consumer = ConsumerChain(context, (Read, Validate))
+
+        consumer_class_name = args_namespace.consumer
+        dumper = None
+        if consumer_class_name == 'validate':
+            dumper = None
+        elif consumer_class_name == 'presentation':
+            dumper = consumer.consumers[0]
+        elif consumer_class_name == 'model':
+            consumer.append(Model)
+        elif consumer_class_name == 'types':
+            consumer.append(Model, Types)
+        elif consumer_class_name == 'instance':
+            consumer.append(Model, Inputs, Instance)
+        else:
+            consumer.append(Model, Inputs, Instance)
+            consumer.append(import_fullname(consumer_class_name))
+
+        if dumper is None:
+            # Default to last consumer
+            dumper = consumer.consumers[-1]
+
+        consumer.consume()
+
+        if not context.validation.dump_issues():
+            dumper.dump()
+            exit(1)
+
+    @staticmethod
+    def create_context_from_namespace(namespace, **kwargs):
+        args = vars(namespace).copy()
+        args.update(kwargs)
+        return ParseCommand.create_context(**args)
+
+    @staticmethod
+    def create_context(uri,
+                       loader_source,
+                       reader_source,
+                       presenter_source,
+                       presenter,
+                       debug,
+                       **kwargs):
+        context = ConsumptionContext()
+        context.loading.loader_source = import_fullname(loader_source)()
+        context.reading.reader_source = import_fullname(reader_source)()
+        context.presentation.location = UriLocation(uri) if isinstance(uri, basestring) else uri
+        context.presentation.presenter_source = import_fullname(presenter_source)()
+        context.presentation.presenter_class = import_fullname(presenter)
+        context.presentation.print_exceptions = debug
+        return context
+
+
+class WorkflowCommand(BaseCommand):
+    """
+    :code:`workflow` command.
+    """
+
+    WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('function', 'implementation', 'dependencies')
+    
+    def __call__(self, args_namespace, unknown_args):
+        super(WorkflowCommand, self).__call__(args_namespace, unknown_args)
+
+        deployment_id = args_namespace.deployment_id or 1 
+        context = self._parse(args_namespace.uri)
+        workflow_fn, inputs = self._get_workflow(context, args_namespace.workflow)
+        self._run(context, args_namespace.workflow, workflow_fn, inputs, deployment_id)
+    
+    def _parse(self, uri):
+        # Parse
+        context = ConsumptionContext()
+        context.presentation.location = UriLocation(uri)
+        consumer = ConsumerChain(context, (Read, Validate, Model, Inputs, Instance))
+        consumer.consume()
+
+        if context.validation.dump_issues():
+            exit(1)
+        
+        return context
+    
+    def _get_workflow(self, context, workflow_name):
+        if workflow_name in BUILTIN_WORKFLOWS:
+            workflow_fn = import_fullname('aria.orchestrator.workflows.builtin.%s' % workflow_name)
+            inputs = {}
+        else:
+            try:
+                policy = context.modeling.instance.policies[workflow_name]
+            except KeyError:
+                raise AttributeError('workflow policy does not exist: "%s"' % workflow_name)
+            if context.modeling.policy_types.get_role(policy.type_name) != 'workflow':
+                raise AttributeError('policy is not a workflow: "%s"' % workflow_name)
+    
+            try:
+                sys.path.append(policy.properties['implementation'].value)
+            except KeyError:
+                pass
+    
+            workflow_fn = import_fullname(policy.properties['function'].value)
+    
+            for k in policy.properties:
+                if k in WORKFLOW_DECORATOR_RESERVED_ARGUMENTS:
+                    raise AttributeError('workflow policy "%s" defines a reserved property: "%s"' %
+                                         (workflow_name, k))
+    
+            inputs = OrderedDict([
+                (k, v.value) for k, v in policy.properties.iteritems()
+                if k not in WorkflowCommand.WORKFLOW_POLICY_INTERNAL_PROPERTIES
+            ])
+        
+        return workflow_fn, inputs
+    
+    def _run(self, context, workflow_name, workflow_fn, inputs, deployment_id):
+        # Storage
+        def _initialize_storage(model_storage):
+            initialize_storage(context, model_storage, deployment_id)
+
+        # Create runner
+        runner = Runner(workflow_name, workflow_fn, inputs, _initialize_storage, deployment_id)
+        
+        # Run
+        runner.run()
+   
+
 class InitCommand(BaseCommand):
     """
-    ``init`` command implementation
+    :code:`init` command.
+    
+    Broken. Currently maintained for reference.
     """
 
     _IN_VIRTUAL_ENV = hasattr(sys, 'real_prefix')
@@ -216,7 +353,9 @@ class InitCommand(BaseCommand):
 
 class ExecuteCommand(BaseCommand):
     """
-    ``execute`` command implementation
+    :code:`execute` command.
+
+    Broken. Currently maintained for reference.
     """
 
     def __call__(self, args_namespace, unknown_args):
@@ -310,98 +449,7 @@ class ExecuteCommand(BaseCommand):
             raise
 
 
-class ParseCommand(BaseCommand):
-    def __call__(self, args_namespace, unknown_args):
-        super(ParseCommand, self).__call__(args_namespace, unknown_args)
-
-        if args_namespace.prefix:
-            for prefix in args_namespace.prefix:
-                extension.parser.uri_loader_prefix().append(prefix)
-
-        cachedmethod.ENABLED = args_namespace.cached_methods
-
-        context = ParseCommand.create_context_from_namespace(args_namespace)
-        context.args = unknown_args
-
-        consumer = ConsumerChain(context, (Read, Validate))
-
-        consumer_class_name = args_namespace.consumer
-        dumper = None
-        if consumer_class_name == 'presentation':
-            dumper = consumer.consumers[0]
-        elif consumer_class_name == 'model':
-            consumer.append(Model)
-        elif consumer_class_name == 'types':
-            consumer.append(Model, Types)
-        elif consumer_class_name == 'instance':
-            consumer.append(Model, Inputs, Instance)
-        else:
-            consumer.append(Model, Inputs, Instance)
-            consumer.append(import_fullname(consumer_class_name))
-
-        if dumper is None:
-            # Default to last consumer
-            dumper = consumer.consumers[-1]
-
-        consumer.consume()
-
-        if not context.validation.dump_issues():
-            dumper.dump()
-
-    @staticmethod
-    def create_context_from_namespace(namespace, **kwargs):
-        args = vars(namespace).copy()
-        args.update(kwargs)
-        return ParseCommand.create_context(**args)
-
-    @staticmethod
-    def create_context(uri,
-                       loader_source,
-                       reader_source,
-                       presenter_source,
-                       presenter,
-                       debug,
-                       **kwargs):
-        context = ConsumptionContext()
-        context.loading.loader_source = import_fullname(loader_source)()
-        context.reading.reader_source = import_fullname(reader_source)()
-        context.presentation.location = UriLocation(uri) if isinstance(uri, basestring) else uri
-        context.presentation.presenter_source = import_fullname(presenter_source)()
-        context.presentation.presenter_class = import_fullname(presenter)
-        context.presentation.print_exceptions = debug
-        return context
-
-
-class SpecCommand(BaseCommand):
-    def __call__(self, args_namespace, unknown_args):
-        super(SpecCommand, self).__call__(args_namespace, unknown_args)
-
-        # Make sure that all @dsl_specification decorators are processed
-        for pkg in extension.parser.specification_package():
-            import_modules(pkg)
-
-        # TODO: scan YAML documents as well
-
-        if args_namespace.csv:
-            writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
-            writer.writerow(('Specification', 'Section', 'Code', 'URL'))
-            for spec, sections in iter_specifications():
-                for section, details in sections:
-                    writer.writerow((spec, section, details['code'], details['url']))
-
-        else:
-            for spec, sections in iter_specifications():
-                puts(Colored.cyan(spec))
-                with indent(2):
-                    for section, details in sections:
-                        puts(Colored.blue(section))
-                        with indent(2):
-                            for k, v in details.iteritems():
-                                puts('%s: %s' % (Colored.magenta(k), v))
-
-
 class BaseCSARCommand(BaseCommand):
-
     @staticmethod
     def _parse_and_dump(reader):
         context = ConsumptionContext()
@@ -439,7 +487,6 @@ class BaseCSARCommand(BaseCommand):
 
 
 class CSARCreateCommand(BaseCSARCommand):
-
     def __call__(self, args_namespace, unknown_args):
         super(CSARCreateCommand, self).__call__(args_namespace, unknown_args)
         csar.write(
@@ -451,7 +498,6 @@ class CSARCreateCommand(BaseCSARCommand):
 
 
 class CSAROpenCommand(BaseCSARCommand):
-
     def __call__(self, args_namespace, unknown_args):
         super(CSAROpenCommand, self).__call__(args_namespace, unknown_args)
         self._read(
@@ -460,7 +506,40 @@ class CSAROpenCommand(BaseCSARCommand):
 
 
 class CSARValidateCommand(BaseCSARCommand):
-
     def __call__(self, args_namespace, unknown_args):
         super(CSARValidateCommand, self).__call__(args_namespace, unknown_args)
         self._validate(args_namespace.source)
+
+
+class SpecCommand(BaseCommand):
+    """
+    :code:`spec` command.
+    
+    Emits all uses of :code:`@dsl_specification` in the codebase, in human-readable or CSV format.
+    """
+    
+    def __call__(self, args_namespace, unknown_args):
+        super(SpecCommand, self).__call__(args_namespace, unknown_args)
+
+        # Make sure that all @dsl_specification decorators are processed
+        for pkg in extension.parser.specification_package():
+            import_modules(pkg)
+
+        # TODO: scan YAML documents as well
+
+        if args_namespace.csv:
+            writer = csv.writer(sys.stdout, quoting=csv.QUOTE_ALL)
+            writer.writerow(('Specification', 'Section', 'Code', 'URL'))
+            for spec, sections in iter_specifications():
+                for section, details in sections:
+                    writer.writerow((spec, section, details['code'], details['url']))
+
+        else:
+            for spec, sections in iter_specifications():
+                puts(Colored.cyan(spec))
+                with indent(2):
+                    for section, details in sections:
+                        puts(Colored.blue(section))
+                        with indent(2):
+                            for k, v in details.iteritems():
+                                puts('%s: %s' % (Colored.magenta(k), v))
