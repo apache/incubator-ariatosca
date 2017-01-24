@@ -29,6 +29,7 @@ script_dir = os.path.dirname(__file__)
 if script_dir in sys.path:
     sys.path.remove(script_dir)
 
+import contextlib
 import io
 import threading
 import socket
@@ -136,37 +137,39 @@ class ProcessExecutor(base.BaseExecutor):
         while not self._stopped:
             try:
                 # Accept messages written to the server socket
-                message = self._recv_message()
-                message_type = message['type']
-                if message_type == 'closed':
-                    break
-                task_id = message['task_id']
-                if message_type == 'started':
-                    self._task_started(self._tasks[task_id])
-                elif message_type == 'succeeded':
-                    task = self._remove_task(task_id)
-                    instrumentation.apply_tracked_changes(
-                        tracked_changes=message['tracked_changes'],
-                        model=task.context.model)
-                    self._task_succeeded(task)
-                elif message_type == 'failed':
-                    task = self._remove_task(task_id)
-                    instrumentation.apply_tracked_changes(
-                        tracked_changes=message['tracked_changes'],
-                        model=task.context.model)
-                    self._task_failed(task, exception=message['exception'])
-                else:
-                    raise RuntimeError('Invalid state')
+                with contextlib.closing(self._server_socket.accept()[0]) as connection:
+                    message = self._recv_message(connection)
+                    message_type = message['type']
+                    if message_type == 'closed':
+                        break
+                    task_id = message['task_id']
+                    if message_type == 'started':
+                        self._task_started(self._tasks[task_id])
+                    elif message_type == 'apply_tracked_changes':
+                        task = self._tasks[task_id]
+                        instrumentation.apply_tracked_changes(
+                            tracked_changes=message['tracked_changes'],
+                            model=task.context.model)
+                    elif message_type == 'succeeded':
+                        task = self._remove_task(task_id)
+                        instrumentation.apply_tracked_changes(
+                            tracked_changes=message['tracked_changes'],
+                            model=task.context.model)
+                        self._task_succeeded(task)
+                    elif message_type == 'failed':
+                        task = self._remove_task(task_id)
+                        instrumentation.apply_tracked_changes(
+                            tracked_changes=message['tracked_changes'],
+                            model=task.context.model)
+                        self._task_failed(task, exception=message['exception'])
+                    else:
+                        raise RuntimeError('Invalid state')
             except BaseException as e:
                 self.logger.debug('Error in process executor listener: {0}'.format(e))
 
-    def _recv_message(self):
-        connection, _ = self._server_socket.accept()
-        try:
-            message_len, = struct.unpack(_INT_FMT, self._recv_bytes(connection, _INT_SIZE))
-            return jsonpickle.loads(self._recv_bytes(connection, message_len))
-        finally:
-            connection.close()
+    def _recv_message(self, connection):
+        message_len, = struct.unpack(_INT_FMT, self._recv_bytes(connection, _INT_SIZE))
+        return jsonpickle.loads(self._recv_bytes(connection, message_len))
 
     @staticmethod
     def _recv_bytes(connection, count):
@@ -247,6 +250,9 @@ class _Messenger(object):
         """Task failed message"""
         self._send_message(type='failed', tracked_changes=tracked_changes, exception=exception)
 
+    def apply_tracked_changes(self, tracked_changes):
+        self._send_message(type='apply_tracked_changes', tracked_changes=tracked_changes)
+
     def closed(self):
         """Executor closed message"""
         self._send_message(type='closed')
@@ -263,8 +269,38 @@ class _Messenger(object):
             })
             sock.send(struct.pack(_INT_FMT, len(data)))
             sock.sendall(data)
+            # send message will block until the server side closes the connection socket
+            # because we want it to be synchronous
+            sock.recv(1)
         finally:
             sock.close()
+
+
+def _patch_session(ctx, messenger, instrument):
+    # model will be None only in tests that test the executor component directly
+    if not ctx.model:
+        return
+
+    # We arbitrarily select the ``node_instance`` mapi to extract the session from it.
+    # could have been any other mapi just as well
+    session = ctx.model.node_instance._session
+    original_refresh = session.refresh
+
+    def patched_refresh(target):
+        instrument.clear(target)
+        original_refresh(target)
+
+    def patched_commit():
+        messenger.apply_tracked_changes(instrument.tracked_changes)
+        instrument.clear()
+
+    # when autoflush is set to true (the default), refreshing an object will trigger
+    # an auto flush by sqlalchemy, this autoflush will attempt to commit changes made so
+    # far on the session. this is not the desired behavior in the subprocess
+    session.autoflush = False
+
+    session.commit = patched_commit
+    session.refresh = patched_refresh
 
 
 def _main():
@@ -292,6 +328,7 @@ def _main():
     with instrumentation.track_changes() as instrument:
         try:
             ctx = serialization.operation_context_from_dict(context_dict)
+            _patch_session(ctx=ctx, messenger=messenger, instrument=instrument)
             task_func = imports.load_attribute(operation_mapping)
             aria.install_aria_extensions()
             for decorate in process_executor.decorate():

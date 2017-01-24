@@ -232,6 +232,44 @@ class TestInstrumentation(object):
         assert instance2_1.dict1 == {'initial': 'value', 'new': 'value'}
         assert instance2_2.list1 == ['initial', 'new_value']
 
+    def test_clear_instance(self, storage):
+        instance1 = MockModel1(name='name1')
+        instance2 = MockModel1(name='name2')
+        for instance in [instance1, instance2]:
+            storage.mock_model_1.put(instance)
+        instrument = self._track_changes({MockModel1.dict1: dict})
+        instance1.dict1 = {'new': 'value'}
+        instance2.dict1 = {'new2': 'value2'}
+        assert instrument.tracked_changes == {
+            'mock_model_1': {
+                instance1.id: {'dict1': Value(STUB, {'new': 'value'})},
+                instance2.id: {'dict1': Value(STUB, {'new2': 'value2'})}
+            }
+        }
+        instrument.clear(instance1)
+        assert instrument.tracked_changes == {
+            'mock_model_1': {
+                instance2.id: {'dict1': Value(STUB, {'new2': 'value2'})}
+            }
+        }
+
+    def test_clear_all(self, storage):
+        instance1 = MockModel1(name='name1')
+        instance2 = MockModel1(name='name2')
+        for instance in [instance1, instance2]:
+            storage.mock_model_1.put(instance)
+        instrument = self._track_changes({MockModel1.dict1: dict})
+        instance1.dict1 = {'new': 'value'}
+        instance2.dict1 = {'new2': 'value2'}
+        assert instrument.tracked_changes == {
+            'mock_model_1': {
+                instance1.id: {'dict1': Value(STUB, {'new': 'value'})},
+                instance2.id: {'dict1': Value(STUB, {'new2': 'value2'})}
+            }
+        }
+        instrument.clear()
+        assert instrument.tracked_changes == {}
+
     def _track_changes(self, instrumented):
         instrument = instrumentation.track_changes(instrumented)
         instruments_holder.append(instrument)

@@ -75,7 +75,7 @@ class _Instrumentation(object):
 
     def _register_set_attribute_listener(self, instrumented_attribute, attribute_type):
         def listener(target, value, *_):
-            mapi_name = api.generate_lower_name(target.__class__)
+            mapi_name = self._mapi_name(target.__class__)
             tracked_instances = self.tracked_changes.setdefault(mapi_name, {})
             tracked_attributes = tracked_instances.setdefault(target.id, {})
             if value is None:
@@ -90,7 +90,7 @@ class _Instrumentation(object):
 
     def _register_instance_listeners(self, instrumented_class, instrumented_attributes):
         def listener(target, *_):
-            mapi_name = api.generate_lower_name(instrumented_class)
+            mapi_name = self._mapi_name(instrumented_class)
             tracked_instances = self.tracked_changes.setdefault(mapi_name, {})
             tracked_attributes = tracked_instances.setdefault(target.id, {})
             for attribute_name, attribute_type in instrumented_attributes.items():
@@ -108,6 +108,14 @@ class _Instrumentation(object):
             sqlalchemy.event.listen(*listener_args)
             self.listeners.append(listener_args)
 
+    def clear(self, target=None):
+        if target:
+            mapi_name = self._mapi_name(target.__class__)
+            tracked_instances = self.tracked_changes.setdefault(mapi_name, {})
+            tracked_instances.pop(target.id, None)
+        else:
+            self.tracked_changes.clear()
+
     def restore(self):
         """Remove all listeners registered by this instrumentation"""
         for listener_args in self.listeners:
@@ -119,6 +127,10 @@ class _Instrumentation(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.restore()
+
+    @staticmethod
+    def _mapi_name(instrumented_class):
+        return api.generate_lower_name(instrumented_class)
 
 
 class _Value(object):
@@ -155,3 +167,5 @@ def apply_tracked_changes(tracked_changes, model):
                     if not instance:
                         instance = mapi.get(instance_id)
                     setattr(instance, attribute_name, value.current)
+            if instance:
+                mapi.update(instance)
