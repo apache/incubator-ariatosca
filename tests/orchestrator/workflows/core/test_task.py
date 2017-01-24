@@ -42,7 +42,7 @@ class TestOperationTask(object):
         with workflow_context.current.push(ctx):
             api_task = api.task.OperationTask.node_instance(
                 instance=node_instance,
-                name='aria.interfaces.lifecycle.create')
+                name='tosca.interfaces.node.lifecycle.Standard.create')
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
@@ -50,7 +50,7 @@ class TestOperationTask(object):
         with workflow_context.current.push(ctx):
             api_task = api.task.OperationTask.relationship_instance(
                 instance=relationship_instance,
-                name='aria.interfaces.relationship_lifecycle.preconfigure',
+                name='tosca.interfaces.relationship.Configure.pre_configure_source',
                 operation_end=operation_end)
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
@@ -67,7 +67,7 @@ class TestOperationTask(object):
         node.plugins = [{'name': plugin_name,
                          'package_name': 'p1',
                          'package_version': '0.1'}]
-        node.operations['aria.interfaces.lifecycle.create'] = {'plugin': plugin_name}
+        node.operations['tosca.interfaces.node.lifecycle.Standard.create'] = {'plugin': plugin_name}
         api_task, core_task = self._create_node_operation_task(ctx, node_instance)
         storage_task = ctx.model.task.get_by_name(core_task.name)
         assert storage_task.plugin_name == plugin_name

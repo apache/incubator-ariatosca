@@ -17,37 +17,14 @@ from tests import mock
 
 
 def assert_node_install_operations(operations, with_relationships=False):
-    if with_relationships:
-        all_operations = [
-            'aria.interfaces.lifecycle.create',
-            'aria.interfaces.relationship_lifecycle.preconfigure',
-            'aria.interfaces.relationship_lifecycle.preconfigure',
-            'aria.interfaces.lifecycle.configure',
-            'aria.interfaces.relationship_lifecycle.postconfigure',
-            'aria.interfaces.relationship_lifecycle.postconfigure',
-            'aria.interfaces.lifecycle.start',
-            'aria.interfaces.relationship_lifecycle.establish',
-            'aria.interfaces.relationship_lifecycle.establish',
-        ]
-
-        for i, operation in enumerate(operations):
-            assert operation.name.startswith(all_operations[i])
-    else:
-        for i, operation in enumerate(operations):
-            assert operation.name.startswith(mock.operations.NODE_OPERATIONS_INSTALL[i])
+    all_operations = mock.operations.OPERATIONS_INSTALL if with_relationships else \
+                     mock.operations.NODE_OPERATIONS_INSTALL
+    for i, operation in enumerate(operations):
+        assert operation.name.startswith(all_operations[i] + '.')
 
 
 def assert_node_uninstall_operations(operations, with_relationships=False):
-    if with_relationships:
-        all_operations = [
-            'aria.interfaces.lifecycle.stop',
-            'aria.interfaces.relationship_lifecycle.unlink',
-            'aria.interfaces.relationship_lifecycle.unlink',
-            'aria.interfaces.lifecycle.delete',
-        ]
-
-        for i, operation in enumerate(operations):
-            assert operation.name.startswith(all_operations[i])
-    else:
-        for i, operation in enumerate(operations):
-            assert operation.name.startswith(mock.operations.NODE_OPERATIONS_UNINSTALL[i])
+    all_operations = mock.operations.OPERATIONS_UNINSTALL if with_relationships else \
+                     mock.operations.NODE_OPERATIONS_UNINSTALL
+    for i, operation in enumerate(operations):
+        assert operation.name.startswith(all_operations[i] + '.')

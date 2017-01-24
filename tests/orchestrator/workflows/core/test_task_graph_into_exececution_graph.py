@@ -23,7 +23,7 @@ from tests import storage
 
 
 def test_task_graph_into_execution_graph():
-    operation_name = 'aria.interfaces.lifecycle.create'
+    operation_name = 'tosca.interfaces.node.lifecycle.Standard.create'
     task_context = mock.context.simple(storage.get_sqlite_api_kwargs())
     node_instance = \
         task_context.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)

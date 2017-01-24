@@ -13,13 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: skip-file
+
 """
 Builtin heal workflow
 """
 
 from aria import workflow
 
-from .workflows import relationship_tasks, install_node_instance, uninstall_node_instance
+from .workflows import (install_node_instance, uninstall_node_instance)
 from ..api import task
 
 

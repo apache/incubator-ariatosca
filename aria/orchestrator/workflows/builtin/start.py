@@ -14,21 +14,15 @@
 # limitations under the License.
 
 """
-Builtin install workflow
+Builtin start workflow
 """
 
-from .workflows import install_node_instance
-from .utils import create_node_instance_task_dependencies
+from .workflows import start_node_instance
 from ..api.task import WorkflowTask
 from ... import workflow
 
 
 @workflow
-def install(ctx, graph):
-    tasks_and_node_instances = []
+def start(ctx, graph):
     for node_instance in ctx.model.node_instance.iter():
-        tasks_and_node_instances.append((
-            WorkflowTask(install_node_instance, node_instance=node_instance),
-            node_instance))
-    graph.add_tasks([task for task, _ in tasks_and_node_instances])
-    create_node_instance_task_dependencies(graph, tasks_and_node_instances)
+        graph.add_tasks(WorkflowTask(start_node_instance, node_instance=node_instance))

@@ -17,37 +17,18 @@
 Builtin uninstall workflow
 """
 
-from aria import workflow
-
 from .workflows import uninstall_node_instance
-from ..api import task
+from .utils import create_node_instance_task_dependencies
+from ..api.task import WorkflowTask
+from ... import workflow
 
 
 @workflow
-def uninstall(ctx, graph, node_instances=(), node_instance_sub_workflows=None):
-    """
-    The uninstall workflow
-    :param WorkflowContext ctx: the workflow context
-    :param TaskGraph graph: the graph which will describe the workflow.
-    :param node_instances: the node instances on which to run the workflow
-    :param dict node_instance_sub_workflows: a dictionary of subworkflows  with id as key and
-    TaskGraph (or OperationContext) as value
-    :return:
-    """
-    node_instance_sub_workflows = node_instance_sub_workflows or {}
-    node_instances = node_instances or list(ctx.node_instances)
-
-    # create install sub workflow for every node instance
-    for node_instance in node_instances:
-        node_instance_sub_workflow = task.WorkflowTask(uninstall_node_instance,
-                                                       node_instance=node_instance)
-        node_instance_sub_workflows[node_instance.id] = node_instance_sub_workflow
-        graph.add_tasks(node_instance_sub_workflow)
-
-    # create dependencies between the node instance sub workflow
-    for node_instance in node_instances:
-        node_instance_sub_workflow = node_instance_sub_workflows[node_instance.id]
-        for relationship_instance in reversed(node_instance.outbound_relationship_instances):
-            target_id = relationship_instance.target_node_instance.id
-            graph.add_dependency(node_instance_sub_workflows[target_id],
-                                 node_instance_sub_workflow)
+def uninstall(ctx, graph):
+    tasks_and_node_instances = []
+    for node_instance in ctx.model.node_instance.iter():
+        tasks_and_node_instances.append((
+            WorkflowTask(uninstall_node_instance, node_instance=node_instance),
+            node_instance))
+    graph.add_tasks([task for task, _ in tasks_and_node_instances])
+    create_node_instance_task_dependencies(graph, tasks_and_node_instances, reverse=True)

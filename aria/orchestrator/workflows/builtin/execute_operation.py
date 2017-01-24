@@ -17,9 +17,8 @@
 Builtin execute_operation workflow
 """
 
-from aria import workflow
-
-from .workflows import execute_operation_on_instance
+from ..api.task import OperationTask
+from ... import workflow
 
 
 @workflow
@@ -68,7 +67,7 @@ def execute_operation(
     # registering actual tasks to sequences
     for node_instance in filtered_node_instances:
         graph.add_tasks(
-            execute_operation_on_instance(
+            _create_node_instance_task(
                 node_instance=node_instance,
                 operation=operation,
                 operation_kwargs=operation_kwargs,
@@ -102,3 +101,26 @@ def _filter_node_instances(context, node_ids=(), node_instance_ids=(), type_name
                 _is_node_instance_by_id(node_instance.id),
                 _is_node_by_type(node_instance.node.type_hierarchy))):
             yield node_instance
+
+
+def _create_node_instance_task(
+        node_instance,
+        operation,
+        operation_kwargs,
+        allow_kwargs_override):
+    """
+    A workflow which executes a single operation
+    :param node_instance: the node instance to install
+    :param basestring operation: the operation name
+    :param dict operation_kwargs:
+    :param bool allow_kwargs_override:
+    :return:
+    """
+
+    if allow_kwargs_override is not None:
+        operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
+
+    return OperationTask.node_instance(
+        instance=node_instance,
+        name=operation,
+        inputs=operation_kwargs)

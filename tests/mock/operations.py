@@ -14,20 +14,46 @@
 # limitations under the License.
 
 NODE_OPERATIONS_INSTALL = [
-    'aria.interfaces.lifecycle.create',
-    'aria.interfaces.lifecycle.configure',
-    'aria.interfaces.lifecycle.start',
-    ]
-NODE_OPERATIONS_UNINSTALL = [
-    'aria.interfaces.lifecycle.stop',
-    'aria.interfaces.lifecycle.delete',
+    'tosca.interfaces.node.lifecycle.Standard.create',
+    'tosca.interfaces.node.lifecycle.Standard.configure',
+    'tosca.interfaces.node.lifecycle.Standard.start',
 ]
+
+NODE_OPERATIONS_UNINSTALL = [
+    'tosca.interfaces.node.lifecycle.Standard.stop',
+    'tosca.interfaces.node.lifecycle.Standard.delete',
+]
+
 NODE_OPERATIONS = NODE_OPERATIONS_INSTALL + NODE_OPERATIONS_UNINSTALL
 
 RELATIONSHIP_OPERATIONS_INSTALL = [
-    'aria.interfaces.relationship_lifecycle.preconfigure',
-    'aria.interfaces.relationship_lifecycle.postconfigure',
-    'aria.interfaces.relationship_lifecycle.establish',
-    ]
-RELATIONSHIP_OPERATIONS_UNINSTALL = ['aria.interfaces.relationship_lifecycle.unlink']
+    'tosca.interfaces.relationship.Configure.pre_configure_source',
+    'tosca.interfaces.relationship.Configure.pre_configure_target',
+    'tosca.interfaces.relationship.Configure.add_source',
+    'tosca.interfaces.relationship.Configure.add_target',
+]
+
+RELATIONSHIP_OPERATIONS_UNINSTALL = [
+    'tosca.interfaces.relationship.Configure.remove_target',
+    'tosca.interfaces.relationship.Configure.target_changed',
+]
+
 RELATIONSHIP_OPERATIONS = RELATIONSHIP_OPERATIONS_INSTALL + RELATIONSHIP_OPERATIONS_UNINSTALL
+
+OPERATIONS_INSTALL = [
+    'tosca.interfaces.node.lifecycle.Standard.create',
+    'tosca.interfaces.relationship.Configure.pre_configure_source',
+    'tosca.interfaces.relationship.Configure.pre_configure_target',
+    'tosca.interfaces.node.lifecycle.Standard.configure',
+    'tosca.interfaces.node.lifecycle.Standard.start',
+    'tosca.interfaces.relationship.Configure.add_source',
+    'tosca.interfaces.relationship.Configure.add_target',
+    'tosca.interfaces.relationship.Configure.target_changed',
+]
+
+OPERATIONS_UNINSTALL = [
+    'tosca.interfaces.relationship.Configure.remove_target',
+    'tosca.interfaces.relationship.Configure.target_changed',
+    'tosca.interfaces.node.lifecycle.Standard.stop',
+    'tosca.interfaces.node.lifecycle.Standard.delete',
+]
