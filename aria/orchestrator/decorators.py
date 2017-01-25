@@ -26,6 +26,9 @@ from . import context
 from .workflows.api import task_graph
 
 
+WORKFLOW_DECORATOR_RESERVED_ARGUMENTS = ('ctx', 'graph')
+
+
 def workflow(func=None, suffix_template=''):
     """
     Workflow decorator

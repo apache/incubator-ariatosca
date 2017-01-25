@@ -330,6 +330,7 @@ def create_types(context, root, types, normalize=None):
                     model = Type(the_type._name)
                 if the_type.description:
                     model.description = the_type.description.value
+                model.role = the_type._get_extension('role')
                 if parent_type is None:
                     root.children.append(model)
                 else:

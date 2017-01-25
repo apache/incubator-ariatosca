@@ -29,13 +29,14 @@ from ..logger import (
 from ..utils.exceptions import print_exception
 from .args_parser import config_parser
 from .commands import (
+    ParseCommand,
+    WorkflowCommand,
     InitCommand,
     ExecuteCommand,
-    ParseCommand,
-    SpecCommand,
     CSARCreateCommand,
     CSAROpenCommand,
     CSARValidateCommand,
+    SpecCommand,
 )
 
 __version__ = '0.1.0'
@@ -49,13 +50,14 @@ class AriaCli(LoggerMixin):
     def __init__(self, *args, **kwargs):
         super(AriaCli, self).__init__(*args, **kwargs)
         self.commands = {
+            'parse': ParseCommand.with_logger(base_logger=self.logger),
+            'workflow': WorkflowCommand.with_logger(base_logger=self.logger),
             'init': InitCommand.with_logger(base_logger=self.logger),
             'execute': ExecuteCommand.with_logger(base_logger=self.logger),
-            'parse': ParseCommand.with_logger(base_logger=self.logger),
-            'spec': SpecCommand.with_logger(base_logger=self.logger),
             'csar-create': CSARCreateCommand.with_logger(base_logger=self.logger),
             'csar-open': CSAROpenCommand.with_logger(base_logger=self.logger),
             'csar-validate': CSARValidateCommand.with_logger(base_logger=self.logger),
+            'spec': SpecCommand.with_logger(base_logger=self.logger),
         }
 
     def __enter__(self):

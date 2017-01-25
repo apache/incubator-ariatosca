@@ -24,6 +24,7 @@ from .model_elements import (ServiceModel, NodeTemplate, RequirementTemplate, Ca
                              GroupPolicyTemplate, GroupPolicyTriggerTemplate, MappingTemplate,
                              SubstitutionTemplate, InterfaceTemplate, OperationTemplate)
 from .types import TypeHierarchy, Type, RelationshipType, PolicyType, PolicyTriggerType
+from .storage import initialize_storage
 
 __all__ = (
     'CannotEvaluateFunctionException',
@@ -65,4 +66,5 @@ __all__ = (
     'Type',
     'RelationshipType',
     'PolicyType',
-    'PolicyTriggerType')
+    'PolicyTriggerType',
+    'initialize_storage')
