@@ -34,6 +34,7 @@ class BaseContext(logger.LoggerMixin):
             deployment_id,
             model_storage,
             resource_storage,
+            workdir=None,
             **kwargs):
         super(BaseContext, self).__init__(**kwargs)
         self._name = name
@@ -41,6 +42,7 @@ class BaseContext(logger.LoggerMixin):
         self._model = model_storage
         self._resource = resource_storage
         self._deployment_id = deployment_id
+        self._workdir = workdir
 
     def __repr__(self):
         return (

@@ -146,7 +146,8 @@ class OperationTask(BaseTask):
                                   resource_storage=self._workflow_context.resource,
                                   deployment_id=self._workflow_context._deployment_id,
                                   task_id=operation_task.id,
-                                  actor_id=api_task.actor.id)
+                                  actor_id=api_task.actor.id,
+                                  workdir=self._workflow_context._workdir)
         self._task_id = operation_task.id
         self._update_fields = None
 

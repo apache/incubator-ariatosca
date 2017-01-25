@@ -26,6 +26,7 @@ def operation_context_to_dict(context):
         'deployment_id': context._deployment_id,
         'task_id': context._task_id,
         'actor_id': context._actor_id,
+        'workdir': context._workdir
     }
     if context.model:
         model = context.model

@@ -17,7 +17,7 @@
 Workflow and operation contexts
 """
 
-
+from aria.utils import file
 from .common import BaseContext
 
 
@@ -59,6 +59,19 @@ class BaseOperationContext(BaseContext):
         if not self._task:
             self._task = self.model.task.get(self._task_id)
         return self._task
+
+    @property
+    def plugin_workdir(self):
+        """
+        A work directory that is unique to the plugin and the deployment id
+        """
+        if not self.task.plugin_name:
+            return None
+        plugin_workdir = '{0}/plugins/{1}/{2}'.format(self._workdir,
+                                                      self.deployment.id,
+                                                      self.task.plugin_name)
+        file.makedirs(plugin_workdir)
+        return plugin_workdir
 
 
 class NodeOperationContext(BaseOperationContext):

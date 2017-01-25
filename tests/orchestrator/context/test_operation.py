@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import pytest
 
 from aria import (
@@ -35,7 +37,8 @@ global_test_holder = {}
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)),
+                                  workdir=str(tmpdir.join('workdir')))
     yield context
     storage.release_sqlite_storage(context.model)
 
@@ -173,6 +176,30 @@ def test_invalid_task_operation_id(ctx, executor):
     assert op_node_instance_id != other_node_instance.id
 
 
+def test_plugin_workdir(ctx, executor, tmpdir):
+    op = 'test.op'
+    plugin_name = 'mock_plugin'
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    node.operations[op] = {'operation': '{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
+                           'plugin': plugin_name}
+    node.plugins = [{'name': plugin_name}]
+    ctx.model.node.update(node)
+    node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+
+    filename = 'test_file'
+    content = 'file content'
+    inputs = {'filename': filename, 'content': content}
+
+    @workflow
+    def basic_workflow(graph, **_):
+        graph.add_tasks(api.task.OperationTask.node_instance(
+            name=op, instance=node_instance, inputs=inputs))
+
+    execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
+    expected_file = tmpdir.join('workdir', 'plugins', str(ctx.deployment.id), plugin_name, filename)
+    assert expected_file.read() == content
+
+
 @operation
 def my_operation(ctx, **_):
     global_test_holder[ctx.name] = ctx
@@ -181,6 +208,12 @@ def my_operation(ctx, **_):
 @operation
 def get_node_instance_id(ctx, **_):
     global_test_holder[ctx.name] = ctx.node_instance.id
+
+
+@operation
+def _test_plugin_workdir(ctx, filename, content):
+    with open(os.path.join(ctx.plugin_workdir, filename), 'w') as f:
+        f.write(content)
 
 
 @pytest.fixture(autouse=True)

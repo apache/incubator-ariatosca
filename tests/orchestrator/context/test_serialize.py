@@ -49,9 +49,13 @@ def test_illegal_serialize_of_memory_model_storage(memory_model_storage):
 
 @workflow
 def _mock_workflow(ctx, graph):
+    op = 'test.op'
+    plugin_name = 'mock_plugin'
     node_instance = ctx.model.node_instance.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    node_instance.node.operations['test.op'] = {'operation': _operation_mapping()}
-    task = api.task.OperationTask.node_instance(instance=node_instance, name='test.op')
+    node = node_instance.node
+    node.operations[op] = {'operation': _operation_mapping(), 'plugin': plugin_name}
+    node.plugins = [{'name': plugin_name}]
+    task = api.task.OperationTask.node_instance(instance=node_instance, name=op)
     graph.add_tasks(task)
     return graph
 
@@ -72,6 +76,8 @@ def _mock_operation(ctx):
     # Here we test that the resource storage was properly re-created
     test_file_content = ctx.resource.blueprint.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
     assert test_file_content == TEST_FILE_CONTENT
+    # a non empty plugin workdir tells us that we kept the correct base_workdir
+    assert ctx.plugin_workdir is not None
 
 
 def _operation_mapping():
@@ -88,7 +94,8 @@ def executor():
 @pytest.fixture
 def context(tmpdir):
     result = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)),
-                                 resources_dir=str(tmpdir.join('resources')))
+                                 resources_dir=str(tmpdir.join('resources')),
+                                 workdir=str(tmpdir.join('workdir')))
     yield result
     storage.release_sqlite_storage(result.model)
 
