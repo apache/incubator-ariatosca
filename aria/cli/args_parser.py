@@ -68,11 +68,79 @@ def config_parser(parser=None):
     add_init_parser(sub_parser)
     add_execute_parser(sub_parser)
     add_parse_parser(sub_parser)
+    add_workflow_parser(sub_parser)
     add_spec_parser(sub_parser)
     add_csar_create_parser(sub_parser)
     add_csar_open_parser(sub_parser)
     add_csar_validate_parser(sub_parser)
     return parser
+
+
+@sub_parser_decorator(
+    name='parse',
+    help='Parse a blueprint',
+    formatter_class=SmartFormatter)
+def add_parse_parser(parse):
+    """
+    ``parse`` command parser configuration
+    """
+    parse.add_argument(
+        'uri',
+        help='URI or file path to service template')
+    parse.add_argument(
+        'consumer',
+        nargs='?',
+        default='validate',
+        help='"validate" (default), "presentation", "model", "types", "instance", or consumer '
+             'class name (full class path or short name)')
+    parse.add_argument(
+        '--loader-source',
+        default='aria.parser.loading.DefaultLoaderSource',
+        help='loader source class for the parser')
+    parse.add_argument(
+        '--reader-source',
+        default='aria.parser.reading.DefaultReaderSource',
+        help='reader source class for the parser')
+    parse.add_argument(
+        '--presenter-source',
+        default='aria.parser.presentation.DefaultPresenterSource',
+        help='presenter source class for the parser')
+    parse.add_argument(
+        '--presenter',
+        help='force use of this presenter class in parser')
+    parse.add_argument(
+        '--prefix', nargs='*',
+        help='prefixes for imports')
+    parse.add_flag_argument(
+        'debug',
+        help_true='print debug info',
+        help_false='don\'t print debug info')
+    parse.add_flag_argument(
+        'cached-methods',
+        help_true='enable cached methods',
+        help_false='disable cached methods',
+        default=True)
+
+
+@sub_parser_decorator(
+    name='workflow',
+    help='Run a workflow on a blueprint',
+    formatter_class=SmartFormatter)
+def add_workflow_parser(workflow):
+    """
+    ``workflow`` command parser configuration
+    """
+    workflow.add_argument(
+        'uri',
+        help='URI or file path to service template')
+    workflow.add_argument(
+        '-w', '--workflow',
+        default='install',
+        help='The workflow name')
+    workflow.add_argument(
+        '-d', '--deployment-id',
+        required=False,
+        help='A unique ID for the deployment')
 
 
 @sub_parser_decorator(
@@ -146,65 +214,6 @@ def add_execute_parser(execute):
 
 
 @sub_parser_decorator(
-    name='parse',
-    help='Parse a blueprint',
-    formatter_class=SmartFormatter)
-def add_parse_parser(parse):
-    """
-    ``parse`` command parser configuration
-    """
-    parse.add_argument(
-        'uri',
-        help='URI or file path to profile')
-    parse.add_argument(
-        'consumer',
-        nargs='?',
-        default='instance',
-        help='consumer class name (full class path or short name)')
-    parse.add_argument(
-        '--loader-source',
-        default='aria.parser.loading.DefaultLoaderSource',
-        help='loader source class for the parser')
-    parse.add_argument(
-        '--reader-source',
-        default='aria.parser.reading.DefaultReaderSource',
-        help='reader source class for the parser')
-    parse.add_argument(
-        '--presenter-source',
-        default='aria.parser.presentation.DefaultPresenterSource',
-        help='presenter source class for the parser')
-    parse.add_argument(
-        '--presenter',
-        help='force use of this presenter class in parser')
-    parse.add_argument(
-        '--prefix', nargs='*',
-        help='prefixes for imports')
-    parse.add_flag_argument(
-        'debug',
-        help_true='print debug info',
-        help_false='don\'t print debug info')
-    parse.add_flag_argument(
-        'cached-methods',
-        help_true='enable cached methods',
-        help_false='disable cached methods',
-        default=True)
-
-
-@sub_parser_decorator(
-    name='spec',
-    help='Specification tool',
-    formatter_class=SmartFormatter)
-def add_spec_parser(spec):
-    """
-    ``spec`` command parser configuration
-    """
-    spec.add_argument(
-        '--csv',
-        action='store_true',
-        help='output as CSV')
-
-
-@sub_parser_decorator(
     name='csar-create',
     help='Create a CSAR file from a TOSCA service template directory',
     formatter_class=SmartFormatter)
@@ -243,3 +252,17 @@ def add_csar_validate_parser(parse):
     parse.add_argument(
         'source',
         help='CSAR file location')
+
+
+@sub_parser_decorator(
+    name='spec',
+    help='Specification tool',
+    formatter_class=SmartFormatter)
+def add_spec_parser(spec):
+    """
+    ``spec`` command parser configuration
+    """
+    spec.add_argument(
+        '--csv',
+        action='store_true',
+        help='output as CSV')
