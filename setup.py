@@ -17,7 +17,8 @@
 import os
 import sys
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Command
+from setuptools.command.install import install
 
 _PACKAGE_NAME = 'aria'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
@@ -45,9 +46,22 @@ except IOError:
 
 
 console_scripts = ['aria = aria.cli.cli:main']
-if os.environ.get('INSTALL_CTX'):
-    console_scripts.append('ctx = aria.orchestrator.execution_plugin.ctx_proxy.client:main')
 
+
+class InstallCommand(install):
+    user_options = install.user_options + [
+        ('skip-ctx', None, 'Install with or without the ctx (Defaults to True')
+    ]
+    boolean_options = install.boolean_options + ['skip-ctx']
+
+    def initialize_options(self):
+        install.initialize_options(self)
+        self.skip_ctx = False
+
+    def run(self):
+        if self.skip_ctx is False:
+            console_scripts.append('ctx = aria.orchestrator.execution_plugin.ctx_proxy.client:main')
+        install.run(self)
 
 setup(
     name=_PACKAGE_NAME,
@@ -83,5 +97,8 @@ setup(
     install_requires=install_requires,
     entry_points={
         'console_scripts': console_scripts
+    },
+    cmdclass={
+        'install': InstallCommand
     }
 )
