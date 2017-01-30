@@ -95,7 +95,6 @@ def _create_node_instance(service_instance, node, node_model):
         service_instance=service_instance,
         name=node_model.id,
         runtime_properties={},
-        version=None,
         node_template=node,
         state='',
         scaling_groups=[]

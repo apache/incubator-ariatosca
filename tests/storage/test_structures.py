@@ -125,7 +125,6 @@ def test_relationship_model_ordering(context):
         name='new_node_instance',
         runtime_properties={},
         service_instance=service_instance,
-        version=None,
         node_template=new_node_template,
         state='',
         scaling_groups=[]

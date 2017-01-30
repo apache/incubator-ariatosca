@@ -53,6 +53,8 @@ _IS_WIN = os.name == 'nt'
 
 _INT_FMT = 'I'
 _INT_SIZE = struct.calcsize(_INT_FMT)
+UPDATE_TRACKED_CHANGES_FAILED_STR = \
+    'Some changes failed writing to storage. For more info refer to the log.'
 
 
 class ProcessExecutor(base.BaseExecutor):
@@ -73,6 +75,13 @@ class ProcessExecutor(base.BaseExecutor):
 
         # Contains reference to all currently running tasks
         self._tasks = {}
+
+        self._request_handlers = {
+            'started': self._handle_task_started_request,
+            'succeeded': self._handle_task_succeeded_request,
+            'failed': self._handle_task_failed_request,
+            'apply_tracked_changes': self._handle_apply_tracked_changes_request
+        }
 
         # Server socket used to accept task status messages from subprocesses
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -131,58 +140,6 @@ class ProcessExecutor(base.BaseExecutor):
     def _remove_task(self, task_id):
         return self._tasks.pop(task_id)
 
-    def _listener(self):
-        # Notify __init__ method this thread has actually started
-        self._listener_started.put(True)
-        while not self._stopped:
-            try:
-                # Accept messages written to the server socket
-                with contextlib.closing(self._server_socket.accept()[0]) as connection:
-                    message = self._recv_message(connection)
-                    message_type = message['type']
-                    if message_type == 'closed':
-                        break
-                    task_id = message['task_id']
-                    if message_type == 'started':
-                        self._task_started(self._tasks[task_id])
-                    elif message_type == 'apply_tracked_changes':
-                        task = self._tasks[task_id]
-                        instrumentation.apply_tracked_changes(
-                            tracked_changes=message['tracked_changes'],
-                            model=task.context.model)
-                    elif message_type == 'succeeded':
-                        task = self._remove_task(task_id)
-                        instrumentation.apply_tracked_changes(
-                            tracked_changes=message['tracked_changes'],
-                            model=task.context.model)
-                        self._task_succeeded(task)
-                    elif message_type == 'failed':
-                        task = self._remove_task(task_id)
-                        instrumentation.apply_tracked_changes(
-                            tracked_changes=message['tracked_changes'],
-                            model=task.context.model)
-                        self._task_failed(task, exception=message['exception'])
-                    else:
-                        raise RuntimeError('Invalid state')
-            except BaseException as e:
-                self.logger.debug('Error in process executor listener: {0}'.format(e))
-
-    def _recv_message(self, connection):
-        message_len, = struct.unpack(_INT_FMT, self._recv_bytes(connection, _INT_SIZE))
-        return jsonpickle.loads(self._recv_bytes(connection, message_len))
-
-    @staticmethod
-    def _recv_bytes(connection, count):
-        result = io.BytesIO()
-        while True:
-            if not count:
-                return result.getvalue()
-            read = connection.recv(count)
-            if not read:
-                return result.getvalue()
-            result.write(read)
-            count -= len(read)
-
     def _check_closed(self):
         if self._stopped:
             raise RuntimeError('Executor closed')
@@ -231,6 +188,90 @@ class ProcessExecutor(base.BaseExecutor):
                 os.pathsep,
                 env.get('PYTHONPATH', ''))
 
+    def _listener(self):
+        # Notify __init__ method this thread has actually started
+        self._listener_started.put(True)
+        while not self._stopped:
+            try:
+                with self._accept_request() as (request, response):
+                    request_type = request['type']
+                    if request_type == 'closed':
+                        break
+                    request_handler = self._request_handlers.get(request_type)
+                    if not request_handler:
+                        raise RuntimeError('Invalid request type: {0}'.format(request_type))
+                    request_handler(task_id=request['task_id'], request=request, response=response)
+            except BaseException as e:
+                self.logger.debug('Error in process executor listener: {0}'.format(e))
+
+    @contextlib.contextmanager
+    def _accept_request(self):
+        with contextlib.closing(self._server_socket.accept()[0]) as connection:
+            message = _recv_message(connection)
+            response = {}
+            yield message, response
+            _send_message(connection, response)
+
+    def _handle_task_started_request(self, task_id, **kwargs):
+        self._task_started(self._tasks[task_id])
+
+    def _handle_task_succeeded_request(self, task_id, request, **kwargs):
+        task = self._remove_task(task_id)
+        try:
+            self._apply_tracked_changes(task, request)
+        except BaseException as e:
+            e.message += UPDATE_TRACKED_CHANGES_FAILED_STR
+            self._task_failed(task, exception=e)
+        else:
+            self._task_succeeded(task)
+
+    def _handle_task_failed_request(self, task_id, request, **kwargs):
+        task = self._remove_task(task_id)
+        try:
+            self._apply_tracked_changes(task, request)
+        except BaseException as e:
+            e.message += 'Task failed due to {0}.'.format(request['exception']) + \
+                         UPDATE_TRACKED_CHANGES_FAILED_STR
+            self._task_failed(task, exception=e)
+        else:
+            self._task_failed(task, exception=request['exception'])
+
+    def _handle_apply_tracked_changes_request(self, task_id, request, response):
+        task = self._tasks[task_id]
+        try:
+            self._apply_tracked_changes(task, request)
+        except BaseException as e:
+            response['exception'] = exceptions.wrap_if_needed(e)
+
+    @staticmethod
+    def _apply_tracked_changes(task, request):
+        instrumentation.apply_tracked_changes(
+            tracked_changes=request['tracked_changes'],
+            model=task.context.model)
+
+
+def _send_message(connection, message):
+    data = jsonpickle.dumps(message)
+    connection.send(struct.pack(_INT_FMT, len(data)))
+    connection.sendall(data)
+
+
+def _recv_message(connection):
+    message_len, = struct.unpack(_INT_FMT, _recv_bytes(connection, _INT_SIZE))
+    return jsonpickle.loads(_recv_bytes(connection, message_len))
+
+
+def _recv_bytes(connection, count):
+    result = io.BytesIO()
+    while True:
+        if not count:
+            return result.getvalue()
+        read = connection.recv(count)
+        if not read:
+            return result.getvalue()
+        result.write(read)
+        count -= len(read)
+
 
 class _Messenger(object):
 
@@ -261,17 +302,16 @@ class _Messenger(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(('localhost', self.port))
         try:
-            data = jsonpickle.dumps({
+            _send_message(sock, {
                 'type': type,
                 'task_id': self.task_id,
                 'exception': exceptions.wrap_if_needed(exception),
                 'tracked_changes': tracked_changes
             })
-            sock.send(struct.pack(_INT_FMT, len(data)))
-            sock.sendall(data)
-            # send message will block until the server side closes the connection socket
-            # because we want it to be synchronous
-            sock.recv(1)
+            response = _recv_message(sock)
+            response_exception = response.get('exception')
+            if response_exception:
+                raise response_exception
         finally:
             sock.close()
 
@@ -294,12 +334,17 @@ def _patch_session(ctx, messenger, instrument):
         messenger.apply_tracked_changes(instrument.tracked_changes)
         instrument.clear()
 
+    def patched_rollback():
+        # Rollback is performed on parent process when commit fails
+        pass
+
     # when autoflush is set to true (the default), refreshing an object will trigger
     # an auto flush by sqlalchemy, this autoflush will attempt to commit changes made so
     # far on the session. this is not the desired behavior in the subprocess
     session.autoflush = False
 
     session.commit = patched_commit
+    session.rollback = patched_rollback
     session.refresh = patched_refresh
 
 
@@ -324,7 +369,6 @@ def _main():
     # This is required for the instrumentation work properly.
     # See docstring of `remove_mutable_association_listener` for further details
     storage_type.remove_mutable_association_listener()
-
     with instrumentation.track_changes() as instrument:
         try:
             ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])

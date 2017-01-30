@@ -553,7 +553,7 @@ class PolicyBase(structure.ModelMixin):
 
     # region many-to-one relationships
     @declared_attr
-    def service_instnce(cls):
+    def service_instance(cls):
         return cls.many_to_one_relationship('service_instance')
 
     # region many-to-many relationships
@@ -851,6 +851,8 @@ class NodeBase(structure.ModelMixin):
     * :code:`relationships`: List of :class:`Relationship`
     """
     __tablename__ = 'node'
+    version = Column(Integer, nullable=False)
+    __mapper_args__ = {'version_id_col': version}
 
     __private_fields__ = ['service_instance_fk',
                           'host_fk',
@@ -878,7 +880,6 @@ class NodeBase(structure.ModelMixin):
     runtime_properties = Column(aria_types.Dict)
     scaling_groups = Column(aria_types.List)
     state = Column(Text, nullable=False)
-    version = Column(Integer, default=1)
 
     @declared_attr
     def plugins(cls):

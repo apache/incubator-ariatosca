@@ -50,7 +50,6 @@ def get_dependency_node_instance(dependency_node, deployment):
         name=DEPENDENCY_NODE_INSTANCE_NAME,
         service_instance=deployment,
         runtime_properties={'ip': '1.1.1.1'},
-        version=None,
         node_template=dependency_node,
         state='',
         scaling_groups=[]
@@ -96,7 +95,6 @@ def get_dependent_node_instance(dependent_node, deployment):
         name=DEPENDENT_NODE_INSTANCE_NAME,
         service_instance=deployment,
         runtime_properties={},
-        version=None,
         node_template=dependent_node,
         state='',
         scaling_groups=[],
