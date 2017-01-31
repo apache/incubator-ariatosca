@@ -44,7 +44,7 @@ except IOError:
     install_requires = []
 
 
-console_scripts = ['aria = aria.cli.cli:main']
+console_scripts = ['aria = aria.api.cli.__main__:main']
 if os.environ.get('INSTALL_CTX'):
     console_scripts.append('ctx = aria.orchestrator.execution_plugin.ctx_proxy.client:main')
 

@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import csv
 import re
 
 from ..extension import parser
+from ..utils.console import (puts, Colored, indent)
 from ..utils.collections import OrderedDict
 from ..utils.formatting import full_type_name
 
@@ -67,14 +69,39 @@ def iter_specifications():
         yield spec, iter_sections(spec, sections)
 
 
+def dump(stream):
+    """
+    Dumps specification to given stream
+    """
+    for spec, sections in iter_specifications():
+        puts(Colored.cyan(spec), stream=stream)
+        with indent(2):
+            for section, details in sections:
+                puts(Colored.blue(section), stream=stream)
+                with indent(2):
+                    for k, v in details.iteritems():
+                        puts('%s: %s' % (Colored.magenta(k), v), stream=stream)
+
+
+def dump_as_csv(stream):
+    """
+    Dumps serialized as CSV specification to given stream
+    """
+    writer = csv.writer(stream, quoting=csv.QUOTE_ALL)
+    writer.writerow(('Specification', 'Section', 'Code', 'URL'))
+
+    for spec, sections in iter_specifications():
+        for section, details in sections:
+            writer.writerow((spec, section, details['code'], details['url']))
 # Utils
+
 
 def _section_key(value):
     try:
         parts = value.split('-', 1)
         first = (int(v) for v in parts[0].split('.'))
         second = parts[1] if len(parts) > 1 else None
-        return (first, second)
+        return first, second
     except ValueError:
         return value
 

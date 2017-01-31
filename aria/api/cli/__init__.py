@@ -12,21 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from .specification import (dsl_specification, dump, dump_as_csv, iter_specifications)
-
-
-MODULES = (
-    'consumption',
-    'loading',
-    'modeling',
-    'presentation',
-    'reading',
-    'validation')
-
-__all__ = (
-    'MODULES',
-    'dsl_specification',
-    'iter_specifications',
-    'dump',
-    'dump_as_csv')

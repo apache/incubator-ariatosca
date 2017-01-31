@@ -15,11 +15,14 @@
 
 import os
 import pprint
+import shutil
 import tempfile
 import zipfile
-
 import requests
+
 from ruamel import yaml # @UnresolvedImport
+
+from ..parser.consumption import ConsumptionContextBuilder, ConsumerChainBuilder
 
 
 META_FILE = 'TOSCA-Metadata/TOSCA.meta'
@@ -35,68 +38,29 @@ BASE_METADATA = {
     META_CSAR_VERSION_KEY: META_CSAR_VERSION_VALUE,
     META_CREATED_BY_KEY: META_CREATED_BY_VALUE,
 }
-
-
-def write(source, entry, destination, logger):
-    source = os.path.expanduser(source)
-    destination = os.path.expanduser(destination)
-    entry_definitions = os.path.join(source, entry)
-    meta_file = os.path.join(source, META_FILE)
-    if not os.path.isdir(source):
-        raise ValueError('{0} is not a directory. Please specify the service template '
-                         'directory.'.format(source))
-    if not os.path.isfile(entry_definitions):
-        raise ValueError('{0} does not exists. Please specify a valid entry point.'
-                         .format(entry_definitions))
-    if os.path.exists(destination):
-        raise ValueError('{0} already exists. Please provide a path to where the CSAR should be '
-                         'created.'.format(destination))
-    if os.path.exists(meta_file):
-        raise ValueError('{0} already exists. This commands generates a meta file for you. Please '
-                         'remove the existing metafile.'.format(meta_file))
-    metadata = BASE_METADATA.copy()
-    metadata[META_ENTRY_DEFINITIONS_KEY] = entry
-    logger.debug('Compressing root directory to ZIP')
-    with zipfile.ZipFile(destination, 'w', zipfile.ZIP_DEFLATED) as f:
-        for root, _, files in os.walk(source):
-            for file in files:
-                file_full_path = os.path.join(root, file)
-                file_relative_path = os.path.relpath(file_full_path, source)
-                logger.debug('Writing to archive: {0}'.format(file_relative_path))
-                f.write(file_full_path, file_relative_path)
-        logger.debug('Writing new metadata file to {0}'.format(META_FILE))
-        f.writestr(META_FILE, yaml.dump(metadata, default_flow_style=False))
+CSAR_DESCRIPTION_TEMPLATE = 'Path: {r.destination}\n' \
+                            'TOSCA meta file version: {r.meta_file_version}\n' \
+                            'CSAR Version: {r.csar_version}\n' \
+                            'Created By: {r.created_by}\n' \
+                            'Entry definitions: {r.entry_definitions}'
 
 
 class _CSARReader(object):
 
     def __init__(self, source, destination, logger):
         self.logger = logger
-        if os.path.isdir(destination) and os.listdir(destination):
-            raise ValueError('{0} already exists and is not empty. '
-                             'Please specify the location where the CSAR '
-                             'should be extracted.'.format(destination))
-        downloaded_csar = '://' in source
-        if downloaded_csar:
+        self._is_read_possible(destination)
+
+        self.downloaded_csar = '://' in source
+        if self.downloaded_csar:
             file_descriptor, download_target = tempfile.mkstemp()
             os.close(file_descriptor)
             self._download(source, download_target)
             source = download_target
+
         self.source = os.path.expanduser(source)
         self.destination = os.path.expanduser(destination)
         self.metadata = {}
-        try:
-            if not os.path.exists(self.source):
-                raise ValueError('{0} does not exists. Please specify a valid CSAR path.'
-                                 .format(self.source))
-            if not zipfile.is_zipfile(self.source):
-                raise ValueError('{0} is not a valid CSAR.'.format(self.source))
-            self._extract()
-            self._read_metadata()
-            self._validate()
-        finally:
-            if downloaded_csar:
-                os.remove(self.source)
 
     @property
     def created_by(self):
@@ -118,6 +82,13 @@ class _CSARReader(object):
     def entry_definitions_yaml(self):
         with open(os.path.join(self.destination, self.entry_definitions)) as f:
             return yaml.load(f)
+
+    @staticmethod
+    def _is_read_possible(destination):
+        if os.path.isdir(destination) and os.listdir(destination):
+            raise ValueError('{0} already exists and is not empty. '
+                             'Please specify the location where the CSAR '
+                             'should be extracted.'.format(destination))
 
     def _extract(self):
         self.logger.debug('Extracting CSAR contents')
@@ -166,6 +137,101 @@ class _CSARReader(object):
                 if chunk:
                     f.write(chunk)
 
+    def read(self):
+        try:
+            if not os.path.exists(self.source):
+                raise ValueError('{0} does not exists. Please specify a valid CSAR path.'
+                                 .format(self.source))
+            if not zipfile.is_zipfile(self.source):
+                raise ValueError('{0} is not a valid CSAR.'.format(self.source))
+            self._extract()
+            self._read_metadata()
+            self._validate()
+        finally:
+            if self.downloaded_csar:
+                os.remove(self.source)
 
-def read(source, destination, logger):
-    return _CSARReader(source=source, destination=destination, logger=logger)
+
+class _CSARWriter(object):
+
+    def __init__(self, source, entry, destination, logger):
+        self.source = os.path.expanduser(source)
+        self.entry = entry
+        self.destination = os.path.expanduser(destination)
+        self.logger = logger
+
+    def _is_write_possible(self, entry_definitions, meta_file):
+        if not os.path.isdir(self.source):
+            raise ValueError('{0} is not a directory. Please specify the service template '
+                             'directory.'.format(self.source))
+        if not os.path.isfile(entry_definitions):
+            raise ValueError('{0} does not exists. Please specify a valid entry point.'
+                             .format(entry_definitions))
+        if os.path.exists(self.destination):
+            raise ValueError('{0} already exists. Please provide a path to where '
+                             'the CSAR should be created.'.format(self.destination))
+        if os.path.exists(meta_file):
+            raise ValueError('{0} already exists. This commands generates a meta file for you. '
+                             'Please remove the existing metafile.'.format(meta_file))
+
+    def _generate_metadata(self):
+        metadata = BASE_METADATA.copy()
+        metadata[META_ENTRY_DEFINITIONS_KEY] = self.entry
+
+        return metadata
+
+    def _write(self):
+        metadata = self._generate_metadata()
+
+        with zipfile.ZipFile(self.destination, 'w', zipfile.ZIP_DEFLATED) as f:
+            for root, _, files in os.walk(self.source):
+                for file in files:
+                    file_full_path = os.path.join(root, file)
+                    file_relative_path = os.path.relpath(file_full_path, self.source)
+                    self.logger.debug('Writing to archive: {0}'.format(file_relative_path))
+                    f.write(file_full_path, file_relative_path)
+
+            self.logger.debug('Writing new metadata file to {0}'.format(META_FILE))
+            f.writestr(META_FILE, yaml.dump(metadata, default_flow_style=False))
+
+    def write(self):
+        self._is_write_possible(
+            os.path.join(self.source, self.entry),
+            os.path.join(self.source, META_FILE))
+
+        self.logger.debug('Compressing root directory to ZIP')
+        self._write()
+
+
+def _parse_and_dump(reader, out):
+    context = ConsumptionContextBuilder(
+        out=out,
+        literal_location=reader.entry_definitions_yaml,
+        prefixes=reader.destination).build()
+
+    chain = ConsumerChainBuilder().build(context)
+    chain.consume()
+
+    if not context.validation.dump_issues():
+        chain.dump()
+
+
+def read(source, destination, out, logger):
+    reader = _CSARReader(source=source, destination=destination, logger=logger)
+    reader.read()
+
+    logger.info(CSAR_DESCRIPTION_TEMPLATE.format(r=reader))
+    _parse_and_dump(reader, out)
+
+
+def write(source, entry, destination, logger):
+    _CSARWriter(source=source, entry=entry, destination=destination, logger=logger).write()
+
+
+def validate(source, out, logger):
+    workdir = tempfile.mkdtemp()
+
+    try:
+        read(source=source, destination=workdir, out=out, logger=logger)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)

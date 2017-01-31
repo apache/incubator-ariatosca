@@ -54,7 +54,6 @@ class LoggerMixin(object):
         cls.logger_name = logger_name
         cls.logger_level = logger_level
         cls.base_logger = base_logger
-        return cls(**kwargs)
 
     def __getstate__(self):
         obj_dict = vars(self).copy()

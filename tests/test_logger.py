@@ -111,8 +111,10 @@ def test_loggermixin(capsys):
 
     logger = create_logger(handlers=[create_console_log_handler()])
 
-    custom_class = type('CustomClass', (LoggerMixin,), {}).with_logger()
-    custom_class.logger.debug(test_string)
+    custom_class = type('CustomClass', (LoggerMixin,), {})
+    custom_class.with_logger()
+    custom_class_instance = custom_class()
+    custom_class_instance.logger.debug(test_string)
 
     _, err = capsys.readouterr()
     assert test_string in err

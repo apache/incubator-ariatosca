@@ -13,20 +13,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .specification import (dsl_specification, dump, dump_as_csv, iter_specifications)
+"""
+CLI Entry point
+"""
+
+import logging
+
+from aria import install_aria_extensions
+
+from ...logger import (
+    create_logger,
+    create_console_log_handler,
+    create_file_log_handler
+)
+from ..components import StdOutReceiver
+from .args_parser import config_parser
+from .components import AriaCliApi
 
 
-MODULES = (
-    'consumption',
-    'loading',
-    'modeling',
-    'presentation',
-    'reading',
-    'validation')
+__version__ = '0.1.0'
 
-__all__ = (
-    'MODULES',
-    'dsl_specification',
-    'iter_specifications',
-    'dump',
-    'dump_as_csv')
+
+def _setup_loggers():
+    create_logger(
+        handlers=[
+            create_console_log_handler(level=logging.WARN),
+            create_file_log_handler(file_path='/tmp/aria_cli.log'),
+        ],
+        level=logging.INFO)
+
+
+def main():
+    """
+    CLI entry point
+    """
+    install_aria_extensions()
+    _setup_loggers()
+
+    with AriaCliApi(StdOutReceiver(), config_parser()) as aria:
+        aria.run()
+
+
+if __name__ == '__main__':
+    main()
