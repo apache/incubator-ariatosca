@@ -17,7 +17,7 @@
 import os
 import sys
 
-from setuptools import setup, find_packages, Command
+from setuptools import setup, find_packages
 from setuptools.command.install import install
 
 _PACKAGE_NAME = 'aria'
@@ -38,11 +38,25 @@ version = '0.1.0'
 execfile(os.path.join(root_dir, _PACKAGE_NAME, 'VERSION.py'))
 
 
+install_requires = []
+extras_require = {}
+
+# We need to parse the requirements for the conditional dependencies to work for wheels and
+# standard installation
 try:
     with open(os.path.join(root_dir, 'requirements.txt')) as requirements:
-        install_requires = [requirement.strip() for requirement in requirements.readlines()]
+        for requirement in requirements.readlines():
+            if not requirement.strip().startswith('#'):
+                if ';' in requirement:
+                    package, condition = requirement.split(';')
+                    cond_name = ':{0}'.format(condition.strip())
+                    extras_require.setdefault(cond_name, [])
+                    extras_require[cond_name].append(package.strip())
+                else:
+                    install_requires.append(requirement.strip())
 except IOError:
     install_requires = []
+    extras_require = {}
 
 
 console_scripts = ['aria = aria.cli.cli:main']
@@ -50,7 +64,7 @@ console_scripts = ['aria = aria.cli.cli:main']
 
 class InstallCommand(install):
     user_options = install.user_options + [
-        ('skip-ctx', None, 'Install with or without the ctx (Defaults to True')
+        ('skip-ctx', None, 'Install with or without the ctx (Defaults to False')
     ]
     boolean_options = install.boolean_options + ['skip-ctx']
 
@@ -95,6 +109,7 @@ setup(
     },
     zip_safe=False,
     install_requires=install_requires,
+    extras_require=extras_require,
     entry_points={
         'console_scripts': console_scripts
     },
