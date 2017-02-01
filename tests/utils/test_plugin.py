@@ -21,7 +21,7 @@ from aria import application_model_storage
 from aria.orchestrator import exceptions
 from aria.orchestrator import plugin
 from aria.utils.plugin import create as create_plugin
-from aria.storage.sql_mapi import SQLAlchemyModelAPI
+from aria.storage import sql_mapi
 
 from .. import storage
 
@@ -49,8 +49,8 @@ class TestPluginManager(object):
 
 @pytest.fixture
 def model():
-    api_kwargs = storage.get_sqlite_api_kwargs()
-    model = application_model_storage(SQLAlchemyModelAPI, api_kwargs=api_kwargs)
+    model = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
+                                      initiator=storage.init_inmemory_model_storage)
     yield model
     storage.release_sqlite_storage(model)
 

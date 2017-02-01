@@ -17,20 +17,20 @@
 Workflow runner
 """
 
-import platform
 import tempfile
 import os
-
-from sqlalchemy import (create_engine, orm) # @UnresolvedImport
-from sqlalchemy.pool import StaticPool # @UnresolvedImport
 
 from .context.workflow import WorkflowContext
 from .workflows.core.engine import Engine
 from .workflows.executor.thread import ThreadExecutor
-from ..storage import model
-from ..storage.sql_mapi import SQLAlchemyModelAPI
-from ..storage.filesystem_rapi import FileSystemResourceAPI
-from .. import (application_model_storage, application_resource_storage)
+from ..storage import (
+    sql_mapi,
+    filesystem_rapi,
+)
+from .. import (
+    application_model_storage,
+    application_resource_storage
+)
 
 
 SQLITE_IN_MEMORY = 'sqlite:///:memory:'
@@ -57,6 +57,8 @@ class Runner(object):
             os.close(the_file)
 
         self._storage_path = storage_path
+        self._storage_dir = os.path.dirname(storage_path)
+        self._storage_name = os.path.basename(storage_path)
         self._is_storage_temporary = is_storage_temporary
 
         workflow_context = self.create_workflow_context(workflow_name, deployment_id,
@@ -76,9 +78,13 @@ class Runner(object):
             self.cleanup()
 
     def create_workflow_context(self, workflow_name, deployment_id, initialize_model_storage_fn):
-        model_storage = self.create_sqlite_model_storage()
+        self.cleanup()
+        model_storage = application_model_storage(
+            sql_mapi.SQLAlchemyModelAPI,
+            initiator_kwargs=dict(base_dir=self._storage_dir, filename=self._storage_name))
         initialize_model_storage_fn(model_storage)
-        resource_storage = self.create_fs_resource_storage()
+        resource_storage = application_resource_storage(
+            filesystem_rapi.FileSystemResourceAPI, api_kwargs=dict(directory='.'))
         return WorkflowContext(
             name=workflow_name,
             model_storage=model_storage,
@@ -88,48 +94,8 @@ class Runner(object):
             task_max_attempts=1,
             task_retry_interval=1)
 
-    def create_sqlite_model_storage(self): # pylint: disable=no-self-use
-        self.cleanup()
-
-        # Engine
-        if self._storage_path is None:
-            # In memory
-            # Causes serious threading problems:
-            # https://gehrcke.de/2015/05/in-memory-sqlite-database-and-flask-a-threading-trap/
-            sqlite_engine = create_engine(
-                SQLITE_IN_MEMORY,
-                connect_args={'check_same_thread': False},
-                poolclass=StaticPool)
-        else:
-            path_prefix = '' if 'Windows' in platform.system() else '/'
-            sqlite_engine = create_engine(
-                'sqlite:///%s%s' % (path_prefix, self._storage_path))
-
-        # Models
-        model.DeclarativeBase.metadata.create_all(bind=sqlite_engine) # @UndefinedVariable
-
-        # Session
-        sqlite_session_factory = orm.sessionmaker(bind=sqlite_engine)
-        if self._storage_path is None:
-            sqlite_session = sqlite_session_factory()
-        else:
-            # File-based storage only
-            sqlite_session = orm.scoped_session(session_factory=sqlite_session_factory)
-
-        # Storage
-        sqlite_kwargs = dict(engine=sqlite_engine, session=sqlite_session)
-        return application_model_storage(
-            SQLAlchemyModelAPI,
-            api_kwargs=sqlite_kwargs)
-
-    def create_fs_resource_storage(self, directory='.'): # pylint: disable=no-self-use
-        fs_kwargs = dict(directory=directory)
-        return application_resource_storage(
-            FileSystemResourceAPI,
-            api_kwargs=fs_kwargs)
 
     def cleanup(self):
-        if self._is_storage_temporary \
-            and (self._storage_path is not None) \
-            and os.path.isfile(self._storage_path):
+        if (self._is_storage_temporary and (self._storage_path is not None) and
+                os.path.isfile(self._storage_path)):
             os.remove(self._storage_path)

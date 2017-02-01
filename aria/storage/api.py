@@ -119,11 +119,12 @@ class ResourceAPI(StorageAPI):
     """
     A Base object for the resource.
     """
-    def __init__(self, name):
+    def __init__(self, name, **kwargs):
         """
         Base resource API
         :param str name: the resource type
         """
+        super(ResourceAPI, self).__init__(**kwargs)
         self._name = name
 
     @property

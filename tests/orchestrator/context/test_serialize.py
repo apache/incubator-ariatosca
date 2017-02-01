@@ -16,13 +16,11 @@
 import pytest
 
 import aria
-from aria.storage.sql_mapi import SQLAlchemyModelAPI
+from aria.storage import sql_mapi
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.core import engine
 from aria.orchestrator.workflows.executor import process
 from aria.orchestrator import workflow, operation
-from aria.orchestrator.context import serialization
-
 import tests
 from tests import mock
 from tests import storage
@@ -41,10 +39,6 @@ def test_serialize_operation_context(context, executor, tmpdir):
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
 
-
-def test_illegal_serialize_of_memory_model_storage(memory_model_storage):
-    with pytest.raises(AssertionError):
-        serialization._serialize_sql_mapi_kwargs(memory_model_storage)
 
 
 @workflow
@@ -93,16 +87,17 @@ def executor():
 
 @pytest.fixture
 def context(tmpdir):
-    result = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)),
-                                 resources_dir=str(tmpdir.join('resources')),
-                                 workdir=str(tmpdir.join('workdir')))
+    result = mock.context.simple(
+        str(tmpdir),
+        context_kwargs=dict(workdir=str(tmpdir.join('workdir')))
+    )
+
     yield result
     storage.release_sqlite_storage(result.model)
 
 
 @pytest.fixture
 def memory_model_storage():
-    result = aria.application_model_storage(
-        SQLAlchemyModelAPI, api_kwargs=storage.get_sqlite_api_kwargs())
+    result = aria.application_model_storage(sql_mapi.SQLAlchemyModelAPI)
     yield result
     storage.release_sqlite_storage(result)

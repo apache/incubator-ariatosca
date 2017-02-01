@@ -53,8 +53,7 @@ def test_download_resource_and_render_provided_variables(tmpdir, ctx):
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(storage.get_sqlite_api_kwargs(),
-                                  resources_dir=str(tmpdir.join('resources')))
+    context = mock.context.simple(str(tmpdir))
     yield context
     storage.release_sqlite_storage(context.model)
 

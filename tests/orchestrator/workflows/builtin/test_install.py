@@ -25,7 +25,7 @@ from . import assert_node_install_operations
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    context = mock.context.simple(str(tmpdir))
     yield context
     storage.release_sqlite_storage(context.model)
 

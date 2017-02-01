@@ -15,13 +15,19 @@
 """
 SQLAlchemy based MAPI
 """
+import os
+import platform
 
+from sqlalchemy import (
+    create_engine,
+    orm,
+)
 from sqlalchemy.exc import SQLAlchemyError
 
 from aria.utils.collections import OrderedDict
-from aria.storage import (
+from . import (
     api,
-    exceptions
+    exceptions,
 )
 
 
@@ -362,6 +368,31 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         """
         for rel in instance.__mapper__.relationships:
             getattr(instance, rel.key)
+
+
+def init_storage(base_dir, filename='db.sqlite'):
+    """
+    A builtin ModelStorage initiator.
+    Creates a sqlalchemy engine and a session to be passed to the mapi.
+
+    Initiator_kwargs must be passed to the ModelStorage which must hold the base_dir for the
+    location of the db file, and an option filename. This would create an sqlite db.
+    :param base_dir: the dir of the db
+    :param filename: the db file name.
+    :return:
+    """
+    uri = 'sqlite:///{platform_char}{path}'.format(
+        # Handles the windows behavior where there is not root, but drivers.
+        # Thus behaving as relative path.
+        platform_char='' if 'Windows' in platform.system() else '/',
+
+        path=os.path.join(base_dir, filename))
+
+    engine = create_engine(uri)
+    session_factory = orm.sessionmaker(bind=engine)
+    session = orm.scoped_session(session_factory=session_factory)
+
+    return dict(engine=engine, session=session)
 
 
 class ListResult(object):

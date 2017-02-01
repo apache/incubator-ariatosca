@@ -265,9 +265,7 @@ class TestWithActualSSHServer(object):
 
     @pytest.fixture
     def workflow_context(self, tmpdir):
-        workflow_context = mock.context.simple(
-            storage.get_sqlite_api_kwargs(str(tmpdir)),
-            resources_dir=str(tmpdir.join('resources')))
+        workflow_context = mock.context.simple(str(tmpdir))
         workflow_context.states = []
         workflow_context.exception = None
         yield workflow_context

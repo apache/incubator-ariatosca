@@ -37,6 +37,7 @@ import struct
 import subprocess
 import tempfile
 import Queue
+import pickle
 
 import jsonpickle
 
@@ -45,7 +46,6 @@ from aria.extension import process_executor
 from aria.utils import imports
 from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
-from aria.orchestrator.context import serialization
 from aria.storage import instrumentation
 from aria.storage import type as storage_type
 
@@ -113,7 +113,7 @@ class ProcessExecutor(base.BaseExecutor):
         file_descriptor, arguments_json_path = tempfile.mkstemp(prefix='executor-', suffix='.json')
         os.close(file_descriptor)
         with open(arguments_json_path, 'wb') as f:
-            f.write(jsonpickle.dumps(self._create_arguments_dict(task)))
+            f.write(pickle.dumps(self._create_arguments_dict(task)))
 
         env = os.environ.copy()
         # See _update_env for plugin_prefix usage
@@ -193,7 +193,7 @@ class ProcessExecutor(base.BaseExecutor):
             'operation_mapping': task.operation_mapping,
             'operation_inputs': task.inputs,
             'port': self._server_port,
-            'context': serialization.operation_context_to_dict(task.context),
+            'context': task.context.serialization_dict,
         }
 
     def _update_env(self, env, plugin_prefix):
@@ -306,7 +306,7 @@ def _patch_session(ctx, messenger, instrument):
 def _main():
     arguments_json_path = sys.argv[1]
     with open(arguments_json_path) as f:
-        arguments = jsonpickle.loads(f.read())
+        arguments = pickle.loads(f.read())
 
     # arguments_json_path is a temporary file created by the parent process.
     # so we remove it here
@@ -327,7 +327,7 @@ def _main():
 
     with instrumentation.track_changes() as instrument:
         try:
-            ctx = serialization.operation_context_from_dict(context_dict)
+            ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
             _patch_session(ctx=ctx, messenger=messenger, instrument=instrument)
             task_func = imports.load_attribute(operation_mapping)
             aria.install_aria_extensions()
@@ -337,6 +337,7 @@ def _main():
             messenger.succeeded(tracked_changes=instrument.tracked_changes)
         except BaseException as e:
             messenger.failed(exception=e, tracked_changes=instrument.tracked_changes)
+
 
 if __name__ == '__main__':
     _main()

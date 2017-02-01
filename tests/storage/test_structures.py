@@ -25,7 +25,7 @@ from aria.storage import (
     exceptions
 )
 
-from ..storage import get_sqlite_api_kwargs, release_sqlite_storage, structure
+from ..storage import release_sqlite_storage, structure, init_inmemory_model_storage
 from . import MockModel
 from ..mock import (
     models,
@@ -36,7 +36,7 @@ from ..mock import (
 
 @pytest.fixture
 def storage():
-    base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI, api_kwargs=get_sqlite_api_kwargs())
+    base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI, initiator=init_inmemory_model_storage)
     base_storage.register(MockModel)
     yield base_storage
     release_sqlite_storage(base_storage)
@@ -48,8 +48,10 @@ def module_cleanup():
 
 
 @pytest.fixture
-def context():
-    return mock_context.simple(get_sqlite_api_kwargs())
+def context(tmpdir):
+    ctx = mock_context.simple(str(tmpdir))
+    yield ctx
+    release_sqlite_storage(ctx.model)
 
 
 def test_inner_dict_update(storage):
@@ -173,7 +175,6 @@ def test_relationship_model_ordering(context):
         source_node_instance=new_node_instance,
         target_node_instance=target_node_instance,
     )
-
 
     context.model.node.put(new_node)
     context.model.node_instance.put(new_node_instance)

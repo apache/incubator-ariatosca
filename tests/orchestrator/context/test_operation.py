@@ -37,8 +37,11 @@ global_test_holder = {}
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)),
-                                  workdir=str(tmpdir.join('workdir')))
+    context = mock.context.simple(
+        str(tmpdir.join('workdir')),
+        inmemory=True,
+        context_kwargs=dict(workdir=str(tmpdir.join('workdir')))
+    )
     yield context
     storage.release_sqlite_storage(context.model)
 

@@ -42,7 +42,6 @@ class MockModel(model.DeclarativeBase, structure.ModelMixin): #pylint: disable=a
     name = Column(Text)
 
 
-
 class TestFileSystem(object):
 
     def setup_method(self):
@@ -50,35 +49,6 @@ class TestFileSystem(object):
 
     def teardown_method(self):
         rmtree(self.path, ignore_errors=True)
-
-
-def get_sqlite_api_kwargs(base_dir=None, filename='db.sqlite'):
-    """
-    Create sql params. works in in-memory and in filesystem mode.
-    If base_dir is passed, the mode will be filesystem mode. while the default mode is in-memory.
-    :param str base_dir: The base dir for the filesystem memory file.
-    :param str filename: the file name - defaults to 'db.sqlite'.
-    :return:
-    """
-    if base_dir is not None:
-        uri = 'sqlite:///{platform_char}{path}'.format(
-            # Handles the windows behavior where there is not root, but drivers.
-            # Thus behaving as relative path.
-            platform_char='' if 'Windows' in platform.system() else '/',
-
-            path=os.path.join(base_dir, filename))
-        engine_kwargs = {}
-    else:
-        uri = 'sqlite:///:memory:'
-        engine_kwargs = dict(connect_args={'check_same_thread': False},
-                             poolclass=pool.StaticPool)
-
-    engine = create_engine(uri, **engine_kwargs)
-    session_factory = orm.sessionmaker(bind=engine)
-    session = orm.scoped_session(session_factory=session_factory) if base_dir else session_factory()
-
-    model.DeclarativeBase.metadata.create_all(bind=engine)
-    return dict(engine=engine, session=session)
 
 
 def release_sqlite_storage(storage):
@@ -95,3 +65,14 @@ def release_sqlite_storage(storage):
             session.close()
         for engine in set(mapi._engine for mapi in mapis):
             model.DeclarativeBase.metadata.drop_all(engine)
+
+
+def init_inmemory_model_storage():
+    uri = 'sqlite:///:memory:'
+    engine_kwargs = dict(connect_args={'check_same_thread': False}, poolclass=pool.StaticPool)
+
+    engine = create_engine(uri, **engine_kwargs)
+    session_factory = orm.sessionmaker(bind=engine)
+    session = session_factory()
+
+    return dict(engine=engine, session=session)

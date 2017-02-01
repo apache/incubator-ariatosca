@@ -75,6 +75,6 @@ def executor():
 
 @pytest.fixture
 def context(tmpdir):
-    result = mock.context.simple(storage.get_sqlite_api_kwargs(str(tmpdir)))
+    result = mock.context.simple(str(tmpdir))
     yield result
     storage.release_sqlite_storage(result.model)

@@ -64,7 +64,7 @@ console_scripts = ['aria = aria.cli.cli:main']
 
 class InstallCommand(install):
     user_options = install.user_options + [
-        ('skip-ctx', None, 'Install with or without the ctx (Defaults to False')
+        ('skip-ctx', None, 'Install with or without the ctx (Defaults to False)')
     ]
     boolean_options = install.boolean_options + ['skip-ctx']
 

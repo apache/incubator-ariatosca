@@ -13,28 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import aria
 from aria.orchestrator import context
-from aria.storage.filesystem_rapi import FileSystemResourceAPI
-from aria.storage.sql_mapi import SQLAlchemyModelAPI
+from aria.storage import (
+    sql_mapi,
+    filesystem_rapi,
+)
 
 from . import models
+from ..storage import init_inmemory_model_storage
 from .topology import create_simple_topology_two_nodes
 
 
-def simple(mapi_kwargs, resources_dir=None, **kwargs):
-    model_storage = aria.application_model_storage(SQLAlchemyModelAPI, api_kwargs=mapi_kwargs)
+def simple(tmpdir, inmemory=False, context_kwargs=None):
+    initiator = init_inmemory_model_storage if inmemory else None
+    initiator_kwargs = {} if inmemory else dict(base_dir=tmpdir)
+
+    model_storage = aria.application_model_storage(
+        sql_mapi.SQLAlchemyModelAPI, initiator=initiator, initiator_kwargs=initiator_kwargs)
+    resource_storage = aria.application_resource_storage(
+        filesystem_rapi.FileSystemResourceAPI,
+        api_kwargs=dict(directory=os.path.join(tmpdir, 'resources'))
+    )
 
     deployment_id = create_simple_topology_two_nodes(model_storage)
-
-    # pytest tmpdir
-    if resources_dir:
-        resource_storage = aria.application_resource_storage(
-            FileSystemResourceAPI,
-            api_kwargs={'directory': resources_dir}
-        )
-    else:
-        resource_storage = None
 
     final_kwargs = dict(
         name='simple_context',
@@ -45,5 +49,5 @@ def simple(mapi_kwargs, resources_dir=None, **kwargs):
         task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL
     )
-    final_kwargs.update(kwargs)
+    final_kwargs.update(context_kwargs or {})
     return context.workflow.WorkflowContext(**final_kwargs)

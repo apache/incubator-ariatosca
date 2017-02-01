@@ -22,14 +22,15 @@ from aria.storage import (
     sql_mapi,
 )
 from aria import application_model_storage
-from ..storage import get_sqlite_api_kwargs, release_sqlite_storage
+from ..storage import release_sqlite_storage, init_inmemory_model_storage
 
 from . import MockModel
 
 
 @pytest.fixture
 def storage():
-    base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI, api_kwargs=get_sqlite_api_kwargs())
+    base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI,
+                                initiator=init_inmemory_model_storage)
     base_storage.register(MockModel)
     yield base_storage
     release_sqlite_storage(base_storage)
@@ -61,7 +62,7 @@ def test_model_storage(storage):
 
 def test_application_storage_factory():
     storage = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
-                                        api_kwargs=get_sqlite_api_kwargs())
+                                        initiator=init_inmemory_model_storage)
     assert storage.node
     assert storage.node_instance
     assert storage.plugin

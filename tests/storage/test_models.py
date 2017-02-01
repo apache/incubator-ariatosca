@@ -39,7 +39,7 @@ from aria.storage.model import (
 
 
 from tests import mock
-from tests.storage import get_sqlite_api_kwargs, release_sqlite_storage
+from ..storage import release_sqlite_storage, init_inmemory_model_storage
 
 
 @contextmanager
@@ -55,7 +55,7 @@ def sql_storage(storage_func):
 
 def _empty_storage():
     return application_model_storage(sql_mapi.SQLAlchemyModelAPI,
-                                     api_kwargs=get_sqlite_api_kwargs())
+                                     initiator=init_inmemory_model_storage)
 
 
 def _blueprint_storage():

@@ -24,13 +24,13 @@ from tests import mock, storage
 
 
 @pytest.fixture
-def ctx():
+def ctx(tmpdir):
     """
     Create the following graph in storage:
     dependency_node <------ dependent_node
     :return:
     """
-    simple_context = mock.context.simple(storage.get_sqlite_api_kwargs())
+    simple_context = mock.context.simple(str(tmpdir), inmemory=False)
     simple_context.model.execution.put(mock.models.get_execution(simple_context.deployment))
     yield simple_context
     storage.release_sqlite_storage(simple_context.model)

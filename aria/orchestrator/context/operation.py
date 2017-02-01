@@ -17,6 +17,7 @@
 Workflow and operation contexts
 """
 
+import aria
 from aria.utils import file
 from .common import BaseContext
 
@@ -72,6 +73,32 @@ class BaseOperationContext(BaseContext):
                                                       self.task.plugin_name)
         file.makedirs(plugin_workdir)
         return plugin_workdir
+
+    @property
+    def serialization_dict(self):
+        context_cls = self.__class__
+        context_dict = {
+            'name': self.name,
+            'deployment_id': self._deployment_id,
+            'task_id': self._task_id,
+            'actor_id': self._actor_id,
+            'workdir': self._workdir,
+            'model_storage': self.model.serialization_dict if self.model else None,
+            'resource_storage': self.resource.serialization_dict if self.resource else None
+        }
+        return {
+            'context_cls': context_cls,
+            'context': context_dict
+        }
+
+    @classmethod
+    def deserialize_from_dict(cls, model_storage=None, resource_storage=None, **kwargs):
+        if model_storage:
+            model_storage = aria.application_model_storage(**model_storage)
+        if resource_storage:
+            resource_storage = aria.application_resource_storage(**resource_storage)
+
+        return cls(model_storage=model_storage, resource_storage=resource_storage, **kwargs)
 
 
 class NodeOperationContext(BaseOperationContext):

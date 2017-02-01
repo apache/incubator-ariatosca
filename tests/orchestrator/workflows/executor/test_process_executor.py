@@ -22,11 +22,15 @@ from contextlib import contextmanager
 import pytest
 
 from aria import application_model_storage
-from aria.storage import model as aria_model
+from aria.storage import (
+    model as aria_model,
+    sql_mapi
+)
+from aria.orchestrator import (
+    events,
+    plugin
+)
 from aria.utils.plugin import create as create_plugin
-from aria.storage.sql_mapi import SQLAlchemyModelAPI
-from aria.orchestrator import events
-from aria.orchestrator import plugin
 from aria.orchestrator.workflows.executor import process
 
 
@@ -74,8 +78,9 @@ class TestProcessExecutor(object):
 
 @pytest.fixture
 def model(tmpdir):
-    api_kwargs = tests.storage.get_sqlite_api_kwargs(str(tmpdir))
-    result = application_model_storage(SQLAlchemyModelAPI, api_kwargs=api_kwargs)
+    result = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
+                                       initiator_kwargs=dict(base_dir=str(tmpdir)),
+                                       initiator=sql_mapi.init_storage)
     yield result
     tests.storage.release_sqlite_storage(result)
 
@@ -112,7 +117,14 @@ class MockContext(object):
         pass
 
     def __getattr__(self, item):
-        return None
+        if item == 'serialization_dict':
+            return {'context_cls': self.__class__, 'context': {}}
+        else:
+            return None
+
+    @classmethod
+    def deserialize_from_dict(cls, **kwargs):
+        return cls()
 
 
 class MockTask(object):

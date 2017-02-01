@@ -86,7 +86,14 @@ class MockContext(object):
         pass
 
     def __getattr__(self, item):
-        return None
+        if item == 'serialization_dict':
+            return {'context_cls': self.__class__, 'context': {}}
+        else:
+            return None
+
+    @classmethod
+    def deserialize_from_dict(cls, **kwargs):
+        return cls()
 
 
 class MockTask(object):

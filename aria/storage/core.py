@@ -39,7 +39,10 @@ API:
 """
 
 from aria.logger import LoggerMixin
-from . import api as storage_api
+from . import (
+    api as storage_api,
+    sql_mapi
+)
 
 __all__ = (
     'Storage',
@@ -52,11 +55,33 @@ class Storage(LoggerMixin):
     """
     Represents the storage
     """
-    def __init__(self, api_cls, api_kwargs=None, items=(), **kwargs):
+    def __init__(self,
+                 api_cls,
+                 api_kwargs=None,
+                 items=(),
+                 initiator=None,
+                 initiator_kwargs=None,
+                 **kwargs):
+        """
+
+        :param api_cls: API cls for each model.
+        :param api_kwargs:
+        :param items: the items to register
+        :param initiator: a func which initializes the storage before the first use.
+        This function should return a dict, this dict would be passed in addition to the api kwargs.
+        This enables the creation of any unpickable objects across process.
+        :param initiator_kwargs:
+        :param kwargs:
+        """
         super(Storage, self).__init__(**kwargs)
         self.api = api_cls
-        self._api_kwargs = api_kwargs or {}
         self.registered = {}
+        self._initiator = initiator
+        self._initiator_kwargs = initiator_kwargs or {}
+        self._api_kwargs = api_kwargs or {}
+        self._additional_api_kwargs = {}
+        if self._initiator:
+            self._additional_api_kwargs = self._initiator(**self._initiator_kwargs)
         for item in items:
             self.register(item)
         self.logger.debug('{name} object is ready: {0!r}'.format(
@@ -70,6 +95,15 @@ class Storage(LoggerMixin):
             return self.registered[item]
         except KeyError:
             return super(Storage, self).__getattribute__(item)
+
+    @property
+    def serialization_dict(self):
+        return {
+            'api': self.api,
+            'api_kwargs': self._api_kwargs,
+            'initiator': self._initiator,
+            'initiator_kwargs': self._initiator_kwargs
+        }
 
     def register(self, entry):
         """
@@ -90,7 +124,9 @@ class ResourceStorage(Storage):
         :param name:
         :return:
         """
-        self.registered[name] = self.api(name=name, **self._api_kwargs)
+        kwargs = self._api_kwargs.copy()
+        kwargs.update(self._additional_api_kwargs)
+        self.registered[name] = self.api(name=name, **kwargs)
         self.registered[name].create()
         self.logger.debug('setup {name} in storage {self!r}'.format(name=name, self=self))
 
@@ -99,6 +135,11 @@ class ModelStorage(Storage):
     """
     Represents model storage.
     """
+    def __init__(self, *args, **kwargs):
+        if kwargs.get('initiator', None) is None:
+            kwargs['initiator'] = sql_mapi.init_storage
+        super(ModelStorage, self).__init__(*args, **kwargs)
+
     def register(self, model_cls):
         """
         Register the model into the model storage.
@@ -110,9 +151,9 @@ class ModelStorage(Storage):
             self.logger.debug('{name} in already storage {self!r}'.format(name=model_name,
                                                                           self=self))
             return
-        self.registered[model_name] = self.api(name=model_name,
-                                               model_cls=model_cls,
-                                               **self._api_kwargs)
+        kwargs = self._api_kwargs.copy()
+        kwargs.update(self._additional_api_kwargs)
+        self.registered[model_name] = self.api(name=model_name, model_cls=model_cls, **kwargs)
         self.registered[model_name].create()
         self.logger.debug('setup {name} in storage {self!r}'.format(name=model_name, self=self))
 

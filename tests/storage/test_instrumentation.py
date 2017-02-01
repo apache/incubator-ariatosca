@@ -25,7 +25,7 @@ from aria.storage import (
     instrumentation,
     exceptions
 )
-from ..storage import get_sqlite_api_kwargs, release_sqlite_storage
+from ..storage import release_sqlite_storage, init_inmemory_model_storage
 
 
 STUB = instrumentation._STUB
@@ -328,10 +328,9 @@ def restore_instrumentation():
 
 @pytest.fixture
 def storage():
-    result = ModelStorage(
-        api_cls=sql_mapi.SQLAlchemyModelAPI,
-        api_kwargs=get_sqlite_api_kwargs(),
-        items=(MockModel1, MockModel2, StrictMockModel))
+    result = ModelStorage(api_cls=sql_mapi.SQLAlchemyModelAPI,
+                          items=(MockModel1, MockModel2, StrictMockModel),
+                          initiator=init_inmemory_model_storage)
     yield result
     release_sqlite_storage(result)
 
