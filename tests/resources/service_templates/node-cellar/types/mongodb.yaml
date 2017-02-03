@@ -1,0 +1,73 @@
+#
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+
+imports:
+  - os.yaml
+
+node_types:
+
+  mongodb.Server:
+    description: >-
+      MongoDB server application.
+    derived_from: tosca.nodes.DBMS
+    properties:
+      root_password: # @override
+        type: string
+        default: admin
+      port: # @override
+        type: integer
+        default: 27017
+    artifacts:
+      mongodb:
+        description: >-
+          MongoDB application package.
+        type: os.Archive
+        file: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu1604-3.2.8.tgz
+        deploy_path: /opt/mongodb
+    capabilities:
+      host: # @override
+        type: tosca.capabilities.Container
+        valid_source_types: [ mongodb.Database ]
+
+  mongodb.Database:
+    description: >-
+      MongoDB database.
+      
+      Supports importing database data if a mongodb.DatabaseDump is provided.
+    derived_from: tosca.nodes.Database
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: mongodb/create_and_import_database.sh
+            dependencies:
+              - mongodb/utils/api.sh
+              - utils/os.sh
+    requirements:
+      - host: # @override
+          capability: tosca.capabilities.Container
+          node: mongodb.Server
+          relationship: tosca.relationships.HostedOn
+
+artifact_types:
+
+  mongodb.DatabaseDump:
+    description: >-
+      Dump of a MongoDB database.
+    derived_from: tosca.artifacts.Root
+    file_ext:
+      - json

@@ -16,13 +16,29 @@
 import os
 import urlparse
 
+
+_IS_WINDOWS = (os.name == 'nt')
+
+
 def as_file(uri):
     """
-    If the URI is a file (either the :code:`file` scheme or no scheme), then returns the absolute
+    If the URI is a file (either the :code:`file` scheme or no scheme), then returns the normalized
     path. Otherwise, returns None.
     """
 
+    if _IS_WINDOWS:
+        # We need this extra check in Windows before urlparse because paths might have a drive
+        # prefix, e.g. "C:" which will be considered a scheme for urlparse below
+        path = uri.replace('/', '\\')
+        if os.path.exists(path):
+            return os.path.normpath(path)
+
     url = urlparse.urlparse(uri)
-    if (not url.scheme) or (url.scheme == 'file'):
-        return os.path.abspath(url.path)
+    scheme = url.scheme
+    if (not scheme) or (scheme == 'file'):
+        path = url.path
+        if _IS_WINDOWS:
+            path = path.replace('/', '\\')
+        return os.path.normpath(path)
+
     return None

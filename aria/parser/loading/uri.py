@@ -66,8 +66,9 @@ class UriTextLoader(Loader):
         except DocumentNotFoundException:
             # Try prefixes in order
             for prefix in self._prefixes:
-                if as_file(prefix) is not None:
-                    uri = os.path.join(prefix, self.location.uri)
+                prefix_as_file = as_file(prefix)
+                if prefix_as_file is not None:
+                    uri = os.path.join(prefix_as_file, self.location.uri)
                 else:
                     uri = urljoin(prefix, self.location.uri)
                 try:

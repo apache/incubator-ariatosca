@@ -17,7 +17,9 @@
 CLI Entry point
 """
 
+import os
 import logging
+import tempfile
 
 from .. import install_aria_extensions
 from ..logger import (
@@ -100,7 +102,7 @@ def main():
     create_logger(
         handlers=[
             create_console_log_handler(),
-            create_file_log_handler(file_path='/tmp/aria_cli.log'),
+            create_file_log_handler(file_path=os.path.join(tempfile.gettempdir(), 'aria_cli.log')),
         ],
         level=logging.INFO)
     with AriaCli() as aria:

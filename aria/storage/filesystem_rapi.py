@@ -17,10 +17,10 @@ SQLalchemy based RAPI
 """
 import os
 import shutil
+from multiprocessing import RLock
 from contextlib import contextmanager
 from functools import partial
 from distutils import dir_util                                # https://github.com/PyCQA/pylint/issues/73; pylint: disable=no-name-in-module
-from multiprocessing import RLock
 
 from aria.storage import (
     api,

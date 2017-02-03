@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import tempfile
+
 from requests import Session
-from requests.exceptions import ConnectionError
+from requests.exceptions import (ConnectionError, InvalidSchema)
 from cachecontrol import CacheControl
 from cachecontrol.caches import FileCache
 
@@ -22,7 +25,7 @@ from .exceptions import LoaderException, DocumentNotFoundException
 from .loader import Loader
 
 SESSION = None
-SESSION_CACHE_PATH = '/tmp'
+SESSION_CACHE_PATH = os.path.join(tempfile.gettempdir(), 'aria_requests')
 
 
 class RequestLoader(Loader):
@@ -53,6 +56,8 @@ class RequestLoader(Loader):
 
         try:
             self._response = SESSION.get(self.uri, headers=self.headers)
+        except InvalidSchema as e:
+            raise DocumentNotFoundException('document not found: "%s"' % self.uri, cause=e)
         except ConnectionError as e:
             raise LoaderException('request connection error: "%s"' % self.uri, cause=e)
         except Exception as e:
