@@ -58,7 +58,7 @@ def _mock_workflow(ctx, graph):
 def _mock_operation(ctx):
     # We test several things in this operation
     # ctx.task, ctx.node, etc... tell us that the model storage was properly re-created
-    # a correct ctx.task.operation_mapping tells us we kept the correct task_id
+    # a correct ctx.task.implementation tells us we kept the correct task_id
     assert ctx.task.implementation == _operation_mapping()
     # a correct ctx.node.name tells us we kept the correct actor_id
     assert ctx.node.name == mock.models.DEPENDENCY_NODE_INSTANCE_NAME

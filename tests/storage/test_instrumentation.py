@@ -17,13 +17,15 @@ import pytest
 from sqlalchemy import Column, Text, Integer, event
 
 from aria.storage import (
-    structure,
     ModelStorage,
     sql_mapi,
     instrumentation,
     exceptions,
+)
+from aria.storage.modeling import (
+    model,
     type as aria_type,
-    model
+    structure,
 )
 from ..storage import release_sqlite_storage, init_inmemory_model_storage
 

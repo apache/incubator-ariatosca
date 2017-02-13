@@ -145,6 +145,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     def create(self, checkfirst=True, create_all=True, **kwargs):
         self.model_cls.__table__.create(self._engine, checkfirst=checkfirst)
+
         if create_all:
             # In order to create any models created dynamically (e.g. many-to-many helper tables are
             # created at runtime).

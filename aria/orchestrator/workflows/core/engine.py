@@ -69,6 +69,7 @@ class Engine(logger.LoggerMixin):
             else:
                 events.on_success_workflow_signal.send(self._workflow_context)
         except BaseException as e:
+
             events.on_failure_workflow_signal.send(self._workflow_context, exception=e)
             raise
 

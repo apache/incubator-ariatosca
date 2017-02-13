@@ -26,18 +26,19 @@ from .. import events
 
 @events.start_task_signal.connect
 def _start_task_handler(task, **kwargs):
-    task.logger.debug('Event: Starting task: {task.name}'.format(task=task))
+    task.context.logger.debug('Event: Starting task: {task.name}'.format(task=task))
 
 
 @events.on_success_task_signal.connect
 def _success_task_handler(task, **kwargs):
-    task.logger.debug('Event: Task success: {task.name}'.format(task=task))
+    task.context.logger.debug('Event: Task success: {task.name}'.format(task=task))
 
 
 @events.on_failure_task_signal.connect
 def _failure_operation_handler(task, exception, **kwargs):
     error = '{0}: {1}'.format(type(exception).__name__, exception)
-    task.logger.error('Event: Task failure: {task.name} [{error}]'.format(task=task, error=error))
+    task.context.logger.error('Event: Task failure: {task.name} [{error}]'.format(
+        task=task, error=error))
 
 
 @events.start_workflow_signal.connect

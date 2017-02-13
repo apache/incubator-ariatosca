@@ -17,12 +17,7 @@
 Aria top level package
 """
 
-import pkgutil
-
-try:
-    import pkg_resources
-except ImportError:
-    pkg_resources = None
+import sys
 
 from .VERSION import version as __version__
 
@@ -35,6 +30,19 @@ from . import (
     orchestrator,
     cli
 )
+
+if sys.version_info < (2, 7):
+    # pkgutil in python2.6 has a bug where it fails to import from protected modules, which causes
+    # the entire process to fail. In order to overcome this issue we use our custom iter_modules
+    from .utils.imports import iter_modules
+else:
+    from pkgutil import iter_modules
+
+try:
+    import pkg_resources
+except ImportError:
+    pkg_resources = None
+
 __all__ = (
     '__version__',
     'workflow',
@@ -48,7 +56,7 @@ def install_aria_extensions():
     :code:`aria_extension` entry points and loads them.
     It then invokes all registered extension functions.
     """
-    for loader, module_name, _ in pkgutil.iter_modules():
+    for loader, module_name, _ in iter_modules():
         if module_name.startswith('aria_extension_'):
             loader.find_module(module_name).load_module(module_name)
     if pkg_resources:
@@ -97,7 +105,8 @@ def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kw
         storage.modeling.model.ServiceInstanceUpdateStep,
         storage.modeling.model.ServiceInstanceModification,
         storage.modeling.model.Plugin,
-        storage.modeling.model.Task
+        storage.modeling.model.Task,
+        storage.modeling.model.Log
     ]
     return storage.ModelStorage(api_cls=api,
                                 api_kwargs=api_kwargs,

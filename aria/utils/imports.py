@@ -18,6 +18,7 @@ Utility methods for dynamically loading python code
 """
 
 import importlib
+import pkgutil
 
 
 def import_fullname(name, paths=None):
@@ -76,3 +77,20 @@ def load_attribute(attribute_path):
     except AttributeError:
         # TODO: handle
         raise
+
+
+def iter_modules():
+    # apparently pkgutil had some issues in python 2.6. Accessing any root level directories
+    # failed. and it got the entire process of importing fail. Since we only need any
+    # aria_extension related loading, in the meantime we could try to import only those
+    # (and assume they are not located at the root level.
+    # [In python 2.7 it does actually ignore any OSError].
+    yielded = {}
+    for importer in pkgutil.iter_importers():
+        try:
+            for module_name, ispkg in pkgutil.iter_importer_modules(importer):
+                if module_name not in yielded:
+                    yielded[module_name] = True
+                    yield importer, module_name, ispkg
+        except OSError:
+            pass

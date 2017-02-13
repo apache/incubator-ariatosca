@@ -15,18 +15,35 @@
 """
 A common context for both workflow and operation
 """
+import logging
+from contextlib import contextmanager
+from functools import partial
 from uuid import uuid4
 
 import jinja2
 
-from aria import logger
-from aria.storage import exceptions
+from aria import logger as aria_logger
+from aria.storage import (
+    exceptions,
+    modeling
+)
 
 
-class BaseContext(logger.LoggerMixin):
+class BaseContext(object):
     """
     Base context object for workflow and operation
     """
+
+    class PrefixedLogger(object):
+        def __init__(self, logger, prefix=''):
+            self._logger = logger
+            self._prefix = prefix
+
+        def __getattr__(self, item):
+            if item.upper() in logging._levelNames:
+                return partial(getattr(self._logger, item), extra={'prefix': self._prefix})
+            else:
+                return getattr(self._logger, item)
 
     def __init__(
             self,
@@ -43,12 +60,42 @@ class BaseContext(logger.LoggerMixin):
         self._resource = resource_storage
         self._service_instance_id = service_instance_id
         self._workdir = workdir
+        self.logger = None
+
+    def _register_logger(self, logger_name=None, level=None):
+        self.logger = self.PrefixedLogger(logging.getLogger(logger_name or self.__class__.__name__),
+                                          self.logging_id)
+        self.logger.addHandler(aria_logger.create_console_log_handler())
+        self.logger.addHandler(self._get_sqla_handler())
+        self.logger.setLevel(level or logging.DEBUG)
+
+    def _get_sqla_handler(self):
+        api_kwargs = {}
+        if self._model._initiator:
+            api_kwargs.update(self._model._initiator(**self._model._initiator_kwargs))
+        api_kwargs.update(**self._model._api_kwargs)
+        return aria_logger.create_sqla_log_handler(log_cls=modeling.model.Log, **api_kwargs)
 
     def __repr__(self):
         return (
             '{name}(name={self.name}, '
             'deployment_id={self._service_instance_id}, '
             .format(name=self.__class__.__name__, self=self))
+
+    @contextmanager
+    def logging_handlers(self, handlers=None):
+        handlers = handlers or []
+        try:
+            for handler in handlers:
+                self.logger.addHandler(handler)
+            yield self.logger
+        finally:
+            for handler in handlers:
+                self.logger.removeHandler(handler)
+
+    @property
+    def logging_id(self):
+        raise NotImplementedError
 
     @property
     def model(self):

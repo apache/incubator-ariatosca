@@ -33,9 +33,6 @@ from .. import (
 )
 
 
-SQLITE_IN_MEMORY = 'sqlite:///:memory:'
-
-
 class Runner(object):
     """
     Runs workflows on a deployment. By default uses temporary storage (either on disk or in memory)
@@ -96,7 +93,6 @@ class Runner(object):
             workflow_name=self.__class__.__name__,
             task_max_attempts=1,
             task_retry_interval=1)
-
 
     def cleanup(self):
         if (self._is_storage_temporary and (self._storage_path is not None) and

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import pytest
 
 import aria
@@ -21,3 +23,25 @@ import aria
 @pytest.fixture(scope='session', autouse=True)
 def install_aria_extensions():
     aria.install_aria_extensions()
+
+
+@pytest.fixture(autouse=True)
+def logging_handler_cleanup(request):
+    """
+    Each time a test runs, the loggers do not clear. we need to manually clear them or we'd have
+    logging overload.
+
+    Since every type of logger (node/relationship/workflow) share the same name, we should
+    clear the logger each test. This should not happen in real world use.
+    :param request:
+    :return:
+    """
+    def clear_logging_handlers():
+        logged_ctx_names = [
+            aria.orchestrator.context.workflow.WorkflowContext.__name__,
+            aria.orchestrator.context.operation.NodeOperationContext.__name__,
+            aria.orchestrator.context.operation.RelationshipOperationContext.__name__
+        ]
+        for logger_name in logged_ctx_names:
+            logging.getLogger(logger_name).handlers = []
+    request.addfinalizer(clear_logging_handlers)

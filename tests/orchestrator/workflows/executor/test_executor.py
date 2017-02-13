@@ -83,7 +83,7 @@ class MockException(Exception):
 class MockContext(object):
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.logger = logging.getLogger()
 
     def __getattr__(self, item):
         if item == 'serialization_dict':

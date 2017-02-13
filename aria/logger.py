@@ -18,7 +18,8 @@ Logging related mixins and functions
 """
 
 import logging
-from logging.handlers import RotatingFileHandler
+from logging import handlers as logging_handlers
+from datetime import datetime
 
 _base_logger = logging.getLogger('aria')
 
@@ -97,6 +98,15 @@ def create_console_log_handler(level=logging.DEBUG, formatter=None):
     return console
 
 
+def create_sqla_log_handler(session, engine, log_cls, level=logging.DEBUG):
+
+    # This is needed since the engine and session are entirely new we need to reflect the db
+    # schema of the logging model into the engine and session.
+    log_cls.__table__.create(bind=engine, checkfirst=True)
+
+    return _SQLAlchemyHandler(session=session, engine=engine, log_cls=log_cls, level=level)
+
+
 class _DefaultConsoleFormat(logging.Formatter):
     """
     _DefaultConsoleFormat class
@@ -106,10 +116,11 @@ class _DefaultConsoleFormat(logging.Formatter):
     """
     def format(self, record):
         try:
-            if record.levelno == logging.INFO:
-                self._fmt = '%(message)s'
+            if hasattr(record, 'prefix'):
+                self._fmt = '<%(asctime)s: [%(levelname)s] @%(prefix)s> %(message)s'
             else:
-                self._fmt = '%(levelname)s: %(message)s'
+                self._fmt = '<%(asctime)s: [%(levelname)s]> %(message)s'
+
         except AttributeError:
             return record.message
         return logging.Formatter.format(self, record)
@@ -124,7 +135,7 @@ def create_file_log_handler(
     """
     Create a logging.handlers.RotatingFileHandler
     """
-    rotating_file = RotatingFileHandler(
+    rotating_file = logging_handlers.RotatingFileHandler(
         filename=file_path,
         maxBytes=max_bytes,
         backupCount=backup_count,
@@ -133,6 +144,32 @@ def create_file_log_handler(
     rotating_file.setLevel(level)
     rotating_file.formatter = formatter or _default_file_formatter
     return rotating_file
+
+
+class _SQLAlchemyHandler(logging.Handler):
+
+    def __init__(self, session, engine, log_cls, **kwargs):
+        logging.Handler.__init__(self, **kwargs)
+        self._session = session
+        self._engine = engine
+        self._cls = log_cls
+
+    def emit(self, record):
+        created_at = datetime.strptime(logging.Formatter('%(asctime)s').formatTime(record),
+                                       '%Y-%m-%d %H:%M:%S,%f')
+        log = self._cls(
+            actor=record.prefix,
+            level=record.levelname,
+            msg=record.msg,
+            created_at=created_at,
+        )
+        self._session.add(log)
+
+        try:
+            self._session.commit()
+        except BaseException:
+            self._session.rollback()
+            raise
 
 
 _default_file_formatter = logging.Formatter(

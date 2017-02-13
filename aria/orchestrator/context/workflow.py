@@ -46,6 +46,7 @@ class WorkflowContext(BaseContext):
         # TODO: execution creation should happen somewhere else
         # should be moved there, when such logical place exists
         self._execution_id = self._create_execution() if execution_id is None else execution_id
+        self._register_logger()
 
     def __repr__(self):
         return (
@@ -63,6 +64,10 @@ class WorkflowContext(BaseContext):
         )
         self.model.execution.put(execution)
         return execution.id
+
+    @property
+    def logging_id(self):
+        return '{0}[{1}]'.format(self._workflow_name, self._execution_id)
 
     @property
     def execution(self):

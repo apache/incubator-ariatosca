@@ -54,12 +54,16 @@ def workflow(func=None, suffix_template=''):
     return _wrapper
 
 
-def operation(func=None, toolbelt=False, suffix_template=''):
+def operation(func=None, toolbelt=False, suffix_template='', logging_handlers=None):
     """
     Operation decorator
     """
+
     if func is None:
-        return partial(operation, suffix_template=suffix_template, toolbelt=toolbelt)
+        return partial(operation,
+                       suffix_template=suffix_template,
+                       toolbelt=toolbelt,
+                       logging_handlers=logging_handlers)
 
     @wraps(func)
     def _wrapper(**func_kwargs):

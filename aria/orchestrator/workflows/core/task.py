@@ -23,7 +23,6 @@ from functools import (
     wraps,
 )
 
-from aria import logger
 from aria.storage.modeling import model
 from aria.orchestrator.context import operation as operation_context
 
@@ -42,7 +41,7 @@ def _locked(func=None):
     return _wrapper
 
 
-class BaseTask(logger.LoggerMixin):
+class BaseTask(object):
     """
     Base class for Task objects
     """

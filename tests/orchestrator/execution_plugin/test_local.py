@@ -483,9 +483,6 @@ if __name__ == '__main__':
                     operations.__name__,
                     operations.run_script_locally.__name__))
             )]
-            # node.operations[op] = {
-            #     'operation': '{0}.{1}'.format(operations.__name__,
-            #                                   operations.run_script_locally.__name__)}
             graph.add_tasks(api.task.OperationTask.node(
                 instance=node,
                 name=op,

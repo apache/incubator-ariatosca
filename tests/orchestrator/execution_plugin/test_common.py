@@ -18,7 +18,7 @@ from collections import namedtuple
 import requests
 import pytest
 
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator import exceptions
 from aria.orchestrator.execution_plugin import common
 

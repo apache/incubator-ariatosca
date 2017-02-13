@@ -44,12 +44,17 @@ class BaseOperationContext(BaseContext):
         self._task_id = task_id
         self._actor_id = actor_id
         self._task = None
+        self._register_logger()
 
     def __repr__(self):
-        details = 'operation_mapping={task.operation_mapping}; ' \
+        details = 'implementation={task.implementation}; ' \
                   'operation_inputs={task.inputs}'\
             .format(task=self.task)
         return '{name}({0})'.format(details, name=self.name)
+
+    @property
+    def logging_id(self):
+        raise NotImplementedError
 
     @property
     def task(self):
@@ -105,6 +110,11 @@ class NodeOperationContext(BaseOperationContext):
     """
     Context for node based operations.
     """
+
+    @property
+    def logging_id(self):
+        return self.node.name or self.node.id
+
     @property
     def node_template(self):
         """
@@ -126,6 +136,12 @@ class RelationshipOperationContext(BaseOperationContext):
     """
     Context for relationship based operations.
     """
+
+    @property
+    def logging_id(self):
+        return '{0}->{1}'.format(self.source_node.name or self.source_node.id,
+                                 self.target_node.name or self.target_node.id)
+
     @property
     def source_node_template(self):
         """

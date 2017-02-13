@@ -24,7 +24,7 @@ import fabric.api
 from fabric.contrib import files
 from fabric import context_managers
 
-from aria.storage import model
+from aria.storage.modeling import model
 from aria.orchestrator import events
 from aria.orchestrator import workflow
 from aria.orchestrator.workflows import api
@@ -412,6 +412,13 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
         task = Stub
         task.runs_on = Stub
         logger = logging.getLogger()
+
+    @staticmethod
+    @contextlib.contextmanager
+    def _mock_self_logging(*args, **kwargs):
+        yield
+    _Ctx.logging_handlers = _mock_self_logging
+
 
     @pytest.fixture(autouse=True)
     def _setup(self, mocker):

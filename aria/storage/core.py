@@ -84,6 +84,12 @@ class Storage(LoggerMixin):
         self.logger.debug('{name} object is ready: {0!r}'.format(
             self, name=self.__class__.__name__))
 
+    @property
+    def _all_api_kwargs(self):
+        kwargs = self._api_kwargs.copy()
+        kwargs.update(self._additional_api_kwargs)
+        return kwargs
+
     def __repr__(self):
         return '{name}(api={self.api})'.format(name=self.__class__.__name__, self=self)
 
@@ -121,9 +127,7 @@ class ResourceStorage(Storage):
         :param name:
         :return:
         """
-        kwargs = self._api_kwargs.copy()
-        kwargs.update(self._additional_api_kwargs)
-        self.registered[name] = self.api(name=name, **kwargs)
+        self.registered[name] = self.api(name=name, **self._all_api_kwargs)
         self.registered[name].create()
         self.logger.debug('setup {name} in storage {self!r}'.format(name=name, self=self))
 
@@ -148,9 +152,9 @@ class ModelStorage(Storage):
             self.logger.debug('{name} in already storage {self!r}'.format(name=model_name,
                                                                           self=self))
             return
-        kwargs = self._api_kwargs.copy()
-        kwargs.update(self._additional_api_kwargs)
-        self.registered[model_name] = self.api(name=model_name, model_cls=model_cls, **kwargs)
+        self.registered[model_name] = self.api(name=model_name,
+                                               model_cls=model_cls,
+                                               **self._all_api_kwargs)
         self.registered[model_name].create()
         self.logger.debug('setup {name} in storage {self!r}'.format(name=model_name, self=self))
 

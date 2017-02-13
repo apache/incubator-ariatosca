@@ -63,5 +63,5 @@ class ThreadExecutor(BaseExecutor):
                 except BaseException as e:
                     self._task_failed(task, exception=e)
             # Daemon threads
-            except BaseException:
+            except BaseException as e:
                 pass

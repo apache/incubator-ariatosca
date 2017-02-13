@@ -216,4 +216,8 @@ class Plugin(aria_declarative_base, orchestrator_elements.PluginBase):
 
 class Task(aria_declarative_base, orchestrator_elements.TaskBase):
     pass
+
+
+class Log(aria_declarative_base, orchestrator_elements.LogBase):
+    pass
 # endregion

@@ -16,7 +16,7 @@
 from datetime import datetime
 from threading import RLock
 
-from .storage import model
+from .storage.modeling import model
 from .orchestrator import operation
 from .utils.formatting import safe_repr
 from .utils.console import puts, Colored

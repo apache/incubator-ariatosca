@@ -12,8 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import platform
+
 from shutil import rmtree
 from tempfile import mkdtemp
 
@@ -23,19 +22,19 @@ from sqlalchemy import (
     Column,
     Text,
     Integer,
-    pool
+    pool,
+    MetaData
 )
 
 
-from aria.storage import (
+from aria.storage.modeling import (
     model,
-    type as aria_type,
     structure,
-    modeling
+    type as aria_type
 )
 
 
-class MockModel(model.aria_declarative_base, structure.ModelMixin): #pylint: disable=abstract-method
+class MockModel(structure.ModelMixin, model.aria_declarative_base): #pylint: disable=abstract-method
     __tablename__ = 'mock_model'
     model_dict = Column(aria_type.Dict)
     model_list = Column(aria_type.List)
@@ -58,14 +57,8 @@ def release_sqlite_storage(storage):
     :param storage:
     :return:
     """
-    mapis = storage.registered.values()
-
-    if mapis:
-        for session in set(mapi._session for mapi in mapis):
-            session.rollback()
-            session.close()
-        for engine in set(mapi._engine for mapi in mapis):
-            model.aria_declarative_base.metadata.drop_all(engine)
+    storage._all_api_kwargs['session'].close()
+    MetaData(bind=storage._all_api_kwargs['engine']).drop_all()
 
 
 def init_inmemory_model_storage():

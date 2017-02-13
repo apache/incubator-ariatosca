@@ -466,3 +466,16 @@ class TaskBase(ModelMixin):
     @staticmethod
     def retry(message=None, retry_interval=None):
         raise TaskRetryException(message, retry_interval=retry_interval)
+
+
+class LogBase(ModelMixin):
+    __tablename__ = 'log'
+
+    level = Column(String)
+    msg = Column(String)
+    created_at = Column(DateTime, index=True)
+    actor = Column(String)
+
+    def __repr__(self):
+        return "<{self.created_at}: [{self.level}] @{self.actor}> {msg}".format(
+            self=self, msg=self.msg[:50])

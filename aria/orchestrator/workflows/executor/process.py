@@ -200,7 +200,8 @@ class ProcessExecutor(base.BaseExecutor):
                     request_handler = self._request_handlers.get(request_type)
                     if not request_handler:
                         raise RuntimeError('Invalid request type: {0}'.format(request_type))
-                    request_handler(task_id=request['task_id'], request=request, response=response)
+                    task_id = request['task_id']
+                    request_handler(task_id=task_id, request=request, response=response)
             except BaseException as e:
                 self.logger.debug('Error in process executor listener: {0}'.format(e))
 
@@ -251,14 +252,26 @@ class ProcessExecutor(base.BaseExecutor):
 
 
 def _send_message(connection, message):
+
+    # Packing the length of the entire msg using struct.pack.
+    # This enables later reading of the content.
+    def _pack(data):
+        return struct.pack(_INT_FMT, len(data))
+
     data = jsonpickle.dumps(message)
-    connection.send(struct.pack(_INT_FMT, len(data)))
+    msg_metadata = _pack(data)
+    connection.send(msg_metadata)
     connection.sendall(data)
 
 
 def _recv_message(connection):
-    message_len, = struct.unpack(_INT_FMT, _recv_bytes(connection, _INT_SIZE))
-    return jsonpickle.loads(_recv_bytes(connection, message_len))
+    # Retrieving the length of the msg to come.
+    def _unpack(conn):
+        return struct.unpack(_INT_FMT, _recv_bytes(conn, _INT_SIZE))[0]
+
+    msg_metadata_len = _unpack(connection)
+    msg = _recv_bytes(connection, msg_metadata_len)
+    return jsonpickle.loads(msg)
 
 
 def _recv_bytes(connection, count):

@@ -22,10 +22,8 @@ from contextlib import contextmanager
 import pytest
 
 from aria import application_model_storage
-from aria.storage import (
-    model as aria_model,
-    sql_mapi
-)
+from aria.storage import sql_mapi
+from aria.storage.modeling import model as aria_model
 from aria.orchestrator import (
     events,
     plugin
@@ -114,7 +112,7 @@ def mock_plugin(plugin_manager, tmpdir):
 class MockContext(object):
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.logger = logging.getLogger('mock_logger')
 
     def __getattr__(self, item):
         if item == 'serialization_dict':
@@ -125,7 +123,6 @@ class MockContext(object):
     @classmethod
     def deserialize_from_dict(cls, **kwargs):
         return cls()
-
 
 class MockTask(object):
 

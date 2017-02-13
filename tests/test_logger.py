@@ -53,7 +53,8 @@ def test_create_console_log_handler(capsys):
     logger.info(info_test_string)
     logger.debug(debug_test_string)
     _, err = capsys.readouterr()
-    assert err.count('DEBUG: {test_string}'.format(test_string=debug_test_string)) == 1
+
+    assert '[DEBUG]> {test_string}'.format(test_string=debug_test_string) in err
     assert err.count(info_test_string) == 1
 
     # Custom handler
