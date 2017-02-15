@@ -289,7 +289,7 @@ policy_types:
         default: workflows.maintenance
       implementation:
         type: string
-        default: tests/resources/service_templates/node-cellar
+        default: tests/resources/service-templates/tosca-simple-1.0/node-cellar
       enabled:
         description: >-
           Whether to turn maintenance mode on or off.

@@ -451,8 +451,8 @@ class Relationship(Element):
                  template_name=None):
         if name is not None and not isinstance(name, basestring):
             raise ValueError('name must be a string or None')
-        if (source_requirement_index is not None and
-                (not isinstance(source_requirement_index, int) or (source_requirement_index < 0))):
+        if source_requirement_index is not None and \
+                (not isinstance(source_requirement_index, int) or (source_requirement_index < 0)):
             raise ValueError('source_requirement_index must be int > 0')
         if type_name is not None and not isinstance(type_name, basestring):
             raise ValueError('type_name must be a string or None')

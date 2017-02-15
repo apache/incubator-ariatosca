@@ -296,9 +296,8 @@ class RequirementTemplate(ModelElement):
         if target_capability_name is not None and not isinstance(target_capability_name,
                                                                  basestring):
             raise ValueError('target_capability_name must be a string or None')
-        if target_node_type_name is not None and target_node_template_name is not None \
-                or target_node_type_name is None and target_node_template_name is None:
-            raise ValueError('must set either target_node_type_name or target_node_template_name')
+        if target_node_type_name is not None and target_node_template_name is not None:
+            raise ValueError('can set either target_node_type_name or target_node_template_name')
         if target_capability_type_name is not None and target_capability_name is not None:
             raise ValueError('can set either target_capability_type_name or target_capability_name')
 
@@ -552,8 +551,7 @@ class RelationshipTemplate(ModelElement):
             raise ValueError('type_name must be a string or None')
         if (template_name is not None) and (not isinstance(template_name, basestring)):
             raise ValueError('template_name must be a string or None')
-        if type_name is not None and template_name is not None \
-                or type_name is None and template_name is None:
+        if (type_name is None) and (template_name is None):
             raise ValueError('must set either type_name or template_name')
 
         self.type_name = type_name
@@ -576,7 +574,7 @@ class RelationshipTemplate(ModelElement):
             ('target_interface_templates', as_raw_list(self.target_interface_templates))))
 
     def instantiate(self, context, container):
-        relationship = Relationship(self.type_name, self.template_name)
+        relationship = Relationship(name=self.template_name, type_name=self.type_name)
         instantiate_dict(context, container,
                          relationship.properties, self.properties)
         instantiate_dict(context, container,

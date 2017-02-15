@@ -15,14 +15,28 @@
 
 from aria.utils.caching import cachedmethod
 
-from .utils import (get_uri, create_context, create_consumer)
+from .utils import (get_example_uri, get_test_uri, create_context, create_consumer)
+
+
+def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
+    cachedmethod.ENABLED = cache
+    uri = get_example_uri('tosca-simple-1.0', 'use-cases', use_case_name,
+                          '{0}.yaml'.format(use_case_name))
+    context = create_context(uri)
+    #context.args.append('--inputs=' + get_example_uri('node-cellar', 'inputs.yaml'))
+    consumer, dumper = create_consumer(context, consumer_class_name)
+    consumer.consume()
+    context.validation.dump_issues()
+    assert not context.validation.has_issues
+    return context, dumper
 
 
 def consume_node_cellar(consumer_class_name='instance', cache=True):
     cachedmethod.ENABLED = cache
-    uri = get_uri('node-cellar', 'node-cellar.yaml')
+    uri = get_test_uri('tosca-simple-1.0', 'node-cellar', 'node-cellar.yaml')
     context = create_context(uri)
-    context.args.append('--inputs=' + get_uri('node-cellar', 'inputs.yaml'))
+    context.args.append('--inputs=' + get_test_uri('tosca-simple-1.0', 'node-cellar',
+                                                   'inputs.yaml'))
     consumer, dumper = create_consumer(context, consumer_class_name)
     consumer.consume()
     context.validation.dump_issues()

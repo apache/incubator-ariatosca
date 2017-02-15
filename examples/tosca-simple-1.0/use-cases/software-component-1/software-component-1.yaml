@@ -1,0 +1,54 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  TOSCA Simple Profile with a SoftwareComponent node with a declared Virtual machine (VM) deployment
+  artifact that automatically deploys to its host Compute node.
+
+metadata:
+  template_name: software-component-1
+  template_author: TOSCA Simple Profile in YAML
+  template_version: '1.0'
+
+imports:
+  - ../non-normative-types.yaml
+
+topology_template:
+
+  # ARIA NOTE: missing in spec
+  inputs:
+    cpus:
+      type: integer
+      description: Number of CPUs for the server.
+      constraints:
+        - valid_values: [ 1, 2, 4, 8 ]
+
+  node_templates:
+
+    my_virtual_machine:
+      type: SoftwareComponent
+      artifacts:
+        my_vm_image:
+          file: images/fedora-18-x86_64.qcow2
+          type: tosca.artifacts.Deployment.Image.VM.QCOW2
+      requirements:
+        - host: my_server
+      # Automatically deploy the VM image referenced on the create operation
+      interfaces:
+        Standard:
+          create: my_vm_image
+
+    # Compute instance with no Operating System guest host
+    my_server:
+      type: Compute
+      capabilities:
+        # Note: no guest OperatingSystem requirements as these are in the image.
+        host:
+          properties:
+            disk_size: 10 GB
+            num_cpus: { get_input: cpus }
+            mem_size: 4 GB
+
+  outputs:
+    private_ip:
+      description: The private IP address of the deployed server instance.
+      value: { get_attribute: [ my_server, private_address ] }

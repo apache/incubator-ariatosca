@@ -232,7 +232,7 @@ class RequirementAssignment(ExtensiblePresentation):
         * Relationship Type that the provider will use to select a type-compatible relationship
           template to relate the source node to the target node at runtime.
 
-        :rtype: :class:`RequirementRelationshipAssignment`
+        :rtype: :class:`RelationshipAssignment`
         """
 
     @field_validator(node_filter_validator)

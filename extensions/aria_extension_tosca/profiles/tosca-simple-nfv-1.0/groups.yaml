@@ -17,7 +17,7 @@ group_types:
 
   tosca.groups.nfv.VNFFG:
     _extensions:
-      shorthand_name: VNFFG # the spec must be mistaken here, says "VL"
+      shorthand_name: VNFFG # ARIA NOTE: the spec must be mistaken here, says "VL"
       type_qualified_name: tosca:VNFFG
       specification: tosca-simple-nfv-1.0
       specification_section: 10.6.1

@@ -85,6 +85,7 @@ class MetaData(ExtensiblePresentation):
         :rtype: dict
         """
 
+@short_form_field('url')
 @has_fields
 @dsl_specification('3.5.5', 'tosca-simple-1.0')
 class Repository(ExtensiblePresentation):

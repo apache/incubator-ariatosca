@@ -28,13 +28,18 @@ from aria.parser.consumption import (
 )
 from aria.utils.imports import import_fullname
 
+from tests import ROOT_DIR
 from tests.resources import DIR
 
 
-SERVICE_TEMPLATES_DIR = os.path.join(DIR, 'service_templates')
+SERVICE_TEMPLATES_DIR = os.path.join(DIR, 'service-templates')
 
 
-def get_uri(*args):
+def get_example_uri(*args):
+    return os.path.join(ROOT_DIR, 'examples', *args)
+
+
+def get_test_uri(*args):
     return os.path.join(SERVICE_TEMPLATES_DIR, *args)
 
 

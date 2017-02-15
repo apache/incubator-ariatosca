@@ -17,7 +17,7 @@ node_types:
 
   tosca.nodes.nfv.VNF:
     _extensions:
-      shorthand_name: VNF # ommitted in the spec (seems to be a mistake)
+      shorthand_name: VNF # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:VNF
       specification: tosca-simple-nfv-1.0
       specification_section: 8.5.1
@@ -103,7 +103,7 @@ node_types:
 
   tosca.nodes.nfv.FP:
     _extensions:
-      shorthand_name: FP # the spec must be mistaken here, says "VL"
+      shorthand_name: FP # ARIA NOTE: the spec must be mistaken here, says "VL"
       type_qualified_name: tosca:FP
       specification: tosca-simple-nfv-1.0
       specification_section: 10.5.1
@@ -147,7 +147,7 @@ node_types:
 
   tosca.nodes.nfv.VL.ELine:
     _extensions:
-      shorthand_name: VL.ELine # ommitted in the spec (seems to be a mistake)
+      shorthand_name: VL.ELine # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:VL.ELine
       specification: tosca-simple-nfv-1.0
       specification_section: 9.2
@@ -158,11 +158,11 @@ node_types:
     capabilities:
       virtual_linkable:
         type: tosca.capabilities.nfv.VirtualLinkable
-        occurrences: [ 2, UNBOUNDED ] # the spec is wrong here, must be a range
+        occurrences: [ 2, UNBOUNDED ] # ARIA NOTE: the spec is wrong here, must be a range
 
   tosca.nodes.nfv.VL.ELAN:
     _extensions:
-      shorthand_name: VL.ELAN # ommitted in the spec (seems to be a mistake)
+      shorthand_name: VL.ELAN # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:VL.ELAN
       specification: tosca-simple-nfv-1.0
       specification_section: 9.3
@@ -173,7 +173,7 @@ node_types:
 
   tosca.nodes.nfv.VL.ETree:
     _extensions:
-      shorthand_name: VL.ETree # ommitted in the spec (seems to be a mistake)
+      shorthand_name: VL.ETree # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:VL.ETree
       specification: tosca-simple-nfv-1.0
       specification_section: 9.4

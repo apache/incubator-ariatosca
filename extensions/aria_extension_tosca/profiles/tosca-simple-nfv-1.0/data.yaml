@@ -57,7 +57,7 @@ data_types:
 
   tosca.datatypes.compute.Container.Architecture.NUMA:
     _extensions:
-      shorthand_name: Container.Architecture.NUMA # seems to be a mistake in the spec; the norm is to add a "Container.Architecture." prefix
+      shorthand_name: Container.Architecture.NUMA # ARIA NOTE: seems to be a mistake in the spec; the norm is to add a "Container.Architecture." prefix
       type_qualified_name: tosca:Container.Architecture.NUMA
       specification: tosca-simple-nfv-1.0
       specification_section: 8.3.2

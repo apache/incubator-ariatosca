@@ -1,0 +1,68 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  TOSCA simple profile with wordpress, web server and mysql on the same server.
+
+metadata:
+  template_name: compute-1
+  template_author: TOSCA Simple Profile in YAML
+  template_version: '1.0'
+
+imports:
+  - ../non-normative-types.yaml
+
+# Repositories to retrieve code artifacts from
+
+repositories:
+
+  docker_hub: https://registry.hub.docker.com/
+
+topology_template:
+
+  inputs:
+    wp_host_port:
+      type: integer
+      description: The host port that maps to port 80 of the WordPress container.
+    db_root_pwd:
+      type: string
+      description: Root password for MySQL.
+
+  node_templates:
+
+    # The MYSQL container based on official MySQL image in Docker hub
+
+    mysql_container:
+      type: tosca.nodes.Container.Application.Docker
+      # ARIA NOTE: moved to a requirement in the node type
+      #capabilities:
+      #  # This is a capability that would mimic the Docker –link feature
+      #  database_link: tosca.capabilities.Docker.Link
+      artifacts:
+        my_image:
+          file: mysql
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      interfaces:
+        Standard:
+          create:
+            implementation: my_image
+            inputs:
+              db_root_password: { get_input: db_root_pwd }
+
+    # The WordPress container based on official WordPress image in Docker hub
+
+    wordpress_container:
+      type: tosca.nodes.Container.Application.Docker
+      requirements:
+        - database_link: mysql_container
+      artifacts:
+        my_image:
+          file: wordpress
+          type: tosca.artifacts.Deployment.Image.Container.Docker
+          repository: docker_hub
+      interfaces:
+        Standard:
+          create:
+            implementation: my_image
+            inputs:
+              host_port: { get_input: wp_host_port }

@@ -1,0 +1,237 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  This TOSCA simple profile deploys nodejs, mongodb, elasticsearch, logstash and kibana each on a
+  separate server with monitoring enabled for nodejs server where a sample nodejs application is
+  running. The syslog and collectd are installed on a nodejs server.
+
+metadata:
+  template_name: multi-tier-1
+  template_author: TOSCA Simple Profile in YAML
+  template_version: '1.0'
+
+imports:
+  - ../webserver-dbms-2/custom_types/paypalpizzastore_nodejs_app.yaml # ARIA NOTE: moved
+  - custom_types/elasticsearch.yaml
+  - custom_types/logstash.yaml
+  - custom_types/kibana.yaml
+  - custom_types/collectd.yaml
+  - custom_types/rsyslog.yaml
+
+dsl_definitions:
+
+  host_capabilities: &host_capabilities
+    # container properties (flavor)
+    disk_size: 10 GB
+    num_cpus: { get_input: my_cpus }
+    mem_size: 4096 MB
+  os_capabilities: &os_capabilities
+    architecture: x86_64
+    type: Linux
+    distribution: Ubuntu
+    version: 14.04
+
+topology_template:
+
+  inputs:
+    my_cpus:
+      type: integer
+      description: Number of CPUs for the server.
+      constraints:
+        - valid_values: [ 1, 2, 4, 8 ]
+    github_url:
+       type: string
+       description: The URL to download nodejs.
+       default: https://github.com/sample.git
+
+  node_templates:
+
+    paypal_pizzastore:
+      type: tosca.nodes.WebApplication.PayPalPizzaStore
+      properties:
+        github_url: { get_input: github_url }
+      requirements:
+        - host: nodejs
+        - database_connection: mongo_db
+      interfaces:
+        Standard:
+           configure:
+             implementation: scripts/nodejs/configure.sh
+             inputs:
+               github_url: { get_property: [ SELF, github_url ] }
+               mongodb_ip: { get_attribute: [mongo_server, private_address] }
+           start: scripts/nodejs/start.sh
+
+    nodejs:
+      type: tosca.nodes.WebServer.Nodejs
+      requirements:
+        - host: app_server
+      interfaces:
+        Standard:
+          create: scripts/nodejs/create.sh
+
+    mongo_db:
+      type: tosca.nodes.Database
+      properties:
+        name: 'pizzastore' # ARIA NOTE: missing in spec
+      requirements:
+        - host: mongo_dbms
+      interfaces:
+        Standard:
+         create: create_database.sh
+
+    mongo_dbms:
+      type: tosca.nodes.DBMS
+      requirements:
+        - host: mongo_server
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/mongodb/create.sh
+          configure:
+            implementation: scripts/mongodb/config.sh
+            inputs:
+              mongodb_ip: { get_attribute: [mongo_server, ip_address] }
+          start: scripts/mongodb/start.sh
+
+    elasticsearch:
+      type: tosca.nodes.SoftwareComponent.Elasticsearch
+      requirements:
+        - host: elasticsearch_server
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/elasticsearch/create.sh
+          start: scripts/elasticsearch/start.sh
+
+    logstash:
+      type: tosca.nodes.SoftwareComponent.Logstash
+      requirements:
+        - host: logstash_server
+        # ARIA NOTE: mangled in the spec
+        - search_endpoint:
+            node: elasticsearch
+            relationship:
+              interfaces:
+                Configure:
+                  pre_configure_source:
+                    implementation: python/logstash/configure_elasticsearch.py
+                    inputs:
+                      elasticsearch_ip: { get_attribute: [elasticsearch_server, ip_address] }
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/lostash/create.sh
+          configure: scripts/logstash/config.sh
+          start: scripts/logstash/start.sh
+
+    kibana:
+      type: tosca.nodes.SoftwareComponent.Kibana
+      requirements:
+        - host: kibana_server
+        - search_endpoint: elasticsearch
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/kibana/create.sh
+          configure:
+            implementation: scripts/kibana/config.sh
+            inputs:
+              elasticsearch_ip: { get_attribute: [ elasticsearch_server, ip_address ] }
+              kibana_ip: { get_attribute: [ kibana_server, ip_address ] }
+          start: scripts/kibana/start.sh
+
+    app_collectd:
+      type: tosca.nodes.SoftwareComponent.Collectd
+      requirements:
+        - host: app_server
+        # ARIA NOTE: mangled in the spec
+        - collectd_endpoint:
+            node: logstash
+            relationship:
+              interfaces:
+                Configure:
+                  pre_configure_target:
+                    implementation: python/logstash/configure_collectd.py
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/collectd/create.sh
+          configure:
+            implementation: python/collectd/config.py
+            inputs:
+              logstash_ip: { get_attribute: [ logstash_server, ip_address ] }
+          start: scripts/collectd/start.sh
+
+    app_rsyslog:
+      type: tosca.nodes.SoftwareComponent.Rsyslog
+      requirements:
+        - host: app_server
+        # ARIA NOTE: mangled in the spec
+        - rsyslog_endpoint:
+            node: logstash
+            relationship:
+              interfaces:
+                Configure:
+                  pre_configure_target:
+                    implementation: python/logstash/configure_rsyslog.py
+      interfaces:
+        Standard: # ARIA NOTE: wrong in spec
+          create: scripts/rsyslog/create.sh
+          configure:
+            implementation: scripts/rsyslog/config.sh
+            inputs:
+              logstash_ip: { get_attribute: [ logstash_server, ip_address ] }
+          start: scripts/rsyslog/start.sh
+
+    app_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties: *host_capabilities
+        os:
+          properties: *os_capabilities
+
+    mongo_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties: *host_capabilities
+        os:
+          properties: *os_capabilities
+
+    elasticsearch_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties: *host_capabilities
+        os:
+          properties: *os_capabilities
+
+    logstash_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties: *host_capabilities
+        os:
+          properties: *os_capabilities
+
+    kibana_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties: *host_capabilities
+        os:
+          properties: *os_capabilities
+
+  outputs:
+    nodejs_url:
+      description: URL for the nodejs server.
+      value: { get_attribute: [ app_server, private_address ] }
+    mongodb_url:
+      description: URL for the mongodb server.
+      value: { get_attribute: [ mongo_server, private_address ] }
+    elasticsearch_url:
+      description: URL for the elasticsearch server.
+      value: { get_attribute: [ elasticsearch_server, private_address ] }
+    logstash_url:
+      description: URL for the logstash server.
+      value: { get_attribute: [ logstash_server, private_address ] }
+    kibana_url:
+      description: URL for the kibana server.
+      value: { get_attribute: [ kibana_server, private_address ] }

@@ -171,15 +171,20 @@ class GetProperty(Function):
     def _evaluate(self, context, container):
         modelable_entities = get_modelable_entities(context, container, self.locator,
                                                     self.modelable_entity_name)
-
         req_or_cap_name = self.nested_property_name_or_index[0]
 
         for modelable_entity in modelable_entities:
+            properties = None
+            
             if hasattr(modelable_entity, 'requirement_templates') \
                 and modelable_entity.requirement_templates \
-                and (req_or_cap_name in modelable_entity.requirement_templates):
-                # First argument refers to a requirement
-                properties = modelable_entity.requirement_templates[req_or_cap_name].properties
+                and (req_or_cap_name in [v.name for v in modelable_entity.requirement_templates]):
+                for requirement_template in modelable_entity.requirement_templates:
+                    if requirement_template.name == req_or_cap_name:
+                        # First argument refers to a requirement
+                        # TODO: should follow to matched capability in other node...
+                        raise CannotEvaluateFunctionException()
+                        break
                 nested_property_name_or_index = self.nested_property_name_or_index[1:]
             elif hasattr(modelable_entity, 'capability_templates') \
                 and modelable_entity.capability_templates \
@@ -501,14 +506,15 @@ def get_host(context, container): # pylint: disable=unused-argument
     ends.
     """
 
-    print container.relationships
-    exit()
+    return []
 
 def get_source(context, container): # pylint: disable=unused-argument
     """
     A TOSCA orchestrator will interpret this keyword as the Node Template instance that is at the
     source end of the relationship that contains the referencing function.
     """
+
+    return []
 
 def get_target(context, container): # pylint: disable=unused-argument
     """

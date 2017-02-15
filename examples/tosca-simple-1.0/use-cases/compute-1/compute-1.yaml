@@ -1,0 +1,42 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  TOSCA simple profile that just defines a single compute instance and selects a (guest) host
+  Operating System from the Compute node's properties. Note, this example does not include default
+  values on inputs properties.
+
+metadata:
+  template_name: compute-1
+  template_author: TOSCA Simple Profile in YAML
+  template_version: '1.0'
+
+topology_template:
+
+  inputs:
+    cpus:
+      type: integer
+      description: Number of CPUs for the server.
+      constraints:
+        - valid_values: [ 1, 2, 4, 8 ]
+
+  node_templates:
+
+    my_server:
+      type: Compute
+      capabilities:
+        host:
+          properties:
+            disk_size: 10 GB
+            num_cpus: { get_input: cpus }
+            mem_size: 1 GB
+        os:
+          properties:
+            architecture: x86_64
+            type: Linux
+            distribution: ubuntu
+            version: 12.04
+
+  outputs:
+    private_ip:
+      description: The private IP address of the deployed server instance.
+      value: { get_attribute: [ my_server, private_address ] }

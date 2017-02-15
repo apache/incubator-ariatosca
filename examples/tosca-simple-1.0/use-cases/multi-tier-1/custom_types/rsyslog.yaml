@@ -1,0 +1,10 @@
+# ARIA NOTE: missing in spec
+
+node_types:
+
+  tosca.nodes.SoftwareComponent.Rsyslog:
+    derived_from: tosca.nodes.SoftwareComponent
+    requirements:
+      - rsyslog_endpoint:
+          capability: tosca.capabilities.Endpoint
+          relationship: tosca.relationships.ConnectsTo

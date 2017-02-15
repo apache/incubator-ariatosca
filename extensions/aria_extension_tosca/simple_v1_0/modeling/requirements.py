@@ -171,7 +171,8 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         # Make sure the type is derived
         if not definition_relationship_type._is_descendant(context, relationship_type):
             context.validation.report(
-                'assigned relationship type "%s" is not a descendant of declared relationship type "%s"'
+                'assigned relationship type "%s" is not a descendant of declared relationship type'
+                ' "%s"' \
                 % (relationship_type._name, definition_relationship_type._name),
                 locator=container._locator, level=Issue.BETWEEN_TYPES)
 
@@ -189,11 +190,11 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
 
         if relationship_template is not None:
             # Property values from template
-            raw['properties'] = relationship_template._get_property_values(context)
+            raw['relationship']['properties'] = relationship_template._get_property_values(context)
         else:
             if relationship_property_definitions:
                 # Convert property definitions to values
-                raw['properties'] = \
+                raw['relationship']['properties'] = \
                     convert_property_definitions_to_values(context,
                                                            relationship_property_definitions)
 
@@ -210,9 +211,9 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         if relationship_definition:
             # Merge extra interface definitions
             # InterfaceDefinition:
-            relationship_interface_definitions = relationship_definition.interfaces
+            definition_interface_definitions = relationship_definition.interfaces
             merge_interface_definitions(context, relationship_interface_definitions,
-                                        relationship_interface_definitions, requirement_definition,
+                                        definition_interface_definitions, requirement_definition,
                                         container)
 
         if relationship_template is not None:
@@ -272,15 +273,10 @@ def merge_requirement_assignment(context, relationship_property_definitions,
         requirement._raw['node_filter'] = deepcopy_with_locators(our_node_filter._raw)
 
     our_relationship = our_requirement.relationship # RelationshipAssignment
-    if our_relationship is not None:
+    if (our_relationship is not None) and (our_relationship.type is None):
         # Make sure we have a dict
         if 'relationship' not in requirement._raw:
             requirement._raw['relationship'] = OrderedDict()
-        elif not isinstance(requirement._raw['relationship'], dict):
-            # Convert existing short form to long form
-            the_type = requirement._raw['relationship']
-            requirement._raw['relationship'] = OrderedDict()
-            requirement._raw['relationship']['type'] = deepcopy_with_locators(the_type)
 
         merge_requirement_assignment_relationship(context, our_relationship,
                                                   relationship_property_definitions,
@@ -289,11 +285,6 @@ def merge_requirement_assignment(context, relationship_property_definitions,
 
 def merge_requirement_assignment_relationship(context, presentation, property_definitions,
                                               interface_definitions, requirement, our_relationship):
-    the_type = our_relationship.type
-    if the_type is not None:
-        # Could be a type or a template:
-        requirement._raw['relationship']['type'] = deepcopy_with_locators(the_type)
-
     our_relationship_properties = our_relationship._raw.get('properties')
     if our_relationship_properties:
         # Make sure we have a dict
@@ -310,7 +301,7 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
                 context.validation.report(
                     'relationship property "%s" not declared at definition of requirement "%s"'
                     ' in "%s"'
-                    % (property_name, presentation._fullname,
+                    % (property_name, requirement._fullname,
                        presentation._container._container._fullname),
                     locator=our_relationship._get_child_locator('properties', property_name),
                     level=Issue.BETWEEN_TYPES)
@@ -333,9 +324,9 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
                                 interface_definition, interface_name)
             else:
                 context.validation.report(
-                    'interface definition "%s" not declared at definition of requirement "%s"'
+                    'relationship interface "%s" not declared at definition of requirement "%s"'
                     ' in "%s"'
-                    % (interface_name, presentation._fullname,
+                    % (interface_name, requirement._fullname,
                        presentation._container._container._fullname),
                     locator=our_relationship._locator, level=Issue.BETWEEN_TYPES)
 

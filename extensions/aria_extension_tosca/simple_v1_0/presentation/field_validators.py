@@ -332,8 +332,8 @@ def node_template_or_type_validator(field, presentation, context):
         node_templates = \
             context.presentation.get('service_template', 'topology_template', 'node_templates') \
             or {}
-        node_types = context.presentation.get('service_template', 'node_types') or {}
-        if (value not in node_templates) and (value not in node_types):
+        if (value not in node_templates) and \
+            (get_type_by_full_or_shorthand_name(context, value, 'node_types') is None):
             report_issue_for_unknown_type(context, presentation, 'node template or node type',
                                           field.name)
 
@@ -358,8 +358,7 @@ def capability_definition_or_type_validator(field, presentation, context):
             if value in capabilities:
                 return
 
-        capability_types = context.presentation.get('service_template', 'capability_types')
-        if (capability_types is not None) and (value in capability_types):
+        if get_type_by_full_or_shorthand_name(context, value, 'capability_types') is not None:
             if node is not None:
                 context.validation.report(
                     '"%s" refers to a capability type even though "node" has a value in "%s"'
@@ -419,9 +418,8 @@ def relationship_template_or_type_validator(field, presentation, context):
             context.presentation.get('service_template', 'topology_template',
                                      'relationship_templates') \
             or {}
-        relationship_types = \
-            context.presentation.get('service_template', 'relationship_types') or {}
-        if (value not in relationship_templates) and (value not in relationship_types):
+        if (value not in relationship_templates) and \
+            (get_type_by_full_or_shorthand_name(context, value, 'relationship_types') is None):
             report_issue_for_unknown_type(context, presentation,
                                           'relationship template or relationship type', field.name)
 
@@ -442,9 +440,9 @@ def list_node_type_or_group_type_validator(field, presentation, context):
     values = getattr(presentation, field.name)
     if values is not None:
         for value in values:
-            node_types = context.presentation.get('service_template', 'node_types') or {}
-            group_types = context.presentation.get('service_template', 'group_types') or {}
-            if (value not in node_types) and (value not in group_types):
+            if \
+                (get_type_by_full_or_shorthand_name(context, value, 'node_types') is None) and \
+                (get_type_by_full_or_shorthand_name(context, value, 'group_types') is None):
                 report_issue_for_unknown_type(context, presentation, 'node type or group type',
                                               field.name, value)
 

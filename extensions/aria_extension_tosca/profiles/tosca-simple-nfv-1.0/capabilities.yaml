@@ -35,7 +35,8 @@ capability_types:
           * any page size maps to system default
           * custom MB value: sets TLB size to this specific value
         type: string
-        #constraints: # seems wrong in the spec
+        # ARIA NOTE: seems wrong in the spec
+        #constraints:
         #  - [ normal, huge ]
       cpu_allocation:
         description: >-

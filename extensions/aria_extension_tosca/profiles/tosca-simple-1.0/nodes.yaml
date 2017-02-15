@@ -126,7 +126,7 @@ node_types:
         description: >-
           The Floating (IP) client's on the public network can connect to.
         type: tosca.capabilities.Endpoint.Public
-        occurrences: [ 0, UNBOUNDED ] # Note: it seems unnecessary to specify this, as it is the implied default
+        occurrences: [ 0, UNBOUNDED ] # ARIA NOTE: it seems unnecessary to specify this, as it is the implied default
     requirements:
       - application:
           capability: tosca.capabilities.Endpoint
@@ -195,7 +195,7 @@ node_types:
     description: >-
       The TOSCA WebApplication node represents a software application that can be managed and run by a TOSCA WebServer node.
       Specific types of web applications such as Java, etc. could be derived from this type.
-    derived_from: tosca.nodes.SoftwareComponent # the spec says tosca.nodes.Root, but this seems to be a mistake
+    derived_from: tosca.nodes.SoftwareComponent # ARIA NOTE: the spec says tosca.nodes.Root
     properties:
       context_root:
         description: >-
@@ -213,7 +213,7 @@ node_types:
   
   tosca.nodes.DBMS:
     _extensions:
-      shorthand_name: DBMS # ommitted in the spec (seems to be a mistake)
+      shorthand_name: DBMS # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:DBMS
       specification: tosca-simple-1.0
       specification_section: 5.8.6
@@ -246,7 +246,7 @@ node_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_NODES_DATABASE'
     description: >-
       The TOSCA Database node represents a logical database that can be managed and hosted by a TOSCA DBMS node.
-    derived_from: tosca.nodes.Root # note, it's *not* a SoftwareComponent
+    derived_from: tosca.nodes.Root # ARIA NOTE: it's *not* a SoftwareComponent
     properties:
       name:
         description: >-
@@ -310,7 +310,8 @@ node_types:
     requirements:
       - host:
           capability: tosca.capabilities.Container
-          #node: tosca.nodes.Container # seems to be a mistake in the spec
+          # ARIA NOTE: seems a mistake in the spec
+          #node: tosca.nodes.Container
           relationship: tosca.relationships.HostedOn
 
   #

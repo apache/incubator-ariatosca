@@ -1,0 +1,46 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  TOSCA simple profile with 1 server bound to an existing network.
+
+metadata:
+  template_name: network-2
+  template_author: TOSCA Simple Profile in YAML
+  template_version: '1.0'
+
+topology_template:
+
+  inputs:
+    network_name:
+      type: string
+      description: Network name
+
+  node_templates:
+
+    my_server:
+      type: tosca.nodes.Compute
+      capabilities:
+        host:
+          properties:
+            disk_size: 10 GB
+            num_cpus: 1
+            mem_size: 4096 MB
+        os:
+          properties:
+            architecture: x86_64
+            type: Linux
+            distribution: CirrOS
+            version: 0.3.2
+
+    my_network:
+      type: tosca.nodes.network.Network
+      properties:
+        network_name: { get_input: network_name }
+
+    my_port:
+      type: tosca.nodes.network.Port
+      requirements:
+        - binding:
+            node: my_server
+        - link:
+            node: my_network

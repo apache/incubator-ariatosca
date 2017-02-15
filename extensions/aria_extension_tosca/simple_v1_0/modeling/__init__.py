@@ -22,6 +22,7 @@ from aria.parser.modeling import (Type, RelationshipType, PolicyType, ServiceMod
                                   ArtifactTemplate, Metadata, Parameter)
 
 from ..data_types import coerce_value
+from platform import node
 
 def create_service_model(context): # pylint: disable=too-many-locals,too-many-branches
     model = ServiceModel()
@@ -106,7 +107,8 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
     return model
 
 def create_node_template(context, node_template):
-    model = NodeTemplate(name=node_template._name, type_name=node_template.type)
+    node_type = node_template._get_type(context)
+    model = NodeTemplate(name=node_template._name, type_name=node_type._name)
 
     if node_template.description:
         model.description = node_template.description.value
@@ -137,12 +139,11 @@ def create_node_template(context, node_template):
     return model
 
 def create_interface_template(context, interface):
-    the_type = interface._get_type(context)
+    interface_type = interface._get_type(context)
+    model = InterfaceTemplate(name=interface._name, type_name=interface_type._name)
 
-    model = InterfaceTemplate(name=interface._name, type_name=the_type._name)
-
-    if the_type.description:
-        model.description = the_type.description.value
+    if interface_type.description:
+        model.description = interface_type.description.value
 
     inputs = interface.inputs
     if inputs:

@@ -17,7 +17,7 @@ artifact_types:
 
   tosca.artifacts.Root:
     _extensions:
-      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Root # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
       specification_section: 5.3.1
@@ -41,7 +41,7 @@ artifact_types:
   
   tosca.artifacts.Deployment:
     _extensions:
-      shorthand_name: Deployment # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Deployment # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Deployment
       specification: tosca-simple-1.0
       specification_section: 5.3.3.1
@@ -67,7 +67,7 @@ artifact_types:
   
   tosca.artifacts.Deployment.Image.VM:
     _extensions:
-      shorthand_name: Deployment.VM # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Deployment.VM # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Deployment.VM
       specification: tosca-simple-1.0
       specification_section: 5.3.3.4
@@ -85,7 +85,7 @@ artifact_types:
   
   tosca.artifacts.Implementation:
     _extensions:
-      shorthand_name: Implementation # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Implementation # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Implementation
       specification: tosca-simple-1.0
       specification_section: 5.3.4.1
@@ -97,7 +97,7 @@ artifact_types:
   
   tosca.artifacts.Implementation.Bash:
     _extensions:
-      shorthand_name: Implementation.Bash # mistake in spec? shouldn't we have "Implementation." as prefix?
+      shorthand_name: Implementation.Bash # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?
       type_qualified_name: tosca:Implementation.Bash
       specification: tosca-simple-1.0
       specification_section: 5.3.4.3
@@ -109,7 +109,7 @@ artifact_types:
   
   tosca.artifacts.Implementation.Python:
     _extensions:
-      shorthand_name: Implementation.Python # mistake in spec? shouldn't we have "Implementation." as prefix?
+      shorthand_name: Implementation.Python # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?
       type_qualified_name: tosca:Implementation.Python
       specification: tosca-simple-1.0
       specification_section: 5.3.4.4

@@ -17,7 +17,7 @@ interface_types:
 
   tosca.interfaces.Root:
     _extensions:
-      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Root # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
       specification_section: 5.7.3

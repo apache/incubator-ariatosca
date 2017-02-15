@@ -1,0 +1,6 @@
+# ARIA NOTE: missing in spec
+
+node_types:
+
+  tosca.nodes.SoftwareComponent.Elasticsearch:
+    derived_from: tosca.nodes.SoftwareComponent

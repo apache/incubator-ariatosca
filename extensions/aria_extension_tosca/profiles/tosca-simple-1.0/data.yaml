@@ -95,7 +95,7 @@ data_types:
 
   tosca.datatypes.Root:
     _extensions:
-      shorthand_name: Root # ommitted in the spec (seems to be a mistake)
+      shorthand_name: Root # ARIA NOTE: ommitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
       specification_section: 5.2.1
@@ -220,7 +220,7 @@ data_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_DATA_PORTDEF'
     description: >-
       The PortDef type is a TOSCA data Type used to define a network port.
-    derived_from: integer # ARIA allows deriving from primitives; it's unclear if the TOSCA spec does
+    derived_from: integer # ARIA NOTE: we allow deriving from primitives
     constraints:
       - in_range: [ 1, 65535 ]
 
