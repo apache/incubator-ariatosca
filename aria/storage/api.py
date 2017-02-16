@@ -135,7 +135,7 @@ class ResourceAPI(StorageAPI):
         """
         return self._name
 
-    def read(self, entry_id, path=None, **kwargs):
+    def read(self, entry_id, path, **kwargs):
         """
         Get a bytesteam from the storage.
 
@@ -144,7 +144,18 @@ class ResourceAPI(StorageAPI):
         :param kwargs:
         :return:
         """
-        raise NotImplementedError('Subclass must implement abstract data method')
+        raise NotImplementedError('Subclass must implement abstract read method')
+
+    def delete(self, entry_id, path, **kwargs):
+        """
+        Delete a resource from the storage.
+
+        :param entry_id:
+        :param path:
+        :param kwargs:
+        :return:
+        """
+        raise NotImplementedError('Subclass must implement abstract delete method')
 
     def download(self, entry_id, destination, path=None, **kwargs):
         """

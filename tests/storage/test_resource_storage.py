@@ -111,7 +111,9 @@ class TestResourceStorage(TestFileSystem):
         tmpfile_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
         self._upload(storage, tmpfile_path, 'blueprint_id')
 
-        assert storage.blueprint.read(entry_id='blueprint_id') == 'fake context'
+        assert storage.blueprint.read(
+            entry_id='blueprint_id',
+            path=os.path.basename(tmpfile_path)) == 'fake context'
 
     def test_upload_dir(self):
         storage = self._create_storage()
@@ -188,4 +190,88 @@ class TestResourceStorage(TestFileSystem):
         storage.blueprint.upload(entry_id='blueprint_id', source=tmp_dir)
 
         with pytest.raises(exceptions.StorageError):
-            storage.blueprint.read(entry_id='blueprint_id')
+            storage.blueprint.read(entry_id='blueprint_id', path='')
+
+    def test_delete_resource(self):
+        storage = self._create_storage()
+        self._create(storage)
+        tmpfile_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
+        self._upload(storage, tmpfile_path, 'blueprint_id')
+        tmpfile2_path = tempfile.mkstemp(suffix=self.__class__.__name__, dir=self.path)[1]
+        self._upload(storage, tmpfile2_path, 'blueprint_id')
+
+        # deleting the first resource and expecting an error on read
+        storage.blueprint.delete(entry_id='blueprint_id', path=os.path.basename(tmpfile_path))
+        with pytest.raises(exceptions.StorageError):
+            storage.blueprint.read(entry_id='blueprint_id', path=os.path.basename(tmpfile_path))
+        # the second resource should still be available for reading
+        assert storage.blueprint.read(
+            entry_id='blueprint_id',
+            path=os.path.basename(tmpfile2_path)) == 'fake context'
+
+    def test_delete_directory(self):
+        storage = self._create_storage()
+        self._create(storage)
+        temp_destination_dir = tempfile.mkdtemp(dir=self.path)
+
+        tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
+        second_level_tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
+        tmp_filename = tempfile.mkstemp(dir=second_level_tmp_dir)[1]
+        self._upload_dir(storage, tmp_dir, tmp_filename, id='blueprint_id')
+        file_path_in_dir = os.path.join(
+            os.path.basename(second_level_tmp_dir),
+            os.path.basename(tmp_filename))
+
+        # should be able to read the file and download the directory..
+        assert storage.blueprint.read(
+            entry_id='blueprint_id',
+            path=file_path_in_dir) == 'fake context'
+        storage.blueprint.download(
+            entry_id='blueprint_id',
+            path=os.path.basename(second_level_tmp_dir),
+            destination=temp_destination_dir)
+
+        # after deletion, the file and directory should both be gone
+        storage.blueprint.delete(
+            entry_id='blueprint_id',
+            path=os.path.basename(second_level_tmp_dir))
+        with pytest.raises(exceptions.StorageError):
+            assert storage.blueprint.read(
+                entry_id='blueprint_id',
+                path=file_path_in_dir) == 'fake context'
+        with pytest.raises(exceptions.StorageError):
+            storage.blueprint.download(
+                entry_id='blueprint_id',
+                path=os.path.basename(second_level_tmp_dir),
+                destination=temp_destination_dir)
+
+    def test_delete_all_resources(self):
+        storage = self._create_storage()
+        self._create(storage)
+        temp_destination_dir = tempfile.mkdtemp(dir=self.path)
+
+        tmp_dir = tempfile.mkdtemp(suffix=self.__class__.__name__, dir=self.path)
+        second_level_tmp_dir = tempfile.mkdtemp(dir=tmp_dir)
+        tmp_filename = tempfile.mkstemp(dir=second_level_tmp_dir)[1]
+        self._upload_dir(storage, tmp_dir, tmp_filename, id='blueprint_id')
+        file_path_in_dir = os.path.join(
+            os.path.basename(second_level_tmp_dir),
+            os.path.basename(tmp_filename))
+
+        # deleting without specifying a path - delete all resources of this entry
+        storage.blueprint.delete(entry_id='blueprint_id')
+        with pytest.raises(exceptions.StorageError):
+            assert storage.blueprint.read(
+                entry_id='blueprint_id',
+                path=file_path_in_dir) == 'fake context'
+        with pytest.raises(exceptions.StorageError):
+            storage.blueprint.download(
+                entry_id='blueprint_id',
+                path=os.path.basename(second_level_tmp_dir),
+                destination=temp_destination_dir)
+
+    def test_delete_nonexisting_resource(self):
+        storage = self._create_storage()
+        self._create(storage)
+        # deleting a nonexisting resource - no effect is expected to happen
+        assert storage.blueprint.delete(entry_id='blueprint_id', path='fake-file') is False

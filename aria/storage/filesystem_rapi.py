@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-SQLalchemy based RAPI
+File system based RAPI
 """
 import os
 import shutil
@@ -92,14 +92,13 @@ class FileSystemResourceAPI(api.ResourceAPI):
         except (OSError, IOError):
             pass
 
-    def read(self, entry_id, path=None, **_):
+    def read(self, entry_id, path, **_):
         """
         Retrieve the content of a file system storage resource.
 
-        :param str entry_type: the type of the entry.
         :param str entry_id: the id of the entry.
-        :param str path: a path to a specific resource.
-        :return: the content of the file
+        :param str path: a path to the specific resource to read.
+        :return: the content of the file.
         :rtype: bytes
         """
         resource_relative_path = os.path.join(self.name, entry_id, path or '')
@@ -110,7 +109,9 @@ class FileSystemResourceAPI(api.ResourceAPI):
         if not os.path.isfile(resource):
             resources = os.listdir(resource)
             if len(resources) != 1:
-                raise exceptions.StorageError('No resource in path: {0}'.format(resource))
+                raise exceptions.StorageError(
+                    'Failed to read {0}; Reading a directory is '
+                    'only allowed when it contains a single resource'.format(resource))
             resource = os.path.join(resource, resources[0])
         with open(resource, 'rb') as resource_file:
             return resource_file.read()
@@ -119,10 +120,9 @@ class FileSystemResourceAPI(api.ResourceAPI):
         """
         Download a specific file or dir from the file system resource storage.
 
-        :param str entry_type: the name of the entry.
-        :param str entry_id: the id of the entry
-        :param str destination: the destination of the files.
-        :param str path: a path on the remote machine relative to the root of the entry.
+        :param str entry_id: the id of the entry.
+        :param str destination: the destination to download to
+        :param str path: the path to download relative to the root of the entry (otherwise all).
         """
         resource_relative_path = os.path.join(self.name, entry_id, path or '')
         resource = os.path.join(self.directory, resource_relative_path)
@@ -138,9 +138,8 @@ class FileSystemResourceAPI(api.ResourceAPI):
         """
         Uploads a specific file or dir to the file system resource storage.
 
-        :param str entry_type: the name of the entry.
-        :param str entry_id: the id of the entry
-        :param source: the source of  the files to upload.
+        :param str entry_id: the id of the entry.
+        :param source: the source of the files to upload.
         :param path: the destination of the file/s relative to the entry root dir.
         """
         resource_directory = os.path.join(self.directory, self.name, entry_id)
@@ -151,3 +150,19 @@ class FileSystemResourceAPI(api.ResourceAPI):
             shutil.copy2(source, destination)
         else:
             dir_util.copy_tree(source, destination)                                       # pylint: disable=no-member
+
+    def delete(self, entry_id, path=None, **_):
+        """
+        Deletes a file system storage resource.
+
+        :param str entry_id: the id of the entry.
+        :param str path: a path to delete relative to the root of the entry (otherwise all).
+        """
+        destination = os.path.join(self.directory, self.name, entry_id, path or '')
+        if os.path.exists(destination):
+            if os.path.isfile(destination):
+                os.remove(destination)
+            else:
+                shutil.rmtree(destination)
+            return True
+        return False
