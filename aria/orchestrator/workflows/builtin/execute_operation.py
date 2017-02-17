@@ -25,7 +25,8 @@ from ... import workflow
 def execute_operation(
         ctx,
         graph,
-        operation,
+        interface_name,
+        operation_name,
         operation_kwargs,
         allow_kwargs_override,
         run_by_dependency_order,
@@ -50,33 +51,33 @@ def execute_operation(
     """
     subgraphs = {}
     # filtering node instances
-    filtered_nodes = list(_filter_node_instances(
+    filtered_nodes = list(_filter_nodes(
         context=ctx,
         node_template_ids=node_template_ids,
         node_ids=node_ids,
         type_names=type_names))
 
     if run_by_dependency_order:
-        filtered_node_instances_ids = set(node_instance.id
-                                          for node_instance in filtered_nodes)
-        for node in ctx.node_instances:
-            if node.id not in filtered_node_instances_ids:
+        filtered_node_ids = set(node_instance.id for node_instance in filtered_nodes)
+        for node in ctx.nodes:
+            if node.id not in filtered_node_ids:
                 subgraphs[node.id] = ctx.task_graph(
                     name='execute_operation_stub_{0}'.format(node.id))
 
     # registering actual tasks to sequences
     for node in filtered_nodes:
         graph.add_tasks(
-            _create_node_instance_task(
-                nodes=node,
-                operation=operation,
+            _create_node_task(
+                node=node,
+                interface_name=interface_name,
+                operation_name=operation_name,
                 operation_kwargs=operation_kwargs,
                 allow_kwargs_override=allow_kwargs_override
             )
         )
 
-    for _, node_instance_sub_workflow in subgraphs.items():
-        graph.add_tasks(node_instance_sub_workflow)
+    for _, node_sub_workflow in subgraphs.items():
+        graph.add_tasks(node_sub_workflow)
 
     # adding tasks dependencies if required
     if run_by_dependency_order:
@@ -86,31 +87,32 @@ def execute_operation(
                     source_task=subgraphs[node.id], after=[subgraphs[relationship.target_id]])
 
 
-def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_names=()):
+def _filter_nodes(context, node_template_ids=(), node_ids=(), type_names=()):
+    def _is_node_template_by_id(node_template_id):
+        return not node_template_ids or node_template_id in node_template_ids
+
     def _is_node_by_id(node_id):
-        return not node_template_ids or node_id in node_template_ids
+        return not node_ids or node_id in node_ids
 
-    def _is_node_instance_by_id(node_instance_id):
-        return not node_ids or node_instance_id in node_ids
-
-    def _is_node_by_type(node_type_hierarchy):
-        return not type_names or node_type_hierarchy in type_names
+    def _is_node_by_type(node_type):
+        return not node_type.name in type_names
 
     for node in context.nodes:
-        if all((_is_node_by_id(node.node_template.id),
-                _is_node_instance_by_id(node.id),
-                _is_node_by_type(node.node_template.type_hierarchy))):
+        if all((_is_node_template_by_id(node.node_template.id),
+                _is_node_by_id(node.id),
+                _is_node_by_type(node.node_template.type))):
             yield node
 
 
-def _create_node_instance_task(
-        nodes,
-        operation,
+def _create_node_task(
+        node,
+        interface_name,
+        operation_name,
         operation_kwargs,
         allow_kwargs_override):
     """
     A workflow which executes a single operation
-    :param nodes: the node instance to install
+    :param node: the node instance to install
     :param basestring operation: the operation name
     :param dict operation_kwargs:
     :param bool allow_kwargs_override:
@@ -120,7 +122,8 @@ def _create_node_instance_task(
     if allow_kwargs_override is not None:
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
-    return OperationTask.node(
-        instance=nodes,
-        name=operation,
+    return OperationTask.for_node(
+        node=node,
+        interface_name=interface_name,
+        operation_name=operation_name,
         inputs=operation_kwargs)

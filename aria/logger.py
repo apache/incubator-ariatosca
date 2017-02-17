@@ -167,7 +167,7 @@ class _SQLAlchemyHandler(logging.Handler):
             task_fk=record.task_id,
             actor=record.prefix,
             level=record.levelname,
-            msg=record.msg,
+            msg=str(record.msg),
             created_at=created_at,
         )
         self._session.add(log)

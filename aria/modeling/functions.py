@@ -13,23 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import namedtuple
+class Function(object):
+    """
+    An intrinsic function.
 
-from . import (
-    model,
-    instance_elements as _instance_base,
-    orchestrator_elements as _orchestrator_base,
-    template_elements as _template_base,
-)
+    Serves as a placeholder for a value that should eventually be derived by calling the function.
+    """
 
-_ModelBaseCls = namedtuple('ModelBase', 'instance_elements,'
-                                        'orchestrator_elements,'
-                                        'template_elements')
-model_base = _ModelBaseCls(instance_elements=_instance_base,
-                           orchestrator_elements=_orchestrator_base,
-                           template_elements=_template_base)
+    @property
+    def as_raw(self):
+        raise NotImplementedError
 
-__all__ = (
-    'model',
-    'model_base',
-)
+    def _evaluate(self, context, container):
+        raise NotImplementedError
+
+    def __deepcopy__(self, memo):
+        # Circumvent cloning in order to maintain our state
+        return self

@@ -14,8 +14,8 @@
 # limitations under the License.
 
 """
-Aria Version module:
-    * version: Aria Package version
+ARIA Version module:
+    * version: ARIA Package version
 """
 
 version = '0.1.0'  # pylint: disable=C0103

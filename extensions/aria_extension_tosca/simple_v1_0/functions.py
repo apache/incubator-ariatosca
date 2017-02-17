@@ -19,8 +19,9 @@ from aria.utils.collections import FrozenList
 from aria.utils.formatting import as_raw, safe_repr
 from aria.parser import dsl_specification
 from aria.parser.exceptions import InvalidValueError
-from aria.parser.modeling import (Function, CannotEvaluateFunctionException)
 from aria.parser.validation import Issue
+from aria.modeling.exceptions import CannotEvaluateFunctionException
+from aria.modeling.functions import Function
 
 #
 # Intrinsic
@@ -139,8 +140,8 @@ class GetInput(Function):
             raise CannotEvaluateFunctionException()
         the_input = context.modeling.instance.inputs.get(
             self.input_property_name,
-            context.modeling.model.inputs.get(self.input_property_name))
-        return the_input.value if the_input is not None else None
+            context.modeling.template.inputs.get(self.input_property_name))
+        return as_raw(the_input.value) if the_input is not None else None
 
 @dsl_specification('4.4.2', 'tosca-simple-1.0')
 class GetProperty(Function):
@@ -209,7 +210,7 @@ class GetProperty(Function):
                         found = False
                         break
                 if found:
-                    return value
+                    return as_raw(value)
 
         raise InvalidValueError(
             'function "get_property" could not find "%s" in modelable entity "%s"' \

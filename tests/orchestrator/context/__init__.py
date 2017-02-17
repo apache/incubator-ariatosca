@@ -23,10 +23,6 @@ def op_path(func, module_path=None):
     return '{0}.{1}'.format(module_path, func.__name__)
 
 
-def op_name(actor, operation_name):
-    return '{name}.{actor.id}'.format(name=operation_name, actor=actor)
-
-
 def execute(workflow_func, workflow_context, executor):
     graph = workflow_func(ctx=workflow_context)
     eng = engine.Engine(executor=executor, workflow_context=workflow_context, tasks_graph=graph)

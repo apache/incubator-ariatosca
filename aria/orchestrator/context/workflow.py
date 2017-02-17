@@ -50,14 +50,14 @@ class WorkflowContext(BaseContext):
 
     def __repr__(self):
         return (
-            '{name}(deployment_id={self._service_instance_id}, '
+            '{name}(deployment_id={self._service_id}, '
             'workflow_name={self._workflow_name}'.format(
                 name=self.__class__.__name__, self=self))
 
     def _create_execution(self):
         now = datetime.utcnow()
         execution = self.model.execution.model_cls(
-            service_instance=self.service_instance,
+            service=self.service,
             workflow_name=self._workflow_name,
             created_at=now,
             parameters=self.parameters,
@@ -88,11 +88,11 @@ class WorkflowContext(BaseContext):
         """
         Iterator over nodes
         """
-        key = 'service_instance_{0}'.format(self.model.node_template.model_cls.name_column_name())
+        key = 'service_{0}'.format(self.model.node_template.model_cls.name_column_name())
 
         return self.model.node_template.iter(
             filters={
-                key: getattr(self.service_instance, self.service_instance.name_column_name())
+                key: getattr(self.service, self.service.name_column_name())
             }
         )
 
@@ -101,10 +101,10 @@ class WorkflowContext(BaseContext):
         """
         Iterator over node instances
         """
-        key = 'service_instance_{0}'.format(self.model.node.model_cls.name_column_name())
+        key = 'service_{0}'.format(self.model.node.model_cls.name_column_name())
         return self.model.node.iter(
             filters={
-                key: getattr(self.service_instance, self.service_instance.name_column_name())
+                key: getattr(self.service, self.service.name_column_name())
             }
         )
 

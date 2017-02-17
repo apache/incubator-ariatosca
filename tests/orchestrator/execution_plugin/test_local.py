@@ -463,7 +463,7 @@ if __name__ == '__main__':
         script_path = os.path.basename(local_script_path) if local_script_path else None
         if script_path:
             workflow_context.resource.deployment.upload(
-                entry_id=str(workflow_context.service_instance.id),
+                entry_id=str(workflow_context.service.id),
                 source=local_script_path,
                 path=script_path)
 
@@ -476,17 +476,20 @@ if __name__ == '__main__':
 
         @workflow
         def mock_workflow(ctx, graph):
-            op = 'test.op'
-            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-            node.interfaces = [mock.models.get_interface(
-                op,
+            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+            interface = mock.models.create_interface(
+                node.service,
+                'test',
+                'op',
                 operation_kwargs=dict(implementation='{0}.{1}'.format(
                     operations.__name__,
                     operations.run_script_locally.__name__))
-            )]
-            graph.add_tasks(api.task.OperationTask.node(
-                instance=node,
-                name=op,
+            )
+            node.interfaces[interface.name] = interface
+            graph.add_tasks(api.task.OperationTask.for_node(
+                node=node,
+                interface_name='test',
+                operation_name='op',
                 inputs=inputs))
             return graph
         tasks_graph = mock_workflow(ctx=workflow_context)  # pylint: disable=no-value-for-parameter
@@ -496,7 +499,7 @@ if __name__ == '__main__':
             tasks_graph=tasks_graph)
         eng.execute()
         return workflow_context.model.node.get_by_name(
-            mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties
+            mock.models.DEPENDENCY_NODE_NAME).runtime_properties
 
     @pytest.fixture
     def executor(self):

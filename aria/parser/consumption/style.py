@@ -43,7 +43,7 @@ class Style(object):
 
     @staticmethod
     def literal(value):
-        return Colored.yellow(safe_repr(value), bold=True)
+        return Colored.magenta(safe_repr(value))
 
     @staticmethod
     def meta(value):

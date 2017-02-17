@@ -24,7 +24,7 @@ import fabric.api
 from fabric.contrib import files
 from fabric import context_managers
 
-from aria.storage.modeling import model
+from aria.modeling import models
 from aria.orchestrator import events
 from aria.orchestrator import workflow
 from aria.orchestrator.workflows import api
@@ -124,10 +124,10 @@ class TestWithActualSSHServer(object):
 
     def test_run_script_download_resource_and_render(self, tmpdir):
         resource = tmpdir.join('resource')
-        resource.write('{{ctx.service_instance.name}}')
+        resource.write('{{ctx.service.name}}')
         self._upload(str(resource), 'test_resource')
         props = self._execute()
-        assert props['test_value'] == self._workflow_context.service_instance.name
+        assert props['test_value'] == self._workflow_context.service.name
 
     @pytest.mark.parametrize('value', ['string-value', [1, 2, 3], {'key': 'value'}])
     def test_run_script_inputs_as_env_variables_no_override(self, value):
@@ -216,15 +216,20 @@ class TestWithActualSSHServer(object):
 
         @workflow
         def mock_workflow(ctx, graph):
-            op = 'test.op'
-            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-            node.interfaces = [mock.models.get_interface(
-                op,
-                dict(implementation='{0}.{1}'.format(operations.__name__, operation.__name__))
-            )]
-            graph.sequence(*[api.task.OperationTask.node(
-                instance=node,
-                name=op,
+            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+            interface = mock.models.create_interface(
+                node.service,
+                'test',
+                'op',
+                operation_kwargs=dict(implementation='{0}.{1}'.format(
+                    operations.__name__,
+                    operation.__name__))
+            )
+            node.interfaces[interface.name] = interface
+            graph.sequence(*[api.task.OperationTask.for_node(
+                node=node,
+                interface_name='test',
+                operation_name='op',
                 inputs={
                     'script_path': script_path,
                     'fabric_env': _FABRIC_ENV,
@@ -243,7 +248,7 @@ class TestWithActualSSHServer(object):
             tasks_graph=tasks_graph)
         eng.execute()
         return self._workflow_context.model.node.get_by_name(
-            mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties
+            mock.models.DEPENDENCY_NODE_NAME).runtime_properties
 
     def _execute_and_get_task_exception(self, *args, **kwargs):
         signal = events.on_failure_task_signal
@@ -254,7 +259,7 @@ class TestWithActualSSHServer(object):
 
     def _upload(self, source, path):
         self._workflow_context.resource.deployment.upload(
-            entry_id=str(self._workflow_context.service_instance.id),
+            entry_id=str(self._workflow_context.service.id),
             source=source,
             path=path)
 
@@ -407,7 +412,7 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
         class Stub(object):
             @staticmethod
             def abort(message=None):
-                model.Task.abort(message)
+                models.Task.abort(message)
             ip = None
         task = Stub
         task.runs_on = Stub

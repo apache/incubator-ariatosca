@@ -19,13 +19,15 @@ import sqlalchemy
 
 from aria.storage import (
     ModelStorage,
-    sql_mapi,
-    exceptions,
-    modeling,
+    sql_mapi
 )
-from aria.storage.modeling import type
+from aria import modeling
+from aria.modeling.exceptions import ValueFormatException
 
-from ..storage import release_sqlite_storage, structure, init_inmemory_model_storage
+from ..storage import (
+    release_sqlite_storage,
+    init_inmemory_model_storage
+)
 from . import MockModel
 from ..mock import (
     models,
@@ -44,7 +46,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.model.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)                      # pylint: disable=no-member
 
 
 @pytest.fixture
@@ -89,90 +91,89 @@ def test_inner_list_update(storage):
 
 
 def test_model_to_dict(context):
-    service_instance = context.service_instance
-    service_instance = service_instance.to_dict()
+    service = context.service
+    service = service.to_dict()
 
     expected_keys = [
         'description',
-        '_metadata',
         'created_at',
         'permalink',
-        'policy_triggers',
-        'policy_types',
         'scaling_groups',
-        'updated_at',
-        'workflows',
+        'updated_at'
     ]
 
     for expected_key in expected_keys:
-        assert expected_key in service_instance
+        assert expected_key in service
 
 
 def test_relationship_model_ordering(context):
-    service_instance = context.model.service_instance.get_by_name(models.DEPLOYMENT_NAME)
-    source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_INSTANCE_NAME)
-    target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_INSTANCE_NAME)
-    new_node_template = modeling.model.NodeTemplate(
-        name='new_node',
-        type_name='test_node_type',
-        type_hierarchy=[],
+    service = context.model.service.get_by_name(models.SERVICE_NAME)
+    source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_NAME)
+    target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_NAME)
+
+    new_node_template = modeling.models.NodeTemplate(
+        name='new_node_template',
+        type=source_node.type,
         default_instances=1,
         min_instances=1,
         max_instances=1,
-        service_template=service_instance.service_template
+        service_template=service.service_template
     )
-    new_node = modeling.model.Node(
-        name='new_node_instance',
+
+    new_node = modeling.models.Node(
+        name='new_node',
+        type=source_node.type,
         runtime_properties={},
-        service_instance=service_instance,
+        service=service,
+        version=None,
         node_template=new_node_template,
         state='',
         scaling_groups=[]
     )
 
-    source_to_new_relationship = modeling.model.Relationship(
-        target_node=new_node,
+    source_node.outbound_relationships.append(modeling.models.Relationship(
         source_node=source_node,
-    )
+        target_node=new_node,
+    ))
 
-    new_to_target_relationship = modeling.model.Relationship(
+    new_node.outbound_relationships.append(modeling.models.Relationship(                            # pylint: disable=no-member
         source_node=new_node,
         target_node=target_node,
-    )
+    ))
 
     context.model.node_template.put(new_node_template)
     context.model.node.put(new_node)
-    context.model.relationship.put(source_to_new_relationship)
-    context.model.relationship.put(new_to_target_relationship)
+    context.model.node.refresh(source_node)
+    context.model.node.refresh(target_node)
 
     def flip_and_assert(node, direction):
         """
         Reversed the order of relationships and assert effects took place.
-        :param node: the node instance to operatate on
-        :param direction: the type of relationships to flip (inbound/outbount)
+        :param node: the node instance to operate on
+        :param direction: the type of relationships to flip (inbound/outbound)
         :return:
         """
         assert direction in ('inbound', 'outbound')
 
-        relationships = getattr(node, direction + '_relationships').all()
+        relationships = getattr(node, direction + '_relationships')
         assert len(relationships) == 2
 
-        reversed_relationship_instances = list(reversed(relationships))
-        assert relationships != reversed_relationship_instances
+        reversed_relationship = list(reversed(relationships))
+        assert relationships != reversed_relationship
 
-        relationships[:] = reversed_relationship_instances
+        relationships[:] = reversed_relationship
         context.model.node.update(node)
-        assert relationships == reversed_relationship_instances
+        assert relationships == reversed_relationship
 
     flip_and_assert(source_node, 'outbound')
     flip_and_assert(target_node, 'inbound')
 
 
-class StrictClass(modeling.model.aria_declarative_base, structure.ModelMixin):
+class StrictClass(modeling.models.aria_declarative_base, modeling.mixins.ModelMixin):
     __tablename__ = 'strict_class'
 
-    strict_dict = sqlalchemy.Column(type.StrictDict(basestring, basestring))
-    strict_list = sqlalchemy.Column(type.StrictList(basestring))
+    strict_dict = sqlalchemy.Column(modeling.types.StrictDict(basestring, basestring))
+    strict_list = sqlalchemy.Column(modeling.types.StrictList(basestring))
 
 
 def test_strict_dict():
@@ -180,13 +181,13 @@ def test_strict_dict():
     strict_class = StrictClass()
 
     def assert_strict(sc):
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             sc.strict_dict = {'key': 1}
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             sc.strict_dict = {1: 'value'}
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             sc.strict_dict = {1: 1}
 
     assert_strict(strict_class)
@@ -194,11 +195,11 @@ def test_strict_dict():
     assert strict_class.strict_dict == {'key': 'value'}
 
     assert_strict(strict_class)
-    with pytest.raises(exceptions.StorageError):
+    with pytest.raises(ValueFormatException):
         strict_class.strict_dict['key'] = 1
-    with pytest.raises(exceptions.StorageError):
+    with pytest.raises(ValueFormatException):
         strict_class.strict_dict[1] = 'value'
-    with pytest.raises(exceptions.StorageError):
+    with pytest.raises(ValueFormatException):
         strict_class.strict_dict[1] = 1
 
 
@@ -206,7 +207,7 @@ def test_strict_list():
     strict_class = StrictClass()
 
     def assert_strict(sc):
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             sc.strict_list = [1]
 
     assert_strict(strict_class)
@@ -214,5 +215,5 @@ def test_strict_list():
     assert strict_class.strict_list == ['item']
 
     assert_strict(strict_class)
-    with pytest.raises(exceptions.StorageError):
+    with pytest.raises(ValueFormatException):
         strict_class.strict_list[0] = 1

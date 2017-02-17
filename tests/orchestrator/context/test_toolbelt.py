@@ -24,7 +24,6 @@ from aria.orchestrator.context.toolbelt import RelationshipToolBelt
 from tests import mock, storage
 from . import (
     op_path,
-    op_name,
     execute,
 )
 
@@ -49,22 +48,22 @@ def executor():
 
 def _get_elements(workflow_context):
     dependency_node_template = workflow_context.model.node_template.get_by_name(
-        mock.models.DEPENDENCY_NODE_NAME)
+        mock.models.DEPENDENCY_NODE_TEMPLATE_NAME)
     dependency_node_template.host = dependency_node_template
     workflow_context.model.node.update(dependency_node_template)
 
     dependency_node = workflow_context.model.node.get_by_name(
-        mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        mock.models.DEPENDENCY_NODE_NAME)
     dependency_node.host_fk = dependency_node.id
     workflow_context.model.node.update(dependency_node)
 
     dependent_node_template = workflow_context.model.node_template.get_by_name(
-        mock.models.DEPENDENT_NODE_NAME)
+        mock.models.DEPENDENT_NODE_TEMPLATE_NAME)
     dependent_node_template.host = dependency_node_template
     workflow_context.model.node_template.update(dependent_node_template)
 
     dependent_node = workflow_context.model.node.get_by_name(
-        mock.models.DEPENDENT_NODE_INSTANCE_NAME)
+        mock.models.DEPENDENT_NODE_NAME)
     dependent_node.host = dependent_node
     workflow_context.model.node.update(dependent_node)
 
@@ -74,21 +73,26 @@ def _get_elements(workflow_context):
 
 
 def test_host_ip(workflow_context, executor):
-    operation_name = 'aria.interfaces.lifecycle.create'
+    interface_name = 'Standard'
+    operation_name = 'create'
     _, dependency_node, _, _, _ = _get_elements(workflow_context)
-    dependency_node.interfaces = [mock.models.get_interface(
-        operation_name,
+    interface = mock.models.create_interface(
+        dependency_node.service,
+        interface_name=interface_name,
+        operation_name=operation_name,
         operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__))
-    )]
+    )
+    dependency_node.interfaces[interface.name] = interface
     workflow_context.model.node.update(dependency_node)
     inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.node(
-                instance=dependency_node,
-                name=operation_name,
+            api.task.OperationTask.for_node(
+                node=dependency_node,
+                interface_name=interface_name,
+                operation_name=operation_name,
                 inputs=inputs
             )
         )
@@ -99,15 +103,16 @@ def test_host_ip(workflow_context, executor):
 
 
 def test_relationship_tool_belt(workflow_context, executor):
-    operation_name = 'aria.interfaces.relationship_lifecycle.post_configure'
+    interface_name = 'Configure'
+    operation_name = 'post_configure'
     _, _, _, _, relationship = _get_elements(workflow_context)
-    relationship.interfaces = [
-        mock.models.get_interface(
-            operation_name,
-            operation_kwargs=dict(
-                implementation=op_path(relationship_operation, module_path=__name__)),
-            edge='source')
-    ]
+    interface = mock.models.create_interface(
+        relationship.source_node.service,
+        interface_name=interface_name,
+        operation_name=operation_name,
+        operation_kwargs=dict(implementation=op_path(relationship_operation, module_path=__name__))
+    )
+    relationship.interfaces[interface.name] = interface
     workflow_context.model.relationship.update(relationship)
 
     inputs = {'putput': True}
@@ -115,18 +120,22 @@ def test_relationship_tool_belt(workflow_context, executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.relationship(
-                instance=relationship,
-                name=operation_name,
-                edge='source',
+            api.task.OperationTask.for_relationship(
+                relationship=relationship,
+                interface_name=interface_name,
+                operation_name=operation_name,
                 inputs=inputs
             )
         )
 
     execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
 
-    assert isinstance(global_test_holder.get(op_name(relationship, operation_name)),
-                      RelationshipToolBelt)
+    assert isinstance(global_test_holder.get(api.task.OperationTask.NAME_FORMAT.format(
+        type='relationship',
+        name=relationship.name,
+        interface=interface_name,
+        operation=operation_name
+    )), RelationshipToolBelt)
 
 
 def test_wrong_model_toolbelt():

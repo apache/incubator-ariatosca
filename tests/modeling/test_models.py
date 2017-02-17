@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -19,15 +20,16 @@ import pytest
 
 from aria import application_model_storage
 from aria.storage import (
-    exceptions,
     sql_mapi,
 )
-from aria.storage.modeling.model import (
+from aria.storage.exceptions import StorageError
+from aria.modeling.exceptions import ValueFormatException
+from aria.modeling.models import (
     ServiceTemplate,
-    ServiceInstance,
-    ServiceInstanceUpdate,
-    ServiceInstanceUpdateStep,
-    ServiceInstanceModification,
+    Service,
+    ServiceUpdate,
+    ServiceUpdateStep,
+    ServiceModification,
     Execution,
     Task,
     Plugin,
@@ -59,63 +61,56 @@ def _empty_storage():
 
 def _service_template_storage():
     storage = _empty_storage()
-    service_template = mock.models.get_blueprint()
+    service_template = mock.models.create_service_template()
     storage.service_template.put(service_template)
     return storage
 
 
-def _service_instance_storage():
+def _service_storage():
     storage = _service_template_storage()
-    service_instance = mock.models.get_deployment(
-        storage.service_template.get_by_name(mock.models.BLUEPRINT_NAME))
-    storage.service_instance.put(service_instance)
+    service = mock.models.create_service(
+        storage.service_template.get_by_name(mock.models.SERVICE_TEMPLATE_NAME))
+    storage.service.put(service)
     return storage
 
 
-def _service_instance_update_storage():
-    storage = _service_instance_storage()
-    service_instance_update = ServiceInstanceUpdate(
-        service_instance=storage.service_instance.list()[0],
+def _service_update_storage():
+    storage = _service_storage()
+    service_update = ServiceUpdate(
+        service=storage.service.list()[0],
         created_at=now,
-        service_instance_plan={},
+        service_plan={},
     )
-    storage.service_instance_update.put(service_instance_update)
+    storage.service_update.put(service_update)
     return storage
 
 
 def _node_template_storage():
-    storage = _service_instance_storage()
-    node_template = mock.models.get_dependency_node(storage.service_instance.list()[0])
-    storage.node_template.put(node_template)
+    storage = _service_storage()
+    service_template = storage.service_template.list()[0]
+    dependency_node_template = mock.models.create_dependency_node_template(service_template)
+    mock.models.create_dependent_node_template(service_template, dependency_node_template)
+    storage.service_template.update(service_template)
     return storage
 
 
-def _nodes_storage():
+def _node_storage():
     storage = _node_template_storage()
-    service_instance = storage.service_instance.get_by_name(mock.models.DEPLOYMENT_NAME)
-
-    dependency_node_template = storage.node_template.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    dependency_node = mock.models.get_dependency_node_instance(dependency_node_template,
-                                                               service_instance)
-
-    req_template, cap_template = mock.models.get_relationship(dependency_node)
-    storage.requirement_template.put(req_template)
-    storage.capability_template.put(cap_template)
-
-    dependent_node_template = mock.models.get_dependent_node(service_instance,
-                                                             req_template,
-                                                             cap_template)
-    dependent_node = mock.models.get_dependent_node_instance(dependent_node_template,
-                                                             service_instance)
-    storage.node.put(dependency_node)
-    storage.node.put(dependent_node)
+    service = storage.service.get_by_name(mock.models.SERVICE_NAME)
+    dependency_node_template = storage.node_template.get_by_name(
+        mock.models.DEPENDENCY_NODE_TEMPLATE_NAME)
+    dependent_node_template = storage.node_template.get_by_name(
+        mock.models.DEPENDENT_NODE_TEMPLATE_NAME)
+    mock.models.create_dependency_node(dependency_node_template, service)
+    mock.models.create_dependent_node(dependent_node_template, service)
+    storage.service.update(service)
     return storage
 
 
 def _execution_storage():
-    storage = _service_instance_storage()
-    execution = mock.models.get_execution(storage.service_instance.list()[0])
-    plugin = mock.models.get_plugin()
+    storage = _service_storage()
+    execution = mock.models.create_execution(storage.service.list()[0])
+    plugin = mock.models.create_plugin()
     storage.execution.put(execution)
     storage.plugin.put(plugin)
     return storage
@@ -134,14 +129,14 @@ def service_template_storage():
 
 
 @pytest.fixture
-def service_instance_storage():
-    with sql_storage(_service_instance_storage) as storage:
+def service_storage():
+    with sql_storage(_service_storage) as storage:
         yield storage
 
 
 @pytest.fixture
-def service_instance_update_storage():
-    with sql_storage(_service_instance_update_storage) as storage:
+def service_update_storage():
+    with sql_storage(_service_update_storage) as storage:
         yield storage
 
 
@@ -152,8 +147,8 @@ def node_template_storage():
 
 
 @pytest.fixture
-def nodes_storage():
-    with sql_storage(_nodes_storage) as storage:
+def node_storage():
+    with sql_storage(_node_storage) as storage:
         yield storage
 
 
@@ -173,30 +168,30 @@ def _test_model(is_valid, storage, model_cls, model_kwargs):
         getattr(storage, model_cls.__modelname__).put(model)
         return model
     else:
-        with pytest.raises((exceptions.StorageError, TypeError),):
+        with pytest.raises((ValueFormatException, StorageError, TypeError),):
             getattr(storage, model_cls.__modelname__).put(model_cls(**model_kwargs))
 
 
 class TestServiceTemplate(object):
 
     @pytest.mark.parametrize(
-        'is_valid, plan, description, created_at, updated_at, main_file_name',
+        'is_valid, description, created_at, updated_at, main_file_name',
         [
-            (False, None, 'description', now, now, '/path'),
-            (False, {}, {}, now, now, '/path'),
-            (False, {}, 'description', 'error', now, '/path'),
-            (False, {}, 'description', now, 'error', '/path'),
-            (False, {}, 'description', now, now, {}),
-            (True, {}, 'description', now, now, '/path'),
+            (True, 'description', now, now, '/path'),
+            (False, {}, now, now, '/path'),
+            (False, 'description', 'error', now, '/path'),
+            (False, 'description', now, 'error', '/path'),
+            (False, 'description', now, now, {}),
+            (True, 'description', now, now, '/path'),
         ]
     )
-    def test_blueprint_model_creation(self, empty_storage, is_valid, plan, description, created_at,
-                                      updated_at, main_file_name):
+
+    def test_service_template_model_creation(self, empty_storage, is_valid, description, created_at,
+                                             updated_at, main_file_name):
         _test_model(is_valid=is_valid,
                     storage=empty_storage,
                     model_cls=ServiceTemplate,
                     model_kwargs=dict(
-                        plan=plan,
                         description=description,
                         created_at=created_at,
                         updated_at=updated_at,
@@ -204,61 +199,52 @@ class TestServiceTemplate(object):
                    )
 
 
-class TestServiceInstance(object):
+class TestService(object):
 
     @pytest.mark.parametrize(
-        'is_valid, name, created_at, description, inputs, permalink, policy_triggers, '
-        'policy_types, outputs, scaling_groups, updated_at, workflows',
+        'is_valid, name, created_at, description, inputs, permalink, '
+        'outputs, scaling_groups, updated_at',
         [
-            (False, m_cls, now, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (False, 'name', m_cls, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (False, 'name', now, m_cls, [], 'perlnk', {}, {}, [], {}, now, {}),
-            (False, 'name', now, 'desc', [], m_cls, {}, {}, [], {}, now, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', m_cls, {}, [], {}, now, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', {}, m_cls, [], {}, now, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', {}, {}, m_cls, {}, now, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', {}, {}, [], m_cls, now, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, m_cls, {}),
-            (False, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, now, m_cls),
+            (False, m_cls, now, 'desc', {}, 'perlnk', {}, {}, now),
+            (False, 'name', m_cls, 'desc', {}, 'perlnk', {}, {}, now),
+            (False, 'name', now, m_cls, {}, 'perlnk', {}, {}, now),
+            (False, 'name', now, 'desc', {}, m_cls, {}, {}, now),
+            (False, 'name', now, 'desc', {}, 'perlnk', m_cls, {}, now),
+            (False, 'name', now, 'desc', {}, 'perlnk', {}, m_cls, now),
+            (False, 'name', now, 'desc', {}, 'perlnk', {}, {}, m_cls),
 
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (True, None, now, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (True, 'name', now, None, [], 'perlnk', {}, {}, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], None, {}, {}, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', None, {}, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, None, [], {}, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], None, now, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, None, {}),
-            (True, 'name', now, 'desc', [], 'perlnk', {}, {}, [], {}, now, None),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, None, now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, None, {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, 'desc', {}, None, {}, {}, now),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, None, now),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, None),
+            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
         ]
     )
-    def test_deployment_model_creation(self, service_instance_storage, is_valid, name, created_at,
-                                       description, inputs, permalink, policy_triggers,
-                                       policy_types, outputs, scaling_groups, updated_at,
-                                       workflows):
-        service_instance = _test_model(
+    def test_service_model_creation(self, service_storage, is_valid, name, created_at, description,
+                                    inputs, permalink, outputs, scaling_groups, updated_at):
+        service = _test_model(
             is_valid=is_valid,
-            storage=service_instance_storage,
-            model_cls=ServiceInstance,
+            storage=service_storage,
+            model_cls=Service,
             model_kwargs=dict(
                 name=name,
-                service_template=service_instance_storage.service_template.list()[0],
+                service_template=service_storage.service_template.list()[0],
                 created_at=created_at,
                 description=description,
                 inputs=inputs,
                 permalink=permalink,
-                policy_triggers=policy_triggers,
-                policy_types=policy_types,
                 outputs=outputs,
                 scaling_groups=scaling_groups,
-                updated_at=updated_at,
-                workflows=workflows
+                updated_at=updated_at
             ))
         if is_valid:
-            assert service_instance.service_template == \
-                   service_instance_storage.service_template.list()[0]
+            assert service.service_template == \
+                   service_storage.service_template.list()[0]
 
 
 class TestExecution(object):
@@ -282,15 +268,15 @@ class TestExecution(object):
             (True, now, now, now, 'error', False, None, Execution.STARTED, 'wf_name'),
         ]
     )
-    def test_execution_model_creation(self, service_instance_storage, is_valid, created_at,
-                                      started_at, ended_at, error, is_system_workflow, parameters,
-                                      status, workflow_name):
+    def test_execution_model_creation(self, service_storage, is_valid, created_at, started_at,
+                                      ended_at, error, is_system_workflow, parameters, status,
+                                      workflow_name):
         execution = _test_model(
             is_valid=is_valid,
-            storage=service_instance_storage,
+            storage=service_storage,
             model_cls=Execution,
             model_kwargs=dict(
-                service_instance=service_instance_storage.service_instance.list()[0],
+                service=service_storage.service.list()[0],
                 created_at=created_at,
                 started_at=started_at,
                 ended_at=ended_at,
@@ -301,8 +287,8 @@ class TestExecution(object):
                 workflow_name=workflow_name,
             ))
         if is_valid:
-            assert execution.service_instance == service_instance_storage.service_instance.list()[0]
-            assert execution.service_template == service_instance_storage.service_template.list()[0]
+            assert execution.service == service_storage.service.list()[0]
+            assert execution.service_template == service_storage.service_template.list()[0]
 
     def test_execution_status_transition(self):
         def create_execution(status):
@@ -369,10 +355,10 @@ class TestExecution(object):
                     execution.status = transitioned_status
 
 
-class TestServiceInstanceUpdate(object):
+class TestServiceUpdate(object):
     @pytest.mark.parametrize(
-        'is_valid, created_at, deployment_plan, service_instance_update_node_instances, '
-        'service_instance_update_service_instance, service_instance_update_nodes, '
+        'is_valid, created_at, service_plan, service_update_nodes, '
+        'service_update_service, service_update_node_templates, '
         'modified_entity_ids, state',
         [
             (False, m_cls, {}, {}, {}, [], {}, 'state'),
@@ -391,74 +377,74 @@ class TestServiceInstanceUpdate(object):
             (True, now, {}, {}, {}, [], {}, None),
         ]
     )
-    def test_service_instance_update_model_creation(
-            self, service_instance_storage, is_valid, created_at, deployment_plan,
-            service_instance_update_node_instances, service_instance_update_service_instance,
-            service_instance_update_nodes, modified_entity_ids, state):
-        service_instance_update = _test_model(
+    def test_service_update_model_creation(self, service_storage, is_valid, created_at,
+                                           service_plan, service_update_nodes,
+                                           service_update_service, service_update_node_templates,
+                                           modified_entity_ids, state):
+        service_update = _test_model(
             is_valid=is_valid,
-            storage=service_instance_storage,
-            model_cls=ServiceInstanceUpdate,
+            storage=service_storage,
+            model_cls=ServiceUpdate,
             model_kwargs=dict(
-                service_instance=service_instance_storage.service_instance.list()[0],
+                service=service_storage.service.list()[0],
                 created_at=created_at,
-                service_instance_plan=deployment_plan,
-                service_instance_update_node_instances=service_instance_update_node_instances,
-                service_instance_update_service_instance=service_instance_update_service_instance,
-                service_instance_update_nodes=service_instance_update_nodes,
+                service_plan=service_plan,
+                service_update_nodes=service_update_nodes,
+                service_update_service=service_update_service,
+                service_update_node_templates=service_update_node_templates,
                 modified_entity_ids=modified_entity_ids,
-                state=state,
+                state=state
             ))
         if is_valid:
-            assert service_instance_update.service_instance == \
-                   service_instance_storage.service_instance.list()[0]
+            assert service_update.service == \
+                   service_storage.service.list()[0]
 
 
-class TestServiceInstanceUpdateStep(object):
+class TestServiceUpdateStep(object):
 
     @pytest.mark.parametrize(
         'is_valid, action, entity_id, entity_type',
         [
-            (False, m_cls, 'id', ServiceInstanceUpdateStep.ENTITY_TYPES.NODE),
-            (False, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, m_cls,
-             ServiceInstanceUpdateStep.ENTITY_TYPES.NODE),
-            (False, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, 'id', m_cls),
+            (False, m_cls, 'id', ServiceUpdateStep.ENTITY_TYPES.NODE),
+            (False, ServiceUpdateStep.ACTION_TYPES.ADD, m_cls,
+             ServiceUpdateStep.ENTITY_TYPES.NODE),
+            (False, ServiceUpdateStep.ACTION_TYPES.ADD, 'id', m_cls),
 
-            (True, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, 'id',
-             ServiceInstanceUpdateStep.ENTITY_TYPES.NODE)
+            (True, ServiceUpdateStep.ACTION_TYPES.ADD, 'id',
+             ServiceUpdateStep.ENTITY_TYPES.NODE)
         ]
     )
-    def test_deployment_update_step_model_creation(self, service_instance_update_storage, is_valid,
-                                                   action, entity_id, entity_type):
-        service_instance_update_step = _test_model(
+    def test_service_update_step_model_creation(self, service_update_storage, is_valid, action,
+                                                entity_id, entity_type):
+        service_update_step = _test_model(
             is_valid=is_valid,
-            storage=service_instance_update_storage,
-            model_cls=ServiceInstanceUpdateStep,
+            storage=service_update_storage,
+            model_cls=ServiceUpdateStep,
             model_kwargs=dict(
-                service_instance_update=
-                service_instance_update_storage.service_instance_update.list()[0],
+                service_update=
+                service_update_storage.service_update.list()[0],
                 action=action,
                 entity_id=entity_id,
                 entity_type=entity_type
             ))
         if is_valid:
-            assert service_instance_update_step.service_instance_update == \
-                   service_instance_update_storage.service_instance_update.list()[0]
+            assert service_update_step.service_update == \
+                   service_update_storage.service_update.list()[0]
 
-    def test_deployment_update_step_order(self):
-        add_node = ServiceInstanceUpdateStep(
+    def test_service_update_step_order(self):
+        add_node = ServiceUpdateStep(
             id='add_step',
             action='add',
             entity_type='node',
             entity_id='node_id')
 
-        modify_node = ServiceInstanceUpdateStep(
+        modify_node = ServiceUpdateStep(
             id='modify_step',
             action='modify',
             entity_type='node',
             entity_id='node_id')
 
-        remove_node = ServiceInstanceUpdateStep(
+        remove_node = ServiceUpdateStep(
             id='remove_step',
             action='remove',
             entity_type='node',
@@ -470,13 +456,13 @@ class TestServiceInstanceUpdateStep(object):
         assert remove_node < modify_node < add_node
         assert not remove_node > modify_node > add_node
 
-        add_rel = ServiceInstanceUpdateStep(
+        add_rel = ServiceUpdateStep(
             id='add_step',
             action='add',
             entity_type='relationship',
             entity_id='relationship_id')
 
-        remove_rel = ServiceInstanceUpdateStep(
+        remove_rel = ServiceUpdateStep(
             id='remove_step',
             action='remove',
             entity_type='relationship',
@@ -486,83 +472,79 @@ class TestServiceInstanceUpdateStep(object):
         assert not add_node < None
 
 
-class TestDeploymentModification(object):
+class TestServiceModification(object):
     @pytest.mark.parametrize(
         'is_valid, context, created_at, ended_at, modified_node_templates, nodes, status',
         [
-            (False, m_cls, now, now, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, m_cls, now, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, m_cls, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, now, m_cls, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, now, {}, m_cls, ServiceInstanceModification.STARTED),
+            (False, m_cls, now, now, {}, {}, ServiceModification.STARTED),
+            (False, {}, m_cls, now, {}, {}, ServiceModification.STARTED),
+            (False, {}, now, m_cls, {}, {}, ServiceModification.STARTED),
+            (False, {}, now, now, m_cls, {}, ServiceModification.STARTED),
+            (False, {}, now, now, {}, m_cls, ServiceModification.STARTED),
             (False, {}, now, now, {}, {}, m_cls),
 
-            (True, {}, now, now, {}, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, None, {}, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, now, None, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, now, {}, None, ServiceInstanceModification.STARTED),
+            (True, {}, now, now, {}, {}, ServiceModification.STARTED),
+            (True, {}, now, None, {}, {}, ServiceModification.STARTED),
+            (True, {}, now, now, None, {}, ServiceModification.STARTED),
+            (True, {}, now, now, {}, None, ServiceModification.STARTED),
         ]
     )
-    def test_deployment_modification_model_creation(
-            self, service_instance_storage, is_valid, context, created_at, ended_at,
-            modified_node_templates, nodes, status):
-        deployment_modification = _test_model(
+    def test_service_modification_model_creation(self, service_storage, is_valid, context,
+                                                 created_at, ended_at, modified_node_templates,
+                                                 nodes, status):
+        service_modification = _test_model(
             is_valid=is_valid,
-            storage=service_instance_storage,
-            model_cls=ServiceInstanceModification,
+            storage=service_storage,
+            model_cls=ServiceModification,
             model_kwargs=dict(
-                service_instance=service_instance_storage.service_instance.list()[0],
+                service=service_storage.service.list()[0],
                 context=context,
                 created_at=created_at,
                 ended_at=ended_at,
-                modified_nodes=modified_node_templates,
-                node_instances=nodes,
+                modified_node_templates=modified_node_templates,
+                nodes=nodes,
                 status=status,
             ))
         if is_valid:
-            assert deployment_modification.service_instance == \
-                   service_instance_storage.service_instance.list()[0]
+            assert service_modification.service == \
+                   service_storage.service.list()[0]
 
 
 class TestNodeTemplate(object):
     @pytest.mark.parametrize(
-        'is_valid, name, default_instances, max_instances, min_instances, plugins, properties, '
-        'type_name, type_hierarchy',
+        'is_valid, name, default_instances, max_instances, min_instances, plugin_specifications, '
+        'properties',
         [
-            (False, m_cls, 1, 1, 1, [], [], 'type', []),
-            (False, 'name', m_cls, 1, 1, [], [], 'type', []),
-            (False, 'name', 1, m_cls, 1, [], [], 'type', []),
-            (False, 'name', 1, 1, m_cls, [], [], 'type', []),
-            (False, 'name', 1, 1, 1, m_cls, [], 'type', []),
-            (False, 'name', 1, 1, 1, [], [], m_cls, []),
-            (False, 'name', 1, 1, 1, [], [], 'type', m_cls),
-            #
-            (True, 'name', 1, 1, 1, [], [], 'type', []),
-            (True, 'name', 1, 1, 1, None, [], 'type', []),
-            (True, 'name', 1, 1, 1, [], [], 'type', None),
+            (False, m_cls, 1, 1, 1, {}, {}),
+            (False, 'name', m_cls, 1, 1, {}, {}),
+            (False, 'name', 1, m_cls, 1, {}, {}),
+            (False, 'name', 1, 1, m_cls, {}, {}),
+            (False, 'name', 1, 1, 1, m_cls, {}),
+            (False, 'name', 1, 1, 1, None, {}),
+
+            (True, 'name', 1, 1, 1, {}, {}),
         ]
     )
-    def test_node_model_creation(self, service_instance_storage, is_valid, name,
-                                 default_instances, max_instances, min_instances, plugins,
-                                 properties, type_name, type_hierarchy):
+    def test_node_template_model_creation(self, service_storage, is_valid, name, default_instances,
+                                          max_instances, min_instances, plugin_specifications,
+                                          properties):
         node_template = _test_model(
             is_valid=is_valid,
-            storage=service_instance_storage,
+            storage=service_storage,
             model_cls=NodeTemplate,
             model_kwargs=dict(
                 name=name,
+                type=service_storage.type.list()[0],
                 default_instances=default_instances,
                 max_instances=max_instances,
                 min_instances=min_instances,
-                plugins=plugins,
+                plugin_specifications=plugin_specifications,
                 properties=properties,
-                type_name=type_name,
-                type_hierarchy=type_hierarchy,
-                service_template=service_instance_storage.service_template.list()[0]
+                service_template=service_storage.service_template.list()[0]
             ))
         if is_valid:
             assert node_template.service_template == \
-                   service_instance_storage.service_template.list()[0]
+                   service_storage.service_template.list()[0]
 
 
 class TestNode(object):
@@ -582,62 +564,63 @@ class TestNode(object):
             (True, 'name', {}, [], 'state', None),
         ]
     )
-    def test_node_instance_model_creation(self, node_template_storage, is_valid, name,
-                                          runtime_properties, scaling_groups, state, version):
-        node_instance = _test_model(
+    def test_node_model_creation(self, node_template_storage, is_valid, name, runtime_properties,
+                                 scaling_groups, state, version):
+        node = _test_model(
             is_valid=is_valid,
             storage=node_template_storage,
             model_cls=Node,
             model_kwargs=dict(
                 node_template=node_template_storage.node_template.list()[0],
+                type=node_template_storage.type.list()[0],
                 name=name,
                 runtime_properties=runtime_properties,
                 scaling_groups=scaling_groups,
                 state=state,
                 version=version,
-                service_instance=node_template_storage.service_instance.list()[0]
+                service=node_template_storage.service.list()[0]
             ))
         if is_valid:
-            assert node_instance.node_template == node_template_storage.node_template.list()[0]
-            assert node_instance.service_instance == \
-                   node_template_storage.service_instance.list()[0]
+            assert node.node_template == node_template_storage.node_template.list()[0]
+            assert node.service == \
+                   node_template_storage.service.list()[0]
 
 
-class TestNodeInstanceIP(object):
+class TestNodeIP(object):
 
     ip = '1.1.1.1'
 
-    def test_ip_on_none_hosted_node_instance(self, service_instance_storage):
-        node_template = self._node_template(service_instance_storage, ip='not considered')
-        node = self._node(service_instance_storage,
+    def test_ip_on_none_hosted_node(self, service_storage):
+        node_template = self._node_template(service_storage, ip='not considered')
+        node = self._node(service_storage,
                           node_template,
                           is_host=False,
                           ip='not considered')
         assert node.ip is None
 
-    def test_property_ip_on_host_node_instance(self, service_instance_storage):
-        node_template = self._node_template(service_instance_storage, ip=self.ip)
-        node = self._node(service_instance_storage, node_template, is_host=True, ip=None)
+    def test_property_ip_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, ip=self.ip)
+        node = self._node(service_storage, node_template, is_host=True, ip=None)
         assert node.ip == self.ip
 
-    def test_runtime_property_ip_on_host_node_instance(self, service_instance_storage):
-        node_template = self._node_template(service_instance_storage, ip='not considered')
-        node = self._node(service_instance_storage, node_template, is_host=True, ip=self.ip)
+    def test_runtime_property_ip_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, ip='not considered')
+        node = self._node(service_storage, node_template, is_host=True, ip=self.ip)
         assert node.ip == self.ip
 
-    def test_no_ip_configured_on_host_node_instance(self, service_instance_storage):
-        node_template = self._node_template(service_instance_storage, ip=None)
-        node = self._node(service_instance_storage, node_template, is_host=True, ip=None)
+    def test_no_ip_configured_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, ip=None)
+        node = self._node(service_storage, node_template, is_host=True, ip=None)
         assert node.ip is None
 
-    def test_runtime_property_on_hosted_node_instance(self, service_instance_storage):
-        host_node_template = self._node_template(service_instance_storage, ip=None)
-        host_node = self._node(service_instance_storage,
+    def test_runtime_property_on_hosted_node(self, service_storage):
+        host_node_template = self._node_template(service_storage, ip=None)
+        host_node = self._node(service_storage,
                                host_node_template,
                                is_host=True,
                                ip=self.ip)
-        node_template = self._node_template(service_instance_storage, ip=None)
-        node = self._node(service_instance_storage,
+        node_template = self._node_template(service_storage, ip=None)
+        node = self._node(service_storage,
                           node_template,
                           is_host=False,
                           ip=None,
@@ -647,14 +630,14 @@ class TestNodeInstanceIP(object):
     def _node_template(self, storage, ip):
         kwargs = dict(
             name='node_template',
+            type=storage.type.list()[0],
             default_instances=1,
             max_instances=1,
             min_instances=1,
-            type_name='',
             service_template=storage.service_template.list()[0]
         )
         if ip:
-            kwargs['properties'] = [Parameter(name='ip', type='str', str_value=str(ip))]
+            kwargs['properties'] = {'ip': Parameter.wrap('ip', ip)}
         node = NodeTemplate(**kwargs)
         storage.node_template.put(node)
         return node
@@ -663,9 +646,10 @@ class TestNodeInstanceIP(object):
         kwargs = dict(
             name='node',
             node_template=node,
+            type=storage.type.list()[0],
             runtime_properties={},
             state='',
-            service_instance=storage.service_instance.list()[0]
+            service=storage.service.list()[0]
         )
         if ip:
             kwargs['runtime_properties']['ip'] = ip
@@ -673,56 +657,34 @@ class TestNodeInstanceIP(object):
             kwargs['host_fk'] = 1
         elif host_fk:
             kwargs['host_fk'] = host_fk
-        node_instance = Node(**kwargs)
-        storage.node.put(node_instance)
-        return node_instance
+        node = Node(**kwargs)
+        storage.node.put(node)
+        return node
 
 
-class TestRelationshipInstance(object):
+class TestRelationship(object):
     @pytest.mark.parametrize(
-        'is_valid, source_requirement_index, target_node_id, target_capability_name, type_name, '
-        'template_name, type_hierarchy, source_position, target_position',
+        'is_valid, source_position, target_position',
         [
-            (False, m_cls, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
-             0),
-            (False, 0, m_cls, 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
-            (False, 0, 'target_node_id', m_cls, 'type_name', 'template_name', [], 0, 0),
-            (False, 0, 'target_node_id', 'target_cap_name', m_cls, 'template_name', [], 0, 0),
-            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', m_cls, [], 0, 0),
-            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', m_cls, 0,
-             0),
-            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], m_cls,
-             0),
-            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
-             m_cls),
+            (False, m_cls, 0),
+            (False, 0, m_cls),
 
-            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
-            (True, None, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
-             0),
-            (True, 0, None, 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
-            (True, 0, 'target_node_id', None, 'type_name', 'template_name', [], 0, 0),
-            (True, 0, 'target_node_id', 'target_cap_name', None, 'template_name', [], 0, 0),
-            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', None, [], 0, 0),
-            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], None,
-             0),
-            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
-             None),
-
+            (True, 0, 0),
+            (True, None, 0),
+            (True, 0, None),
         ]
     )
-    def test_relationship(self, nodes_storage, is_valid, source_requirement_index, target_node_id,
-                          target_capability_name, type_name, template_name, type_hierarchy,
-                          source_position, target_position):
+    def test_relationship_model_creation(self, node_storage, is_valid, source_position,
+                                         target_position):
+        nodes = node_storage.node
+        source_node = nodes.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+        target_node = nodes.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
         _test_model(is_valid=is_valid,
-                    storage=nodes_storage,
+                    storage=node_storage,
                     model_cls=Relationship,
                     model_kwargs=dict(
-                        source_requirement_index=source_requirement_index,
-                        target_node_id=target_node_id,
-                        target_capability_name=target_capability_name,
-                        type_name=type_name,
-                        template_name=template_name,
-                        type_hierarchy=type_hierarchy,
+                        source_node=source_node,
+                        target_node=target_node,
                         source_position=source_position,
                         target_position=target_position
                     ))
@@ -780,9 +742,9 @@ class TestPlugin(object):
         ]
     )
     def test_plugin_model_creation(self, empty_storage, is_valid, archive_name, distribution,
-                                   distribution_release, distribution_version,
-                                   package_name, package_source, package_version,
-                                   supported_platform, supported_py_versions, uploaded_at, wheels):
+                                   distribution_release, distribution_version, package_name,
+                                   package_source, package_version, supported_platform,
+                                   supported_py_versions, uploaded_at, wheels):
         _test_model(is_valid=is_valid,
                     storage=empty_storage,
                     model_cls=Plugin,
@@ -818,6 +780,7 @@ class TestTask(object):
             (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', m_cls, {}, '1'),
             (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', m_cls, '1'),
             (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, m_cls),
+            (False, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', None, '1'),
 
             (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
             (True, Task.STARTED, None, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
@@ -828,7 +791,6 @@ class TestTask(object):
             (True, Task.STARTED, now, now, now, 1, 1, 1, None, 'name', 'map', {}, '1'),
             (True, Task.STARTED, now, now, now, 1, 1, 1, True, None, 'map', {}, '1'),
             (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', None, {}, '1'),
-            (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', None, '1'),
             (True, Task.STARTED, now, now, now, 1, 1, 1, True, 'name', 'map', {}, None),
         ]
     )

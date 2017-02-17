@@ -13,74 +13,60 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.storage.modeling import model
+from aria.modeling import models as aria_models
 
 from . import models
 
 
 def create_simple_topology_single_node(model_storage, create_operation):
-    service_template = models.get_blueprint()
+    service_template = models.create_service_template()
+    service = models.create_service(service_template)
+
+    node_template = models.create_dependency_node_template(service_template)
+    interface_template = models.create_interface_template(
+        service_template,
+        'Standard', 'create',
+        operation_kwargs=dict(
+            implementation=create_operation,
+            inputs={'key': aria_models.Parameter.wrap('key', 'create'),
+                    'value': aria_models.Parameter.wrap('value', True)})
+    )
+    node_template.interface_templates[interface_template.name] = interface_template                 # pylint: disable=unsubscriptable-object
+
+    node = models.create_dependency_node(node_template, service)
+    interface = models.create_interface(
+        service,
+        'Standard', 'create',
+        operation_kwargs=dict(
+            implementation=create_operation,
+            inputs={'key': aria_models.Parameter.wrap('key', 'create'),
+                    'value': aria_models.Parameter.wrap('value', True)})
+    )
+    node.interfaces[interface.name] = interface                                                     # pylint: disable=unsubscriptable-object
+
     model_storage.service_template.put(service_template)
-
-    service_instance = models.get_deployment(service_template)
-    model_storage.service_instance.put(service_instance)
-
-    node_template = models.get_dependency_node(service_instance)
-    node_template.interface_templates = [models.get_interface_template(
-        'tosca.interfaces.node.lifecycle.Standard.create',
-        operation_kwargs=dict(
-            implementation=create_operation,
-            inputs=[model.Parameter(name='key', str_value='create', type='str'),
-                    model.Parameter(name='value', str_value=str(True), type='bool')]
-        )
-    )]
-    model_storage.node_template.put(node_template)
-
-    node = models.get_dependency_node_instance(node_template, service_instance)
-    node.interfaces = [models.get_interface(
-        'tosca.interfaces.node.lifecycle.Standard.create',
-        operation_kwargs=dict(
-            implementation=create_operation,
-            inputs=[model.Parameter(name='key', str_value='create', type='str'),
-                    model.Parameter(name='value', str_value=str(True), type='bool')])
-    )]
-    model_storage.node.put(node)
+    model_storage.service.put(service)
 
 
 def create_simple_topology_two_nodes(model_storage):
-    blueprint = models.get_blueprint()
-    model_storage.service_template.put(blueprint)
-    deployment = models.get_deployment(blueprint)
-    model_storage.service_instance.put(deployment)
+    service_template = models.create_service_template()
+    service = models.create_service(service_template)
 
-    #################################################################################
-    # Creating a simple deployment with node -> node as a graph
+    # Creating a simple service with node -> node as a graph
 
-    dependency_node = models.get_dependency_node(deployment)
-    model_storage.node_template.put(dependency_node)
-    storage_dependency_node = model_storage.node_template.get(dependency_node.id)
+    dependency_node_template = models.create_dependency_node_template(service_template)
+    dependent_node_template = models.create_dependent_node_template(service_template,
+                                                                    dependency_node_template)
 
-    dependency_node_instance = models.get_dependency_node_instance(storage_dependency_node,
-                                                                   deployment)
-    model_storage.node.put(dependency_node_instance)
-    storage_dependency_node_instance = model_storage.node.get(dependency_node_instance.id)
+    dependency_node = models.create_dependency_node(dependency_node_template, service)
+    dependent_node = models.create_dependent_node(dependent_node_template, service)
 
-    req_template, cap_template = models.get_relationship(storage_dependency_node)
-    model_storage.requirement_template.put(req_template)
-    model_storage.capability_template.put(cap_template)
+    dependent_node.outbound_relationships.append(models.create_relationship(                        # pylint: disable=no-member
+        source=dependent_node,
+        target=dependency_node
+    ))
 
-    dependent_node = models.get_dependent_node(deployment, req_template, cap_template)
-    model_storage.node_template.put(dependent_node)
-    storage_dependent_node = model_storage.node_template.get(dependent_node.id)
+    model_storage.service_template.put(service_template)
+    model_storage.service.put(service)
 
-    dependent_node_instance = models.get_dependent_node_instance(storage_dependent_node, deployment)
-    model_storage.node.put(dependent_node_instance)
-    storage_dependent_node_instance = model_storage.node.get(dependent_node_instance.id)
-
-    relationship_instance = models.get_relationship_instance(
-        target_instance=storage_dependency_node_instance,
-        source_instance=storage_dependent_node_instance
-    )
-    model_storage.relationship.put(relationship_instance)
-
-    return deployment.id
+    return service.id

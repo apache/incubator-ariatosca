@@ -15,11 +15,14 @@
 
 import sys
 import linecache
+import traceback as tb
 
 import jsonpickle
 
-from clint.textui import indent
-from .console import (puts, Colored)
+from .console import (puts, indent, Colored)
+
+
+ENTRY_FORMAT = 'File "{filename}", line {lineno}, in {name}'
 
 
 def print_exception(e, full=True, cause=False, traceback=None):
@@ -27,14 +30,16 @@ def print_exception(e, full=True, cause=False, traceback=None):
     Prints the exception with nice colors and such.
     """
     def format_heading(e):
-        return '%s%s: %s' % (Colored.red('Caused by ') if cause else '', Colored.red(
-            e.__class__.__name__, bold=True), Colored.red(e))
+        return '{0}{1}: {2}'.format(
+            Colored.red('Caused by ') if cause else '',
+            Colored.red(e.__class__.__name__, bold=True),
+            Colored.red(e))
 
     puts(format_heading(e))
     if full:
         if cause:
             if traceback:
-                print_traceback(traceback)
+                print_traceback(traceback, True)
         else:
             print_traceback()
     if hasattr(e, 'cause') and e.cause:
@@ -42,7 +47,7 @@ def print_exception(e, full=True, cause=False, traceback=None):
         print_exception(e.cause, full=full, cause=True, traceback=traceback)
 
 
-def print_traceback(traceback=None):
+def print_traceback(traceback=None, print_last_stack=False):
     """
     Prints the traceback with nice colors and such.
     """
@@ -51,20 +56,37 @@ def print_traceback(traceback=None):
         _, _, traceback = sys.exc_info()
     while traceback is not None:
         frame = traceback.tb_frame
-        lineno = traceback.tb_lineno
         code = frame.f_code
         filename = code.co_filename
+        lineno = traceback.tb_lineno
         name = code.co_name
         with indent(2):
-            puts('File "%s", line %s, in %s' % (Colored.blue(filename),
-                                                Colored.cyan(lineno),
-                                                Colored.cyan(name)))
+            puts(ENTRY_FORMAT.format(filename=Colored.blue(filename),
+                                     lineno=Colored.cyan(lineno),
+                                     name=Colored.cyan(name)))
             linecache.checkcache(filename)
             line = linecache.getline(filename, lineno, frame.f_globals)
             if line:
                 with indent(2):
-                    puts(Colored.black(line.strip()))
+                    puts(line.strip())
         traceback = traceback.tb_next
+        if print_last_stack and (traceback is None):
+            # Print stack of *last* traceback
+            _print_stack(frame)
+
+
+def _print_stack(frame):
+    entries = tb.extract_stack(frame)
+    if not entries:
+        return
+    puts(Colored.red('Call stack:'))
+    with indent(2):
+        for filename, lineno, name, line in entries:
+            puts(ENTRY_FORMAT.format(filename=Colored.blue(filename),
+                                     lineno=Colored.cyan(lineno),
+                                     name=Colored.cyan(name)))
+            with indent(2):
+                puts(line)
 
 
 class _WrappedException(Exception):

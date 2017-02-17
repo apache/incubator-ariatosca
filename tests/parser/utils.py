@@ -21,10 +21,10 @@ from aria.parser.consumption import (
     ConsumerChain,
     Read,
     Validate,
-    Model,
+    ServiceTemplate,
     Types,
     Inputs,
-    Instance
+    ServiceInstance
 )
 from aria.utils.imports import import_fullname
 
@@ -66,14 +66,14 @@ def create_consumer(context, consumer_class_name):
         dumper = None
     elif consumer_class_name == 'presentation':
         dumper = consumer.consumers[0]
-    elif consumer_class_name == 'model':
-        consumer.append(Model)
+    elif consumer_class_name == 'template':
+        consumer.append(ServiceTemplate)
     elif consumer_class_name == 'types':
-        consumer.append(Model, Types)
+        consumer.append(ServiceTemplate, Types)
     elif consumer_class_name == 'instance':
-        consumer.append(Model, Inputs, Instance)
+        consumer.append(ServiceTemplate, Inputs, ServiceInstance)
     else:
-        consumer.append(Model, Inputs, Instance)
+        consumer.append(ServiceTemplate, Inputs, ServiceInstance)
         consumer.append(import_fullname(consumer_class_name))
 
     if dumper is None:

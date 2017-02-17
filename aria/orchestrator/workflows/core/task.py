@@ -16,6 +16,7 @@
 """
 Workflow tasks
 """
+
 from contextlib import contextmanager
 from datetime import datetime
 from functools import (
@@ -23,9 +24,9 @@ from functools import (
     wraps,
 )
 
-from aria.storage.modeling import model
-from aria.orchestrator.context import operation as operation_context
 
+from ....modeling import models
+from ...context import operation as operation_context
 from .. import exceptions
 
 
@@ -36,7 +37,7 @@ def _locked(func=None):
     @wraps(func)
     def _wrapper(self, value, **kwargs):
         if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
+            raise exceptions.TaskException('Task is not in update mode')
         return func(self, value, **kwargs)
     return _wrapper
 
@@ -65,66 +66,61 @@ class StubTask(BaseTask):
 
     def __init__(self, *args, **kwargs):
         super(StubTask, self).__init__(*args, **kwargs)
-        self.status = model.Task.PENDING
+        self.status = models.Task.PENDING
         self.due_at = datetime.utcnow()
 
 
 class StartWorkflowTask(StubTask):
     """
-    Tasks marking a workflow start
+    Task marking a workflow start
     """
     pass
 
 
 class EndWorkflowTask(StubTask):
     """
-    Tasks marking a workflow end
+    Task marking a workflow end
     """
     pass
 
 
 class StartSubWorkflowTask(StubTask):
     """
-    Tasks marking a subworkflow start
+    Task marking a subworkflow start
     """
     pass
 
 
 class EndSubWorkflowTask(StubTask):
     """
-    Tasks marking a subworkflow end
+    Task marking a subworkflow end
     """
     pass
 
 
 class OperationTask(BaseTask):
     """
-    Operation tasks
+    Operation task
     """
 
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
         model_storage = api_task._workflow_context.model
+        plugin = api_task.plugin
 
         base_task_model = model_storage.task.model_cls
-        if isinstance(api_task.actor, model.Node):
+        if isinstance(api_task.actor, models.Node):
             context_cls = operation_context.NodeOperationContext
-            task_model_cls = base_task_model.as_node_instance
-        elif isinstance(api_task.actor, model.Relationship):
+            create_task_model = base_task_model.for_node
+        elif isinstance(api_task.actor, models.Relationship):
             context_cls = operation_context.RelationshipOperationContext
-            task_model_cls = base_task_model.as_relationship_instance
+            create_task_model = base_task_model.for_relationship
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
-        plugin = api_task.plugin
-        plugins = model_storage.plugin.list(filters={
-            'package_name': plugin.get('package_name', ''),
-            'package_version': plugin.get('package_version', '')
-        })
-        # Validation during installation ensures that at most one plugin can exists with provided
-        # package_name and package_version
-        operation_task = task_model_cls(
+
+        task_model = create_task_model(
             name=api_task.name,
             implementation=api_task.implementation,
             instance=api_task.actor,
@@ -133,22 +129,21 @@ class OperationTask(BaseTask):
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
-            plugin=plugins[0] if plugins else None,
-            plugin_name=plugin.get('name'),
+            plugin=plugin,
             execution=self._workflow_context.execution,
             runs_on=api_task.runs_on
         )
-        self._workflow_context.model.task.put(operation_task)
+        self._workflow_context.model.task.put(task_model)
 
         self._ctx = context_cls(name=api_task.name,
                                 model_storage=self._workflow_context.model,
                                 resource_storage=self._workflow_context.resource,
-                                service_instance_id=self._workflow_context._service_instance_id,
-                                task_id=operation_task.id,
+                                service_id=self._workflow_context._service_id,
+                                task_id=task_model.id,
                                 actor_id=api_task.actor.id,
                                 execution_id=self._workflow_context._execution_id,
                                 workdir=self._workflow_context._workdir)
-        self._task_id = operation_task.id
+        self._task_id = task_model.id
         self._update_fields = None
 
     @contextmanager

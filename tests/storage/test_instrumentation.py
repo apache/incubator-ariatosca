@@ -16,18 +16,19 @@
 import pytest
 from sqlalchemy import Column, Text, Integer, event
 
+from aria.modeling import (
+    mixins,
+    types as modeling_types,
+    models
+)
+from aria.modeling.exceptions import ValueFormatException
 from aria.storage import (
     ModelStorage,
     sql_mapi,
-    instrumentation,
-    exceptions,
+    instrumentation
 )
-from aria.storage.modeling import (
-    model,
-    type as aria_type,
-    structure,
-)
-from ..storage import release_sqlite_storage, init_inmemory_model_storage
+
+from . import release_sqlite_storage, init_inmemory_model_storage
 
 STUB = instrumentation._STUB
 Value = instrumentation._Value
@@ -280,8 +281,8 @@ class TestInstrumentation(object):
     def test_track_changes_to_strict_dict(self, storage):
         model_kwargs = dict(strict_dict={'key': 'value'},
                             strict_list=['item'])
-        mode_instance = StrictMockModel(**model_kwargs)
-        storage.strict_mock_model.put(mode_instance)
+        model_instance = StrictMockModel(**model_kwargs)
+        storage.strict_mock_model.put(model_instance)
 
         instrument = self._track_changes({
             StrictMockModel.strict_dict: dict,
@@ -290,28 +291,28 @@ class TestInstrumentation(object):
 
         assert not instrument.tracked_changes
 
-        storage_model_instance = storage.strict_mock_model.get(mode_instance.id)
+        storage_model_instance = storage.strict_mock_model.get(model_instance.id)
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             storage_model_instance.strict_dict = {1: 1}
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             storage_model_instance.strict_dict = {'hello': 1}
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             storage_model_instance.strict_dict = {1: 'hello'}
 
         storage_model_instance.strict_dict = {'hello': 'world'}
         assert storage_model_instance.strict_dict == {'hello': 'world'}
 
-        with pytest.raises(exceptions.StorageError):
+        with pytest.raises(ValueFormatException):
             storage_model_instance.strict_list = [1]
         storage_model_instance.strict_list = ['hello']
         assert storage_model_instance.strict_list == ['hello']
 
         assert instrument.tracked_changes == {
             'strict_mock_model': {
-                mode_instance.id: {
+                model_instance.id: {
                     'strict_dict': Value(STUB, {'hello': 'world'}),
                     'strict_list': Value(STUB, ['hello']),
                 }
@@ -336,27 +337,27 @@ def storage():
     release_sqlite_storage(result)
 
 
-class _MockModel(structure.ModelMixin):
+class _MockModel(mixins.ModelMixin):
     name = Column(Text)
-    dict1 = Column(aria_type.Dict)
-    dict2 = Column(aria_type.Dict)
-    list1 = Column(aria_type.List)
-    list2 = Column(aria_type.List)
+    dict1 = Column(modeling_types.Dict)
+    dict2 = Column(modeling_types.Dict)
+    list1 = Column(modeling_types.List)
+    list2 = Column(modeling_types.List)
     int1 = Column(Integer)
     int2 = Column(Integer)
     string2 = Column(Text)
 
 
-class MockModel1(_MockModel, model.aria_declarative_base):
+class MockModel1(_MockModel, models.aria_declarative_base):
     __tablename__ = 'mock_model_1'
 
 
-class MockModel2(_MockModel, model.aria_declarative_base):
+class MockModel2(_MockModel, models.aria_declarative_base):
     __tablename__ = 'mock_model_2'
 
 
-class StrictMockModel(structure.ModelMixin, model.aria_declarative_base):
+class StrictMockModel(mixins.ModelMixin, models.aria_declarative_base):
     __tablename__ = 'strict_mock_model'
 
-    strict_dict = Column(aria_type.StrictDict(basestring, basestring))
-    strict_list = Column(aria_type.StrictList(basestring))
+    strict_dict = Column(modeling_types.StrictDict(basestring, basestring))
+    strict_list = Column(modeling_types.StrictList(basestring))

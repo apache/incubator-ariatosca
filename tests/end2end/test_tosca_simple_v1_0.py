@@ -71,7 +71,7 @@ def test_use_case_network_4():
 
 
 def test_use_case_webserver_dbms_1():
-    consume_use_case('webserver-dbms-1', 'model')
+    consume_use_case('webserver-dbms-1', 'template')
 
 
 def test_use_case_webserver_dbms_2():
@@ -83,7 +83,7 @@ def test_use_case_multi_tier_1():
 
 
 def test_use_case_container_1():
-    consume_use_case('container-1', 'model')
+    consume_use_case('container-1', 'template')
 
 
 # NodeCellar
@@ -101,7 +101,7 @@ def test_node_cellar_presentation():
 
 
 def test_node_cellar_model():
-    consume_node_cellar('model')
+    consume_node_cellar('template')
 
 
 def test_node_cellar_types():
