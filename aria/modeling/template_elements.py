@@ -212,7 +212,9 @@ class InterfaceTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
+
     # endregion
 
     @property
@@ -395,7 +397,8 @@ class ArtifactTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -499,7 +502,8 @@ class PolicyTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -581,7 +585,8 @@ class GroupPolicyTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -662,7 +667,8 @@ class GroupPolicyTriggerTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -866,7 +872,8 @@ class NodeTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -985,7 +992,8 @@ class GroupTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 
@@ -1258,7 +1266,8 @@ class CapabilityTemplateBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             collection_class=dict)
 
     # endregion
 

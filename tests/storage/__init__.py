@@ -30,9 +30,9 @@ from sqlalchemy import (
 from aria.storage import (
     model,
     type as aria_type,
-    structure,
-    modeling
+    structure
 )
+from aria import modeling
 
 
 class MockModel(model.aria_declarative_base, structure.ModelMixin): #pylint: disable=abstract-method

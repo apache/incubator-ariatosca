@@ -24,7 +24,7 @@ from functools import (
 )
 
 from aria import logger
-from aria.storage.modeling import model
+from aria.modeling import model
 from aria.orchestrator.context import operation as operation_context
 
 from .. import exceptions

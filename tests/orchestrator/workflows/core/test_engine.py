@@ -23,7 +23,7 @@ from aria.orchestrator import (
     workflow,
     operation,
 )
-from aria.storage.modeling import model
+from aria.modeling import model
 from aria.orchestrator.workflows import (
     api,
     exceptions,

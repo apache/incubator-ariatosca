@@ -18,9 +18,9 @@ from sqlalchemy import (
     Text
 )
 
-from ...parser.modeling import utils
-from ...utils.collections import OrderedDict
-from ...utils.console import puts
+from ..parser.modeling import utils
+from ..utils.collections import OrderedDict
+from ..utils.console import puts
 from .. import exceptions
 
 from . import structure
@@ -56,7 +56,7 @@ class ParameterBase(structure.ModelMixin):
         if self.type is None:
             return
         try:
-            if self.type.lower() in ['str', 'unicode']:
+            if self.type.lower() in ('str', 'unicode'):
                 return self.str_value.decode('utf-8')
             elif self.type.lower() == 'int':
                 return int(self.str_value)
@@ -88,6 +88,7 @@ class MetadataBase(structure.ModelMixin):
 
     * :code:`values`: Dict of custom values
     """
+    __tablename__ = 'metadata'
     values = Column(type.StrictDict(key_cls=basestring))
 
     @property

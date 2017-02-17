@@ -21,7 +21,7 @@ into one package (aria.modeling?).
 from datetime import datetime
 from threading import RLock
 
-from ...storage.modeling import model
+from ...modeling import model
 from ...orchestrator.decorators import operation
 from ...utils.console import puts, Colored
 from ...utils.formatting import safe_repr

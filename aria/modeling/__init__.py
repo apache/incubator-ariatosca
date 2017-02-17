@@ -16,11 +16,14 @@
 from collections import namedtuple
 
 from . import (
+    structure,
+    type,
     model,
     instance_elements as _instance_base,
     orchestrator_elements as _orchestrator_base,
     template_elements as _template_base,
 )
+
 
 _ModelBaseCls = namedtuple('ModelBase', 'instance_elements,'
                                         'orchestrator_elements,'
@@ -30,6 +33,8 @@ model_base = _ModelBaseCls(instance_elements=_instance_base,
                            template_elements=_template_base)
 
 __all__ = (
+    'structure',
+    'type',
     'model',
     'model_base',
 )

@@ -42,12 +42,6 @@ from .core import (
     ModelStorage,
     ResourceStorage,
 )
-from .modeling import (
-    structure,
-    model,
-    model_base,
-    type
-)
 from . import (
     exceptions,
     api,
@@ -58,14 +52,10 @@ from . import (
 
 __all__ = (
     'exceptions',
-    'structure',
     'Storage',
     'ModelStorage',
     'ResourceStorage',
     'filesystem_rapi',
     'sql_mapi',
     'api',
-    'model',
-    'model_base',
-    'type',
 )

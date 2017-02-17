@@ -17,7 +17,7 @@ import copy
 
 import sqlalchemy.event
 
-from .modeling import model as _model
+from ..modeling import model as _model
 
 _STUB = object()
 _INSTRUMENTED = {

@@ -15,7 +15,7 @@
 
 from datetime import datetime
 
-from aria.storage.modeling import model
+from aria.modeling import model
 from . import operations
 
 DEPLOYMENT_NAME = 'test_deployment_id'

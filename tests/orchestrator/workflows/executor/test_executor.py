@@ -28,7 +28,7 @@ except ImportError:
     _celery = None
     app = None
 
-from aria.storage.modeling import model
+from aria.modeling import model
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
     thread,

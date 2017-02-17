@@ -22,7 +22,7 @@ from aria.storage import (
     exceptions,
     sql_mapi,
 )
-from aria.storage.modeling.model import (
+from aria.modeling.model import (
     ServiceTemplate,
     ServiceInstance,
     ServiceInstanceUpdate,

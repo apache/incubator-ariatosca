@@ -15,11 +15,18 @@
 
 import re
 
-from aria.parser.modeling import (Type, RelationshipType, PolicyType, ServiceModel, NodeTemplate,
-                                  RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
-                                  GroupTemplate, PolicyTemplate, SubstitutionTemplate,
-                                  MappingTemplate, InterfaceTemplate, OperationTemplate,
-                                  ArtifactTemplate, Metadata, Parameter)
+from aria.parser.modeling import Type, RelationshipType, PolicyType, RelationshipTemplate
+from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
+                                 RequirementTemplate, CapabilityTemplate,
+                                 GroupTemplate, PolicyTemplate, SubstitutionTemplate,
+                                 MappingTemplate, InterfaceTemplate, OperationTemplate,
+                                 ArtifactTemplate, Metadata, Parameter)
+
+#from aria.modeling.model import (Type, RelationshipType, PolicyType, ServiceModel, NodeTemplate,
+#                                 RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
+#                                 GroupTemplate, PolicyTemplate, SubstitutionTemplate,
+#                                 MappingTemplate, InterfaceTemplate, OperationTemplate,
+#                                 ArtifactTemplate, Metadata, Parameter)
 
 from ..data_types import coerce_value
 from platform import node
@@ -30,16 +37,16 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
     model.description = context.presentation.get('service_template', 'description', 'value')
 
     metadata = context.presentation.get('service_template', 'metadata')
-    if metadata is not None:
-        substitution_template = Metadata()
-        substitution_template.values['template_name'] = metadata.template_name
-        substitution_template.values['template_author'] = metadata.template_author
-        substitution_template.values['template_version'] = metadata.template_version
+    if metadata is not None and False: # TODO
+        metadata_model = Metadata()
+        metadata_model.values['template_name'] = metadata.template_name
+        metadata_model.values['template_author'] = metadata.template_author
+        metadata_model.values['template_version'] = metadata.template_version
         custom = metadata.custom
         if custom:
             for name, v in custom.iteritems():
-                substitution_template.values[name] = v
-        model.metadata = substitution_template
+                metadata_model.values[name] = v
+        model.metadata = metadata_model
 
     create_types(context,
                  context.modeling.node_types,
@@ -342,7 +349,10 @@ def create_types(context, root, types, normalize=None):
 def create_properties_from_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(prop.type, prop.value, prop.description)
+            properties.append(Parameter(name=property_name,
+                                        type=prop.type,
+                                        str_value=prop.value,
+                                        description=prop.description))
 
 def create_properties_from_assignments(properties, source_properties):
     if source_properties:

@@ -18,7 +18,7 @@ import pytest
 
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
-from aria.storage.modeling import model
+from aria.modeling import model
 from tests import mock, storage
 
 

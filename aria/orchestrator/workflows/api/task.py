@@ -18,7 +18,7 @@ Provides the tasks to be entered into the task graph
 """
 from uuid import uuid4
 
-from aria.storage.modeling import model
+from aria.modeling import model
 
 from ... import context
 from .. import exceptions

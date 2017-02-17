@@ -17,7 +17,7 @@ from random import randrange
 
 from shortuuid import ShortUUID
 
-from ...utils.console import puts
+from ..utils.console import puts
 
 
 # UUID = ShortUUID() # default alphabet is base57, which is alphanumeric without visually ambiguous

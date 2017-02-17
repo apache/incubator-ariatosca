@@ -47,7 +47,7 @@ from aria.utils import imports
 from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.storage import instrumentation
-from aria.storage.modeling import type as storage_type
+from aria.modeling import type as storage_type
 
 _IS_WIN = os.name == 'nt'
 

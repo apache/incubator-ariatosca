@@ -18,11 +18,10 @@ import pytest
 from aria.storage import (
     ModelStorage,
     exceptions,
-    sql_mapi,
-    modeling,
+    sql_mapi
 )
-from aria import application_model_storage
-from ..storage import release_sqlite_storage, init_inmemory_model_storage
+from aria import (application_model_storage, modeling)
+from ..storage import (release_sqlite_storage, init_inmemory_model_storage)
 
 from . import MockModel
 

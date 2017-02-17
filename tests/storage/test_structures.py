@@ -21,9 +21,9 @@ from aria.storage import (
     ModelStorage,
     sql_mapi,
     exceptions,
-    type,
-    modeling,
+    type
 )
+from aria import modeling
 
 from ..storage import release_sqlite_storage, structure, init_inmemory_model_storage
 from . import MockModel

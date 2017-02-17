@@ -27,6 +27,7 @@ __all__ = (
     'aria_declarative_base',
 
     'Parameter',
+    'Metadata',
 
     'MappingTemplate',
     'InterfaceTemplate',
@@ -72,6 +73,11 @@ aria_declarative_base = declarative_base(cls=structure.ModelIDMixin)
 
 class Parameter(aria_declarative_base, elements.ParameterBase):
     pass
+
+
+class Metadata(aria_declarative_base, elements.MetadataBase):
+    pass
+
 
 # endregion
 
