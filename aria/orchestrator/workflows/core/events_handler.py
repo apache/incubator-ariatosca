@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Aria's events Sub-Package
+ARIA's events Sub-Package
 Path: aria.events.storage_event_handler
 
 Implementation of storage handlers for workflow and operation events.

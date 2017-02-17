@@ -13,7 +13,7 @@
 from .raw import RawReader
 from .reader import Reader
 from .yaml import YamlReader
-from .locator import Locator
+from .locator import (Locator, deepcopy_with_locators, copy_locators)
 from .json import JsonReader
 from .jinja import JinjaReader
 from .context import ReadingContext
@@ -34,6 +34,8 @@ __all__ = (
     'ReadingContext',
     'RawReader',
     'Locator',
+    'deepcopy_with_locators',
+    'copy_locators',
     'YamlReader',
     'JsonReader',
     'JinjaReader')

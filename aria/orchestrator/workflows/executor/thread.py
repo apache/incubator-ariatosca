@@ -58,7 +58,8 @@ class ThreadExecutor(BaseExecutor):
                 self._task_started(task)
                 try:
                     task_func = imports.load_attribute(task.implementation)
-                    task_func(ctx=task.context, **task.inputs)
+                    inputs = dict((k, v.value) for k, v in task.inputs.iteritems())
+                    task_func(ctx=task.context, **inputs)
                     self._task_succeeded(task)
                 except BaseException as e:
                     self._task_failed(task, exception=e)

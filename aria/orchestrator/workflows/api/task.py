@@ -16,10 +16,10 @@
 """
 Provides the tasks to be entered into the task graph
 """
-from uuid import uuid4
 
-from aria.storage.modeling import model
-
+from ....modeling import models
+from ....utils.collections import OrderedDict
+from ....utils.uuid import generate_uuid
 from ... import context
 from .. import exceptions
 
@@ -28,12 +28,13 @@ class BaseTask(object):
     """
     Abstract task_graph task
     """
+
     def __init__(self, ctx=None, **kwargs):
         if ctx is not None:
             self._workflow_context = ctx
         else:
             self._workflow_context = context.workflow.current.get()
-        self._id = str(uuid4())
+        self._id = generate_uuid(variant='uuid')
 
     @property
     def id(self):
@@ -57,33 +58,30 @@ class OperationTask(BaseTask):
     Represents an operation task in the task_graph
     """
 
-    SOURCE_OPERATION = 'source'
-    TARGET_OPERATION = 'target'
+    NAME_FORMAT = '{interface}:{operation}@{type}:{name}'
 
     def __init__(self,
-                 name,
                  actor,
-                 implementation,
+                 actor_type,
+                 interface_name,
+                 operation_name,
+                 runs_on=None,
                  max_attempts=None,
                  retry_interval=None,
                  ignore_failure=None,
-                 inputs=None,
-                 plugin=None,
-                 runs_on=None):
+                 inputs=None):
         """
-        Creates an operation task using the name, details, node instance and any additional kwargs.
-        :param name: the operation of the name.
-        :param actor: the operation host on which this operation is registered.
-        :param inputs: operation inputs.
+        Do not call this constructor directly. Instead, use :meth:`for_node` or
+        :meth:`for_relationship`.
         """
-        assert isinstance(actor, (model.Node,
-                                  model.Relationship))
+
+        assert isinstance(actor, (models.Node, models.Relationship))
+        assert actor_type in ('node', 'relationship')
+        assert interface_name and operation_name
+        assert runs_on in models.Task.RUNS_ON
         super(OperationTask, self).__init__()
+
         self.actor = actor
-        self.name = '{name}.{actor.id}'.format(name=name, actor=actor)
-        self.implementation = implementation
-        self.inputs = inputs or {}
-        self.plugin = plugin or {}
         self.max_attempts = (self.workflow_context._task_max_attempts
                              if max_attempts is None else max_attempts)
         self.retry_interval = (self.workflow_context._task_retry_interval
@@ -92,144 +90,137 @@ class OperationTask(BaseTask):
                                if ignore_failure is None else ignore_failure)
         self.runs_on = runs_on
 
+        # Wrap inputs
+        if inputs:
+            for k, v in inputs.iteritems():
+                if not isinstance(v, models.Parameter):
+                    inputs[k] = models.Parameter.wrap(k, v)
+
+        # TODO: Suggestion: these extra inputs could be stored as a separate entry in the task
+        # model, because they are different from the operation inputs. If we do this, then the two
+        # kinds of inputs should *not* be merged here.
+
+        operation = self._get_operation(interface_name, operation_name)
+        if operation is None:
+            raise exceptions.OperationNotFoundException(
+                'Could not find operation "{0}" on interface "{1}" for {2} "{3}"'
+                .format(operation_name, interface_name, actor_type, actor.name))
+
+        self.plugin = None
+        if operation.plugin_specification:
+            self.plugin = OperationTask._find_plugin(operation.plugin_specification)
+            if self.plugin is None:
+                raise exceptions.PluginNotFoundException(
+                    'Could not find plugin of operation "{0}" on interface "{1}" for {2} "{3}"'
+                    .format(operation_name, interface_name, actor_type, actor.name))
+
+        self.implementation = operation.implementation
+        self.inputs = OperationTask._merge_inputs(operation.inputs, inputs)
+
+        self.name = OperationTask.NAME_FORMAT.format(type=actor_type,
+                                                     name=actor.name,
+                                                     interface=interface_name,
+                                                     operation=operation_name)
+
     @classmethod
-    def _merge_inputs(cls, operation_inputs, additional_inputs=None):
-        final_inputs = dict((p.name, p.as_raw['value']) for p in operation_inputs)
-        final_inputs.update(additional_inputs or {})
+    def for_node(cls,
+                 node,
+                 interface_name,
+                 operation_name,
+                 max_attempts=None,
+                 retry_interval=None,
+                 ignore_failure=None,
+                 inputs=None):
+        """
+        Creates an operation on a node.
+
+        :param node: The node on which to run the operation
+        :param interface_name: The interface name
+        :param operation_name: The operation name within the interface
+        :param max_attempts: The maximum number of attempts in case the operation fails
+                             (if not specified the defaults it taken from the workflow context)
+        :param retry_interval: The interval in seconds between attempts when the operation fails
+                               (if not specified the defaults it taken from the workflow context)
+        :param ignore_failure: Whether to ignore failures
+                               (if not specified the defaults it taken from the workflow context)
+        :param inputs: Additional operation inputs
+        """
+
+        assert isinstance(node, models.Node)
+        return cls(
+            actor=node,
+            actor_type='node',
+            interface_name=interface_name,
+            operation_name=operation_name,
+            max_attempts=max_attempts,
+            retry_interval=retry_interval,
+            ignore_failure=ignore_failure,
+            inputs=inputs,
+            runs_on=models.Task.RUNS_ON_NODE)
+
+    @classmethod
+    def for_relationship(cls,
+                         relationship,
+                         interface_name,
+                         operation_name,
+                         runs_on=models.Task.RUNS_ON_SOURCE,
+                         max_attempts=None,
+                         retry_interval=None,
+                         ignore_failure=None,
+                         inputs=None):
+        """
+        Creates an operation on a relationship edge.
+
+        :param relationship: The relationship on which to run the operation
+        :param interface_name: The interface name
+        :param operation_name: The operation name within the interface
+        :param runs_on: where to run the operation ("source" or "target"); defaults to "source"
+        :param max_attempts: The maximum number of attempts in case the operation fails
+                             (if not specified the defaults it taken from the workflow context)
+        :param retry_interval: The interval in seconds between attempts when the operation fails
+                               (if not specified the defaults it taken from the workflow context)
+        :param ignore_failure: Whether to ignore failures
+                               (if not specified the defaults it taken from the workflow context)
+        :param inputs: Additional operation inputs
+        """
+
+        assert isinstance(relationship, models.Relationship)
+        assert runs_on in models.Task.RUNS_ON
+        return cls(
+            actor=relationship,
+            actor_type='relationship',
+            interface_name=interface_name,
+            operation_name=operation_name,
+            runs_on=runs_on,
+            max_attempts=max_attempts,
+            retry_interval=retry_interval,
+            ignore_failure=ignore_failure,
+            inputs=inputs)
+
+    def _get_operation(self, interface_name, operation_name):
+        interface = self.actor.interfaces.get(interface_name)
+        if interface is not None:
+            return interface.operations.get(operation_name)
+        return None
+
+    @staticmethod
+    def _find_plugin(plugin_specification):
+        workflow_context = context.workflow.current.get()
+        return plugin_specification.find_plugin(workflow_context.model.plugin.list())
+
+    @staticmethod
+    def _merge_inputs(operation_inputs, override_inputs=None):
+        final_inputs = OrderedDict(operation_inputs)
+        if override_inputs:
+            final_inputs.update(override_inputs)
         return final_inputs
-
-    @classmethod
-    def node(cls, instance, name, inputs=None, *args, **kwargs):
-        """
-        Represents a node based operation
-
-        :param instance: the node of which this operation belongs to.
-        :param name: the name of the operation.
-        """
-        assert isinstance(instance, model.Node)
-        interface_name = _get_interface_name(name)
-        interfaces = instance.interfaces.filter_by(name=interface_name)
-        if interfaces.count() > 1:
-            raise exceptions.TaskException(
-                "More than one interface with the same name `{0}` found".format(name)
-            )
-        elif interfaces.count() == 0:
-            raise exceptions.TaskException(
-                "No Interface with the name `{interface_name}` found".format(
-                    interface_name=interface_name)
-            )
-
-        operation_templates = interfaces[0].operations.filter_by(name=name)
-        if operation_templates.count() > 1:
-            raise exceptions.TaskException(
-                "More than one operation with the same name `{0}` were found".format(name)
-            )
-
-        elif operation_templates.count() == 0:
-            raise exceptions.TaskException(
-                "No interface with the name `{operation_name}` found".format(
-                    operation_name=name)
-            )
-
-        return cls._instance(
-            instance=instance,
-            name=name,
-            operation_template=operation_templates[0],
-            plugins=instance.plugins or [],
-            runs_on=model.Task.RUNS_ON_NODE_INSTANCE,
-            inputs=cls._merge_inputs(operation_templates[0].inputs, inputs),
-            *args,
-            **kwargs)
-
-    @classmethod
-    def relationship(cls, instance, name, edge, runs_on=None, inputs=None, *args,
-                     **kwargs):
-        """
-        Represents a relationship based operation
-
-        :param instance: the relationship of which this operation belongs to.
-        :param name: the name of the operation.
-        :param edge: the edge of the interface ("source" or "target").
-        :param runs_on: where to run the operation ("source" or "target"); if None defaults to the
-                        interface edge.
-        :param inputs any additional inputs to the operation
-        """
-        assert isinstance(instance, model.Relationship)
-        interface_name = _get_interface_name(name)
-        interfaces = instance.interfaces.filter_by(name=interface_name, edge=edge)
-        count = interfaces.count()
-        if count > 1:
-            raise exceptions.TaskException(
-                "More than one interface with the same name `{interface_name}` found at `{edge}`"
-                + " edge".format(
-                    interface_name=interface_name, edge=edge)
-            )
-        elif count == 0:
-            raise exceptions.TaskException(
-                "No interface with the name `{interface_name}` found at `{edge}` edge".format(
-                    interface_name=interface_name, edge=edge)
-            )
-
-        operations = interfaces.all()[0].operations.filter_by(name=name)
-        count = operations.count()
-        if count > 1:
-            raise exceptions.TaskException(
-                "More than one operation with the same name `{0}` found".format(name)
-            )
-        elif count == 0:
-            raise exceptions.TaskException(
-                "No operation with the name `{operation_name}` found".format(
-                    operation_name=name)
-            )
-
-        if not runs_on:
-            if edge == cls.SOURCE_OPERATION:
-                runs_on = model.Task.RUNS_ON_SOURCE
-            else:
-                runs_on = model.Task.RUNS_ON_TARGET
-
-        if runs_on == model.Task.RUNS_ON_SOURCE:
-            plugins = instance.source_node.plugins
-        else:
-            plugins = instance.target_node.plugins
-
-        return cls._instance(instance=instance,
-                             name=name,
-                             operation_template=operations[0],
-                             plugins=plugins or [],
-                             runs_on=runs_on,
-                             inputs=cls._merge_inputs(operations[0].inputs, inputs),
-                             *args,
-                             **kwargs)
-
-    @classmethod
-    def _instance(cls,
-                  instance,
-                  name,
-                  operation_template,
-                  inputs,
-                  plugins,
-                  runs_on,
-                  *args,
-                  **kwargs):
-        matching_plugins = [p for p in plugins if p['name'] == operation_template.plugin]
-        # All matching plugins should have identical package_name/package_version, so it's safe to
-        # take the first found.
-        plugin = matching_plugins[0] if matching_plugins else {}
-        return cls(actor=instance,
-                   name=name,
-                   implementation=operation_template.implementation,
-                   inputs=inputs,
-                   plugin=plugin,
-                   runs_on=runs_on,
-                   *args,
-                   **kwargs)
 
 
 class WorkflowTask(BaseTask):
     """
-    Represents an workflow task in the task_graph
+    Represents a workflow task in the task graph
     """
+
     def __init__(self, workflow_func, **kwargs):
         """
         Creates a workflow based task using the workflow_func provided, and its kwargs
@@ -259,8 +250,3 @@ class StubTask(BaseTask):
     """
     Enables creating empty tasks.
     """
-    pass
-
-
-def _get_interface_name(operation_name):
-    return operation_name.rsplit('.', 1)[0]

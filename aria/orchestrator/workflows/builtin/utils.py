@@ -14,20 +14,24 @@
 # limitations under the License.
 
 from ..api.task import OperationTask
+from .. import exceptions
 
 
-def create_node_task(operation_name, node):
+def create_node_task(interface_name, operation_name, node):
     """
     Returns a new operation task if the operation exists in the node, otherwise returns None.
     """
 
-    if _has_operation(node.interfaces, operation_name):
-        return OperationTask.node(instance=node,
-                                  name=operation_name)
-    return None
+    try:
+        return OperationTask.for_node(node=node,
+                                      interface_name=interface_name,
+                                      operation_name=operation_name)
+    except exceptions.OperationNotFoundException:
+        # We will skip nodes which do not have the operation
+        return None
 
 
-def create_relationship_tasks(operation_name, runs_on, node):
+def create_relationship_tasks(interface_name, operation_name, runs_on, node):
     """
     Returns a list of operation tasks for each outbound relationship of the node if the operation
     exists there.
@@ -35,12 +39,15 @@ def create_relationship_tasks(operation_name, runs_on, node):
 
     sequence = []
     for relationship in node.outbound_relationships:
-        if _has_operation(relationship.interfaces, operation_name):
+        try:
             sequence.append(
-                OperationTask.relationship(instance=relationship,
-                                           name=operation_name,
-                                           edge='source',
-                                           runs_on=runs_on))
+                OperationTask.for_relationship(relationship=relationship,
+                                               interface_name=interface_name,
+                                               operation_name=operation_name,
+                                               runs_on=runs_on))
+        except exceptions.OperationNotFoundException:
+            # We will skip relationships which do not have the operation
+            pass
     return sequence
 
 
@@ -49,16 +56,16 @@ def create_node_task_dependencies(graph, tasks_and_nodes, reverse=False):
     Creates dependencies between tasks if there is a relationship (outbound) between their nodes.
     """
 
-    def get_task(node_id):
+    def get_task(node_name):
         for task, node in tasks_and_nodes:
-            if node.id == node_id:
+            if node.name == node_name:
                 return task
         return None
 
     for task, node in tasks_and_nodes:
         dependencies = []
         for relationship in node.outbound_relationships:
-            dependency = get_task(relationship.target_node.id)
+            dependency = get_task(relationship.target_node.name)
             if dependency:
                 dependencies.append(dependency)
         if dependencies:
@@ -67,10 +74,3 @@ def create_node_task_dependencies(graph, tasks_and_nodes, reverse=False):
                     graph.add_dependency(dependency, task)
             else:
                 graph.add_dependency(task, dependencies)
-
-
-def _has_operation(interfaces, operation_name):
-    for interface in interfaces:
-        if interface.operations.filter_by(name=operation_name).count() == 1:
-            return True
-    return False

@@ -10,11 +10,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
+
+
 from ...utils.console import puts, Colored, indent
+
 
 # We are inheriting the primitive types in order to add the ability to set
 # an attribute (_locator) on them.
-
 
 class LocatableString(unicode):
     pass
@@ -117,3 +120,35 @@ class Locator(object):
     def __str__(self):
         # Should be in same format as Issue.locator_as_str
         return '"%s":%d:%d' % (self.location, self.line, self.column)
+
+
+def deepcopy_with_locators(value):
+    """
+    Like :code:`deepcopy`, but also copies over locators.
+    """
+
+    res = deepcopy(value)
+    copy_locators(res, value)
+    return res
+
+
+def copy_locators(target, source):
+    """
+    Copies over :code:`_locator` for all elements, recursively.
+
+    Assumes that target and source have exactly the same list/dict structure.
+    """
+
+    locator = getattr(source, '_locator', None)
+    if locator is not None:
+        try:
+            setattr(target, '_locator', locator)
+        except AttributeError:
+            pass
+
+    if isinstance(target, list) and isinstance(source, list):
+        for i, _ in enumerate(target):
+            copy_locators(target[i], source[i])
+    elif isinstance(target, dict) and isinstance(source, dict):
+        for k, v in target.items():
+            copy_locators(v, source[k])

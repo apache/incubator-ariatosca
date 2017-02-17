@@ -18,7 +18,7 @@ from collections import namedtuple
 import requests
 import pytest
 
-from aria.storage.modeling import model
+from aria.modeling import models
 from aria.orchestrator import exceptions
 from aria.orchestrator.execution_plugin import common
 
@@ -35,7 +35,7 @@ class TestDownloadScript(object):
 
     def _test_url(self, url):
         class Ctx(object):
-            task = model.Task
+            task = models.Task
 
         script_path = url
         result = common.download_script(Ctx, script_path)

@@ -71,9 +71,9 @@ def _test_update_and_refresh(ctx, lock_files, key, first_value, second_value):
 
 def _test(context, executor, lock_files, func, expected_failure):
     def _node(ctx):
-        return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+        return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
 
-    op_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
+    interface_name, operation_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
 
     key = 'key'
     first_value = 'value1'
@@ -86,17 +86,26 @@ def _test(context, executor, lock_files, func, expected_failure):
     }
 
     node = _node(context)
-    node.interfaces = [mock.models.get_interface(
-        op_name,
+    interface = mock.models.create_interface(
+        node.service,
+        interface_name,
+        operation_name,
         operation_kwargs=dict(implementation='{0}.{1}'.format(__name__, func.__name__))
-    )]
+    )
+    node.interfaces[interface.name] = interface
     context.model.node.update(node)
 
     @workflow
     def mock_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.node(instance=node, name=op_name, inputs=inputs),
-            api.task.OperationTask.node(instance=node, name=op_name, inputs=inputs)
+            api.task.OperationTask.for_node(node=node,
+                                            interface_name=interface_name,
+                                            operation_name=operation_name,
+                                            inputs=inputs),
+            api.task.OperationTask.for_node(node=node,
+                                            interface_name=interface_name,
+                                            operation_name=operation_name,
+                                            inputs=inputs)
         )
 
     signal = events.on_failure_task_signal

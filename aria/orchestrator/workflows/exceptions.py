@@ -68,4 +68,15 @@ class TaskException(exceptions.AriaError):
     """
     Raised by the task
     """
-    pass
+
+
+class OperationNotFoundException(TaskException):
+    """
+    Could not find an operation on the node or relationship.
+    """
+
+
+class PluginNotFoundException(TaskException):
+    """
+    Could not find a plugin matching the plugin specification.
+    """

@@ -17,9 +17,9 @@ import sys
 
 from aria.orchestrator.runner import Runner
 from aria.orchestrator.workflows.builtin import BUILTIN_WORKFLOWS
-from aria.parser.modeling.storage import initialize_storage
 from aria.utils.imports import import_fullname
 from aria.utils.collections import OrderedDict
+from aria.cli.dry import convert_to_dry
 
 from tests.parser.service_templates import consume_node_cellar
 
@@ -38,23 +38,25 @@ def test_custom():
 def _workflow(workflow_name):
     context, _ = consume_node_cellar()
 
+    convert_to_dry(context.modeling.instance)
+
     # TODO: this logic will eventually stabilize and be part of the ARIA API,
     # likely somewhere in aria.orchestrator.workflows
     if workflow_name in BUILTIN_WORKFLOWS:
         workflow_fn = import_fullname('aria.orchestrator.workflows.builtin.' + workflow_name)
         inputs = {}
     else:
-        policy = context.modeling.instance.policies[workflow_name]
-        sys.path.append(policy.properties['implementation'].value)
-
-        workflow_fn = import_fullname(policy.properties['function'].value)
+        workflow = context.modeling.instance.policies[workflow_name]
+        sys.path.append(workflow.properties['implementation'].value)
+        workflow_fn = import_fullname(workflow.properties['function'].value)
         inputs = OrderedDict([
-            (k, v.value) for k, v in policy.properties.iteritems()
+            (k, v.value) for k, v in workflow.properties.iteritems()
             if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES
         ])
 
     def _initialize_storage(model_storage):
-        initialize_storage(context, model_storage, 1)
+        context.modeling.store(model_storage)
 
-    runner = Runner(workflow_name, workflow_fn, inputs, _initialize_storage, 1)
+    runner = Runner(workflow_name, workflow_fn, inputs, _initialize_storage,
+                    lambda: context.modeling.instance.id)
     runner.run()

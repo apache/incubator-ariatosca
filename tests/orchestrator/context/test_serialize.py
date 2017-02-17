@@ -42,14 +42,20 @@ def test_serialize_operation_context(context, executor, tmpdir):
 
 @workflow
 def _mock_workflow(ctx, graph):
-    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    plugin_name = 'mock_plugin'
-    node.interfaces = [mock.models.get_interface(
-        'test.op',
-        operation_kwargs=dict(implementation=_operation_mapping(), plugin=plugin_name)
-    )]
-    node.plugins = [{'name': plugin_name}]
-    task = api.task.OperationTask.node(instance=node, name='test.op')
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    plugin = mock.models.create_plugin()
+    ctx.model.plugin.put(plugin)
+    plugin_specification = mock.models.create_plugin_specification()
+    interface = mock.models.create_interface(
+        node.service,
+        'test',
+        'op',
+        operation_kwargs=dict(implementation=_operation_mapping(),
+                              plugin_specification=plugin_specification)
+    )
+    node.interfaces[interface.name] = interface
+    node.plugin_specifications[plugin_specification.name] = plugin_specification
+    task = api.task.OperationTask.for_node(node=node, interface_name='test', operation_name='op')
     graph.add_tasks(task)
     return graph
 
@@ -61,12 +67,12 @@ def _mock_operation(ctx):
     # a correct ctx.task.implementation tells us we kept the correct task_id
     assert ctx.task.implementation == _operation_mapping()
     # a correct ctx.node.name tells us we kept the correct actor_id
-    assert ctx.node.name == mock.models.DEPENDENCY_NODE_INSTANCE_NAME
+    assert ctx.node.name == mock.models.DEPENDENCY_NODE_NAME
     # a correct ctx.name tells us we kept the correct name
     assert ctx.name is not None
     assert ctx.name == ctx.task.name
     # a correct ctx.deployment.name tells us we kept the correct deployment_id
-    assert ctx.service_instance.name == mock.models.DEPLOYMENT_NAME
+    assert ctx.service.name == mock.models.SERVICE_NAME
     # Here we test that the resource storage was properly re-created
     test_file_content = ctx.resource.blueprint.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
     assert test_file_content == TEST_FILE_CONTENT

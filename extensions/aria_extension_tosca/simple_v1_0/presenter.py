@@ -19,7 +19,7 @@ from aria.parser.presentation import Presenter
 
 from .functions import (Concat, Token, GetInput, GetProperty, GetAttribute, GetOperationOutput,
                         GetNodesOfType, GetArtifact)
-from .modeling import create_service_model
+from .modeling import create_service_template_model
 from .templates import ServiceTemplate
 
 class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name
@@ -75,5 +75,5 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name
         return FrozenList(import_locations) if import_locations else EMPTY_READ_ONLY_LIST
 
     @cachedmethod
-    def _get_service_model(self, context): # pylint: disable=no-self-use
-        return create_service_model(context)
+    def _get_model(self, context): # pylint: disable=no-self-use
+        return create_service_template_model(context)

@@ -12,22 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 A common context for both workflow and operation
 """
+
 import logging
 from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
-from uuid import uuid4
 
 import jinja2
 
-from aria import logger as aria_logger
-from aria.storage import (
-    exceptions,
+from aria import (
+    logger as aria_logger,
     modeling
 )
+from aria.storage import exceptions
+
+from ...utils.uuid import generate_uuid
 
 
 class BaseContext(object):
@@ -51,17 +54,17 @@ class BaseContext(object):
     def __init__(
             self,
             name,
-            service_instance_id,
+            service_id,
             model_storage,
             resource_storage,
             workdir=None,
             **kwargs):
         super(BaseContext, self).__init__(**kwargs)
         self._name = name
-        self._id = str(uuid4())
+        self._id = generate_uuid(variant='uuid')
         self._model = model_storage
         self._resource = resource_storage
-        self._service_instance_id = service_instance_id
+        self._service_id = service_id
         self._workdir = workdir
         self.logger = None
 
@@ -89,14 +92,14 @@ class BaseContext(object):
         if self._model._initiator:
             api_kwargs.update(self._model._initiator(**self._model._initiator_kwargs))
         api_kwargs.update(**self._model._api_kwargs)
-        return aria_logger.create_sqla_log_handler(log_cls=modeling.model.Log,
+        return aria_logger.create_sqla_log_handler(log_cls=modeling.models.Log,
                                                    execution_id=self._execution_id,
                                                    **api_kwargs)
 
     def __repr__(self):
         return (
             '{name}(name={self.name}, '
-            'deployment_id={self._service_instance_id}, '
+            'deployment_id={self._service_id}, '
             .format(name=self.__class__.__name__, self=self))
 
     @contextmanager
@@ -135,14 +138,14 @@ class BaseContext(object):
         """
         The blueprint model
         """
-        return self.service_instance.service_template
+        return self.service.service_template
 
     @property
-    def service_instance(self):
+    def service(self):
         """
         The deployment model
         """
-        return self.model.service_instance.get(self._service_instance_id)
+        return self.model.service.get(self._service_id)
 
     @property
     def name(self):
@@ -165,7 +168,7 @@ class BaseContext(object):
         Download a blueprint resource from the resource storage
         """
         try:
-            self.resource.deployment.download(entry_id=str(self.service_instance.id),
+            self.resource.deployment.download(entry_id=str(self.service.id),
                                               destination=destination,
                                               path=path)
         except exceptions.StorageError:
@@ -190,7 +193,7 @@ class BaseContext(object):
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.read(entry_id=str(self.service_instance.id), path=path)
+            return self.resource.deployment.read(entry_id=str(self.service.id), path=path)
         except exceptions.StorageError:
             return self.resource.deployment.read(entry_id=str(self.service_template.id), path=path)
 

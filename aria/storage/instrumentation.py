@@ -16,17 +16,16 @@
 import copy
 import json
 
-import sqlalchemy
 import sqlalchemy.event
 
-from . import exceptions
+from ..modeling import models as _models
+from ..storage.exceptions import StorageError
 
-from .modeling import model as _model
 
 _VERSION_ID_COL = 'version'
 _STUB = object()
 _INSTRUMENTED = {
-    _model.Node.runtime_properties: dict
+    _models.Node.runtime_properties: dict
 }
 
 
@@ -207,7 +206,7 @@ def _validate_version_id(instance, mapi):
     if version_id and getattr(instance, _VERSION_ID_COL) != version_id:
         object_version_id = getattr(instance, _VERSION_ID_COL)
         mapi._session.rollback()
-        raise exceptions.StorageError(
+        raise StorageError(
             'Version conflict: committed and object {0} differ '
             '[committed {0}={1}, object {0}={2}]'
             .format(_VERSION_ID_COL,

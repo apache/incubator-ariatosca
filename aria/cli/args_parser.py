@@ -91,7 +91,7 @@ def add_parse_parser(parse):
         'consumer',
         nargs='?',
         default='validate',
-        help='"validate" (default), "presentation", "model", "types", "instance", or consumer '
+        help='"validate" (default), "presentation", "template", "types", "instance", or consumer '
              'class name (full class path or short name)')
     parse.add_argument(
         '--loader-source',
@@ -137,10 +137,11 @@ def add_workflow_parser(workflow):
         '-w', '--workflow',
         default='install',
         help='The workflow name')
-    workflow.add_argument(
-        '-i', '--service-instance-id',
-        required=False,
-        help='A unique ID for the service instance')
+    workflow.add_flag_argument(
+        'dry',
+        default=True,
+        help_true='dry run',
+        help_false='wet run')
 
 
 @sub_parser_decorator(

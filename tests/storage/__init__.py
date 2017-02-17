@@ -19,27 +19,11 @@ from tempfile import mkdtemp
 from sqlalchemy import (
     create_engine,
     orm,
-    Column,
-    Text,
-    Integer,
     pool,
     MetaData
 )
 
-
-from aria.storage.modeling import (
-    model,
-    structure,
-    type as aria_type
-)
-
-
-class MockModel(structure.ModelMixin, model.aria_declarative_base): #pylint: disable=abstract-method
-    __tablename__ = 'mock_model'
-    model_dict = Column(aria_type.Dict)
-    model_list = Column(aria_type.List)
-    value = Column(Integer)
-    name = Column(Text)
+from aria.modeling import models
 
 
 class TestFileSystem(object):

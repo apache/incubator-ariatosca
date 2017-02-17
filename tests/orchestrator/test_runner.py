@@ -49,8 +49,9 @@ def test_runner_tasks():
     def workflow_fn(ctx, graph):
         for node in ctx.model.node:
             graph.add_tasks(
-                OperationTask.node(instance=node,
-                                   name='tosca.interfaces.node.lifecycle.Standard.create'))
+                OperationTask.for_node(node=node,
+                                       interface_name='Standard',
+                                       operation_name='create'))
 
     _test_runner(workflow_fn)
 
@@ -69,5 +70,5 @@ def _test_runner(workflow_fn):
                     workflow_fn=workflow_fn,
                     inputs={},
                     initialize_model_storage_fn=_initialize_model_storage_fn,
-                    service_instance_id=1)
+                    service_id_fn=lambda: 1)
     runner.run()

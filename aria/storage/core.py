@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Aria's storage Sub-Package
+ARIA's storage Sub-Package
 Path: aria.storage
 
 Storage package is a generic abstraction over different storage types.
@@ -26,15 +26,15 @@ We define this abstraction with the following components:
 4. field: defines a field/item in the model.
 
 API:
-    * application_storage_factory - function, default Aria storage factory.
+    * application_storage_factory - function, default ARIA storage factory.
     * Storage - class, simple storage mapi.
-    * models - module, default Aria standard models.
-    * structures - module, default Aria structures - holds the base model,
+    * models - module, default ARIA standard models.
+    * structures - module, default ARIA structures - holds the base model,
                    and different fields types.
     * Model - class, abstract model implementation.
     * Field - class, base field implementation.
     * IterField - class, base iterable field implementation.
-    * drivers - module, a pool of Aria standard drivers.
+    * drivers - module, a pool of ARIA standard drivers.
     * StorageDriver - class, abstract model implementation.
 """
 

@@ -13,10 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...exceptions import AriaException
+from sqlalchemy import (
+    Column,
+    Text,
+    Integer,
+)
+
+from aria.modeling import (
+    models,
+    types as modeling_types,
+    mixins
+)
 
 
-class CannotEvaluateFunctionException(AriaException):
-    """
-    ARIA modeling exception: cannot evaluate the function at this time.
-    """
+class MockModel(models.aria_declarative_base, mixins.ModelMixin): #pylint: disable=abstract-method
+    __tablename__ = 'mock_model'
+    model_dict = Column(modeling_types.Dict)
+    model_list = Column(modeling_types.List)
+    value = Column(Integer)
+    name = Column(Text)

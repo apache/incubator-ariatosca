@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext import mutable
 
-from .. import exceptions
+from . import exceptions
 
 
 class _MutableType(TypeDecorator):
@@ -78,7 +78,7 @@ class _StrictDictMixin(object):
             else:
                 return value
         except ValueError as e:
-            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+            raise exceptions.ValueFormatException('could not coerce to MutableDict', cause=e)
 
     def __setitem__(self, key, value):
         self._assert_strict_key(key)
@@ -99,16 +99,14 @@ class _StrictDictMixin(object):
     @classmethod
     def _assert_strict_key(cls, key):
         if cls._key_cls is not None and not isinstance(key, cls._key_cls):
-            raise exceptions.StorageError("Key type was set strictly to {0}, but was {1}".format(
-                cls._key_cls, type(key)
-            ))
+            raise exceptions.ValueFormatException('key type was set strictly to {0}, but was {1}'
+                                                  .format(cls._key_cls, type(key)))
 
     @classmethod
     def _assert_strict_value(cls, value):
         if cls._value_cls is not None and not isinstance(value, cls._value_cls):
-            raise exceptions.StorageError("Value type was set strictly to {0}, but was {1}".format(
-                cls._value_cls, type(value)
-            ))
+            raise exceptions.ValueFormatException('value type was set strictly to {0}, but was {1}'
+                                                  .format(cls._value_cls, type(value)))
 
 
 class _MutableDict(mutable.MutableDict):
@@ -122,7 +120,7 @@ class _MutableDict(mutable.MutableDict):
         try:
             return mutable.MutableDict.coerce(key, value)
         except ValueError as e:
-            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+            raise exceptions.ValueFormatException('could not coerce value', cause=e)
 
 
 class _StrictListMixin(object):
@@ -140,7 +138,7 @@ class _StrictListMixin(object):
             else:
                 return value
         except ValueError as e:
-            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+            raise exceptions.ValueFormatException('could not coerce to MutableDict', cause=e)
 
     def __setitem__(self, index, value):
         """Detect list set events and emit change events."""
@@ -162,9 +160,8 @@ class _StrictListMixin(object):
     @classmethod
     def _assert_item(cls, item):
         if cls._item_cls is not None and not isinstance(item, cls._item_cls):
-            raise exceptions.StorageError("Key type was set strictly to {0}, but was {1}".format(
-                cls._item_cls, type(item)
-            ))
+            raise exceptions.ValueFormatException('key type was set strictly to {0}, but was {1}'
+                                                  .format(cls._item_cls, type(item)))
 
 
 class _MutableList(mutable.MutableList):
@@ -175,11 +172,11 @@ class _MutableList(mutable.MutableList):
         try:
             return mutable.MutableList.coerce(key, value)
         except ValueError as e:
-            raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
+            raise exceptions.ValueFormatException('could not coerce to MutableDict', cause=e)
+
 
 _StrictDictID = namedtuple('_StrictDictID', 'key_cls, value_cls')
 _StrictValue = namedtuple('_StrictValue', 'type_cls, listener_cls')
-
 
 class _StrictDict(object):
     """
@@ -194,7 +191,7 @@ class _StrictDict(object):
         if strict_dict_map_key not in self._strict_map:
             key_cls_name = getattr(key_cls, '__name__', str(key_cls))
             value_cls_name = getattr(value_cls, '__name__', str(value_cls))
-            # Creating the type class itself. this class would be returned (used by the sqlalchemy
+            # Creating the type class itself. this class would be returned (used by the SQLAlchemy
             # Column).
             strict_dict_cls = type(
                 'StrictDict_{0}_{1}'.format(key_cls_name, value_cls_name),
@@ -214,6 +211,7 @@ class _StrictDict(object):
 
         return self._strict_map[strict_dict_map_key].type_cls
 
+
 StrictDict = _StrictDict()
 
 
@@ -229,7 +227,7 @@ class _StrictList(object):
 
         if item_cls not in self._strict_map:
             item_cls_name = getattr(item_cls, '__name__', str(item_cls))
-            # Creating the type class itself. this class would be returned (used by the sqlalchemy
+            # Creating the type class itself. this class would be returned (used by the SQLAlchemy
             # Column).
             strict_list_cls = type(
                 'StrictList_{0}'.format(item_cls_name),
@@ -248,6 +246,7 @@ class _StrictList(object):
                                                       listener_cls=listener_cls)
 
         return self._strict_map[item_cls].type_cls
+
 
 StrictList = _StrictList()
 
@@ -274,6 +273,8 @@ def _mutable_association_listener(mapper, cls):
                 getattr(cls, prop.key))
         elif isinstance(column_type, List):
             _MutableList.associate_with_attribute(getattr(cls, prop.key))
+
+
 _LISTENER_ARGS = (mutable.mapper, 'mapper_configured', _mutable_association_listener)
 
 
@@ -298,5 +299,6 @@ def remove_mutable_association_listener():
     """
     if event.contains(*_LISTENER_ARGS):
         event.remove(*_LISTENER_ARGS)
+
 
 _register_mutable_association_listener()

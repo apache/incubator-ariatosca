@@ -28,7 +28,7 @@ except ImportError:
     _celery = None
     app = None
 
-from aria.storage.modeling import model
+from aria.modeling import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
     thread,
@@ -43,7 +43,8 @@ def test_execute(executor):
     expected_value = 'value'
     successful_task = MockTask(mock_successful_task)
     failing_task = MockTask(mock_failing_task)
-    task_with_inputs = MockTask(mock_task_with_input, inputs=dict(input='value'))
+    task_with_inputs = MockTask(mock_task_with_input, inputs={'input': models.Parameter.wrap(
+        'input', 'value')})
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -98,14 +99,15 @@ class MockContext(object):
 
 class MockTask(object):
 
-    INFINITE_RETRIES = model.Task.INFINITE_RETRIES
+    INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
     def __init__(self, func, inputs=None):
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
-        implementation = 'tests.orchestrator.workflows.executor.test_executor.{name}'.format(
+        implementation = '{module}.{name}'.format(
+            module=__name__,
             name=name)
         self.implementation = implementation
         self.logger = logging.getLogger()
@@ -117,7 +119,7 @@ class MockTask(object):
         self.plugin_fk = None
         self.ignore_failure = False
 
-        for state in model.Task.STATES:
+        for state in models.Task.STATES:
             setattr(self, state.upper(), state)
 
     @contextmanager
@@ -151,6 +153,7 @@ def register_signals():
     def failure_handler(task, exception, *args, **kwargs):
         task.states.append('failure')
         task.exception = exception
+
     events.start_task_signal.connect(start_handler)
     events.on_success_task_signal.connect(success_handler)
     events.on_failure_task_signal.connect(failure_handler)

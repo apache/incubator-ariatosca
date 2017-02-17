@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import  # so we can import standard 'collections'
-
 import json
 from types import MethodType
+
 from ruamel import yaml  # @UnresolvedImport
 
 from .collections import FrozenList, FrozenDict, StrictList, StrictDict, OrderedDict
+
+
+PLURALIZE_EXCEPTIONS = {}
+
 
 # Add our types to ruamel.yaml (for round trips)
 yaml.representer.RoundTripRepresenter.add_representer(
@@ -106,6 +109,18 @@ def string_list_as_string(strings):
     """
 
     return ', '.join('"%s"' % safe_str(v) for v in strings)
+
+
+def pluralize(noun):
+    plural = PLURALIZE_EXCEPTIONS.get(noun)
+    if plural is not None:
+        return plural
+    elif noun.endswith('s'):
+        return '{0}es'.format(noun)
+    elif noun.endswith('y'):
+        return '{0}ies'.format(noun[:-1])
+    else:
+        return '{0}s'.format(noun)
 
 
 def as_raw(value):

@@ -14,46 +14,46 @@
 # limitations under the License.
 
 NODE_OPERATIONS_INSTALL = [
-    'tosca.interfaces.node.lifecycle.Standard.create',
-    'tosca.interfaces.node.lifecycle.Standard.configure',
-    'tosca.interfaces.node.lifecycle.Standard.start',
+    ('Standard', 'create'),
+    ('Standard', 'configure'),
+    ('Standard', 'start')
 ]
 
 NODE_OPERATIONS_UNINSTALL = [
-    'tosca.interfaces.node.lifecycle.Standard.stop',
-    'tosca.interfaces.node.lifecycle.Standard.delete',
+    ('Standard', 'stop'),
+    ('Standard', 'delete')
 ]
 
 NODE_OPERATIONS = NODE_OPERATIONS_INSTALL + NODE_OPERATIONS_UNINSTALL
 
 RELATIONSHIP_OPERATIONS_INSTALL = [
-    'tosca.interfaces.relationship.Configure.pre_configure_source',
-    'tosca.interfaces.relationship.Configure.pre_configure_target',
-    'tosca.interfaces.relationship.Configure.add_source',
-    'tosca.interfaces.relationship.Configure.add_target',
+    ('Configure', 'pre_configure_source'),
+    ('Configure', 'pre_configure_target'),
+    ('Configure', 'add_source'),
+    ('Configure', 'add_target')
 ]
 
 RELATIONSHIP_OPERATIONS_UNINSTALL = [
-    'tosca.interfaces.relationship.Configure.remove_target',
-    'tosca.interfaces.relationship.Configure.target_changed',
+    ('Configure', 'remove_target'),
+    ('Configure', 'target_changed')
 ]
 
 RELATIONSHIP_OPERATIONS = RELATIONSHIP_OPERATIONS_INSTALL + RELATIONSHIP_OPERATIONS_UNINSTALL
 
 OPERATIONS_INSTALL = [
-    'tosca.interfaces.node.lifecycle.Standard.create',
-    'tosca.interfaces.relationship.Configure.pre_configure_source',
-    'tosca.interfaces.relationship.Configure.pre_configure_target',
-    'tosca.interfaces.node.lifecycle.Standard.configure',
-    'tosca.interfaces.node.lifecycle.Standard.start',
-    'tosca.interfaces.relationship.Configure.add_source',
-    'tosca.interfaces.relationship.Configure.add_target',
-    'tosca.interfaces.relationship.Configure.target_changed',
+    ('Standard', 'create'),
+    ('Configure', 'pre_configure_source'),
+    ('Configure', 'pre_configure_target'),
+    ('Standard', 'configure'),
+    ('Standard', 'start'),
+    ('Configure', 'add_source'),
+    ('Configure', 'add_target'),
+    ('Configure', 'target_changed')
 ]
 
 OPERATIONS_UNINSTALL = [
-    'tosca.interfaces.relationship.Configure.remove_target',
-    'tosca.interfaces.relationship.Configure.target_changed',
-    'tosca.interfaces.node.lifecycle.Standard.stop',
-    'tosca.interfaces.node.lifecycle.Standard.delete',
+    ('Configure', 'remove_target'),
+    ('Configure', 'target_changed'),
+    ('Standard', 'stop'),
+    ('Standard', 'delete')
 ]
