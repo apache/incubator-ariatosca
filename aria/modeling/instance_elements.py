@@ -33,10 +33,10 @@ from . import (
     type as aria_types
 )
 
+
 # pylint: disable=no-self-argument, no-member, abstract-method
 
 # region Element instances
-
 
 class ServiceInstanceBase(structure.ModelMixin):
     __tablename__ = 'service_instance'
@@ -64,6 +64,7 @@ class ServiceInstanceBase(structure.ModelMixin):
     # endregion
 
     # region foreign keys
+
     @declared_attr
     def substitution_fk(cls):
         return cls.foreign_key('substitution', nullable=True)
@@ -75,12 +76,15 @@ class ServiceInstanceBase(structure.ModelMixin):
     # endregion
 
     # region one-to-one relationships
+
     @declared_attr
     def substitution(cls):
         return cls.one_to_one_relationship('substitution')
+
     # endregion
 
     # region many-to-one relationships
+
     @declared_attr
     def service_template(cls):
         return cls.many_to_one_relationship('service_template')
@@ -184,6 +188,7 @@ class OperationBase(structure.ModelMixin):
         return cls.foreign_key('interface', nullable=True)
 
     # endregion
+
     description = Column(Text)
     implementation = Column(Text)
     dependencies = Column(aria_types.StrictList(item_cls=basestring))
@@ -195,6 +200,7 @@ class OperationBase(structure.ModelMixin):
     operation = Column(Boolean)
 
     # region many-to-one relationships
+
     @declared_attr
     def service_instance(cls):
         return cls.many_to_one_relationship('service_instance')
@@ -202,6 +208,9 @@ class OperationBase(structure.ModelMixin):
     @declared_attr
     def interface(cls):
         return cls.many_to_one_relationship('interface')
+
+    # endregion
+
     # region many-to-many relationships
 
     @declared_attr
@@ -268,6 +277,7 @@ class InterfaceBase(structure.ModelMixin):
 
 
     # region foreign_keys
+
     @declared_attr
     def group_fk(cls):
         return cls.foreign_key('group', nullable=True)
@@ -363,11 +373,13 @@ class CapabilityBase(structure.ModelMixin):
     __private_fields__ = ['node_fk']
 
     # region foreign_keys
+
     @declared_attr
     def node_fk(cls):
         return cls.foreign_key('node')
 
     # endregion
+
     type_name = Column(Text)
 
     min_occurrences = Column(Integer, default=None) # optional
@@ -375,14 +387,15 @@ class CapabilityBase(structure.ModelMixin):
     occurrences = Column(Integer, default=0)
 
     # region many-to-one relationships
+
     @declared_attr
     def node(cls):
         return cls.many_to_one_relationship('node')
 
     # endregion
 
-
     # region many-to-many relationships
+
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties')
@@ -469,12 +482,12 @@ class ArtifactBase(structure.ModelMixin):
     repository_credential = Column(aria_types.StrictDict(basestring, basestring))
 
     # region many-to-one relationships
+
     @declared_attr
     def node(cls):
         return cls.many_to_one_relationship('node')
 
     # endregion
-
 
     # region many-to-many relationships
 
@@ -547,11 +560,13 @@ class PolicyBase(structure.ModelMixin):
         return cls.foreign_key('service_instance')
 
     # endregion
+
     type_name = Column(Text)
     target_node_ids = Column(aria_types.StrictList(basestring))
     target_group_ids = Column(aria_types.StrictList(basestring))
 
     # region many-to-one relationships
+
     @declared_attr
     def service_instnce(cls):
         return cls.many_to_one_relationship('service_instance')
@@ -629,6 +644,7 @@ class GroupPolicyBase(structure.ModelMixin):
     type_name = Column(Text)
 
     # region many-to-one relationships
+
     @declared_attr
     def group(cls):
         return cls.many_to_one_relationship('group')
@@ -636,6 +652,7 @@ class GroupPolicyBase(structure.ModelMixin):
     # end region
 
     # region many-to-many relationships
+
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties')
@@ -796,7 +813,6 @@ class SubstitutionBase(structure.ModelMixin):
                                              table_prefix='requirements',
                                              relationship_kwargs=dict(lazy='dynamic'))
 
-
     # endregion
 
     @property
@@ -828,8 +844,8 @@ class SubstitutionBase(structure.ModelMixin):
             utils.dump_dict_values(context, self.capabilities, 'Capability mappings')
             utils.dump_dict_values(context, self.requirements, 'Requirement mappings')
 
-
 # endregion
+
 
 # region Node instances
 
@@ -857,6 +873,7 @@ class NodeBase(structure.ModelMixin):
                           'node_template_fk']
 
     # region foreign_keys
+
     @declared_attr
     def service_instance_fk(cls):
         return cls.foreign_key('service_instance')
@@ -875,6 +892,7 @@ class NodeBase(structure.ModelMixin):
     template_name = Column(Text)
 
     # region orchestrator required columns
+
     runtime_properties = Column(aria_types.Dict)
     scaling_groups = Column(aria_types.List)
     state = Column(Text, nullable=False)
@@ -912,9 +930,11 @@ class NodeBase(structure.ModelMixin):
     @declared_attr
     def service_template(cls):
         return association_proxy('service_instance', 'service_template')
+
     # endregion
 
     # region many-to-one relationships
+
     @declared_attr
     def service_instance(cls):
         return cls.many_to_one_relationship('service_instance')
@@ -1091,11 +1111,15 @@ class GroupBase(structure.ModelMixin):
     member_group_ids = Column(aria_types.StrictList(basestring))
 
     # region many-to-one relationships
+
     @declared_attr
     def service_instance(cls):
         return cls.many_to_one_relationship('service_instance')
 
+    # endregion
+
     # region many-to-many relationships
+
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties')
@@ -1147,8 +1171,8 @@ class GroupBase(structure.ModelMixin):
 
 # endregion
 
-# region Relationship instances
 
+# region Relationship instances
 
 class RelationshipBase(structure.ModelMixin):
     """
@@ -1179,7 +1203,8 @@ class RelationshipBase(structure.ModelMixin):
     type_name = Column(Text)
     template_name = Column(Text)
 
-    # # region orchestrator required columns
+    # region orchestrator required columns
+
     source_position = Column(Integer)
     target_position = Column(Integer)
 
@@ -1222,9 +1247,10 @@ class RelationshipBase(structure.ModelMixin):
     @declared_attr
     def target_node_name(cls):
         return association_proxy('target_node', cls.name_column_name())
+
     # endregion
 
-    # region many-to-many relationship
+    # region many-to-many relationships
 
     @declared_attr
     def properties(cls):

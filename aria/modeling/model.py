@@ -41,6 +41,7 @@ __all__ = (
     'GroupPolicyTriggerTemplate',
     'RequirementTemplate',
     'CapabilityTemplate',
+    'RelationshipTemplate',
 
     'Mapping',
     'Substitution',
@@ -68,8 +69,8 @@ aria_declarative_base = declarative_base(cls=structure.ModelIDMixin)
 
 # pylint: disable=abstract-method
 
-# region elements
 
+# region elements
 
 class Parameter(aria_declarative_base, elements.ParameterBase):
     pass
@@ -137,7 +138,11 @@ class CapabilityTemplate(aria_declarative_base, template_elements.CapabilityTemp
     pass
 
 
+class RelationshipTemplate(aria_declarative_base, template_elements.RelationshipTemplateBase):
+    pass
+
 # endregion
+
 
 # region instance models
 
@@ -192,8 +197,8 @@ class GroupPolicy(aria_declarative_base, instance_elements.GroupPolicyBase):
 class GroupPolicyTrigger(aria_declarative_base, instance_elements.GroupPolicyTriggerBase):
     pass
 
-
 # endregion
+
 
 # region orchestrator models
 
@@ -222,4 +227,5 @@ class Plugin(aria_declarative_base, orchestrator_elements.PluginBase):
 
 class Task(aria_declarative_base, orchestrator_elements.TaskBase):
     pass
+
 # endregion

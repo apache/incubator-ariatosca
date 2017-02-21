@@ -28,6 +28,7 @@ classes:
 """
 
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.ext import associationproxy
 from sqlalchemy import (
     Column,
@@ -138,6 +139,17 @@ class ModelMixin(ModelElementBase):
                             backref=backref(backreference or cls.__tablename__, uselist=False))
 
     @classmethod
+    def one_to_many_relationship(cls, other_table_name, backreference=None, key_column_name=None):
+        # See: http://docs.sqlalchemy.org/en/latest/orm/collections.html        
+        collection_class = attribute_mapped_collection(key_column_name) \
+            if key_column_name \
+            else list
+
+        return relationship(lambda: cls._get_cls_by_tablename(other_table_name),
+                            backref=backref(backreference or cls.__tablename__, uselist=False),
+                            collection_class=collection_class)
+
+    @classmethod
     def many_to_one_relationship(cls,
                                  parent_table_name,
                                  foreign_key_column=None,
@@ -184,7 +196,8 @@ class ModelMixin(ModelElementBase):
                             post_update=True)
 
     @classmethod
-    def many_to_many_relationship(cls, other_table_name, table_prefix, relationship_kwargs=None):
+    def many_to_many_relationship(cls, other_table_name, table_prefix, key_column_name=None,
+                                  relationship_kwargs=None):
         """Return a many-to-many SQL relationship object
 
         Notes:
@@ -194,7 +207,8 @@ class ModelMixin(ModelElementBase):
         :param cls: The class of the table we're connecting from
         :param other_table_name: The class of the table we're connecting to
         :param table_prefix: Custom prefix for the helper table name and the
-        backreference name
+                             backreference name
+        :param key_column_name: If provided, will use a dict class with this column as the key 
         """
         current_table_name = cls.__tablename__
         current_column_name = '{0}_id'.format(current_table_name)
@@ -219,10 +233,16 @@ class ModelMixin(ModelElementBase):
             other_foreign_key
         )
 
+        # See: http://docs.sqlalchemy.org/en/latest/orm/collections.html        
+        collection_class = attribute_mapped_collection(key_column_name) \
+            if key_column_name \
+            else list
+
         return relationship(
             lambda: cls._get_cls_by_tablename(other_table_name),
             secondary=secondary_table,
             backref=backref(backref_name),
+            collection_class=collection_class,
             **(relationship_kwargs or {})
         )
 

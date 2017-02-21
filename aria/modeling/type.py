@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext import mutable
 
-from .. import exceptions
+from ..storage import exceptions
 
 
 class _MutableType(TypeDecorator):

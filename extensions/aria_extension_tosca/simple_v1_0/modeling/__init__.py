@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import re
+from types import FunctionType
 
-from aria.parser.modeling import Type, RelationshipType, PolicyType, RelationshipTemplate
+from aria.parser.modeling import Type, RelationshipType, PolicyType
+from aria.modeling import type as aria_type
 from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
-                                 RequirementTemplate, CapabilityTemplate,
+                                 RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                  GroupTemplate, PolicyTemplate, SubstitutionTemplate,
                                  MappingTemplate, InterfaceTemplate, OperationTemplate,
                                  ArtifactTemplate, Metadata, Parameter)
@@ -30,6 +32,7 @@ from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
 
 from ..data_types import coerce_value
 from platform import node
+
 
 def create_service_model(context): # pylint: disable=too-many-locals,too-many-branches
     model = ServiceModel()
@@ -80,8 +83,8 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
     node_templates = context.presentation.get('service_template', 'topology_template',
                                               'node_templates')
     if node_templates:
-        for node_template_name, node_template in node_templates.iteritems():
-            model.node_templates[node_template_name] = create_node_template(context, node_template)
+        for node_template in node_templates.itervalues():
+            model.node_templates.append(create_node_template(context, node_template))
 
     groups = context.presentation.get('service_template', 'topology_template', 'groups')
     if groups:
@@ -113,6 +116,7 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
 
     return model
 
+
 def create_node_template(context, node_template):
     node_type = node_template._get_type(context)
     model = NodeTemplate(name=node_template._name, type_name=node_type._name)
@@ -140,10 +144,12 @@ def create_node_template(context, node_template):
             model.capability_templates[capability_name] = create_capability_template(context,
                                                                                      capability)
 
+    model.target_node_template_constraints = aria_type.StrictList(FunctionType)
     create_node_filter_constraint_lambdas(context, node_template.node_filter,
                                           model.target_node_template_constraints)
 
     return model
+
 
 def create_interface_template(context, interface):
     interface_type = interface._get_type(context)
@@ -166,6 +172,7 @@ def create_interface_template(context, interface):
 
     return model if model.operation_templates else None
 
+
 def create_operation_template(context, operation): # pylint: disable=unused-argument
     model = OperationTemplate(name=operation._name)
 
@@ -187,6 +194,7 @@ def create_operation_template(context, operation): # pylint: disable=unused-argu
 
     return model
 
+
 def create_artifact_template(context, artifact):
     model = ArtifactTemplate(name=artifact._name, type_name=artifact.type,
                              source_path=artifact.file)
@@ -207,6 +215,7 @@ def create_artifact_template(context, artifact):
     create_properties_from_values(model.properties, artifact._get_property_values(context))
 
     return model
+
 
 def create_requirement_template(context, requirement):
     model = {'name': requirement._name}
@@ -236,11 +245,14 @@ def create_requirement_template(context, requirement):
 
     return model
 
+
 def create_relationship_type(context, relationship_type): # pylint: disable=unused-argument
     return RelationshipType(relationship_type._name)
 
+
 def create_policy_type(context, policy_type): # pylint: disable=unused-argument
     return PolicyType(policy_type._name)
+
 
 def create_relationship_template(context, relationship):
     relationship_type, relationship_type_variant = relationship._get_type(context)
@@ -255,9 +267,10 @@ def create_relationship_template(context, relationship):
             model.description = relationship_template.description.value
 
     create_properties_from_assignments(model.properties, relationship.properties)
-    create_interface_templates(context, model.source_interface_templates, relationship.interfaces)
+    create_interface_templates(context, model.interface_templates, relationship.interfaces)
 
     return model
+
 
 def create_capability_template(context, capability):
     capability_type = capability._get_type(context)
@@ -280,6 +293,7 @@ def create_capability_template(context, capability):
 
     return model
 
+
 def create_group_template(context, group):
     group_type = group._get_type(context)
     model = GroupTemplate(name=group._name, type_name=group_type._name)
@@ -297,6 +311,7 @@ def create_group_template(context, group):
 
     return model
 
+
 def create_policy_template(context, policy):
     policy_type = policy._get_type(context)
     model = PolicyTemplate(name=policy._name, type_name=policy_type._name)
@@ -313,6 +328,7 @@ def create_policy_template(context, policy):
         model.target_group_template_names.append(group._name)
 
     return model
+
 
 #
 # Utils
@@ -346,19 +362,22 @@ def create_types(context, root, types, normalize=None):
                     if container is not None:
                         container.children.append(model)
 
+
 def create_properties_from_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties.append(Parameter(name=property_name,
-                                        type=prop.type,
-                                        str_value=prop.value,
-                                        description=prop.description))
+            properties[property_name] = Parameter(type=prop.type,
+                                                  str_value=prop.value,
+                                                  description=prop.description)
+
 
 def create_properties_from_assignments(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(prop.value.type, prop.value.value,
-                                                  prop.value.description)
+            properties[property_name] = Parameter(type=prop.value.type,
+                                                  str_value=prop.value.value,
+                                                  description=prop.value.description)
+
 
 def create_interface_templates(context, interfaces, source_interfaces):
     if source_interfaces:
@@ -367,7 +386,8 @@ def create_interface_templates(context, interfaces, source_interfaces):
             if interface is not None:
                 interfaces[interface_name] = interface
 
-def create_node_filter_constraint_lambdas(context, node_filter, node_type_constraints):
+
+def create_node_filter_constraint_lambdas(context, node_filter, target_node_template_constraints):
     if node_filter is None:
         return
 
@@ -377,7 +397,7 @@ def create_node_filter_constraint_lambdas(context, node_filter, node_type_constr
             func = create_constraint_clause_lambda(context, node_filter, constraint_clause,
                                                    property_name, None)
             if func is not None:
-                node_type_constraints.append(func)
+                target_node_template_constraints.append(func)
 
     capabilities = node_filter.capabilities
     if capabilities is not None:
@@ -388,7 +408,8 @@ def create_node_filter_constraint_lambdas(context, node_filter, node_type_constr
                     func = create_constraint_clause_lambda(context, node_filter, constraint_clause,
                                                            property_name, capability_name)
                     if func is not None:
-                        node_type_constraints.append(func)
+                        target_node_template_constraints.append(func)
+
 
 def create_constraint_clause_lambda(context, node_filter, constraint_clause, property_name, # pylint: disable=too-many-return-statements
                                     capability_name):
