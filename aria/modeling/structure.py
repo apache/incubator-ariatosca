@@ -45,8 +45,7 @@ class Function(object):
     """
     An intrinsic function.
 
-    Serves as a placeholder for a value that should eventually be derived
-    by calling the function.
+    Serves as a placeholder for a value that should eventually be derived by calling the function.
     """
 
     @property
@@ -61,40 +60,7 @@ class Function(object):
         return self
 
 
-class ElementBase(object):
-    """
-    Base class for :class:`ServiceInstance` elements.
-
-    All elements support validation, diagnostic dumping, and representation as
-    raw data (which can be translated into JSON or YAML) via :code:`as_raw`.
-    """
-
-    @property
-    def as_raw(self):
-        raise NotImplementedError
-
-    def validate(self, context):
-        pass
-
-    def coerce_values(self, context, container, report_issues):
-        pass
-
-    def dump(self, context):
-        pass
-
-
-class ModelElementBase(ElementBase):
-    """
-    Base class for :class:`ServiceModel` elements.
-
-    All model elements can be instantiated into :class:`ServiceInstance` elements.
-    """
-
-    def instantiate(self, context, container):
-        raise NotImplementedError
-
-
-class ModelMixin(ModelElementBase):
+class ModelMixin(object):
 
     @utils.classproperty
     def __modelname__(cls):                                                                         # pylint: disable=no-self-argument
@@ -209,7 +175,7 @@ class ModelMixin(ModelElementBase):
                             **relationship_kwargs)
 
     @classmethod
-    def many_to_many_relationship(cls, other_table_name, table_prefix, key_column_name=None,
+    def many_to_many_relationship(cls, other_table_name, table_prefix=None, key_column_name=None,
                                   relationship_kwargs=None):
         """Return a many-to-many SQL relationship object
 
@@ -337,6 +303,39 @@ class ModelMixin(ModelElementBase):
         return '<{__class__.__name__} id=`{id}`>'.format(
             __class__=self.__class__,
             id=getattr(self, self.name_column_name()))
+
+
+class InstanceModelMixin(ModelMixin):
+    """
+    Mixin for :class:`ServiceInstance` models.
+
+    All models support validation, diagnostic dumping, and representation as
+    raw data (which can be translated into JSON or YAML) via :code:`as_raw`.
+    """
+
+    @property
+    def as_raw(self):
+        raise NotImplementedError
+
+    def validate(self, context):
+        pass
+
+    def coerce_values(self, context, container, report_issues):
+        pass
+
+    def dump(self, context):
+        pass
+
+
+class TemplateModelMixin(InstanceModelMixin):
+    """
+    Mixin for :class:`ServiceTemplate` models.
+
+    All model models can be instantiated into :class:`ServiceInstance` models.
+    """
+
+    def instantiate(self, context, container):
+        raise NotImplementedError
 
 
 class ModelIDMixin(object):

@@ -21,20 +21,19 @@ from sqlalchemy import (
 from ..parser.modeling import utils
 from ..storage import exceptions
 from ..utils.collections import OrderedDict
-from ..utils.console import puts
 
 from . import structure
-from . import type
 
 # pylint: disable=no-self-argument, no-member, abstract-method
 
 
-class ParameterBase(structure.ModelMixin):
+class ParameterBase(structure.TemplateModelMixin):
     """
     Represents a typed value.
 
-    This class is used by both service model and service instance elements.
+    This class is used by both service template and service instance elements.
     """
+
     __tablename__ = 'parameter'
 
     name = Column(Text, nullable=False)
@@ -76,38 +75,35 @@ class ParameterBase(structure.ModelMixin):
         self.str_value = unicode(value)
 
     def instantiate(self, context, container):
-        return ParameterBase(self.type_name, self.str_value, self.description)
+        from . import model
+        return model.Parameter(type_name=self.type_name,
+                               str_value=self.str_value,
+                               description=self.description)
 
     def coerce_values(self, context, container, report_issues):
         if self.str_value is not None:
             self.str_value = utils.coerce_value(context, container, self.str_value, report_issues)
 
 
-class MetadataBase(structure.ModelMixin):
+class MetadataBase(structure.TemplateModelMixin):
     """
-    Custom values associated with the deployment template and its plans.
+    Custom values associated with the service.
 
-    This class is used by both service model and service instance elements.
-
-    Properties:
-
-    * :code:`values`: Dict of custom values
+    This class is used by both service template and service instance elements.
     """
-    __tablename__ = 'meta_data'
 
-    values = Column(type.StrictDict(key_cls=basestring))
+    __tablename__ = 'metadata'
+
+    name = Column(Text, nullable=False)
+    value = Column(Text)
 
     @property
     def as_raw(self):
-        return self.values
+        return OrderedDict((
+            ('name', self.name),
+            ('value', self.value)))
 
     def instantiate(self, context, container):
-        metadata = MetadataBase()
-        metadata.values.update(self.values)
-        return metadata
-
-    def dump(self, context):
-        puts('Metadata:')
-        with context.style.indent:
-            for name, value in self.values.iteritems():
-                puts('%s: %s' % (name, context.style.meta(value)))
+        from . import model
+        return model.Metadata(name=self.name,
+                              value=self.value)

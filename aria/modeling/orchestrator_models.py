@@ -52,7 +52,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
-from aria.orchestrator.exceptions import TaskAbortException, TaskRetryException
+from ..orchestrator.exceptions import TaskAbortException, TaskRetryException
 
 from .type import List, Dict
 from .structure import ModelMixin

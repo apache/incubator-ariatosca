@@ -19,18 +19,19 @@ from . import (
     structure,
     type,
     model,
-    instance_elements as _instance_base,
-    orchestrator_elements as _orchestrator_base,
-    template_elements as _template_base,
+    service_template_models as _service_template_models_base,
+    service_instance_models as _service_instance_models_base,
+    orchestrator_models as _orchestrator_models_base,
 )
 
 
-_ModelBaseCls = namedtuple('ModelBase', 'instance_elements,'
-                                        'orchestrator_elements,'
-                                        'template_elements')
-model_base = _ModelBaseCls(instance_elements=_instance_base,
-                           orchestrator_elements=_orchestrator_base,
-                           template_elements=_template_base)
+_ModelBaseCls = namedtuple('ModelBase', 'service_template_models,'
+                                        'service_instance_models,'
+                                        'orchestrator_models')
+model_base = _ModelBaseCls(service_template_models=_service_template_models_base,
+                           service_instance_models=_service_instance_models_base,
+                           orchestrator_models=_orchestrator_models_base)
+                           
 
 __all__ = (
     'structure',

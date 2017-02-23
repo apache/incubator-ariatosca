@@ -83,6 +83,15 @@ def instantiate_dict(context, container, the_dict, from_dict):
             the_dict[name] = value
 
 
+def instantiate_list(context, container, the_list, from_list):
+    if not from_list:
+        return
+    for value in from_list.iteritems():
+        value = value.instantiate(context, container)
+        if value is not None:
+            the_list.append(value)
+
+
 def dump_list_values(context, the_list, name):
     if not the_list:
         return

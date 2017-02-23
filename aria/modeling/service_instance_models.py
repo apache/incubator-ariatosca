@@ -24,8 +24,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
 
-from aria.parser import validation
-from aria.utils import collections, formatting, console
+from ..parser import validation
+from ..utils import collections, formatting, console
 
 from . import (
     utils,
@@ -33,19 +33,34 @@ from . import (
     type as aria_types
 )
 
-
 # pylint: disable=no-self-argument, no-member, abstract-method
 
-# region Element instances
 
-class ServiceInstanceBase(structure.ModelMixin):
+class ServiceInstanceBase(structure.InstanceModelMixin):
+    """
+    A service instance is an instance of a :class:`ServiceTemplate`.
+
+    You will usually not create it programmatically, but instead instantiate it from the template.
+
+    Properties:
+
+    * :code:`description`: Human-readable description
+    * :code:`meta_data`: Dict of :class:`Metadata`
+    * :code:`nodes`: Dict of :class:`Node`
+    * :code:`groups`: Dict of :class:`Group`
+    * :code:`policies`: Dict of :class:`Policy`
+    * :code:`substitution`: :class:`Substitution`
+    * :code:`inputs`: Dict of :class:`Parameter`
+    * :code:`outputs`: Dict of :class:`Parameter`
+    * :code:`operations`: Dict of :class:`Operation`
+    """
+
     __tablename__ = 'service_instance'
 
     __private_fields__ = ['substituion_fk',
                           'service_template_fk']
 
     description = Column(Text)
-    _metadata = Column(Text)
 
     # region orchestrator required columns
 
@@ -83,6 +98,14 @@ class ServiceInstanceBase(structure.ModelMixin):
 
     # endregion
 
+    # region one-to-many relationships
+
+    @declared_attr
+    def interfaces(cls):
+        return cls.one_to_many_relationship('interfaces', key_column_name='name')
+
+    # endregion
+
     # region many-to-one relationships
 
     @declared_attr
@@ -92,6 +115,12 @@ class ServiceInstanceBase(structure.ModelMixin):
     # endregion
 
     # region many-to-many relationships
+
+    @declared_attr
+    def meta_data(cls):
+        # Warning! We cannot use the attr name "metadata" because it's used by SqlAlchemy!
+        return cls.many_to_many_relationship('metadata', key_column_name='name')
+    
     @declared_attr
     def inputs(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='inputs')
@@ -157,7 +186,7 @@ class ServiceInstanceBase(structure.ModelMixin):
         return False
 
 
-class OperationBase(structure.ModelMixin):
+class OperationBase(structure.InstanceModelMixin):
     """
     An operation in a :class:`Interface`.
 
@@ -172,6 +201,7 @@ class OperationBase(structure.ModelMixin):
     * :code:`retry_interval`: Interval between retries
     * :code:`inputs`: Dict of :class:`Parameter`
     """
+
     __tablename__ = 'operation'
 
     __private_fields__ = ['service_template_fk',
@@ -257,7 +287,7 @@ class OperationBase(structure.ModelMixin):
             utils.dump_parameters(context, self.inputs, 'Inputs')
 
 
-class InterfaceBase(structure.ModelMixin):
+class InterfaceBase(structure.InstanceModelMixin):
     """
     A typed set of :class:`Operation`.
 
@@ -269,12 +299,12 @@ class InterfaceBase(structure.ModelMixin):
     * :code:`inputs`: Dict of :class:`Parameter`
     * :code:`operations`: Dict of :class:`Operation`
     """
+
     __tablename__ = 'interface'
 
     __private_fields__ = ['group_fk',
                           'node_fk',
                           'relationship_fk']
-
 
     # region foreign_keys
 
@@ -316,7 +346,8 @@ class InterfaceBase(structure.ModelMixin):
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs')
+        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
+                                             key_column_name='name')
 
     # endregion
 
@@ -354,7 +385,7 @@ class InterfaceBase(structure.ModelMixin):
             utils.dump_dict_values(context, self.operations, 'Operations')
 
 
-class CapabilityBase(structure.ModelMixin):
+class CapabilityBase(structure.InstanceModelMixin):
     """
     A capability of a :class:`Node`.
 
@@ -368,6 +399,7 @@ class CapabilityBase(structure.ModelMixin):
     * :code:`max_occurrences`: Maximum number of requirement matches allowed
     * :code:`properties`: Dict of :class:`Parameter`
     """
+
     __tablename__ = 'capability'
 
     __private_fields__ = ['node_fk']
@@ -398,7 +430,8 @@ class CapabilityBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -447,7 +480,7 @@ class CapabilityBase(structure.ModelMixin):
             utils.dump_parameters(context, self.properties)
 
 
-class ArtifactBase(structure.ModelMixin):
+class ArtifactBase(structure.InstanceModelMixin):
     """
     A file associated with a :class:`Node`.
 
@@ -462,6 +495,7 @@ class ArtifactBase(structure.ModelMixin):
     * :code:`repository_credential`: Dict of string
     * :code:`properties`: Dict of :class:`Parameter`
     """
+
     __tablename__ = 'artifact'
 
     __private_fields__ = ['node_fk']
@@ -493,7 +527,8 @@ class ArtifactBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -537,7 +572,7 @@ class ArtifactBase(structure.ModelMixin):
             utils.dump_parameters(context, self.properties)
 
 
-class PolicyBase(structure.ModelMixin):
+class PolicyBase(structure.InstanceModelMixin):
     """
     An instance of a :class:`PolicyTemplate`.
 
@@ -549,6 +584,7 @@ class PolicyBase(structure.ModelMixin):
     * :code:`target_node_ids`: Must be represented in the :class:`ServiceInstance`
     * :code:`target_group_ids`: Must be represented in the :class:`ServiceInstance`
     """
+
     __tablename__ = 'policy'
 
     __private_fields__ = ['service_instance_fk']
@@ -575,7 +611,8 @@ class PolicyBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -616,7 +653,7 @@ class PolicyBase(structure.ModelMixin):
                         console.puts(context.style.node(group_id))
 
 
-class MappingBase(structure.ModelMixin):
+class MappingBase(structure.InstanceModelMixin):
     """
     An instance of a :class:`MappingTemplate`.
 
@@ -626,6 +663,7 @@ class MappingBase(structure.ModelMixin):
     * :code:`node_id`: Must be represented in the :class:`ServiceInstance`
     * :code:`name`: Name of capability or requirement at the node
     """
+
     __tablename__ = 'mapping'
 
     mapped_name = Column(Text)
@@ -645,7 +683,7 @@ class MappingBase(structure.ModelMixin):
                         context.style.node(self.name)))
 
 
-class SubstitutionBase(structure.ModelMixin):
+class SubstitutionBase(structure.InstanceModelMixin):
     """
     An instance of a :class:`SubstitutionTemplate`.
 
@@ -655,6 +693,7 @@ class SubstitutionBase(structure.ModelMixin):
     * :code:`capabilities`: Dict of :class:`Mapping`
     * :code:`requirements`: Dict of :class:`Mapping`
     """
+
     __tablename__ = 'substitution'
 
     node_type_name = Column(Text)
@@ -702,12 +741,8 @@ class SubstitutionBase(structure.ModelMixin):
             utils.dump_dict_values(context, self.capabilities, 'Capability mappings')
             utils.dump_dict_values(context, self.requirements, 'Requirement mappings')
 
-# endregion
 
-
-# region Node instances
-
-class NodeBase(structure.ModelMixin):
+class NodeBase(structure.InstanceModelMixin):
     """
     An instance of a :class:`NodeTemplate`.
 
@@ -717,13 +752,14 @@ class NodeBase(structure.ModelMixin):
 
     * :code:`id`: Unique ID (prefixed with the template name)
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`interfaces`: Dict of :class:`Interface`
     * :code:`artifacts`: Dict of :class:`Artifact`
     * :code:`capabilities`: Dict of :class:`CapabilityTemplate`
     * :code:`relationships`: List of :class:`Relationship`
     """
+
     __tablename__ = 'node'
 
     __private_fields__ = ['service_instance_fk',
@@ -791,6 +827,14 @@ class NodeBase(structure.ModelMixin):
 
     # endregion
 
+    # region one-to-many relationships
+
+    @declared_attr
+    def interfaces(cls):
+        return cls.one_to_many_relationship('interfaces', key_column_name='name')
+
+    # endregion
+
     # region many-to-one relationships
 
     @declared_attr
@@ -803,7 +847,8 @@ class NodeBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -936,7 +981,7 @@ class NodeBase(structure.ModelMixin):
             utils.dump_list_values(context, self.relationships, 'Relationships')
 
 
-class GroupBase(structure.ModelMixin):
+class GroupBase(structure.InstanceModelMixin):
     """
     An instance of a :class:`GroupTemplate`.
 
@@ -944,13 +989,14 @@ class GroupBase(structure.ModelMixin):
 
     * :code:`id`: Unique ID (prefixed with the template name)
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`interfaces`: Dict of :class:`Interface`
     * :code:`policies`: Dict of :class:`GroupPolicy`
     * :code:`member_node_ids`: Must be represented in the :class:`ServiceInstance`
     * :code:`member_group_ids`: Must be represented in the :class:`ServiceInstance`
     """
+
     __tablename__ = 'group'
 
     __private_fields__ = ['service_instance_fk']
@@ -968,6 +1014,14 @@ class GroupBase(structure.ModelMixin):
     member_node_ids = Column(aria_types.StrictList(basestring))
     member_group_ids = Column(aria_types.StrictList(basestring))
 
+    # region one-to-many relationships
+
+    @declared_attr
+    def interfaces(cls):
+        return cls.one_to_many_relationship('interfaces', key_column_name='name')
+
+    # endregion
+
     # region many-to-one relationships
 
     @declared_attr
@@ -980,7 +1034,8 @@ class GroupBase(structure.ModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -1027,12 +1082,8 @@ class GroupBase(structure.ModelMixin):
                     for node_id in self.member_node_ids:
                         console.puts(context.style.node(node_id))
 
-# endregion
 
-
-# region Relationship instances
-
-class RelationshipBase(structure.ModelMixin):
+class RelationshipBase(structure.InstanceModelMixin):
     """
     Connects :class:`Node` to another node.
 
@@ -1045,11 +1096,12 @@ class RelationshipBase(structure.ModelMixin):
     * :code:`target_node_id`: Must be represented in the :class:`ServiceInstance`
     * :code:`target_capability_name`: Matches the capability at the target node
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`source_interfaces`: Dict of :class:`Interface`
     * :code:`target_interfaces`: Dict of :class:`Interface`
     """
+
     __tablename__ = 'relationship'
 
     __private_fields__ = ['source_node_fk',
@@ -1108,11 +1160,20 @@ class RelationshipBase(structure.ModelMixin):
 
     # endregion
 
+    # region one-to-many relationships
+
+    @declared_attr
+    def interfaces(cls):
+        return cls.one_to_many_relationship('interfaces', key_column_name='name')
+
+    # endregion
+
     # region many-to-many relationships
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties')
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     # endregion
 
@@ -1126,8 +1187,7 @@ class RelationshipBase(structure.ModelMixin):
             ('type_name', self.type_name),
             ('template_name', self.template_name),
             ('properties', formatting.as_raw_dict(self.properties)),
-            ('source_interfaces', formatting.as_raw_list(self.source_interfaces)),
-            ('target_interfaces', formatting.as_raw_list(self.target_interfaces))))
+            ('interfaces', formatting.as_raw_list(self.interfaces))))
 
     def validate(self, context):
         if self.type_name:
@@ -1137,13 +1197,11 @@ class RelationshipBase(structure.ModelMixin):
                                              formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
         utils.validate_dict_values(context, self.properties)
-        utils.validate_dict_values(context, self.source_interfaces)
-        utils.validate_dict_values(context, self.target_interfaces)
+        utils.validate_dict_values(context, self.interfaces)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, container, self.properties, report_issues)
-        utils.coerce_dict_values(context, container, self.source_interfaces, report_issues)
-        utils.coerce_dict_values(context, container, self.target_interfaces, report_issues)
+        utils.coerce_dict_values(context, container, self.interfaces, report_issues)
 
     def dump(self, context):
         if self.name:
@@ -1164,7 +1222,4 @@ class RelationshipBase(structure.ModelMixin):
             if self.template_name is not None:
                 console.puts('Relationship template: %s' % context.style.node(self.template_name))
             utils.dump_parameters(context, self.properties)
-            utils.dump_interfaces(context, self.source_interfaces, 'Source interfaces')
-            utils.dump_interfaces(context, self.target_interfaces, 'Target interfaces')
-
-# endregion
+            utils.dump_interfaces(context, self.interfaces, 'Interfaces')

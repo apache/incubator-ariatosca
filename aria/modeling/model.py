@@ -16,10 +16,10 @@
 from sqlalchemy.ext.declarative import declarative_base
 
 from . import (
-    template_elements,
-    instance_elements,
-    orchestrator_elements,
-    elements,
+    service_template_models,
+    service_instance_models,
+    orchestrator_models,
+    shared_service_models,
     structure,
 )
 
@@ -66,146 +66,144 @@ aria_declarative_base = declarative_base(cls=structure.ModelIDMixin)
 # pylint: disable=abstract-method
 
 
-# region elements
+# region shared service models
 
-class Parameter(aria_declarative_base, elements.ParameterBase):
+class Parameter(aria_declarative_base, shared_service_models.ParameterBase):
     pass
 
 
-class Metadata(aria_declarative_base, elements.MetadataBase):
-    pass
-
-
-# endregion
-
-# region template models
-
-
-class MappingTemplate(aria_declarative_base, template_elements.MappingTemplateBase):
-    pass
-
-
-class SubstitutionTemplate(aria_declarative_base, template_elements.SubstitutionTemplateBase):
-    pass
-
-
-class InterfaceTemplate(aria_declarative_base, template_elements.InterfaceTemplateBase):
-    pass
-
-
-class OperationTemplate(aria_declarative_base, template_elements.OperationTemplateBase):
-    pass
-
-
-class ServiceTemplate(aria_declarative_base, template_elements.ServiceTemplateBase):
-    pass
-
-
-class NodeTemplate(aria_declarative_base, template_elements.NodeTemplateBase):
-    pass
-
-
-class GroupTemplate(aria_declarative_base, template_elements.GroupTemplateBase):
-    pass
-
-
-class ArtifactTemplate(aria_declarative_base, template_elements.ArtifactTemplateBase):
-    pass
-
-
-class PolicyTemplate(aria_declarative_base, template_elements.PolicyTemplateBase):
-    pass
-
-
-class RequirementTemplate(aria_declarative_base, template_elements.RequirementTemplateBase):
-    pass
-
-
-class CapabilityTemplate(aria_declarative_base, template_elements.CapabilityTemplateBase):
-    pass
-
-
-class RelationshipTemplate(aria_declarative_base, template_elements.RelationshipTemplateBase):
+class Metadata(aria_declarative_base, shared_service_models.MetadataBase):
     pass
 
 # endregion
 
 
-# region instance models
+# region service template models
 
-class Mapping(aria_declarative_base, instance_elements.MappingBase):
+class MappingTemplate(aria_declarative_base, service_template_models.MappingTemplateBase):
     pass
 
 
-class Substitution(aria_declarative_base, instance_elements.SubstitutionBase):
+class SubstitutionTemplate(aria_declarative_base, service_template_models.SubstitutionTemplateBase):
     pass
 
 
-class ServiceInstance(aria_declarative_base, instance_elements.ServiceInstanceBase):
+class InterfaceTemplate(aria_declarative_base, service_template_models.InterfaceTemplateBase):
     pass
 
 
-class Node(aria_declarative_base, instance_elements.NodeBase):
+class OperationTemplate(aria_declarative_base, service_template_models.OperationTemplateBase):
     pass
 
 
-class Relationship(aria_declarative_base, instance_elements.RelationshipBase):
+class ServiceTemplate(aria_declarative_base, service_template_models.ServiceTemplateBase):
     pass
 
 
-class Artifact(aria_declarative_base, instance_elements.ArtifactBase):
+class NodeTemplate(aria_declarative_base, service_template_models.NodeTemplateBase):
     pass
 
 
-class Group(aria_declarative_base, instance_elements.GroupBase):
+class GroupTemplate(aria_declarative_base, service_template_models.GroupTemplateBase):
     pass
 
 
-class Interface(aria_declarative_base, instance_elements.InterfaceBase):
+class ArtifactTemplate(aria_declarative_base, service_template_models.ArtifactTemplateBase):
     pass
 
 
-class Operation(aria_declarative_base, instance_elements.OperationBase):
+class PolicyTemplate(aria_declarative_base, service_template_models.PolicyTemplateBase):
     pass
 
 
-class Capability(aria_declarative_base, instance_elements.CapabilityBase):
+class RequirementTemplate(aria_declarative_base, service_template_models.RequirementTemplateBase):
     pass
 
 
-class Policy(aria_declarative_base, instance_elements.PolicyBase):
+class CapabilityTemplate(aria_declarative_base, service_template_models.CapabilityTemplateBase):
     pass
 
+
+class RelationshipTemplate(aria_declarative_base, service_template_models.RelationshipTemplateBase):
+    pass
+
+# endregion
+
+
+# region service instance models
+
+class Mapping(aria_declarative_base, service_instance_models.MappingBase):
+    pass
+
+
+class Substitution(aria_declarative_base, service_instance_models.SubstitutionBase):
+    pass
+
+
+class ServiceInstance(aria_declarative_base, service_instance_models.ServiceInstanceBase):
+    pass
+
+
+class Node(aria_declarative_base, service_instance_models.NodeBase):
+    pass
+
+
+class Relationship(aria_declarative_base, service_instance_models.RelationshipBase):
+    pass
+
+
+class Artifact(aria_declarative_base, service_instance_models.ArtifactBase):
+    pass
+
+
+class Group(aria_declarative_base, service_instance_models.GroupBase):
+    pass
+
+
+class Interface(aria_declarative_base, service_instance_models.InterfaceBase):
+    pass
+
+
+class Operation(aria_declarative_base, service_instance_models.OperationBase):
+    pass
+
+
+class Capability(aria_declarative_base, service_instance_models.CapabilityBase):
+    pass
+
+
+class Policy(aria_declarative_base, service_instance_models.PolicyBase):
+    pass
 
 # endregion
 
 
 # region orchestrator models
 
-class Execution(aria_declarative_base, orchestrator_elements.Execution):
+class Execution(aria_declarative_base, orchestrator_models.Execution):
     pass
 
 
 class ServiceInstanceUpdate(aria_declarative_base,
-                            orchestrator_elements.ServiceInstanceUpdateBase):
+                            orchestrator_models.ServiceInstanceUpdateBase):
     pass
 
 
 class ServiceInstanceUpdateStep(aria_declarative_base,
-                                orchestrator_elements.ServiceInstanceUpdateStepBase):
+                                orchestrator_models.ServiceInstanceUpdateStepBase):
     pass
 
 
 class ServiceInstanceModification(aria_declarative_base,
-                                  orchestrator_elements.ServiceInstanceModificationBase):
+                                  orchestrator_models.ServiceInstanceModificationBase):
     pass
 
 
-class Plugin(aria_declarative_base, orchestrator_elements.PluginBase):
+class Plugin(aria_declarative_base, orchestrator_models.PluginBase):
     pass
 
 
-class Task(aria_declarative_base, orchestrator_elements.TaskBase):
+class Task(aria_declarative_base, orchestrator_models.TaskBase):
     pass
 
 # endregion

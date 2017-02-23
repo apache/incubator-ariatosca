@@ -40,16 +40,14 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
 
     # Metadata
     metadata = context.presentation.get('service_template', 'metadata')
-    if metadata is not None and False: # TODO
-        metadata_model = Metadata()
-        metadata_model.values['template_name'] = metadata.template_name
-        metadata_model.values['template_author'] = metadata.template_author
-        metadata_model.values['template_version'] = metadata.template_version
+    if metadata is not None:
+        model.meta_data['template_name'] = Metadata(value=metadata.template_name)
+        model.meta_data['template_author'] = Metadata(value=metadata.template_author)
+        model.meta_data['template_version'] = Metadata(value=metadata.template_version)
         custom = metadata.custom
         if custom:
             for name, v in custom.iteritems():
-                metadata_model.values[name] = v
-        model.metadata = metadata_model
+                model.meta_data[name] = Metadata(value=v)
 
     # Types
     create_types(context,

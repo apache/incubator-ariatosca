@@ -30,20 +30,17 @@ from ..parser import validation
 from ..utils import collections, formatting, console
 from . import (
     utils,
-    instance_elements,
     structure,
     type as aria_type
 )
 
-
 # pylint: disable=no-self-argument, no-member, abstract-method
 
-# region Element templates
 
-class ServiceTemplateBase(structure.ModelMixin):
+class ServiceTemplateBase(structure.TemplateModelMixin):
     """
-    A service model is a normalized service template from which :class:`ServiceInstance` instances
-    can be created.
+    A service template is a normalized blueprint from which :class:`ServiceInstance` instances can
+    be created.
 
     It is usually created by various DSL parsers, such as ARIA's TOSCA extension. However, it
     can also be created programmatically.
@@ -51,14 +48,14 @@ class ServiceTemplateBase(structure.ModelMixin):
     Properties:
 
     * :code:`description`: Human-readable description
-    * :code:`meta_data`: :class:`Metadata`
-    * :code:`node_templates`: Dict of :class:`NodeTemplate`
-    * :code:`group_templates`: Dict of :class:`GroupTemplate`
-    * :code:`policy_templates`: Dict of :class:`PolicyTemplate`
+    * :code:`meta_data`: Dict of :class:`Metadata`
+    * :code:`node_templates`: List of :class:`NodeTemplate`
+    * :code:`group_templates`: List of :class:`GroupTemplate`
+    * :code:`policy_templates`: List of :class:`PolicyTemplate`
     * :code:`substitution_template`: :class:`SubstituionTemplate`
     * :code:`inputs`: Dict of :class:`Parameter`
     * :code:`outputs`: Dict of :class:`Parameter`
-    * :code:`operation_templates`: Dict of :class:`Operation`
+    * :code:`operation_templates`: Dict of :class:`OperationTemplate`
     """
 
     __tablename__ = 'service_template'
@@ -82,10 +79,6 @@ class ServiceTemplateBase(structure.ModelMixin):
     def substitution_template_fk(cls):
         return cls.foreign_key('substitution_template', nullable=True)
 
-    @declared_attr
-    def meta_data_fk(cls):
-        return cls.foreign_key('meta_data', nullable=True)
-
     # endregion
 
     # region one-to-one relationships
@@ -93,10 +86,6 @@ class ServiceTemplateBase(structure.ModelMixin):
     @declared_attr
     def substitution_template(cls):
         return cls.one_to_one_relationship('substitution_template')
-
-    @declared_attr
-    def meta_data(cls):
-        return cls.one_to_one_relationship('meta_data')
 
     # endregion
 
@@ -109,6 +98,11 @@ class ServiceTemplateBase(structure.ModelMixin):
     # endregion
 
     # region many-to-many relationships
+
+    @declared_attr
+    def meta_data(cls):
+        # Warning! We cannot use the attr name "metadata" because it's used by SqlAlchemy!
+        return cls.many_to_many_relationship('metadata', key_column_name='name')
 
     @declared_attr
     def inputs(cls):
@@ -126,7 +120,7 @@ class ServiceTemplateBase(structure.ModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('description', self.description),
-            ('metadata', formatting.as_raw(self.meta_data)),
+            ('metadata', formatting.as_raw_dict(self.meta_data)),
             ('node_templates', formatting.as_raw_list(self.node_templates)),
             ('group_templates', formatting.as_raw_list(self.group_templates)),
             ('policy_templates', formatting.as_raw_list(self.policy_templates)),
@@ -136,21 +130,21 @@ class ServiceTemplateBase(structure.ModelMixin):
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
 
     def instantiate(self, context, container):
-        service_instance = instance_elements.ServiceInstanceBase()
+        from . import model
+        service_instance = model.ServiceInstance()
         context.modeling.instance = service_instance
 
         service_instance.description = deepcopy_with_locators(self.description)
 
-        if self.meta_data is not None:
-            service_instance.meta_data = self.meta_data.instantiate(context, container)
+        utils.instantiate_dict(context, self, service_instance.meta_data, self.meta_data)
 
-        for node_template in self.node_templates.itervalues():
+        for node_template in self.node_templates:
             for _ in range(node_template.default_instances):
                 node = node_template.instantiate(context, container)
                 service_instance.nodes[node.id] = node
 
-        utils.instantiate_dict(context, self, service_instance.groups, self.group_templates)
-        utils.instantiate_dict(context, self, service_instance.policies, self.policy_templates)
+        utils.instantiate_list(context, self, service_instance.groups, self.group_templates)
+        utils.instantiate_list(context, self, service_instance.policies, self.policy_templates)
         utils.instantiate_dict(context, self, service_instance.operations, self.operation_templates)
 
         if self.substitution_template is not None:
@@ -169,8 +163,7 @@ class ServiceTemplateBase(structure.ModelMixin):
         return service_instance
 
     def validate(self, context):
-        if self.meta_data is not None:
-            self.meta_data.validate(context)
+        utils.validate_dict_values(context, self.meta_data)
         utils.validate_list_values(context, self.node_templates)
         utils.validate_list_values(context, self.group_templates)
         utils.validate_list_values(context, self.policy_templates)
@@ -181,8 +174,7 @@ class ServiceTemplateBase(structure.ModelMixin):
         utils.validate_dict_values(context, self.operation_templates)
 
     def coerce_values(self, context, container, report_issues):
-        if self.meta_data is not None:
-            self.meta_data.coerce_values(context, container, report_issues)
+        utils.coerce_dict_values(context, container, self.meta_data, report_issues)
         utils.coerce_list_values(context, container, self.node_templates, report_issues)
         utils.coerce_list_values(context, container, self.group_templates, report_issues)
         utils.coerce_list_values(context, container, self.policy_templates, report_issues)
@@ -195,8 +187,7 @@ class ServiceTemplateBase(structure.ModelMixin):
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
-        if self.meta_data is not None:
-            self.meta_data.dump(context)
+        dump_parameters(context, self.meta_data, 'Metadata')
         for node_template in self.node_templates.all():
             node_template.dump(context)
         for group_template in self.group_templates.all():
@@ -210,7 +201,7 @@ class ServiceTemplateBase(structure.ModelMixin):
         utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
-class InterfaceTemplateBase(structure.ModelMixin):
+class InterfaceTemplateBase(structure.TemplateModelMixin):
     """
     A typed set of :class:`OperationTemplate`.
 
@@ -281,7 +272,9 @@ class InterfaceTemplateBase(structure.ModelMixin):
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
 
     def instantiate(self, context, container):
-        interface = instance_elements.InterfaceBase(self.name, self.type_name)
+        from . import model
+        interface = model.Interface(name=self.name,
+                                    type_name=self.type_name)
         interface.description = deepcopy_with_locators(self.description)
         utils.instantiate_dict(context, container, interface.inputs, self.inputs)
         utils.instantiate_dict(context, container, interface.operations, self.operation_templates)
@@ -311,7 +304,7 @@ class InterfaceTemplateBase(structure.ModelMixin):
             utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
-class OperationTemplateBase(structure.ModelMixin):
+class OperationTemplateBase(structure.TemplateModelMixin):
     """
     An operation in a :class:`InterfaceTemplate`.
 
@@ -380,7 +373,8 @@ class OperationTemplateBase(structure.ModelMixin):
             ('inputs', formatting.as_raw_dict(self.inputs))))
 
     def instantiate(self, context, container):
-        operation = instance_elements.OperationBase(self.name)
+        from . import model
+        operation = model.Operation()
         operation.description = deepcopy_with_locators(self.description)
         operation.implementation = self.implementation
         operation.dependencies = self.dependencies
@@ -415,7 +409,7 @@ class OperationTemplateBase(structure.ModelMixin):
             dump_parameters(context, self.inputs, 'Inputs')
 
 
-class ArtifactTemplateBase(structure.ModelMixin):
+class ArtifactTemplateBase(structure.TemplateModelMixin):
     """
     A file associated with a :class:`NodeTemplate`.
 
@@ -472,7 +466,8 @@ class ArtifactTemplateBase(structure.ModelMixin):
             ('properties', formatting.as_raw_dict(self.properties.iteritems()))))
 
     def instantiate(self, context, container):
-        artifact = instance_elements.ArtifactBase(self.name, self.type_name, self.source_path)
+        from . import model
+        artifact = model.Artifact(self.name, self.type_name, self.source_path)
         artifact.description = deepcopy_with_locators(self.description)
         artifact.target_path = self.target_path
         artifact.repository_url = self.repository_url
@@ -508,7 +503,7 @@ class ArtifactTemplateBase(structure.ModelMixin):
             dump_parameters(context, self.properties)
 
 
-class PolicyTemplateBase(structure.ModelMixin):
+class PolicyTemplateBase(structure.TemplateModelMixin):
     """
     Policies can be applied to zero or more :class:`NodeTemplate` or :class:`GroupTemplate`
     instances.
@@ -519,8 +514,8 @@ class PolicyTemplateBase(structure.ModelMixin):
     * :code:`description`: Description
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
     * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`target_node_template_names`: Must be represented in the :class:`ServiceModel`
-    * :code:`target_group_template_names`: Must be represented in the :class:`ServiceModel`
+    * :code:`target_node_template_names`: Must be represented in the :class:`ServiceTemplate`
+    * :code:`target_group_template_names`: Must be represented in the :class:`ServiceTemplate`
     """
     __tablename__ = 'policy_template'
 
@@ -567,7 +562,8 @@ class PolicyTemplateBase(structure.ModelMixin):
             ('target_group_template_names', self.target_group_template_names)))
 
     def instantiate(self, context, *args, **kwargs):
-        policy = instance_elements.PolicyBase(self.name, self.type_name)
+        from . import model
+        policy = model.Policy(self.name, self.type_name)
         utils.instantiate_dict(context, self, policy.properties, self.properties)
         for node_template_name in self.target_node_template_names:
             policy.target_node_ids.extend(
@@ -603,14 +599,14 @@ class PolicyTemplateBase(structure.ModelMixin):
                     (str(context.style.node(v)) for v in self.target_group_template_names)))
 
 
-class MappingTemplateBase(structure.ModelMixin):
+class MappingTemplateBase(structure.TemplateModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
 
     Properties:
 
     * :code:`mapped_name`: Exposed capability or requirement name
-    * :code:`node_template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`node_template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`name`: Name of capability or requirement at the node template
     """
 
@@ -637,6 +633,7 @@ class MappingTemplateBase(structure.ModelMixin):
             ('name', self.name)))
 
     def instantiate(self, context, *args, **kwargs):
+        from . import model
         nodes = context.modeling.instance.find_nodes(self.node_template_name)
         if len(nodes) == 0:
             context.validation.report(
@@ -645,7 +642,9 @@ class MappingTemplateBase(structure.ModelMixin):
                                     self.node_template_name),
                 level=validation.Issue.BETWEEN_INSTANCES)
             return None
-        return instance_elements.MappingBase(self.mapped_name, nodes[0].id, self.name)
+        return model.Mapping(mapped_name=self.mapped_name,
+                             node_id=nodes[0].id,
+                             name=self.name)
 
     def validate(self, context):
         if not utils.query_has_item_named(context.modeling.model.node_templates,
@@ -662,7 +661,7 @@ class MappingTemplateBase(structure.ModelMixin):
                                       context.style.node(self.name)))
 
 
-class SubstitutionTemplateBase(structure.ModelMixin):
+class SubstitutionTemplateBase(structure.TemplateModelMixin):
     """
     Used to substitute a single node for the entire deployment.
 
@@ -692,7 +691,8 @@ class SubstitutionTemplateBase(structure.ModelMixin):
             ('mappings', formatting.as_raw_list(self.mappings))))
 
     def instantiate(self, context, container):
-        substitution = instance_elements.SubstitutionBase(self.node_type_name)
+        from . import model
+        substitution = model.Substitution(self.node_type_name)
         utils.instantiate_dict(context, container, substitution.mappings,
                                self.mappings)
         return substitution
@@ -716,11 +716,7 @@ class SubstitutionTemplateBase(structure.ModelMixin):
                                    'Mappings')
 
 
-# endregion
-
-# region Node templates
-
-class NodeTemplateBase(structure.ModelMixin):
+class NodeTemplateBase(structure.TemplateModelMixin):
     """
     A template for creating zero or more :class:`Node` instances.
 
@@ -835,7 +831,9 @@ class NodeTemplateBase(structure.ModelMixin):
             ('requirement_templates', formatting.as_raw_list(self.requirement_templates))))
 
     def instantiate(self, context, *args, **kwargs):
-        node = instance_elements.NodeBase(context, self.type_name, self.name)
+        from . import model
+        node = model.Node(name=self.name,
+                          type_name=self.type_name)
         utils.instantiate_dict(context, node, node.properties, self.properties)
         utils.instantiate_dict(context, node, node.interfaces, self.interface_templates)
         utils.instantiate_dict(context, node, node.artifacts, self.artifact_templates)
@@ -881,7 +879,7 @@ class NodeTemplateBase(structure.ModelMixin):
             utils.dump_list_values(context, self.requirement_templates, 'Requirement templates')
 
 
-class GroupTemplateBase(structure.ModelMixin):
+class GroupTemplateBase(structure.TemplateModelMixin):
     """
     A template for creating zero or more :class:`Group` instances.
 
@@ -896,8 +894,8 @@ class GroupTemplateBase(structure.ModelMixin):
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
     * :code:`policy_templates`: Dict of :class:`GroupPolicyTemplate`
-    * :code:`member_node_template_names`: Must be represented in the :class:`ServiceModel`
-    * :code:`member_group_template_names`: Must be represented in the :class:`ServiceModel`
+    * :code:`member_node_template_names`: Must be represented in the :class:`ServiceTemplate`
+    * :code:`member_group_template_names`: Must be represented in the :class:`ServiceTemplate`
     """
 
     __tablename__ = 'group_template'
@@ -954,7 +952,8 @@ class GroupTemplateBase(structure.ModelMixin):
             ('member_group_template_names', self.member_group_template_names1)))
 
     def instantiate(self, context, *args, **kwargs):
-        group = instance_elements.GroupBase(context, self.type_name, self.name)
+        from . import model
+        group = model.Group(context, self.type_name, self.name)
         utils.instantiate_dict(context, self, group.properties, self.properties)
         utils.instantiate_dict(context, self, group.interfaces, self.interface_templates)
         utils.instantiate_dict(context, self, group.policies, self.policy_templates)
@@ -993,11 +992,7 @@ class GroupTemplateBase(structure.ModelMixin):
                     (str(context.style.node(v)) for v in self.member_node_template_names)))
 
 
-# endregion
-
-# region Relationship templates
-
-class RequirementTemplateBase(structure.ModelMixin):
+class RequirementTemplateBase(structure.TemplateModelMixin):
     """
     A requirement for a :class:`NodeTemplate`. During instantiation will be matched with a
     capability of another
@@ -1010,7 +1005,7 @@ class RequirementTemplateBase(structure.ModelMixin):
 
     * :code:`name`: Name
     * :code:`target_node_type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`target_node_template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`target_node_template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`target_node_template_constraints`: List of :class:`FunctionType`
     * :code:`target_capability_type_name`: Type of capability in target node
     * :code:`target_capability_name`: Name of capability in target node
@@ -1165,7 +1160,7 @@ class RequirementTemplateBase(structure.ModelMixin):
                     self.relationship_template.dump(context)
 
 
-class CapabilityTemplateBase(structure.ModelMixin):
+class CapabilityTemplateBase(structure.TemplateModelMixin):
     """
     A capability of a :class:`NodeTemplate`. Nodes expose zero or more capabilities that can be
     matched with :class:`Requirement` instances of other nodes.
@@ -1255,7 +1250,8 @@ class CapabilityTemplateBase(structure.ModelMixin):
             ('properties', formatting.as_raw_dict(self.properties))))
 
     def instantiate(self, context, container):
-        capability = instance_elements.CapabilityBase(self.name, self.type_name)
+        from . import model
+        capability = model.Capability(self.name, self.type_name)
         capability.min_occurrences = self.min_occurrences
         capability.max_occurrences = self.max_occurrences
         utils.instantiate_dict(context, container, capability.properties, self.properties)
@@ -1290,7 +1286,7 @@ class CapabilityTemplateBase(structure.ModelMixin):
             dump_parameters(context, self.properties)
 
 
-class RelationshipTemplateBase(structure.ModelMixin):
+class RelationshipTemplateBase(structure.TemplateModelMixin):
     """
     Optional addition to a :class:`Requirement` in :class:`NodeTemplate` that can be applied when
     the requirement is matched with a capability.
@@ -1298,7 +1294,7 @@ class RelationshipTemplateBase(structure.ModelMixin):
     Properties:
 
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceModel`
+    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`description`: Description
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`source_interface_templates`: Dict of :class:`InterfaceTemplate`
@@ -1337,8 +1333,9 @@ class RelationshipTemplateBase(structure.ModelMixin):
             ('interface_templates', formatting.as_raw_list(self.interface_templates))))
 
     def instantiate(self, context, container):
-        relationship = instance_elements.RelationshipBase(name=self.template_name,
-                                                          type_name=self.type_name)
+        from . import model
+        relationship = model.Relationship(name=self.template_name,
+                                          type_name=self.type_name)
         utils.instantiate_dict(context, container,
                                relationship.properties, self.properties)
         utils.instantiate_dict(context, container,
@@ -1382,14 +1379,14 @@ def dump_parameters(context, parameters, name='Properties'):
     console.puts('%s:' % name)
     with context.style.indent:
         for parameter_name, parameter in parameters.items():
-            if parameter.type_name is not None:
+            if hasattr(parameter, 'type_name') and (parameter.type_name is not None):
                 console.puts('%s = %s (%s)' % (context.style.property(parameter_name),
                                                context.style.literal(parameter.value),
                                                context.style.type(parameter.type_name)))
             else:
                 console.puts('%s = %s' % (context.style.property(parameter_name),
                                           context.style.literal(parameter.value)))
-            if parameter.description:
+            if hasattr(parameter, 'description') and parameter.description:
                 console.puts(context.style.meta(parameter.description))
 
 
