@@ -37,8 +37,6 @@ __all__ = (
     'GroupTemplate',
     'ArtifactTemplate',
     'PolicyTemplate',
-    'GroupPolicyTemplate',
-    'GroupPolicyTriggerTemplate',
     'RequirementTemplate',
     'CapabilityTemplate',
     'RelationshipTemplate',
@@ -54,8 +52,6 @@ __all__ = (
     'Operation',
     'Capability',
     'Policy',
-    'GroupPolicy',
-    'GroupPolicyTrigger',
 
     'Execution',
     'ServiceInstanceUpdate',
@@ -121,15 +117,6 @@ class PolicyTemplate(aria_declarative_base, template_elements.PolicyTemplateBase
     pass
 
 
-class GroupPolicyTemplate(aria_declarative_base, template_elements.GroupPolicyTemplateBase):
-    pass
-
-
-class GroupPolicyTriggerTemplate(aria_declarative_base,
-                                 template_elements.GroupPolicyTriggerTemplateBase):
-    pass
-
-
 class RequirementTemplate(aria_declarative_base, template_elements.RequirementTemplateBase):
     pass
 
@@ -189,13 +176,6 @@ class Capability(aria_declarative_base, instance_elements.CapabilityBase):
 class Policy(aria_declarative_base, instance_elements.PolicyBase):
     pass
 
-
-class GroupPolicy(aria_declarative_base, instance_elements.GroupPolicyBase):
-    pass
-
-
-class GroupPolicyTrigger(aria_declarative_base, instance_elements.GroupPolicyTriggerBase):
-    pass
 
 # endregion
 

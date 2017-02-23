@@ -123,31 +123,59 @@ class ModelMixin(ModelElementBase):
                 return table_cls
 
     @classmethod
-    def foreign_key(cls, table_name, nullable=False):
-        """Return a ForeignKey object with the relevant
+    def foreign_key(cls, parent_table_name, nullable=False):
+        """Return a ForeignKey object.
 
-        :param table: Unique id column in the parent table
+        :param parent_table_name: Parent table name
         :param nullable: Should the column be allowed to remain empty
         """
         return Column(Integer,
-                      ForeignKey('{tablename}.id'.format(tablename=table_name), ondelete='CASCADE'),
+                      ForeignKey('{table}.id'.format(table=parent_table_name),
+                                 ondelete='CASCADE'),
                       nullable=nullable)
 
     @classmethod
-    def one_to_one_relationship(cls, table_name, backreference=None):
-        return relationship(lambda: cls._get_cls_by_tablename(table_name),
-                            backref=backref(backreference or cls.__tablename__, uselist=False))
+    def relationship_to_self(cls, local_column, relationship_kwargs=None):
+        relationship_kwargs = relationship_kwargs or {}
+
+        remote_side_str = '{cls.__name__}.{remote_column}'.format(
+            cls=cls,
+            remote_column=cls.id_column_name()
+        )
+
+        primaryjoin_str = '{remote_side_str} == {cls.__name__}.{local_column}'.format(
+            remote_side_str=remote_side_str,
+            cls=cls,
+            local_column=local_column)
+
+        return relationship(cls._get_cls_by_tablename(cls.__tablename__).__name__,
+                            primaryjoin=primaryjoin_str,
+                            remote_side=remote_side_str,
+                            post_update=True,
+                            **relationship_kwargs)
 
     @classmethod
-    def one_to_many_relationship(cls, other_table_name, backreference=None, key_column_name=None):
-        # See: http://docs.sqlalchemy.org/en/latest/orm/collections.html        
+    def one_to_one_relationship(cls, other_table_name, backreference=None,
+                                relationship_kwargs=None):
+        relationship_kwargs = relationship_kwargs or {}
+
+        return relationship(lambda: cls._get_cls_by_tablename(other_table_name),
+                            backref=backref(backreference or cls.__tablename__, uselist=False),
+                            **relationship_kwargs)
+
+    @classmethod
+    def one_to_many_relationship(cls, child_table_name, backreference=None, key_column_name=None,
+                                 relationship_kwargs=None):
+        relationship_kwargs = relationship_kwargs or {}
+
         collection_class = attribute_mapped_collection(key_column_name) \
             if key_column_name \
             else list
 
-        return relationship(lambda: cls._get_cls_by_tablename(other_table_name),
+        return relationship(lambda: cls._get_cls_by_tablename(child_table_name),
                             backref=backref(backreference or cls.__tablename__, uselist=False),
-                            collection_class=collection_class)
+                            collection_class=collection_class,
+                            **relationship_kwargs)
 
     @classmethod
     def many_to_one_relationship(cls,
@@ -155,6 +183,7 @@ class ModelMixin(ModelElementBase):
                                  foreign_key_column=None,
                                  backreference=None,
                                  backref_kwargs=None,
+                                 relationship_kwargs=None,
                                  **kwargs):
         """Return a one-to-many SQL relationship object
         Meant to be used from inside the *child* object
@@ -170,30 +199,14 @@ class ModelMixin(ModelElementBase):
 
         backref_kwargs = backref_kwargs or {}
         backref_kwargs.setdefault('lazy', 'dynamic')
-        # The following line make sure that when the *parent* is
-        #  deleted, all its connected children are deleted as well
+        # The following line make sure that when the *parent* is deleted, all its connected children
+        # are deleted as well
         backref_kwargs.setdefault('cascade', 'all')
 
         return relationship(lambda: cls._get_cls_by_tablename(parent_table_name),
                             backref=backref(backreference or utils.pluralize(cls.__tablename__),
                                             **backref_kwargs or {}),
                             **relationship_kwargs)
-
-    @classmethod
-    def relationship_to_self(cls, local_column):
-
-        remote_side_str = '{cls.__name__}.{remote_column}'.format(
-            cls=cls,
-            remote_column=cls.id_column_name()
-        )
-        primaryjoin_str = '{remote_side_str} == {cls.__name__}.{local_column}'.format(
-            remote_side_str=remote_side_str,
-            cls=cls,
-            local_column=local_column)
-        return relationship(cls._get_cls_by_tablename(cls.__tablename__).__name__,
-                            primaryjoin=primaryjoin_str,
-                            remote_side=remote_side_str,
-                            post_update=True)
 
     @classmethod
     def many_to_many_relationship(cls, other_table_name, table_prefix, key_column_name=None,
@@ -233,7 +246,6 @@ class ModelMixin(ModelElementBase):
             other_foreign_key
         )
 
-        # See: http://docs.sqlalchemy.org/en/latest/orm/collections.html        
         collection_class = attribute_mapped_collection(key_column_name) \
             if key_column_name \
             else list

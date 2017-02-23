@@ -16,6 +16,8 @@
 from random import randrange
 
 from shortuuid import ShortUUID
+from sqlalchemy.orm.exc import DetachedInstanceError
+from networkx.release import name
 
 from ..utils.console import puts
 
@@ -137,3 +139,12 @@ class classproperty(object):                                                    
 
     def __get__(self, instance, owner):
         return self._func(owner)
+
+
+def query_has_item_named(the_list, name):
+        try:
+            # This is most efficient, however it will not work if we don't have a session
+            return the_list.filter_by(name=name).count() > 0
+        except DetachedInstanceError:
+            # This will always work
+            return name in [v.name for v in the_list.all()]

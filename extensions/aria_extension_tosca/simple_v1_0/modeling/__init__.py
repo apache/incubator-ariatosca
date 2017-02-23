@@ -17,7 +17,6 @@ import re
 from types import FunctionType
 
 from aria.parser.modeling import Type, RelationshipType, PolicyType
-from aria.modeling import type as aria_type
 from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
                                  RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                  GroupTemplate, PolicyTemplate, SubstitutionTemplate,
@@ -39,6 +38,7 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
 
     model.description = context.presentation.get('service_template', 'description', 'value')
 
+    # Metadata
     metadata = context.presentation.get('service_template', 'metadata')
     if metadata is not None and False: # TODO
         metadata_model = Metadata()
@@ -51,6 +51,7 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
                 metadata_model.values[name] = v
         model.metadata = metadata_model
 
+    # Types
     create_types(context,
                  context.modeling.node_types,
                  context.presentation.get('service_template', 'node_types'))
@@ -75,43 +76,50 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
                  context.modeling.interface_types,
                  context.presentation.get('service_template', 'interface_types'))
 
+    # Topology template
     topology_template = context.presentation.get('service_template', 'topology_template')
     if topology_template is not None:
         create_properties_from_values(model.inputs, topology_template._get_input_values(context))
         create_properties_from_values(model.outputs, topology_template._get_output_values(context))
 
+    # Node templates
     node_templates = context.presentation.get('service_template', 'topology_template',
                                               'node_templates')
     if node_templates:
         for node_template in node_templates.itervalues():
             model.node_templates.append(create_node_template(context, node_template))
 
+    # Groups
     groups = context.presentation.get('service_template', 'topology_template', 'groups')
     if groups:
-        for group_name, group in groups.iteritems():
-            model.group_templates[group_name] = create_group_template(context, group)
+        for group in groups.itervalues():
+            model.group_templates.append(create_group_template(context, group))
 
+    # Policies
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
     if policies:
-        for policy_name, policy in policies.iteritems():
-            model.policy_templates[policy_name] = create_policy_template(context, policy)
+        for policy in policies.itervalues():
+            model.policy_templates.append(create_policy_template(context, policy))
 
+    # Substitution
     substitution_mappings = context.presentation.get('service_template', 'topology_template',
                                                      'substitution_mappings')
     if substitution_mappings is not None:
-        substitution_template = SubstitutionTemplate(substitution_mappings.node_type)
+        substitution_template = SubstitutionTemplate(node_type_name=substitution_mappings.node_type)
         capabilities = substitution_mappings.capabilities
         if capabilities:
             for mapped_capability_name, capability in capabilities.iteritems():
-                substitution_template.capability_templates[mapped_capability_name] = \
-                    MappingTemplate(mapped_capability_name, capability.node_template,
-                                    capability.capability)
+                substitution_template.mappings[mapped_capability_name] = \
+                    MappingTemplate(mapped_name='capability.' + mapped_capability_name,
+                                    node_template_name=capability.node_template,
+                                    name='capability.' + capability.capability)
         requirements = substitution_mappings.requirements
         if requirements:
             for mapped_requirement_name, requirement in requirements.iteritems():
-                substitution_template.requirement_templates[mapped_requirement_name] = \
-                    MappingTemplate(mapped_requirement_name, requirement.node_template,
-                                    requirement.requirement)
+                substitution_template.mappings[mapped_requirement_name] = \
+                    MappingTemplate(mapped_name='requirement.' + mapped_requirement_name,
+                                    node_template_name=requirement.node_template,
+                                    name='requirement.' + requirement.requirement)
         model.substitution_template = substitution_template
 
     return model
@@ -120,6 +128,9 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
 def create_node_template(context, node_template):
     node_type = node_template._get_type(context)
     model = NodeTemplate(name=node_template._name, type_name=node_type._name)
+    
+    model.default_instances = 1
+    model.min_instances = 0
 
     if node_template.description:
         model.description = node_template.description.value
@@ -144,9 +155,10 @@ def create_node_template(context, node_template):
             model.capability_templates[capability_name] = create_capability_template(context,
                                                                                      capability)
 
-    model.target_node_template_constraints = aria_type.StrictList(FunctionType)
-    create_node_filter_constraint_lambdas(context, node_template.node_filter,
-                                          model.target_node_template_constraints)
+    if model.target_node_template_constraints:
+        model.target_node_template_constraints = []
+        create_node_filter_constraint_lambdas(context, node_template.node_filter,
+                                              model.target_node_template_constraints)
 
     return model
 
@@ -161,8 +173,9 @@ def create_interface_template(context, interface):
     inputs = interface.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(the_input.value.type, the_input.value.value,
-                                                 the_input.value.description)
+            model.inputs[input_name] = Parameter(type_name=the_input.value.type,
+                                                 str_value=the_input.value.value,
+                                                 description=the_input.value.description)
 
     operations = interface.operations
     if operations:
@@ -189,8 +202,9 @@ def create_operation_template(context, operation): # pylint: disable=unused-argu
     inputs = operation.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(the_input.value.type, the_input.value.value,
-                                                 the_input.value.description)
+            model.inputs[input_name] = Parameter(type_name=the_input.value.type,
+                                                 str_value=the_input.value.value,
+                                                 description=the_input.value.description)
 
     return model
 
@@ -209,6 +223,7 @@ def create_artifact_template(context, artifact):
         model.repository_url = repository.url
         credential = repository._get_credential(context)
         if credential:
+            model.repository_credential = {}
             for k, v in credential.iteritems():
                 model.repository_credential[k] = v
 
@@ -236,8 +251,10 @@ def create_requirement_template(context, requirement):
 
     model = RequirementTemplate(**model)
 
-    create_node_filter_constraint_lambdas(context, requirement.node_filter,
-                                          model.target_node_template_constraints)
+    if model.target_node_template_constraints:
+        model.target_node_template_constraints = []
+        create_node_filter_constraint_lambdas(context, requirement.node_filter,
+                                              model.target_node_template_constraints)
 
     relationship = requirement.relationship
     if relationship is not None:
@@ -306,6 +323,7 @@ def create_group_template(context, group):
 
     members = group.members
     if members:
+        model.member_node_template_names = []
         for member in members:
             model.member_node_template_names.append(member)
 
@@ -322,10 +340,14 @@ def create_policy_template(context, policy):
     create_properties_from_values(model.properties, policy._get_property_values(context))
 
     node_templates, groups = policy._get_targets(context)
-    for node_template in node_templates:
-        model.target_node_template_names.append(node_template._name)
-    for group in groups:
-        model.target_group_template_names.append(group._name)
+    if node_templates:
+        model.target_node_template_names = []
+        for node_template in node_templates:
+            model.target_node_template_names.append(node_template._name)
+    if groups:
+        model.target_group_template_names = []
+        for group in groups:
+            model.target_group_template_names.append(group._name)
 
     return model
 
@@ -366,7 +388,7 @@ def create_types(context, root, types, normalize=None):
 def create_properties_from_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(type=prop.type,
+            properties[property_name] = Parameter(type_name=prop.type,
                                                   str_value=prop.value,
                                                   description=prop.description)
 
@@ -374,7 +396,7 @@ def create_properties_from_values(properties, source_properties):
 def create_properties_from_assignments(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(type=prop.value.type,
+            properties[property_name] = Parameter(type_name=prop.value.type,
                                                   str_value=prop.value.value,
                                                   description=prop.value.description)
 

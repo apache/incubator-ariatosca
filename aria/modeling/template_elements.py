@@ -51,7 +51,7 @@ class ServiceTemplateBase(structure.ModelMixin):
     Properties:
 
     * :code:`description`: Human-readable description
-    * :code:`metadata`: :class:`Metadata`
+    * :code:`meta_data`: :class:`Metadata`
     * :code:`node_templates`: Dict of :class:`NodeTemplate`
     * :code:`group_templates`: Dict of :class:`GroupTemplate`
     * :code:`policy_templates`: Dict of :class:`PolicyTemplate`
@@ -66,7 +66,6 @@ class ServiceTemplateBase(structure.ModelMixin):
     __private_fields__ = ['substitution_template_fk']
 
     description = Column(Text)
-    metadata = Column(Text)
 
     # region orchestrator required columns
 
@@ -83,6 +82,10 @@ class ServiceTemplateBase(structure.ModelMixin):
     def substitution_template_fk(cls):
         return cls.foreign_key('substitution_template', nullable=True)
 
+    @declared_attr
+    def meta_data_fk(cls):
+        return cls.foreign_key('meta_data', nullable=True)
+
     # endregion
 
     # region one-to-one relationships
@@ -90,6 +93,18 @@ class ServiceTemplateBase(structure.ModelMixin):
     @declared_attr
     def substitution_template(cls):
         return cls.one_to_one_relationship('substitution_template')
+
+    @declared_attr
+    def meta_data(cls):
+        return cls.one_to_one_relationship('meta_data')
+
+    # endregion
+
+    # region one-to-many relationships
+
+    @declared_attr
+    def operation_templates(cls):
+        return cls.one_to_many_relationship('operation_template', key_column_name='name')
 
     # endregion
 
@@ -111,7 +126,7 @@ class ServiceTemplateBase(structure.ModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('description', self.description),
-            ('metadata', formatting.as_raw(self.metadata)),
+            ('metadata', formatting.as_raw(self.meta_data)),
             ('node_templates', formatting.as_raw_list(self.node_templates)),
             ('group_templates', formatting.as_raw_list(self.group_templates)),
             ('policy_templates', formatting.as_raw_list(self.policy_templates)),
@@ -126,8 +141,8 @@ class ServiceTemplateBase(structure.ModelMixin):
 
         service_instance.description = deepcopy_with_locators(self.description)
 
-        if self.metadata is not None:
-            service_instance.metadata = self.metadata.instantiate(context, container)
+        if self.meta_data is not None:
+            service_instance.meta_data = self.meta_data.instantiate(context, container)
 
         for node_template in self.node_templates.itervalues():
             for _ in range(node_template.default_instances):
@@ -154,11 +169,11 @@ class ServiceTemplateBase(structure.ModelMixin):
         return service_instance
 
     def validate(self, context):
-        if self.metadata is not None:
-            self.metadata.validate(context)
-        utils.validate_dict_values(context, self.node_templates)
-        utils.validate_dict_values(context, self.group_templates)
-        utils.validate_dict_values(context, self.policy_templates)
+        if self.meta_data is not None:
+            self.meta_data.validate(context)
+        utils.validate_list_values(context, self.node_templates)
+        utils.validate_list_values(context, self.group_templates)
+        utils.validate_list_values(context, self.policy_templates)
         if self.substitution_template is not None:
             self.substitution_template.validate(context)
         utils.validate_dict_values(context, self.inputs)
@@ -166,11 +181,11 @@ class ServiceTemplateBase(structure.ModelMixin):
         utils.validate_dict_values(context, self.operation_templates)
 
     def coerce_values(self, context, container, report_issues):
-        if self.metadata is not None:
-            self.metadata.coerce_values(context, container, report_issues)
-        utils.coerce_dict_values(context, container, self.node_templates, report_issues)
-        utils.coerce_dict_values(context, container, self.group_templates, report_issues)
-        utils.coerce_dict_values(context, container, self.policy_templates, report_issues)
+        if self.meta_data is not None:
+            self.meta_data.coerce_values(context, container, report_issues)
+        utils.coerce_list_values(context, container, self.node_templates, report_issues)
+        utils.coerce_list_values(context, container, self.group_templates, report_issues)
+        utils.coerce_list_values(context, container, self.policy_templates, report_issues)
         if self.substitution_template is not None:
             self.substitution_template.coerce_values(context, container, report_issues)
         utils.coerce_dict_values(context, container, self.inputs, report_issues)
@@ -180,13 +195,13 @@ class ServiceTemplateBase(structure.ModelMixin):
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
-        if self.metadata is not None:
-            self.metadata.dump(context)
-        for node_template in self.node_templates.itervalues():
+        if self.meta_data is not None:
+            self.meta_data.dump(context)
+        for node_template in self.node_templates.all():
             node_template.dump(context)
-        for group_template in self.group_templates.itervalues():
+        for group_template in self.group_templates.all():
             group_template.dump(context)
-        for policy_template in self.policy_templates.itervalues():
+        for policy_template in self.policy_templates.all():
             policy_template.dump(context)
         if self.substitution_template is not None:
             self.substitution_template.dump(context)
@@ -238,18 +253,6 @@ class InterfaceTemplateBase(structure.ModelMixin):
     @declared_attr
     def operation_templates(cls):
         return cls.one_to_many_relationship('operation_template', key_column_name='name')
-
-    # endregion
-
-    # region many-to-one relationships
-   
-    #@declared_attr
-    #def node_template(cls):
-    #    return cls.many_to_one_relationship('node_template')
-
-    @declared_attr
-    def group_template(cls):
-        return cls.many_to_one_relationship('group_template')
 
     # endregion
 
@@ -355,18 +358,6 @@ class OperationTemplateBase(structure.ModelMixin):
 
     # endregion
 
-    # region many-to-one relationships
-
-    @declared_attr
-    def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
-
-    #@declared_attr
-    #def interface_template(cls):
-    #    return cls.many_to_one_relationship('interface_template')
-
-    # endregion
-
     # region many-to-many relationships
 
     @declared_attr
@@ -459,14 +450,6 @@ class ArtifactTemplateBase(structure.ModelMixin):
     repository_url = Column(Text)
     repository_credential = Column(aria_type.StrictDict(basestring, basestring))
 
-    # region many-to-one relationships
-
-    #@declared_attr
-    #def node_template(cls):
-    #    return cls.many_to_one_relationship('node_template')
-
-    # endregion
-
     # region many-to-many relationships
 
     @declared_attr
@@ -541,18 +524,13 @@ class PolicyTemplateBase(structure.ModelMixin):
     """
     __tablename__ = 'policy_template'
 
-    __private_fields__ = ['service_templaet_fk',
-                          'group_template_fk']
+    __private_fields__ = ['service_template_fk']
 
     # region foreign keys
 
     @declared_attr
     def service_template_fk(cls):
         return cls.foreign_key('service_template')
-
-    @declared_attr
-    def group_template_fk(cls):
-        return cls.foreign_key('group_template')
 
     # endregion
 
@@ -566,10 +544,6 @@ class PolicyTemplateBase(structure.ModelMixin):
     @declared_attr
     def service_template(cls):
         return cls.many_to_one_relationship('service_template')
-
-    @declared_attr
-    def group_template(cls):
-        return cls.many_to_one_relationship('group_template')
 
     # endregion
 
@@ -629,157 +603,6 @@ class PolicyTemplateBase(structure.ModelMixin):
                     (str(context.style.node(v)) for v in self.target_group_template_names)))
 
 
-class GroupPolicyTemplateBase(structure.ModelMixin):
-    """
-    Policies applied to groups.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`triggers`: Dict of :class:`GroupPolicyTrigger`
-    """
-
-    __tablename__ = 'group_policy_template'
-
-    __private_fields__ = ['group_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def group_template_fk(cls):
-        return cls.foreign_key('group_template')
-
-    # endregion
-
-    description = Column(Text)
-    type_name = Column(Text)
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('type_name', self.type_name),
-            ('properties', formatting.as_raw_dict(self.properties)),
-            ('triggers', formatting.as_raw_list(self.triggers))))
-
-    def instantiate(self, context, container):
-        group_policy = instance_elements.GroupPolicyBase(self.name, self.type_name)
-        group_policy.description = deepcopy_with_locators(self.description)
-        utils.instantiate_dict(context, container, group_policy.properties, self.properties)
-        utils.instantiate_dict(context, container, group_policy.triggers, self.triggers)
-        return group_policy
-
-    def validate(self, context):
-        if context.modeling.policy_types.get_descendant(self.type_name) is None:
-            context.validation.report('group policy "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.properties)
-        utils.validate_dict_values(context, self.triggers)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-        utils.coerce_dict_values(context, container, self.triggers, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Group policy type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.properties)
-            utils.dump_dict_values(context, self.triggers, 'Triggers')
-
-
-class GroupPolicyTriggerTemplateBase(structure.ModelMixin):
-    """
-    Triggers for :class:`GroupPolicyTemplate`.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`implementation`: Implementation string (interpreted by the orchestrator)
-    * :code:`properties`: Dict of :class:`Parameter`
-    """
-    __tablename__ = 'group_policy_trigger_template'
-
-    __private_fields__ = ['group_policy_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def group_policy_template_fk(cls):
-        return cls.foreign_key('group_policy_template')
-
-    # endregion
-
-    description = Column(Text)
-    implementation = Column(Text)
-
-    # region many-to-one relationships
-
-    @declared_attr
-    def group_policy_template(cls):
-        return cls.many_to_one_relationship('group_policy_template')
-
-    # endregion
-
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('implementation', self.implementation),
-            ('properties', formatting.as_raw_dict(self.properties))))
-
-    def instantiate(self, context, container):
-        group_policy_trigger = instance_elements.GroupPolicyTriggerBase(self.name,
-                                                                        self.implementation)
-        group_policy_trigger.description = deepcopy_with_locators(self.description)
-        utils.instantiate_dict(context, container, group_policy_trigger.properties,
-                               self.properties)
-        return group_policy_trigger
-
-    def validate(self, context):
-        utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Implementation: %s' % context.style.literal(self.implementation))
-            dump_parameters(context, self.properties)
-
-
 class MappingTemplateBase(structure.ModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
@@ -793,8 +616,18 @@ class MappingTemplateBase(structure.ModelMixin):
 
     __tablename__ = 'mapping_template'
 
+    __private_fields__ = ['substitution_template_fk']
+
     mapped_name = Column(Text)
     node_template_name = Column(Text)
+
+    # region foreign keys
+
+    @declared_attr
+    def substitution_template_fk(cls):
+        return cls.foreign_key('substitution_template', nullable=True)
+
+    # endregion
 
     @property
     def as_raw(self):
@@ -815,7 +648,8 @@ class MappingTemplateBase(structure.ModelMixin):
         return instance_elements.MappingBase(self.mapped_name, nodes[0].id, self.name)
 
     def validate(self, context):
-        if self.node_template_name not in context.modeling.model.node_templates:
+        if not utils.query_has_item_named(context.modeling.model.node_templates,
+                                          self.node_template_name):
             context.validation.report('mapping "%s" refers to an unknown node template: %s'
                                       % (
                                           self.mapped_name,
@@ -840,21 +674,14 @@ class SubstitutionTemplateBase(structure.ModelMixin):
     """
 
     __tablename__ = 'substitution_template'
+
     node_type_name = Column(Text)
 
-    # region many-to-many relationships
+    # region one-to-many relationships
 
     @declared_attr
-    def capability_templates(cls):
-        return cls.many_to_many_relationship('mapping_template',
-                                             table_prefix='capability_templates',
-                                             relationship_kwargs=dict(lazy='dynamic'))
-
-    @declared_attr
-    def requirement_templates(cls):
-        return cls.many_to_many_relationship('mapping_template',
-                                             table_prefix='requirement_templates',
-                                             relationship_kwargs=dict(lazy='dynamic'))
+    def mappings(cls):
+        return cls.one_to_many_relationship('mapping_template', key_column_name='name')
 
     # endregion
 
@@ -862,15 +689,12 @@ class SubstitutionTemplateBase(structure.ModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('node_type_name', self.node_type_name),
-            ('capability_templates', formatting.as_raw_list(self.capability_templates)),
-            ('requirement_templates', formatting.as_raw_list(self.requirement_templates))))
+            ('mappings', formatting.as_raw_list(self.mappings))))
 
     def instantiate(self, context, container):
         substitution = instance_elements.SubstitutionBase(self.node_type_name)
-        utils.instantiate_dict(context, container, substitution.capabilities,
-                               self.capability_templates)
-        utils.instantiate_dict(context, container, substitution.requirements,
-                               self.requirement_templates)
+        utils.instantiate_dict(context, container, substitution.mappings,
+                               self.mappings)
         return substitution
 
     def validate(self, context):
@@ -879,21 +703,17 @@ class SubstitutionTemplateBase(structure.ModelMixin):
                                       % formatting.safe_repr(self.node_type_name),
                                       level=validation.Issue.BETWEEN_TYPES)
 
-        utils.validate_dict_values(context, self.capability_templates)
-        utils.validate_dict_values(context, self.requirement_templates)
+        utils.validate_dict_values(context, self.mappings)
 
     def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.capability_templates, report_issues)
-        utils.coerce_dict_values(context, self, self.requirement_templates, report_issues)
+        utils.coerce_dict_values(context, self, self.mappings, report_issues)
 
     def dump(self, context):
         console.puts('Substitution template:')
         with context.style.indent:
             console.puts('Node type: %s' % context.style.type(self.node_type_name))
-            utils.dump_dict_values(context, self.capability_templates,
-                                   'Capability template mappings')
-            utils.dump_dict_values(context, self.requirement_templates,
-                                   'Requirement template mappings')
+            utils.dump_dict_values(context, self.mappings,
+                                   'Mappings')
 
 
 # endregion
@@ -1105,6 +925,14 @@ class GroupTemplateBase(structure.ModelMixin):
 
     # endregion
 
+    # region one-to-many relationships
+
+    @declared_attr
+    def interface_templates(cls):
+        return cls.one_to_many_relationship('interface_template', key_column_name='name')
+
+    # endregion
+
     # region many-to-many relationships
 
     @declared_attr
@@ -1122,7 +950,6 @@ class GroupTemplateBase(structure.ModelMixin):
             ('type_name', self.type_name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interface_templates', formatting.as_raw_list(self.interface_templates)),
-            ('policy_templates', formatting.as_raw_list(self.policy_templates)),
             ('member_node_template_names', self.member_node_template_names),
             ('member_group_template_names', self.member_group_template_names1)))
 
@@ -1147,12 +974,10 @@ class GroupTemplateBase(structure.ModelMixin):
 
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interface_templates)
-        utils.validate_dict_values(context, self.policy_templates)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, self, self.properties, report_issues)
         utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
-        utils.coerce_dict_values(context, self, self.policy_templates, report_issues)
 
     def dump(self, context):
         console.puts('Group template: %s' % context.style.node(self.name))
@@ -1163,7 +988,6 @@ class GroupTemplateBase(structure.ModelMixin):
                 console.puts('Type: %s' % context.style.type(self.type_name))
             dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interface_templates)
-            utils.dump_dict_values(context, self.policy_templates, 'Policy templates')
             if self.member_node_template_names:
                 console.puts('Member node templates: %s' % ', '.join(
                     (str(context.style.node(v)) for v in self.member_node_template_names)))
@@ -1510,10 +1334,7 @@ class RelationshipTemplateBase(structure.ModelMixin):
             ('template_name', self.template_name),
             ('description', self.description),
             ('properties', formatting.as_raw_dict(self.properties)),
-            ('source_interface_templates',
-             formatting.as_raw_list(self.source_interface_templates)),
-            ('target_interface_templates',
-             formatting.as_raw_list(self.target_interface_templates))))
+            ('interface_templates', formatting.as_raw_list(self.interface_templates))))
 
     def instantiate(self, context, container):
         relationship = instance_elements.RelationshipBase(name=self.template_name,
@@ -1521,9 +1342,7 @@ class RelationshipTemplateBase(structure.ModelMixin):
         utils.instantiate_dict(context, container,
                                relationship.properties, self.properties)
         utils.instantiate_dict(context, container,
-                               relationship.source_interfaces, self.source_interface_templates)
-        utils.instantiate_dict(context, container,
-                               relationship.target_interfaces, self.target_interface_templates)
+                               relationship.interfaces, self.interface_templates)
         return relationship
 
     def validate(self, context):
@@ -1536,13 +1355,11 @@ class RelationshipTemplateBase(structure.ModelMixin):
                 level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
-        utils.validate_dict_values(context, self.source_interface_templates)
-        utils.validate_dict_values(context, self.target_interface_templates)
+        utils.validate_dict_values(context, self.interface_templates)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, self, self.properties, report_issues)
-        utils.coerce_dict_values(context, self, self.source_interface_templates, report_issues)
-        utils.coerce_dict_values(context, self, self.target_interface_templates, report_issues)
+        utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
 
     def dump(self, context):
         if self.type_name is not None:
@@ -1554,10 +1371,7 @@ class RelationshipTemplateBase(structure.ModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             utils.dump_parameters(context, self.properties)
-            utils.dump_interfaces(context, self.source_interface_templates,
-                                  'Source interface templates')
-            utils.dump_interfaces(context, self.target_interface_templates,
-                                  'Target interface templates')
+            utils.dump_interfaces(context, self.interface_templates, 'Interface templates')
 
 # endregion
 

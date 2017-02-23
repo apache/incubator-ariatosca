@@ -19,9 +19,9 @@ from sqlalchemy import (
 )
 
 from ..parser.modeling import utils
+from ..storage import exceptions
 from ..utils.collections import OrderedDict
 from ..utils.console import puts
-from .. import exceptions
 
 from . import structure
 from . import type
@@ -36,8 +36,9 @@ class ParameterBase(structure.ModelMixin):
     This class is used by both service model and service instance elements.
     """
     __tablename__ = 'parameter'
+
     name = Column(Text, nullable=False)
-    type = Column(Text, nullable=False)
+    type_name = Column(Text, nullable=False)
 
     # Check: value type
     str_value = Column(Text)
@@ -47,31 +48,35 @@ class ParameterBase(structure.ModelMixin):
     def as_raw(self):
         return OrderedDict((
             ('name', self.name),
-            ('type_name', self.type),
+            ('type_name', self.type_name),
             ('value', self.value),
             ('description', self.description)))
 
     @property
     def value(self):
-        if self.type is None:
+        if self.type_name is None:
             return
         try:
-            if self.type.lower() in ('str', 'unicode'):
+            if self.type_name.lower() in ('str', 'unicode'):
                 return self.str_value.decode('utf-8')
-            elif self.type.lower() == 'int':
+            elif self.type_name.lower() == 'int':
                 return int(self.str_value)
-            elif self.type.lower() == 'bool':
+            elif self.type_name.lower() == 'bool':
                 return bool(self.str_value)
-            elif self.type.lower() == 'float':
+            elif self.type_name.lower() == 'float':
                 return float(self.str_value)
             else:
-                raise exceptions.StorageError('No supported type_name was provided')
+                return self.str_value
         except ValueError:
             raise exceptions.StorageError('Trying to cast {0} to {1} failed'.format(self.str_value,
                                                                                     self.type))
 
+    @value.setter
+    def value(self, value):
+        self.str_value = unicode(value)
+
     def instantiate(self, context, container):
-        return ParameterBase(self.type, self.str_value, self.description)
+        return ParameterBase(self.type_name, self.str_value, self.description)
 
     def coerce_values(self, context, container, report_issues):
         if self.str_value is not None:
@@ -88,7 +93,8 @@ class MetadataBase(structure.ModelMixin):
 
     * :code:`values`: Dict of custom values
     """
-    __tablename__ = 'metadata'
+    __tablename__ = 'meta_data'
+
     values = Column(type.StrictDict(key_cls=basestring))
 
     @property
