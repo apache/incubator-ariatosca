@@ -14,17 +14,14 @@
 # limitations under the License.
 
 """
-Aria's storage.structures module
+ARIA's storage.structures module
 Path: aria.storage.structures
 
-models module holds aria's models.
+models module holds ARIA's models.
 
 classes:
-    * Field - represents a single field.
-    * IterField - represents an iterable field.
-    * PointerField - represents a single pointer field.
-    * IterPointerField - represents an iterable pointers field.
-    * Model - abstract model implementation.
+    * ModelMixin - abstract model implementation.
+    * ModelIDMixin - abstract model implementation with IDs.
 """
 
 from sqlalchemy.orm import relationship, backref
@@ -39,25 +36,6 @@ from sqlalchemy import (
 )
 
 from . import utils
-
-
-class Function(object):
-    """
-    An intrinsic function.
-
-    Serves as a placeholder for a value that should eventually be derived by calling the function.
-    """
-
-    @property
-    def as_raw(self):
-        raise NotImplementedError
-
-    def _evaluate(self, context, container):
-        raise NotImplementedError
-
-    def __deepcopy__(self, memo):
-        # Circumvent cloning in order to maintain our state
-        return self
 
 
 class ModelMixin(object):
@@ -75,22 +53,9 @@ class ModelMixin(object):
         raise NotImplementedError
 
     @classmethod
-    def _get_cls_by_tablename(cls, tablename):
-        """Return class reference mapped to table.
-
-         :param tablename: String with name of table.
-         :return: Class reference or None.
-         """
-        if tablename in (cls.__name__, cls.__tablename__):
-            return cls
-
-        for table_cls in cls._decl_class_registry.values():
-            if tablename == getattr(table_cls, '__tablename__', None):
-                return table_cls
-
-    @classmethod
     def foreign_key(cls, parent_table_name, nullable=False):
-        """Return a ForeignKey object.
+        """
+        Return a ForeignKey object.
 
         :param parent_table_name: Parent table name
         :param nullable: Should the column be allowed to remain empty
@@ -101,47 +66,71 @@ class ModelMixin(object):
                       nullable=nullable)
 
     @classmethod
-    def relationship_to_self(cls, local_column, relationship_kwargs=None):
+    def relationship_to_self(cls,
+                             column_name,
+                             relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
-        remote_side_str = '{cls.__name__}.{remote_column}'.format(
-            cls=cls,
+        remote_side_str = '{cls}.{remote_column}'.format(
+            cls=cls.__name__,
             remote_column=cls.id_column_name()
         )
 
-        primaryjoin_str = '{remote_side_str} == {cls.__name__}.{local_column}'.format(
+        primaryjoin_str = '{remote_side_str} == {cls}.{column}'.format(
             remote_side_str=remote_side_str,
-            cls=cls,
-            local_column=local_column)
+            cls=cls.__name__,
+            column=column_name
+        )
 
-        return relationship(cls._get_cls_by_tablename(cls.__tablename__).__name__,
-                            primaryjoin=primaryjoin_str,
-                            remote_side=remote_side_str,
-                            post_update=True,
-                            **relationship_kwargs)
+        return relationship(
+            cls._get_cls_by_tablename(cls.__tablename__).__name__,
+            primaryjoin=primaryjoin_str,
+            remote_side=remote_side_str,
+            post_update=True,
+            **relationship_kwargs
+        )
 
     @classmethod
-    def one_to_one_relationship(cls, other_table_name, backreference=None,
+    def one_to_one_relationship(cls,
+                                other_table_name,
+                                backreference=None,
                                 relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
-        return relationship(lambda: cls._get_cls_by_tablename(other_table_name),
-                            backref=backref(backreference or cls.__tablename__, uselist=False),
-                            **relationship_kwargs)
+        return relationship(
+            lambda: cls._get_cls_by_tablename(other_table_name),
+            backref=backref(backreference or cls.__tablename__, uselist=False),
+            **relationship_kwargs
+        )
 
     @classmethod
-    def one_to_many_relationship(cls, child_table_name, backreference=None, key_column_name=None,
+    def one_to_many_relationship(cls,
+                                 child_table_name,
+                                 foreign_key_name=None,
+                                 backreference=None,
+                                 key_column_name=None,
                                  relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
+        
+        #foreign_keys = lambda: '{0}.{1}'.format(cls._get_cls_by_tablename(child_table_name).__name__,
+        #                                foreign_key_name) \
+        foreign_keys = lambda: getattr(cls._get_cls_by_tablename(child_table_name),
+                                       foreign_key_name) \
+            if foreign_key_name \
+            else None
+        #foreign_keys = foreign_key_name or None
 
         collection_class = attribute_mapped_collection(key_column_name) \
             if key_column_name \
             else list
 
-        return relationship(lambda: cls._get_cls_by_tablename(child_table_name),
-                            backref=backref(backreference or cls.__tablename__, uselist=False),
-                            collection_class=collection_class,
-                            **relationship_kwargs)
+        return relationship(
+            lambda: cls._get_cls_by_tablename(child_table_name),
+            backref=backref(backreference or cls.__tablename__, uselist=False),
+            foreign_keys=foreign_keys,
+            collection_class=collection_class,
+            **relationship_kwargs
+        )
 
     @classmethod
     def many_to_one_relationship(cls,
@@ -149,9 +138,9 @@ class ModelMixin(object):
                                  foreign_key_column=None,
                                  backreference=None,
                                  backref_kwargs=None,
-                                 relationship_kwargs=None,
-                                 **kwargs):
-        """Return a one-to-many SQL relationship object
+                                 relationship_kwargs=None):
+        """
+        Return a one-to-many SQL relationship object
         Meant to be used from inside the *child* object
 
         :param parent_class: Class of the parent table
@@ -159,7 +148,8 @@ class ModelMixin(object):
         :param foreign_key_column: The column of the foreign key (from the child table)
         :param backreference: The name to give to the reference to the child (on the parent table)
         """
-        relationship_kwargs = kwargs
+        relationship_kwargs = relationship_kwargs or {}
+
         if foreign_key_column:
             relationship_kwargs.setdefault('foreign_keys', getattr(cls, foreign_key_column))
 
@@ -169,17 +159,23 @@ class ModelMixin(object):
         # are deleted as well
         backref_kwargs.setdefault('cascade', 'all')
 
-        return relationship(lambda: cls._get_cls_by_tablename(parent_table_name),
-                            backref=backref(backreference or utils.pluralize(cls.__tablename__),
-                                            **backref_kwargs or {}),
-                            **relationship_kwargs)
+        return relationship(
+            lambda: cls._get_cls_by_tablename(parent_table_name),
+            backref=backref(backreference or utils.pluralize(cls.__tablename__), **backref_kwargs),
+            **relationship_kwargs
+        )
 
     @classmethod
-    def many_to_many_relationship(cls, other_table_name, table_prefix=None, key_column_name=None,
+    def many_to_many_relationship(cls,
+                                  other_table_name,
+                                  table_prefix=None,
+                                  key_column_name=None,
                                   relationship_kwargs=None):
-        """Return a many-to-many SQL relationship object
+        """
+        Return a many-to-many SQL relationship object
 
         Notes:
+
         1. The backreference name is the current table's table name
         2. This method creates a new helper table in the DB
 
@@ -189,6 +185,8 @@ class ModelMixin(object):
                              backreference name
         :param key_column_name: If provided, will use a dict class with this column as the key 
         """
+        relationship_kwargs = relationship_kwargs or {}
+        
         current_table_name = cls.__tablename__
         current_column_name = '{0}_id'.format(current_table_name)
         current_foreign_key = '{0}.id'.format(current_table_name)
@@ -221,7 +219,7 @@ class ModelMixin(object):
             secondary=secondary_table,
             backref=backref(backref_name),
             collection_class=collection_class,
-            **(relationship_kwargs or {})
+            **relationship_kwargs
         )
 
     @staticmethod
@@ -231,13 +229,14 @@ class ModelMixin(object):
                             second_column_name,
                             first_foreign_key,
                             second_foreign_key):
-        """Create a helper table for a many-to-many relationship
+        """
+        Create a helper table for a many-to-many relationship
 
         :param helper_table_name: The name of the table
         :param first_column_name: The name of the first column in the table
         :param second_column_name: The name of the second column in the table
         :param first_foreign_key: The string representing the first foreign key,
-        for example `blueprint.storage_id`, or `tenants.id`
+               for example `blueprint.storage_id`, or `tenants.id`
         :param second_foreign_key: The string representing the second foreign key
         :return: A Table object
         """
@@ -257,11 +256,12 @@ class ModelMixin(object):
         )
 
     def to_dict(self, fields=None, suppress_error=False):
-        """Return a dict representation of the model
+        """
+        Return a dict representation of the model
 
         :param suppress_error: If set to True, sets `None` to attributes that
-        it's unable to retrieve (e.g., if a relationship wasn't established
-        yet, and so it's impossible to access a property through it)
+                               it's unable to retrieve (e.g., if a relationship wasn't established
+                               yet, and so it's impossible to access a property through it)
         """
         res = dict()
         fields = fields or self.fields()
@@ -291,7 +291,8 @@ class ModelMixin(object):
 
     @classmethod
     def fields(cls):
-        """Return the list of field names for this table
+        """
+        Return the list of field names for this table
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
@@ -299,43 +300,25 @@ class ModelMixin(object):
         fields.update(cls.__table__.columns.keys())
         return fields - set(getattr(cls, '__private_fields__', []))
 
+    @classmethod
+    def _get_cls_by_tablename(cls, tablename):
+        """
+        Return class reference mapped to table.
+
+         :param tablename: String with name of table.
+         :return: Class reference or None.
+         """
+        if tablename in (cls.__name__, cls.__tablename__):
+            return cls
+
+        for table_cls in cls._decl_class_registry.values():
+            if tablename == getattr(table_cls, '__tablename__', None):
+                return table_cls
+
     def __repr__(self):
-        return '<{__class__.__name__} id=`{id}`>'.format(
-            __class__=self.__class__,
+        return '<{cls} id=`{id}`>'.format(
+            cls=self.__class__.__name__,
             id=getattr(self, self.name_column_name()))
-
-
-class InstanceModelMixin(ModelMixin):
-    """
-    Mixin for :class:`ServiceInstance` models.
-
-    All models support validation, diagnostic dumping, and representation as
-    raw data (which can be translated into JSON or YAML) via :code:`as_raw`.
-    """
-
-    @property
-    def as_raw(self):
-        raise NotImplementedError
-
-    def validate(self, context):
-        pass
-
-    def coerce_values(self, context, container, report_issues):
-        pass
-
-    def dump(self, context):
-        pass
-
-
-class TemplateModelMixin(InstanceModelMixin):
-    """
-    Mixin for :class:`ServiceTemplate` models.
-
-    All model models can be instantiated into :class:`ServiceInstance` models.
-    """
-
-    def instantiate(self, context, container):
-        raise NotImplementedError
 
 
 class ModelIDMixin(object):

@@ -86,7 +86,7 @@ def instantiate_dict(context, container, the_dict, from_dict):
 def instantiate_list(context, container, the_list, from_list):
     if not from_list:
         return
-    for value in from_list.iteritems():
+    for value in from_list:
         value = value.instantiate(context, container)
         if value is not None:
             the_list.append(value)
@@ -151,9 +151,10 @@ class classproperty(object):                                                    
 
 
 def query_has_item_named(the_list, name):
-        try:
-            # This is most efficient, however it will not work if we don't have a session
-            return the_list.filter_by(name=name).count() > 0
-        except DetachedInstanceError:
-            # This will always work
-            return name in [v.name for v in the_list.all()]
+    print dir(the_list)
+    try:
+        # This is most efficient, however it will not work if we don't have a session
+        return the_list.filter_by(name=name).count() > 0
+    except DetachedInstanceError:
+        # This will always work
+        return name in [v.name for v in the_list.all()]

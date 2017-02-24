@@ -14,26 +14,18 @@
 # limitations under the License.
 
 """
-Aria's storage.models module
+ARIA's storage.models module
 Path: aria.storage.models
 
-models module holds aria's models.
+models module holds ARIA's models.
 
 classes:
-    * Field - represents a single field.
-    * IterField - represents an iterable field.
-    * Model - abstract model implementation.
-    * Snapshot - snapshots implementation model.
-    * Deployment - deployment implementation model.
-    * DeploymentUpdateStep - deployment update step implementation model.
-    * DeploymentUpdate - deployment update implementation model.
-    * DeploymentModification - deployment modification implementation model.
     * Execution - execution implementation model.
-    * Node - node implementation model.
-    * Relationship - relationship implementation model.
-    * NodeInstance - node instance implementation model.
-    * RelationshipInstance - relationship instance implementation model.
+    * ServiceUpdate - service update implementation model.
+    * ServiceUpdateStep - service update step implementation model.
+    * ServiceModification - service modification implementation model.
     * Plugin - plugin implementation model.
+    * Task - a task
 """
 from collections import namedtuple
 from datetime import datetime
@@ -55,13 +47,13 @@ from sqlalchemy.ext.declarative import declared_attr
 from ..orchestrator.exceptions import TaskAbortException, TaskRetryException
 
 from .type import List, Dict
-from .structure import ModelMixin
+from .base import ModelMixin
 
 __all__ = (
-    'ServiceInstanceUpdateStepBase',
-    'ServiceInstanceUpdateBase',
-    'ServiceInstanceModificationBase',
     'Execution',
+    'ServiceUpdateBase',
+    'ServiceUpdateStepBase',
+    'ServiceModificationBase',
     'PluginBase',
     'TaskBase'
 )
@@ -76,7 +68,7 @@ class Execution(ModelMixin):
     # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
     __tablename__ = 'execution'
 
-    __private_fields__ = ['service_instance_fk']
+    __private_fields__ = ['service_fk']
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -123,23 +115,23 @@ class Execution(ModelMixin):
 
     @declared_attr
     def service_template(cls):
-        return association_proxy('service_instance', 'service_template')
+        return association_proxy('service', 'service_template')
 
     @declared_attr
-    def service_instance_fk(cls):
-        return cls.foreign_key('service_instance')
+    def service_fk(cls):
+        return cls.foreign_key('service')
 
     @declared_attr
-    def service_instance(cls):
-        return cls.many_to_one_relationship('service_instance')
+    def service(cls):
+        return cls.many_to_one_relationship('service')
 
     @declared_attr
-    def service_instance_name(cls):
-        return association_proxy('service_instance', cls.name_column_name())
+    def service_name(cls):
+        return association_proxy('service', cls.name_column_name())
 
     @declared_attr
     def service_template_name(cls):
-        return association_proxy('service_instance', 'service_template_name')
+        return association_proxy('service', 'service_template_name')
 
     def __str__(self):
         return '<{0} id=`{1}` (status={2})>'.format(
@@ -149,24 +141,24 @@ class Execution(ModelMixin):
         )
 
 
-class ServiceInstanceUpdateBase(ModelMixin):
+class ServiceUpdateBase(ModelMixin):
     """
     Deployment update model representation.
     """
     # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
     steps = None
 
-    __tablename__ = 'service_instance_update'
-    __private_fields__ = ['service_instance_fk',
+    __tablename__ = 'service_update'
+    __private_fields__ = ['service_fk',
                           'execution_fk']
 
     _private_fields = ['execution_fk', 'deployment_fk']
 
     created_at = Column(DateTime, nullable=False, index=True)
-    service_instance_plan = Column(Dict, nullable=False)
-    service_instance_update_node_instances = Column(Dict)
-    service_instance_update_service_instance = Column(Dict)
-    service_instance_update_nodes = Column(List)
+    service_plan = Column(Dict, nullable=False)
+    service_update_node_instances = Column(Dict)
+    service_update_service_instance = Column(Dict)
+    service_update_nodes = Column(List)
     modified_entity_ids = Column(Dict)
     state = Column(Text)
 
@@ -183,31 +175,31 @@ class ServiceInstanceUpdateBase(ModelMixin):
         return association_proxy('execution', cls.name_column_name())
 
     @declared_attr
-    def service_instance_fk(cls):
-        return cls.foreign_key('service_instance')
+    def service_fk(cls):
+        return cls.foreign_key('service')
 
     @declared_attr
-    def service_instance(cls):
-        return cls.many_to_one_relationship('service_instance')
+    def service(cls):
+        return cls.many_to_one_relationship('service')
 
     @declared_attr
-    def service_instance_name(cls):
-        return association_proxy('service_instance', cls.name_column_name())
+    def service_name(cls):
+        return association_proxy('service', cls.name_column_name())
 
     def to_dict(self, suppress_error=False, **kwargs):
-        dep_update_dict = super(ServiceInstanceUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
+        dep_update_dict = super(ServiceUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
         # Taking care of the fact the DeploymentSteps are _BaseModels
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         return dep_update_dict
 
 
-class ServiceInstanceUpdateStepBase(ModelMixin):
+class ServiceUpdateStepBase(ModelMixin):
     """
     Deployment update step model representation.
     """
     # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
-    __tablename__ = 'service_instance_update_step'
-    __private_fields__ = ['service_instance_update_fk']
+    __tablename__ = 'service_update_step'
+    __private_fields__ = ['service_update_fk']
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
@@ -234,12 +226,12 @@ class ServiceInstanceUpdateStepBase(ModelMixin):
     entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
 
     @declared_attr
-    def service_instance_update_fk(cls):
-        return cls.foreign_key('service_instance_update')
+    def service_update_fk(cls):
+        return cls.foreign_key('service_update')
 
     @declared_attr
-    def service_instance_update(cls):
-        return cls.many_to_one_relationship('service_instance_update',
+    def service_update(cls):
+        return cls.many_to_one_relationship('service_update',
                                             backreference='steps')
 
     @declared_attr
@@ -274,12 +266,12 @@ class ServiceInstanceUpdateStepBase(ModelMixin):
         return False
 
 
-class ServiceInstanceModificationBase(ModelMixin):
+class ServiceModificationBase(ModelMixin):
     """
     Deployment modification model representation.
     """
-    __tablename__ = 'service_instance_modification'
-    __private_fields__ = ['service_instance_fk']
+    __tablename__ = 'service_modification'
+    __private_fields__ = ['service_fk']
 
     STARTED = 'started'
     FINISHED = 'finished'
@@ -296,17 +288,17 @@ class ServiceInstanceModificationBase(ModelMixin):
     status = Column(Enum(*STATES, name='deployment_modification_status'))
 
     @declared_attr
-    def service_instance_fk(cls):
-        return cls.foreign_key('service_instance')
+    def service_fk(cls):
+        return cls.foreign_key('service')
 
     @declared_attr
-    def service_instance(cls):
-        return cls.many_to_one_relationship('service_instance',
+    def service(cls):
+        return cls.many_to_one_relationship('service',
                                             backreference='modifications')
 
     @declared_attr
-    def service_instance_name(cls):
-        return association_proxy('service_instance', cls.name_column_name())
+    def service_name(cls):
+        return association_proxy('service', cls.name_column_name())
 
 
 class PluginBase(ModelMixin):
@@ -356,7 +348,7 @@ class TaskBase(ModelMixin):
 
     @declared_attr
     def relationship_name(cls):
-        return association_proxy('relationships', cls.name_column_name())
+        return association_proxy('relationship', cls.name_column_name())
 
     @declared_attr
     def relationship(cls):

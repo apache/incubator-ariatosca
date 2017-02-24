@@ -20,7 +20,7 @@ from aria.parser.modeling import Type, RelationshipType, PolicyType
 from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
                                  RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                  GroupTemplate, PolicyTemplate, SubstitutionTemplate,
-                                 MappingTemplate, InterfaceTemplate, OperationTemplate,
+                                 SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
                                  ArtifactTemplate, Metadata, Parameter)
 
 #from aria.modeling.model import (Type, RelationshipType, PolicyType, ServiceModel, NodeTemplate,
@@ -108,16 +108,16 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
         if capabilities:
             for mapped_capability_name, capability in capabilities.iteritems():
                 substitution_template.mappings[mapped_capability_name] = \
-                    MappingTemplate(mapped_name='capability.' + mapped_capability_name,
-                                    node_template_name=capability.node_template,
-                                    name='capability.' + capability.capability)
+                    SubstitutionTemplateMapping(mapped_name='capability.' + mapped_capability_name,
+                                                node_template_name=capability.node_template,
+                                                name='capability.' + capability.capability)
         requirements = substitution_mappings.requirements
         if requirements:
             for mapped_requirement_name, requirement in requirements.iteritems():
                 substitution_template.mappings[mapped_requirement_name] = \
-                    MappingTemplate(mapped_name='requirement.' + mapped_requirement_name,
-                                    node_template_name=requirement.node_template,
-                                    name='requirement.' + requirement.requirement)
+                    SubstitutionTemplateMapping(mapped_name='requirement.' + mapped_requirement_name,
+                                                node_template_name=requirement.node_template,
+                                                name='requirement.' + requirement.requirement)
         model.substitution_template = substitution_template
 
     return model

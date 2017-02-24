@@ -26,18 +26,32 @@ from sqlalchemy import (
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
+from ..storage import exceptions
 from ..parser import validation
+from ..parser.modeling import utils as parser_utils
 from ..utils import collections, formatting, console
+from .service_models import InstanceModelMixin
 from . import (
     utils,
-    structure,
-    type as aria_type
+    type as modeling_type
 )
 
 # pylint: disable=no-self-argument, no-member, abstract-method
 
 
-class ServiceTemplateBase(structure.TemplateModelMixin):
+
+class TemplateModelMixin(InstanceModelMixin):
+    """
+    Mixin for :class:`ServiceTemplate` models.
+
+    All model models can be instantiated into :class:`ServiceInstance` models.
+    """
+
+    def instantiate(self, context, container):
+        raise NotImplementedError
+
+
+class ServiceTemplateBase(TemplateModelMixin):
     """
     A service template is a normalized blueprint from which :class:`ServiceInstance` instances can
     be created.
@@ -64,45 +78,26 @@ class ServiceTemplateBase(structure.TemplateModelMixin):
 
     description = Column(Text)
 
-    # region orchestrator required columns
-
-    created_at = Column(DateTime, nullable=False, index=True)
-    main_file_name = Column(Text)
-    plan = Column(aria_type.Dict, nullable=False)
-    updated_at = Column(DateTime)
-
-    # endregion
-
-    # region foreign keys
-
-    @declared_attr
-    def substitution_template_fk(cls):
-        return cls.foreign_key('substitution_template', nullable=True)
-
-    # endregion
-
-    # region one-to-one relationships
-
-    @declared_attr
-    def substitution_template(cls):
-        return cls.one_to_one_relationship('substitution_template')
-
-    # endregion
-
-    # region one-to-many relationships
-
-    @declared_attr
-    def operation_templates(cls):
-        return cls.one_to_many_relationship('operation_template', key_column_name='name')
-
-    # endregion
-
-    # region many-to-many relationships
-
     @declared_attr
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SqlAlchemy!
         return cls.many_to_many_relationship('metadata', key_column_name='name')
+
+    @declared_attr
+    def node_templates(cls):
+        return cls.one_to_many_relationship('node_template')
+
+    @declared_attr
+    def group_templates(cls):
+        return cls.one_to_many_relationship('group_template')
+
+    @declared_attr
+    def policy_templates(cls):
+        return cls.one_to_many_relationship('policy_template')
+
+    @declared_attr
+    def substitution_template(cls):
+        return cls.one_to_one_relationship('substitution_template')
 
     @declared_attr
     def inputs(cls):
@@ -114,7 +109,33 @@ class ServiceTemplateBase(structure.TemplateModelMixin):
         return cls.many_to_many_relationship('parameter', table_prefix='outputs',
                                              key_column_name='name')
 
+    @declared_attr
+    def operation_templates(cls):
+        return cls.one_to_many_relationship('operation_template', key_column_name='name')
+
+    # region orchestrator required columns
+
+    created_at = Column(DateTime, nullable=False, index=True)
+    main_file_name = Column(Text)
+    plan = Column(modeling_type.Dict, nullable=False)
+    updated_at = Column(DateTime)
+
     # endregion
+
+    # region foreign keys
+
+    @declared_attr
+    def substitution_template_fk(cls):
+        return cls.foreign_key('substitution_template', nullable=True)
+
+    # endregion
+    
+    def get_node_template(self, node_template_name):
+        if self.node_templates:
+            for node_template in self.node_templates:
+                if node_template.name == node_template_name:
+                    return node_template
+        return None
 
     @property
     def as_raw(self):
@@ -131,36 +152,34 @@ class ServiceTemplateBase(structure.TemplateModelMixin):
 
     def instantiate(self, context, container):
         from . import model
-        service_instance = model.ServiceInstance()
-        context.modeling.instance = service_instance
+        service = model.Service(description=deepcopy_with_locators(self.description))
 
-        service_instance.description = deepcopy_with_locators(self.description)
+        context.modeling.instance = service
 
-        utils.instantiate_dict(context, self, service_instance.meta_data, self.meta_data)
+        utils.instantiate_dict(context, self, service.meta_data, self.meta_data)
 
         for node_template in self.node_templates:
             for _ in range(node_template.default_instances):
                 node = node_template.instantiate(context, container)
-                service_instance.nodes[node.id] = node
+                service.nodes.append(node)
 
-        utils.instantiate_list(context, self, service_instance.groups, self.group_templates)
-        utils.instantiate_list(context, self, service_instance.policies, self.policy_templates)
-        utils.instantiate_dict(context, self, service_instance.operations, self.operation_templates)
+        utils.instantiate_list(context, self, service.groups, self.group_templates)
+        utils.instantiate_list(context, self, service.policies, self.policy_templates)
+        utils.instantiate_dict(context, self, service.operations, self.operation_templates)
 
         if self.substitution_template is not None:
-            service_instance.substitution = self.substitution_template.instantiate(context,
-                                                                                   container)
+            service.substitution = self.substitution_template.instantiate(context, container)
 
-        utils.instantiate_dict(context, self, service_instance.inputs, self.inputs)
-        utils.instantiate_dict(context, self, service_instance.outputs, self.outputs)
+        utils.instantiate_dict(context, self, service.inputs, self.inputs)
+        utils.instantiate_dict(context, self, service.outputs, self.outputs)
 
         for name, the_input in context.modeling.inputs.iteritems():
-            if name not in service_instance.inputs:
+            if name not in service.inputs:
                 context.validation.report('input "%s" is not supported' % name)
             else:
-                service_instance.inputs[name].value = the_input
+                service.inputs[name].value = the_input
 
-        return service_instance
+        return service
 
     def validate(self, context):
         utils.validate_dict_values(context, self.meta_data)
@@ -188,11 +207,12 @@ class ServiceTemplateBase(structure.TemplateModelMixin):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
         dump_parameters(context, self.meta_data, 'Metadata')
-        for node_template in self.node_templates.all():
+
+        for node_template in self.node_templates:
             node_template.dump(context)
-        for group_template in self.group_templates.all():
+        for group_template in self.group_templates:
             group_template.dump(context)
-        for policy_template in self.policy_templates.all():
+        for policy_template in self.policy_templates:
             policy_template.dump(context)
         if self.substitution_template is not None:
             self.substitution_template.dump(context)
@@ -201,522 +221,7 @@ class ServiceTemplateBase(structure.TemplateModelMixin):
         utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
-class InterfaceTemplateBase(structure.TemplateModelMixin):
-    """
-    A typed set of :class:`OperationTemplate`.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`inputs`: Dict of :class:`Parameter`
-    * :code:`operation_templates`: Dict of :class:`OperationTemplate`
-    """
-
-    __tablename__ = 'interface_template'
-
-    __private_fields__ = ['node_template_fk',
-                          'group_template_fk',
-                          'relationship_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def node_template_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
-
-    @declared_attr
-    def group_template_fk(cls):
-        return cls.foreign_key('group_template', nullable=True)
-
-    @declared_attr
-    def relationship_template_fk(cls):
-        return cls.foreign_key('relationship_template', nullable=True)
-
-    # endregion
-
-    description = Column(Text)
-    type_name = Column(Text)
-
-    # region one-to-many relationships
-
-    @declared_attr
-    def operation_templates(cls):
-        return cls.one_to_many_relationship('operation_template', key_column_name='name')
-
-    # endregion
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             key_column_name='name')
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('type_name', self.type_name),
-            ('inputs', formatting.as_raw_dict(self.properties)),  # pylint: disable=no-member
-            # TODO fix self.properties reference
-            ('operation_templates', formatting.as_raw_list(self.operation_templates))))
-
-    def instantiate(self, context, container):
-        from . import model
-        interface = model.Interface(name=self.name,
-                                    type_name=self.type_name)
-        interface.description = deepcopy_with_locators(self.description)
-        utils.instantiate_dict(context, container, interface.inputs, self.inputs)
-        utils.instantiate_dict(context, container, interface.operations, self.operation_templates)
-        return interface
-
-    def validate(self, context):
-        if self.type_name:
-            if context.modeling.interface_types.get_descendant(self.type_name) is None:
-                context.validation.report('interface "%s" has an unknown type: %s'
-                                          % (self.name, formatting.safe_repr(self.type_name)),
-                                          level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.inputs)
-        utils.validate_dict_values(context, self.operation_templates)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-        utils.coerce_dict_values(context, container, self.operation_templates, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Interface type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.inputs, 'Inputs')
-            utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
-
-
-class OperationTemplateBase(structure.TemplateModelMixin):
-    """
-    An operation in a :class:`InterfaceTemplate`.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`implementation`: Implementation string (interpreted by the orchestrator)
-    * :code:`dependencies`: List of strings (interpreted by the orchestrator)
-    * :code:`executor`: Executor string (interpreted by the orchestrator)
-    * :code:`max_retries`: Maximum number of retries allowed in case of failure
-    * :code:`retry_interval`: Interval between retries
-    * :code:`inputs`: Dict of :class:`Parameter`
-    """
-
-    __tablename__ = 'operation_template'
-
-    __private_fields__ = ['service_template_fk',
-                          'interface_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def service_template_fk(cls):
-        return cls.foreign_key('service_template', nullable=True)
-
-    @declared_attr
-    def interface_template_fk(cls):
-        return cls.foreign_key('interface_template', nullable=True)
-
-    # endregion
-
-    description = Column(Text)
-    implementation = Column(Text)
-    dependencies = Column(aria_type.StrictList(item_cls=basestring))
-    executor = Column(Text)
-    max_retries = Column(Integer)
-    retry_interval = Column(Integer)
-
-    # region orchestrator required columns
-
-    plugin = Column(Text)
-    operation = Column(Boolean)
-
-    # endregion
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('implementation', self.implementation),
-            ('dependencies', self.dependencies),
-            ('executor', self.executor),
-            ('max_retries', self.max_retries),
-            ('retry_interval', self.retry_interval),
-            ('inputs', formatting.as_raw_dict(self.inputs))))
-
-    def instantiate(self, context, container):
-        from . import model
-        operation = model.Operation()
-        operation.description = deepcopy_with_locators(self.description)
-        operation.implementation = self.implementation
-        operation.dependencies = self.dependencies
-        operation.executor = self.executor
-        operation.max_retries = self.max_retries
-        operation.retry_interval = self.retry_interval
-        utils.instantiate_dict(context, container, operation.inputs, self.inputs)
-        return operation
-
-    def validate(self, context):
-        utils.validate_dict_values(context, self.inputs)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            if self.implementation is not None:
-                console.puts('Implementation: %s' % context.style.literal(self.implementation))
-            if self.dependencies:
-                console.puts('Dependencies: %s' % ', '.join(
-                    (str(context.style.literal(v)) for v in self.dependencies)))
-            if self.executor is not None:
-                console.puts('Executor: %s' % context.style.literal(self.executor))
-            if self.max_retries is not None:
-                console.puts('Max retries: %s' % context.style.literal(self.max_retries))
-            if self.retry_interval is not None:
-                console.puts('Retry interval: %s' % context.style.literal(self.retry_interval))
-            dump_parameters(context, self.inputs, 'Inputs')
-
-
-class ArtifactTemplateBase(structure.TemplateModelMixin):
-    """
-    A file associated with a :class:`NodeTemplate`.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`source_path`: Source path (CSAR or repository)
-    * :code:`target_path`: Path at destination machine
-    * :code:`repository_url`: Repository URL
-    * :code:`repository_credential`: Dict of string
-    * :code:`properties`: Dict of :class:`Parameter`
-    """
-
-    __tablename__ = 'artifact_template'
-
-    __private_fields__ = ['node_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def node_template_fk(cls):
-        return cls.foreign_key('node_template')
-
-    # endregion
-
-    description = Column(Text)
-    type_name = Column(Text)
-    source_path = Column(Text)
-    target_path = Column(Text)
-    repository_url = Column(Text)
-    repository_credential = Column(aria_type.StrictDict(basestring, basestring))
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('type_name', self.type_name),
-            ('source_path', self.source_path),
-            ('target_path', self.target_path),
-            ('repository_url', self.repository_url),
-            ('repository_credential', formatting.as_agnostic(self.repository_credential)),
-            ('properties', formatting.as_raw_dict(self.properties.iteritems()))))
-
-    def instantiate(self, context, container):
-        from . import model
-        artifact = model.Artifact(self.name, self.type_name, self.source_path)
-        artifact.description = deepcopy_with_locators(self.description)
-        artifact.target_path = self.target_path
-        artifact.repository_url = self.repository_url
-        artifact.repository_credential = self.repository_credential
-        utils.instantiate_dict(context, container, artifact.properties, self.properties)
-        return artifact
-
-    def validate(self, context):
-        if context.modeling.artifact_types.get_descendant(self.type_name) is None:
-            context.validation.report('artifact "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Artifact type: %s' % context.style.type(self.type_name))
-            console.puts('Source path: %s' % context.style.literal(self.source_path))
-            if self.target_path is not None:
-                console.puts('Target path: %s' % context.style.literal(self.target_path))
-            if self.repository_url is not None:
-                console.puts('Repository URL: %s' % context.style.literal(self.repository_url))
-            if self.repository_credential:
-                console.puts('Repository credential: %s'
-                             % context.style.literal(self.repository_credential))
-            dump_parameters(context, self.properties)
-
-
-class PolicyTemplateBase(structure.TemplateModelMixin):
-    """
-    Policies can be applied to zero or more :class:`NodeTemplate` or :class:`GroupTemplate`
-    instances.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`target_node_template_names`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`target_group_template_names`: Must be represented in the :class:`ServiceTemplate`
-    """
-    __tablename__ = 'policy_template'
-
-    __private_fields__ = ['service_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def service_template_fk(cls):
-        return cls.foreign_key('service_template')
-
-    # endregion
-
-    description = Column(Text)
-    type_name = Column(Text)
-    target_node_template_names = Column(aria_type.StrictList(basestring))
-    target_group_template_names = Column(aria_type.StrictList(basestring))
-
-    # region many-to-one relationships
-
-    @declared_attr
-    def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
-
-    # endregion
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('type_name', self.type_name),
-            ('properties', formatting.as_raw_dict(self.properties)),
-            ('target_node_template_names', self.target_node_template_names),
-            ('target_group_template_names', self.target_group_template_names)))
-
-    def instantiate(self, context, *args, **kwargs):
-        from . import model
-        policy = model.Policy(self.name, self.type_name)
-        utils.instantiate_dict(context, self, policy.properties, self.properties)
-        for node_template_name in self.target_node_template_names:
-            policy.target_node_ids.extend(
-                context.modeling.instance.get_node_ids(node_template_name))
-        for group_template_name in self.target_group_template_names:
-            policy.target_group_ids.extend(
-                context.modeling.instance.get_group_ids(group_template_name))
-        return policy
-
-    def validate(self, context):
-        if context.modeling.policy_types.get_descendant(self.type_name) is None:
-            context.validation.report('policy template "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-
-    def dump(self, context):
-        console.puts('Policy template: %s' % context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.properties)
-            if self.target_node_template_names:
-                console.puts('Target node templates: %s' % ', '.join(
-                    (str(context.style.node(v)) for v in self.target_node_template_names)))
-            if self.target_group_template_names:
-                console.puts('Target group templates: %s' % ', '.join(
-                    (str(context.style.node(v)) for v in self.target_group_template_names)))
-
-
-class MappingTemplateBase(structure.TemplateModelMixin):
-    """
-    Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
-
-    Properties:
-
-    * :code:`mapped_name`: Exposed capability or requirement name
-    * :code:`node_template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`name`: Name of capability or requirement at the node template
-    """
-
-    __tablename__ = 'mapping_template'
-
-    __private_fields__ = ['substitution_template_fk']
-
-    mapped_name = Column(Text)
-    node_template_name = Column(Text)
-
-    # region foreign keys
-
-    @declared_attr
-    def substitution_template_fk(cls):
-        return cls.foreign_key('substitution_template', nullable=True)
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('mapped_name', self.mapped_name),
-            ('node_template_name', self.node_template_name),
-            ('name', self.name)))
-
-    def instantiate(self, context, *args, **kwargs):
-        from . import model
-        nodes = context.modeling.instance.find_nodes(self.node_template_name)
-        if len(nodes) == 0:
-            context.validation.report(
-                'mapping "%s" refer to node template "%s" but there are no '
-                'node instances' % (self.mapped_name,
-                                    self.node_template_name),
-                level=validation.Issue.BETWEEN_INSTANCES)
-            return None
-        return model.Mapping(mapped_name=self.mapped_name,
-                             node_id=nodes[0].id,
-                             name=self.name)
-
-    def validate(self, context):
-        if not utils.query_has_item_named(context.modeling.model.node_templates,
-                                          self.node_template_name):
-            context.validation.report('mapping "%s" refers to an unknown node template: %s'
-                                      % (
-                                          self.mapped_name,
-                                          formatting.safe_repr(self.node_template_name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-    def dump(self, context):
-        console.puts('%s -> %s.%s' % (context.style.node(self.mapped_name),
-                                      context.style.node(self.node_template_name),
-                                      context.style.node(self.name)))
-
-
-class SubstitutionTemplateBase(structure.TemplateModelMixin):
-    """
-    Used to substitute a single node for the entire deployment.
-
-    Properties:
-
-    * :code:`node_type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`capability_templates`: Dict of :class:`MappingTemplate`
-    * :code:`requirement_templates`: Dict of :class:`MappingTemplate`
-    """
-
-    __tablename__ = 'substitution_template'
-
-    node_type_name = Column(Text)
-
-    # region one-to-many relationships
-
-    @declared_attr
-    def mappings(cls):
-        return cls.one_to_many_relationship('mapping_template', key_column_name='name')
-
-    # endregion
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('node_type_name', self.node_type_name),
-            ('mappings', formatting.as_raw_list(self.mappings))))
-
-    def instantiate(self, context, container):
-        from . import model
-        substitution = model.Substitution(self.node_type_name)
-        utils.instantiate_dict(context, container, substitution.mappings,
-                               self.mappings)
-        return substitution
-
-    def validate(self, context):
-        if context.modeling.node_types.get_descendant(self.node_type_name) is None:
-            context.validation.report('substitution template has an unknown type: %s'
-                                      % formatting.safe_repr(self.node_type_name),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.mappings)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.mappings, report_issues)
-
-    def dump(self, context):
-        console.puts('Substitution template:')
-        with context.style.indent:
-            console.puts('Node type: %s' % context.style.type(self.node_type_name))
-            utils.dump_dict_values(context, self.mappings,
-                                   'Mappings')
-
-
-class NodeTemplateBase(structure.TemplateModelMixin):
+class NodeTemplateBase(TemplateModelMixin):
     """
     A template for creating zero or more :class:`Node` instances.
 
@@ -741,49 +246,17 @@ class NodeTemplateBase(structure.TemplateModelMixin):
     __private_fields__ = ['service_template_fk',
                           'host_fk']
 
-    # region foreign_keys
-
-    @declared_attr
-    def service_template_fk(cls):
-        return cls.foreign_key('service_template')
-
-    @declared_attr
-    def host_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
-
-    # endregion
-
     description = Column(Text)
     type_name = Column(Text)
     default_instances = Column(Integer, default=1)
     min_instances = Column(Integer, default=0)
     max_instances = Column(Integer, default=None)
-    target_node_template_constraints = Column(aria_type.StrictList(FunctionType))
-
-    # region orchestrator required columns
-
-    plugins = Column(aria_type.List)
-    type_hierarchy = Column(aria_type.List)
+    target_node_template_constraints = Column(modeling_type.StrictList(FunctionType))
 
     @declared_attr
-    def host(cls):
-        return cls.relationship_to_self('host_fk')
-
-    @declared_attr
-    def service_template_name(cls):
-        return association_proxy('service_template', cls.name_column_name())
-
-    # endregion
-
-    # region many-to-one relationships
-
-    @declared_attr
-    def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
-
-    # endregion
-
-    # region one-to-many relationships
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     @declared_attr
     def interface_templates(cls):
@@ -797,14 +270,34 @@ class NodeTemplateBase(structure.TemplateModelMixin):
     def capability_templates(cls):
         return cls.one_to_many_relationship('capability_template', key_column_name='name')
 
-    # endregion
+    @declared_attr
+    def requirement_templates(cls):
+        return cls.one_to_many_relationship('requirement_template')
 
-    # region many-to-many relationships
+    # region orchestrator required columns
+
+    plugins = Column(modeling_type.List)
+    type_hierarchy = Column(modeling_type.List)
 
     @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
+    def host(cls):
+        return cls.relationship_to_self('host_fk')
+
+    @declared_attr
+    def service_template_name(cls):
+        return association_proxy('service_template', cls.name_column_name())
+
+    # endregion
+
+    # region foreign_keys
+
+    @declared_attr
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template')
+
+    @declared_attr
+    def host_fk(cls):
+        return cls.foreign_key('node_template', nullable=True)
 
     # endregion
 
@@ -832,7 +325,7 @@ class NodeTemplateBase(structure.TemplateModelMixin):
 
     def instantiate(self, context, *args, **kwargs):
         from . import model
-        node = model.Node(name=self.name,
+        node = model.Node(template_name=self.name,
                           type_name=self.type_name)
         utils.instantiate_dict(context, node, node.properties, self.properties)
         utils.instantiate_dict(context, node, node.interfaces, self.interface_templates)
@@ -879,7 +372,7 @@ class NodeTemplateBase(structure.TemplateModelMixin):
             utils.dump_list_values(context, self.requirement_templates, 'Requirement templates')
 
 
-class GroupTemplateBase(structure.TemplateModelMixin):
+class GroupTemplateBase(TemplateModelMixin):
     """
     A template for creating zero or more :class:`Group` instances.
 
@@ -893,7 +386,6 @@ class GroupTemplateBase(structure.TemplateModelMixin):
     * :code:`type_name`: Must be represented in the :class:`ModelingContext`
     * :code:`properties`: Dict of :class:`Parameter`
     * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
-    * :code:`policy_templates`: Dict of :class:`GroupPolicyTemplate`
     * :code:`member_node_template_names`: Must be represented in the :class:`ServiceTemplate`
     * :code:`member_group_template_names`: Must be represented in the :class:`ServiceTemplate`
     """
@@ -902,41 +394,26 @@ class GroupTemplateBase(structure.TemplateModelMixin):
 
     __private_fields__ = ['service_template_fk']
 
-    # region foreign keys
-
-    @declared_attr
-    def service_template_fk(cls):
-        return cls.foreign_key('service_template')
-
-    # endregion
-
     description = Column(Text)
     type_name = Column(Text)
-    member_node_template_names = Column(aria_type.StrictList(basestring))
-    member_group_template_names = Column(aria_type.StrictList(basestring))
-
-    # region many-to-one relationships
-
+    
     @declared_attr
-    def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
-
-    # endregion
-
-    # region one-to-many relationships
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
 
     @declared_attr
     def interface_templates(cls):
         return cls.one_to_many_relationship('interface_template', key_column_name='name')
 
-    # endregion
+    member_node_template_names = Column(modeling_type.StrictList(basestring))
+    member_group_template_names = Column(modeling_type.StrictList(basestring))
 
-    # region many-to-many relationships
+    # region foreign keys
 
     @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template')
 
     # endregion
 
@@ -953,16 +430,20 @@ class GroupTemplateBase(structure.TemplateModelMixin):
 
     def instantiate(self, context, *args, **kwargs):
         from . import model
-        group = model.Group(context, self.type_name, self.name)
+        group = model.Group(name=self.name,
+                            type_name=self.type_name)
         utils.instantiate_dict(context, self, group.properties, self.properties)
         utils.instantiate_dict(context, self, group.interfaces, self.interface_templates)
-        utils.instantiate_dict(context, self, group.policies, self.policy_templates)
-        for member_node_template_name in self.member_node_template_names:
-            group.member_node_ids += \
-                context.modeling.instance.get_node_ids(member_node_template_name)
-        for member_group_template_name in self.member_group_template_names:
-            group.member_group_ids += \
-                context.modeling.instance.get_group_ids(member_group_template_name)
+        if self.member_node_template_names:
+            group.member_node_ids = []
+            for member_node_template_name in self.member_node_template_names:
+                group.member_node_ids += \
+                    context.modeling.instance.get_node_ids(member_node_template_name)
+        if self.member_group_template_names:
+            group.member_group_ids = []
+            for member_group_template_name in self.member_group_template_names:
+                group.member_group_ids += \
+                    context.modeling.instance.get_group_ids(member_group_template_name)
         return group
 
     def validate(self, context):
@@ -992,7 +473,208 @@ class GroupTemplateBase(structure.TemplateModelMixin):
                     (str(context.style.node(v)) for v in self.member_node_template_names)))
 
 
-class RequirementTemplateBase(structure.TemplateModelMixin):
+class PolicyTemplateBase(TemplateModelMixin):
+    """
+    Policies can be applied to zero or more :class:`NodeTemplate` or :class:`GroupTemplate`
+    instances.
+
+    Properties:
+
+    * :code:`name`: Name
+    * :code:`description`: Description
+    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
+    * :code:`properties`: Dict of :class:`Parameter`
+    * :code:`target_node_template_names`: Must be represented in the :class:`ServiceTemplate`
+    * :code:`target_group_template_names`: Must be represented in the :class:`ServiceTemplate`
+    """
+    __tablename__ = 'policy_template'
+
+    __private_fields__ = ['service_template_fk']
+
+    description = Column(Text)
+    type_name = Column(Text)
+
+    @declared_attr
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
+
+    target_node_template_names = Column(modeling_type.StrictList(basestring))
+    target_group_template_names = Column(modeling_type.StrictList(basestring))
+
+    # region foreign keys
+
+    @declared_attr
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template')
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('description', self.description),
+            ('type_name', self.type_name),
+            ('properties', formatting.as_raw_dict(self.properties)),
+            ('target_node_template_names', self.target_node_template_names),
+            ('target_group_template_names', self.target_group_template_names)))
+
+    def instantiate(self, context, *args, **kwargs):
+        from . import model
+        policy = model.Policy(name=self.name,
+                              type_name=self.type_name)
+        utils.instantiate_dict(context, self, policy.properties, self.properties)
+        if self.target_node_template_names:
+            policy.target_node_ids = []
+            for node_template_name in self.target_node_template_names:
+                policy.target_node_ids += \
+                    context.modeling.instance.get_node_ids(node_template_name)
+        if self.target_group_template_names:
+            policy.target_group_ids = []
+            for group_template_name in self.target_group_template_names:
+                policy.target_group_ids += \
+                    context.modeling.instance.get_group_ids(group_template_name)
+        return policy
+
+    def validate(self, context):
+        if context.modeling.policy_types.get_descendant(self.type_name) is None:
+            context.validation.report('policy template "%s" has an unknown type: %s'
+                                      % (self.name, formatting.safe_repr(self.type_name)),
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+        utils.validate_dict_values(context, self.properties)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, self, self.properties, report_issues)
+
+    def dump(self, context):
+        console.puts('Policy template: %s' % context.style.node(self.name))
+        if self.description:
+            console.puts(context.style.meta(self.description))
+        with context.style.indent:
+            console.puts('Type: %s' % context.style.type(self.type_name))
+            dump_parameters(context, self.properties)
+            if self.target_node_template_names:
+                console.puts('Target node templates: %s' % ', '.join(
+                    (str(context.style.node(v)) for v in self.target_node_template_names)))
+            if self.target_group_template_names:
+                console.puts('Target group templates: %s' % ', '.join(
+                    (str(context.style.node(v)) for v in self.target_group_template_names)))
+
+
+class SubstitutionTemplateBase(TemplateModelMixin):
+    """
+    Used to substitute a single node for the entire deployment.
+
+    Properties:
+
+    * :code:`node_type_name`: Must be represented in the :class:`ModelingContext`
+    * :code:`mappings`: Dict of :class:` SubstitutionTemplateMapping`
+    """
+
+    __tablename__ = 'substitution_template'
+
+    node_type_name = Column(Text)
+
+    @declared_attr
+    def mappings(cls):
+        return cls.one_to_many_relationship('substitution_template_mapping', key_column_name='name')
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('node_type_name', self.node_type_name),
+            ('mappings', formatting.as_raw_list(self.mappings))))
+
+    def instantiate(self, context, container):
+        from . import model
+        substitution = model.Substitution(node_type_name=self.node_type_name)
+        utils.instantiate_dict(context, container, substitution.mappings,
+                               self.mappings)
+        return substitution
+
+    def validate(self, context):
+        if context.modeling.node_types.get_descendant(self.node_type_name) is None:
+            context.validation.report('substitution template has an unknown type: %s'
+                                      % formatting.safe_repr(self.node_type_name),
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+        utils.validate_dict_values(context, self.mappings)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, self, self.mappings, report_issues)
+
+    def dump(self, context):
+        console.puts('Substitution template:')
+        with context.style.indent:
+            console.puts('Node type: %s' % context.style.type(self.node_type_name))
+            utils.dump_dict_values(context, self.mappings,
+                                   'Mappings')
+
+
+class SubstitutionTemplateMappingBase(TemplateModelMixin):
+    """
+    Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
+
+    Properties:
+
+    * :code:`mapped_name`: Exposed capability or requirement name
+    * :code:`node_template_name`: Must be represented in the :class:`ServiceTemplate`
+    * :code:`name`: Name of capability or requirement at the node template
+    """
+
+    __tablename__ = 'substitution_template_mapping'
+
+    __private_fields__ = ['substitution_template_fk']
+
+    mapped_name = Column(Text)
+    node_template_name = Column(Text)
+
+    # region foreign keys
+
+    @declared_attr
+    def substitution_template_fk(cls):
+        return cls.foreign_key('substitution_template', nullable=True)
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('mapped_name', self.mapped_name),
+            ('node_template_name', self.node_template_name),
+            ('name', self.name)))
+
+    def instantiate(self, context, *args, **kwargs):
+        from . import model
+        nodes = context.modeling.instance.find_nodes(self.node_template_name)
+        if len(nodes) == 0:
+            context.validation.report(
+                'mapping "%s" refers to node template "%s" but there are no '
+                'node instances' % (self.mapped_name,
+                                    self.node_template_name),
+                level=validation.Issue.BETWEEN_INSTANCES)
+            return None
+        return model.SubstitutionMapping(mapped_name=self.mapped_name,
+                                         node_id=nodes[0].id,
+                                         name=self.name)
+
+    def validate(self, context):
+        if self.node_template_name not in (v.name for v in context.modeling.model.node_templates):
+            context.validation.report('mapping "%s" refers to an unknown node template: %s'
+                                      % (
+                                          self.mapped_name,
+                                          formatting.safe_repr(self.node_template_name)),
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+    def dump(self, context):
+        console.puts('%s -> %s.%s' % (context.style.node(self.mapped_name),
+                                      context.style.node(self.node_template_name),
+                                      context.style.node(self.name)))
+
+
+class RequirementTemplateBase(TemplateModelMixin):
     """
     A requirement for a :class:`NodeTemplate`. During instantiation will be matched with a
     capability of another
@@ -1016,27 +698,18 @@ class RequirementTemplateBase(structure.TemplateModelMixin):
 
     __private_fields__ = ['node_template_fk']
 
+    target_node_type_name = Column(Text)
+    target_node_template_name = Column(Text)
+    target_node_template_constraints = Column(modeling_type.StrictList(FunctionType))
+    target_capability_type_name = Column(Text)
+    target_capability_name = Column(Text)
+    relationship_template = Column(Text) # TODO
+
     # region foreign keys
 
     @declared_attr
     def node_template_fk(cls):
         return cls.foreign_key('node_template', nullable=True)
-
-    # endregion
-
-    target_node_type_name = Column(Text)
-    target_node_template_name = Column(Text)
-    target_node_template_constraints = Column(aria_type.StrictList(FunctionType))
-    target_capability_type_name = Column(Text)
-    target_capability_name = Column(Text)
-    # CHECK: ???
-    relationship_template = Column(Text)  # optional
-
-    # region many-to-one relationships
-
-    @declared_attr
-    def node_template(cls):
-        return cls.many_to_one_relationship('node_template')
 
     # endregion
 
@@ -1047,7 +720,7 @@ class RequirementTemplateBase(structure.TemplateModelMixin):
         # We might already have a specific node template, so we'll just verify it
         if self.target_node_template_name is not None:
             target_node_template = \
-                context.modeling.model.node_templates.get(self.target_node_template_name)
+                context.modeling.model.get_node_template(self.target_node_template_name)
 
             if not source_node_template.is_target_node_valid(target_node_template):
                 context.validation.report('requirement "%s" of node template "%s" is for node '
@@ -1058,8 +731,8 @@ class RequirementTemplateBase(structure.TemplateModelMixin):
                                           level=validation.Issue.BETWEEN_TYPES)
                 return None, None
 
-            if self.target_capability_type_name is not None \
-                    or self.target_capability_name is not None:
+            if (self.target_capability_type_name is not None) \
+                or (self.target_capability_name is not None):
                 target_node_capability = self.find_target_capability(context,
                                                                      source_node_template,
                                                                      target_node_template)
@@ -1072,7 +745,7 @@ class RequirementTemplateBase(structure.TemplateModelMixin):
 
         # Find first node that matches the type
         elif self.target_node_type_name is not None:
-            for target_node_template in context.modeling.model.node_templates.itervalues():
+            for target_node_template in context.modeling.model.node_templates:
                 if not context.modeling.node_types.is_descendant(self.target_node_type_name,
                                                                  target_node_template.type_name):
                     continue
@@ -1160,133 +833,7 @@ class RequirementTemplateBase(structure.TemplateModelMixin):
                     self.relationship_template.dump(context)
 
 
-class CapabilityTemplateBase(structure.TemplateModelMixin):
-    """
-    A capability of a :class:`NodeTemplate`. Nodes expose zero or more capabilities that can be
-    matched with :class:`Requirement` instances of other nodes.
-
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`min_occurrences`: Minimum number of requirement matches required
-    * :code:`max_occurrences`: Maximum number of requirement matches allowed
-    * :code:`valid_source_node_type_names`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    """
-
-    __tablename__ = 'capability_template'
-
-    __private_fields__ = ['node_template_fk']
-
-    # region foreign keys
-
-    @declared_attr
-    def node_template_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
-
-    # endregion
-
-    description = Column(Text)
-    type_name = Column(Text)
-    min_occurrences = Column(Integer, default=None)  # optional
-    max_occurrences = Column(Integer, default=None)  # optional
-    # CHECK: type?
-    valid_source_node_type_names = Column(Text)
-
-    # region many-to-one relationships
-
-    #@declared_attr
-    #def node_template(cls):
-    #    return cls.many_to_one_relationship('node_template')
-
-    # endregion
-
-    # region many-to-many relationships
-
-    @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             key_column_name='name')
-
-    # endregion
-
-    def satisfies_requirement(self,
-                              context,
-                              source_node_template,
-                              requirement,
-                              target_node_template):
-        # Do we match the required capability type?
-        capability_types = context.modeling.capability_types
-        if not capability_types.is_descendant(requirement.target_capability_type_name,
-                                              self.type_name):
-            return False
-
-        # Are we in valid_source_node_type_names?
-        if self.valid_source_node_type_names:
-            for valid_source_node_type_name in self.valid_source_node_type_names:
-                if not context.modeling.node_types.is_descendant(valid_source_node_type_name,
-                                                                 source_node_template.type_name):
-                    return False
-
-        # Apply requirement constraints
-        if requirement.target_node_template_constraints:
-            for node_type_constraint in requirement.target_node_template_constraints:
-                if not node_type_constraint(target_node_template, source_node_template):
-                    return False
-
-        return True
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('description', self.description),
-            ('type_name', self.type_name),
-            ('min_occurrences', self.min_occurrences),
-            ('max_occurrences', self.max_occurrences),
-            ('valid_source_node_type_names', self.valid_source_node_type_names),
-            ('properties', formatting.as_raw_dict(self.properties))))
-
-    def instantiate(self, context, container):
-        from . import model
-        capability = model.Capability(self.name, self.type_name)
-        capability.min_occurrences = self.min_occurrences
-        capability.max_occurrences = self.max_occurrences
-        utils.instantiate_dict(context, container, capability.properties, self.properties)
-        return capability
-
-    def validate(self, context):
-        if context.modeling.capability_types.get_descendant(self.type_name) is None:
-            context.validation.report('capability "%s" refers to an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
-                                      #  TODO fix self.type reference
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-
-    def dump(self, context):
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            console.puts(
-                'Occurrences: %d%s'
-                % (self.min_occurrences or 0, (' to %d' % self.max_occurrences)
-                   if self.max_occurrences is not None else ' or more'))
-            if self.valid_source_node_type_names:
-                console.puts('Valid source node types: %s'
-                             % ', '.join((str(context.style.type(v))
-                                          for v in self.valid_source_node_type_names)))
-            dump_parameters(context, self.properties)
-
-
-class RelationshipTemplateBase(structure.TemplateModelMixin):
+class RelationshipTemplateBase(TemplateModelMixin):
     """
     Optional addition to a :class:`Requirement` in :class:`NodeTemplate` that can be applied when
     the requirement is matched with a capability.
@@ -1297,31 +844,22 @@ class RelationshipTemplateBase(structure.TemplateModelMixin):
     * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
     * :code:`description`: Description
     * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`source_interface_templates`: Dict of :class:`InterfaceTemplate`
-    * :code:`target_interface_templates`: Dict of :class:`InterfaceTemplate`
+    * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
     """
 
     __tablename__ = 'relationship_template'
 
-    description = Column(Text)
     type_name = Column(Text)
-
-    # region many-to-many relationships
+    description = Column(Text)
 
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              key_column_name='name')
 
-    # endregion
-
-    # region one-to-many relationships
-
     @declared_attr
     def interface_templates(cls):
         return cls.one_to_many_relationship('interface_template', key_column_name='name')
-
-    # endregion
 
     @property
     def as_raw(self):
@@ -1370,7 +908,504 @@ class RelationshipTemplateBase(structure.TemplateModelMixin):
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interface_templates, 'Interface templates')
 
-# endregion
+
+class CapabilityTemplateBase(TemplateModelMixin):
+    """
+    A capability of a :class:`NodeTemplate`. Nodes expose zero or more capabilities that can be
+    matched with :class:`Requirement` instances of other nodes.
+
+    Properties:
+
+    * :code:`name`: Name
+    * :code:`description`: Description
+    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
+    * :code:`min_occurrences`: Minimum number of requirement matches required
+    * :code:`max_occurrences`: Maximum number of requirement matches allowed
+    * :code:`valid_source_node_type_names`: Must be represented in the :class:`ModelingContext`
+    * :code:`properties`: Dict of :class:`Parameter`
+    """
+
+    __tablename__ = 'capability_template'
+
+    __private_fields__ = ['node_template_fk']
+
+    description = Column(Text)
+    type_name = Column(Text)
+    min_occurrences = Column(Integer, default=None)  # optional
+    max_occurrences = Column(Integer, default=None)  # optional
+    valid_source_node_type_names = Column(Text)
+
+    @declared_attr
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
+
+    # region foreign keys
+
+    @declared_attr
+    def node_template_fk(cls):
+        return cls.foreign_key('node_template', nullable=True)
+
+    # endregion
+
+    def satisfies_requirement(self,
+                              context,
+                              source_node_template,
+                              requirement,
+                              target_node_template):
+        # Do we match the required capability type?
+        capability_types = context.modeling.capability_types
+        if not capability_types.is_descendant(requirement.target_capability_type_name,
+                                              self.type_name):
+            return False
+
+        # Are we in valid_source_node_type_names?
+        if self.valid_source_node_type_names:
+            for valid_source_node_type_name in self.valid_source_node_type_names:
+                if not context.modeling.node_types.is_descendant(valid_source_node_type_name,
+                                                                 source_node_template.type_name):
+                    return False
+
+        # Apply requirement constraints
+        if requirement.target_node_template_constraints:
+            for node_type_constraint in requirement.target_node_template_constraints:
+                if not node_type_constraint(target_node_template, source_node_template):
+                    return False
+
+        return True
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('description', self.description),
+            ('type_name', self.type_name),
+            ('min_occurrences', self.min_occurrences),
+            ('max_occurrences', self.max_occurrences),
+            ('valid_source_node_type_names', self.valid_source_node_type_names),
+            ('properties', formatting.as_raw_dict(self.properties))))
+
+    def instantiate(self, context, container):
+        from . import model
+        capability = model.Capability(name=self.name,
+                                      type_name=self.type_name,
+                                      min_occurrences=self.min_occurrences,
+                                      max_occurrences=self.max_occurrences,
+                                      occurrences=0)
+        utils.instantiate_dict(context, container, capability.properties, self.properties)
+        return capability
+
+    def validate(self, context):
+        if context.modeling.capability_types.get_descendant(self.type_name) is None:
+            context.validation.report('capability "%s" refers to an unknown type: %s'
+                                      % (self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
+                                      #  TODO fix self.type reference
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+        utils.validate_dict_values(context, self.properties)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, self, self.properties, report_issues)
+
+    def dump(self, context):
+        console.puts(context.style.node(self.name))
+        if self.description:
+            console.puts(context.style.meta(self.description))
+        with context.style.indent:
+            console.puts('Type: %s' % context.style.type(self.type_name))
+            console.puts(
+                'Occurrences: %d%s'
+                % (self.min_occurrences or 0, (' to %d' % self.max_occurrences)
+                   if self.max_occurrences is not None else ' or more'))
+            if self.valid_source_node_type_names:
+                console.puts('Valid source node types: %s'
+                             % ', '.join((str(context.style.type(v))
+                                          for v in self.valid_source_node_type_names)))
+            dump_parameters(context, self.properties)
+
+
+class InterfaceTemplateBase(TemplateModelMixin):
+    """
+    A typed set of :class:`OperationTemplate`.
+
+    Properties:
+
+    * :code:`name`: Name
+    * :code:`description`: Description
+    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
+    * :code:`inputs`: Dict of :class:`Parameter`
+    * :code:`operation_templates`: Dict of :class:`OperationTemplate`
+    """
+
+    __tablename__ = 'interface_template'
+
+    __private_fields__ = ['node_template_fk',
+                          'group_template_fk',
+                          'relationship_template_fk']
+
+    description = Column(Text)
+    type_name = Column(Text)
+
+    @declared_attr
+    def inputs(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
+                                             key_column_name='name')
+    @declared_attr
+    def operation_templates(cls):
+        return cls.one_to_many_relationship('operation_template', key_column_name='name')
+
+    # region foreign keys
+
+    @declared_attr
+    def node_template_fk(cls):
+        return cls.foreign_key('node_template', nullable=True)
+
+    @declared_attr
+    def group_template_fk(cls):
+        return cls.foreign_key('group_template', nullable=True)
+
+    @declared_attr
+    def relationship_template_fk(cls):
+        return cls.foreign_key('relationship_template', nullable=True)
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('description', self.description),
+            ('type_name', self.type_name),
+            ('inputs', formatting.as_raw_dict(self.properties)),  # pylint: disable=no-member
+            # TODO fix self.properties reference
+            ('operation_templates', formatting.as_raw_list(self.operation_templates))))
+
+    def instantiate(self, context, container):
+        from . import model
+        interface = model.Interface(name=self.name,
+                                    description=deepcopy_with_locators(self.description),
+                                    type_name=self.type_name)
+        utils.instantiate_dict(context, container, interface.inputs, self.inputs)
+        utils.instantiate_dict(context, container, interface.operations, self.operation_templates)
+        return interface
+
+    def validate(self, context):
+        if self.type_name:
+            if context.modeling.interface_types.get_descendant(self.type_name) is None:
+                context.validation.report('interface "%s" has an unknown type: %s'
+                                          % (self.name, formatting.safe_repr(self.type_name)),
+                                          level=validation.Issue.BETWEEN_TYPES)
+
+        utils.validate_dict_values(context, self.inputs)
+        utils.validate_dict_values(context, self.operation_templates)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, container, self.inputs, report_issues)
+        utils.coerce_dict_values(context, container, self.operation_templates, report_issues)
+
+    def dump(self, context):
+        console.puts(context.style.node(self.name))
+        if self.description:
+            console.puts(context.style.meta(self.description))
+        with context.style.indent:
+            console.puts('Interface type: %s' % context.style.type(self.type_name))
+            dump_parameters(context, self.inputs, 'Inputs')
+            utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
+
+
+class OperationTemplateBase(TemplateModelMixin):
+    """
+    An operation in a :class:`InterfaceTemplate`.
+
+    Properties:
+
+    * :code:`name`: Name
+    * :code:`description`: Description
+    * :code:`implementation`: Implementation string (interpreted by the orchestrator)
+    * :code:`dependencies`: List of strings (interpreted by the orchestrator)
+    * :code:`executor`: Executor string (interpreted by the orchestrator)
+    * :code:`max_retries`: Maximum number of retries allowed in case of failure
+    * :code:`retry_interval`: Interval between retries
+    * :code:`inputs`: Dict of :class:`Parameter`
+    """
+
+    __tablename__ = 'operation_template'
+
+    __private_fields__ = ['service_template_fk',
+                          'interface_template_fk']
+
+    description = Column(Text)
+    implementation = Column(Text)
+    dependencies = Column(modeling_type.StrictList(item_cls=basestring))
+    executor = Column(Text)
+    max_retries = Column(Integer)
+    retry_interval = Column(Integer)
+
+    @declared_attr
+    def inputs(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
+                                             key_column_name='name')
+
+    # region orchestrator required columns
+
+    plugin = Column(Text)
+    operation = Column(Boolean)
+
+    # endregion
+
+    # region foreign keys
+
+    @declared_attr
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template', nullable=True)
+
+    @declared_attr
+    def interface_template_fk(cls):
+        return cls.foreign_key('interface_template', nullable=True)
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('description', self.description),
+            ('implementation', self.implementation),
+            ('dependencies', self.dependencies),
+            ('executor', self.executor),
+            ('max_retries', self.max_retries),
+            ('retry_interval', self.retry_interval),
+            ('inputs', formatting.as_raw_dict(self.inputs))))
+
+    def instantiate(self, context, container):
+        from . import model
+        operation = model.Operation(description=deepcopy_with_locators(self.description),
+                                    implementation=self.implementation,
+                                    dependencies=self.dependencies,
+                                    executor=self.executor,
+                                    max_retries=self.max_retries,
+                                    retry_interval=self.retry_interval)
+        utils.instantiate_dict(context, container, operation.inputs, self.inputs)
+        return operation
+
+    def validate(self, context):
+        utils.validate_dict_values(context, self.inputs)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, container, self.inputs, report_issues)
+
+    def dump(self, context):
+        console.puts(context.style.node(self.name))
+        if self.description:
+            console.puts(context.style.meta(self.description))
+        with context.style.indent:
+            if self.implementation is not None:
+                console.puts('Implementation: %s' % context.style.literal(self.implementation))
+            if self.dependencies:
+                console.puts('Dependencies: %s' % ', '.join(
+                    (str(context.style.literal(v)) for v in self.dependencies)))
+            if self.executor is not None:
+                console.puts('Executor: %s' % context.style.literal(self.executor))
+            if self.max_retries is not None:
+                console.puts('Max retries: %s' % context.style.literal(self.max_retries))
+            if self.retry_interval is not None:
+                console.puts('Retry interval: %s' % context.style.literal(self.retry_interval))
+            dump_parameters(context, self.inputs, 'Inputs')
+
+
+class ArtifactTemplateBase(TemplateModelMixin):
+    """
+    A file associated with a :class:`NodeTemplate`.
+
+    Properties:
+
+    * :code:`name`: Name
+    * :code:`description`: Description
+    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
+    * :code:`source_path`: Source path (CSAR or repository)
+    * :code:`target_path`: Path at destination machine
+    * :code:`repository_url`: Repository URL
+    * :code:`repository_credential`: Dict of string
+    * :code:`properties`: Dict of :class:`Parameter`
+    """
+
+    __tablename__ = 'artifact_template'
+
+    __private_fields__ = ['node_template_fk']
+
+    description = Column(Text)
+    type_name = Column(Text)
+    source_path = Column(Text)
+    target_path = Column(Text)
+    repository_url = Column(Text)
+    repository_credential = Column(modeling_type.StrictDict(basestring, basestring))
+
+    @declared_attr
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             key_column_name='name')
+
+    # region foreign keys
+
+    @declared_attr
+    def node_template_fk(cls):
+        return cls.foreign_key('node_template')
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('description', self.description),
+            ('type_name', self.type_name),
+            ('source_path', self.source_path),
+            ('target_path', self.target_path),
+            ('repository_url', self.repository_url),
+            ('repository_credential', formatting.as_agnostic(self.repository_credential)),
+            ('properties', formatting.as_raw_dict(self.properties.iteritems()))))
+
+    def instantiate(self, context, container):
+        from . import model
+        artifact = model.Artifact(name=self.name,
+                                  type_name=self.type_name,
+                                  source_path=self.source_path,
+                                  description=deepcopy_with_locators(self.description),
+                                  target_path=self.target_path,
+                                  repository_url=self.repository_url,
+                                  repository_credential=self.repository_credential)
+        utils.instantiate_dict(context, container, artifact.properties, self.properties)
+        return artifact
+
+    def validate(self, context):
+        if context.modeling.artifact_types.get_descendant(self.type_name) is None:
+            context.validation.report('artifact "%s" has an unknown type: %s'
+                                      % (self.name, formatting.safe_repr(self.type_name)),
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+        utils.validate_dict_values(context, self.properties)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, container, self.properties, report_issues)
+
+    def dump(self, context):
+        console.puts(context.style.node(self.name))
+        if self.description:
+            console.puts(context.style.meta(self.description))
+        with context.style.indent:
+            console.puts('Artifact type: %s' % context.style.type(self.type_name))
+            console.puts('Source path: %s' % context.style.literal(self.source_path))
+            if self.target_path is not None:
+                console.puts('Target path: %s' % context.style.literal(self.target_path))
+            if self.repository_url is not None:
+                console.puts('Repository URL: %s' % context.style.literal(self.repository_url))
+            if self.repository_credential:
+                console.puts('Repository credential: %s'
+                             % context.style.literal(self.repository_credential))
+            dump_parameters(context, self.properties)
+
+
+
+class ParameterBase(TemplateModelMixin):
+    """
+    Represents a typed value.
+
+    This class is used by both service template and service instance elements.
+    """
+
+    __tablename__ = 'parameter'
+
+    name = Column(Text, nullable=False)
+    type_name = Column(Text, nullable=False)
+
+    # Check: value type
+    str_value = Column(Text)
+    description = Column(Text)
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('type_name', self.type_name),
+            ('value', self.value),
+            ('description', self.description)))
+
+    @property
+    def value(self):
+        if self.type_name is None:
+            return
+        try:
+            if self.type_name.lower() in ('str', 'unicode'):
+                return self.str_value.decode('utf-8')
+            elif self.type_name.lower() == 'int':
+                return int(self.str_value)
+            elif self.type_name.lower() == 'bool':
+                return bool(self.str_value)
+            elif self.type_name.lower() == 'float':
+                return float(self.str_value)
+            else:
+                return self.str_value
+        except ValueError:
+            raise exceptions.StorageError('Trying to cast {0} to {1} failed'.format(self.str_value,
+                                                                                    self.type))
+
+    @value.setter
+    def value(self, value):
+        self.str_value = unicode(value)
+
+    def instantiate(self, context, container):
+        from . import model
+        return model.Parameter(type_name=self.type_name,
+                               str_value=self.str_value,
+                               description=self.description)
+
+    def coerce_values(self, context, container, report_issues):
+        if self.str_value is not None:
+            self.str_value = parser_utils.coerce_value(context, container, self.str_value,
+                                                       report_issues)
+
+
+class MetadataBase(TemplateModelMixin):
+    """
+    Custom values associated with the service.
+
+    This class is used by both service template and service instance elements.
+    """
+
+    __tablename__ = 'metadata'
+
+    name = Column(Text, nullable=False)
+    value = Column(Text)
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('value', self.value)))
+
+    def instantiate(self, context, container):
+        from . import model
+        return model.Metadata(name=self.name,
+                              value=self.value)
+
+
+class Function(object):
+    """
+    An intrinsic function.
+
+    Serves as a placeholder for a value that should eventually be derived by calling the function.
+    """
+
+    @property
+    def as_raw(self):
+        raise NotImplementedError
+
+    def _evaluate(self, context, container):
+        raise NotImplementedError
+
+    def __deepcopy__(self, memo):
+        # Circumvent cloning in order to maintain our state
+        return self
 
 
 def dump_parameters(context, parameters, name='Properties'):

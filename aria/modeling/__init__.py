@@ -16,25 +16,25 @@
 from collections import namedtuple
 
 from . import (
-    structure,
+    base,
     type,
     model,
     service_template_models as _service_template_models_base,
-    service_instance_models as _service_instance_models_base,
+    service_models as _service_models_base,
     orchestrator_models as _orchestrator_models_base,
 )
 
 
 _ModelBaseCls = namedtuple('ModelBase', 'service_template_models,'
-                                        'service_instance_models,'
+                                        'service_models,'
                                         'orchestrator_models')
 model_base = _ModelBaseCls(service_template_models=_service_template_models_base,
-                           service_instance_models=_service_instance_models_base,
+                           service_models=_service_models_base,
                            orchestrator_models=_orchestrator_models_base)
                            
 
 __all__ = (
-    'structure',
+    'base',
     'type',
     'model',
     'model_base',
