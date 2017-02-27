@@ -30,7 +30,7 @@ from ..storage import exceptions
 from ..parser import validation
 from ..parser.modeling import utils as parser_utils
 from ..utils import collections, formatting, console
-from .service_models import InstanceModelMixin
+from .service_models import _InstanceModelMixin
 from . import (
     utils,
     type as modeling_type
@@ -40,7 +40,7 @@ from . import (
 
 
 
-class TemplateModelMixin(InstanceModelMixin):
+class _TemplateModelMixin(_InstanceModelMixin):
     """
     Mixin for :class:`ServiceTemplate` models.
 
@@ -51,25 +51,23 @@ class TemplateModelMixin(InstanceModelMixin):
         raise NotImplementedError
 
 
-class ServiceTemplateBase(TemplateModelMixin):
+class ServiceTemplateBase(_TemplateModelMixin):
     """
     A service template is a normalized blueprint from which :class:`ServiceInstance` instances can
     be created.
 
-    It is usually created by various DSL parsers, such as ARIA's TOSCA extension. However, it
-    can also be created programmatically.
+    It is usually created by various DSL parsers, such as ARIA's TOSCA extension. However, it can
+    also be created programmatically.
 
-    Properties:
-
-    * :code:`description`: Human-readable description
-    * :code:`meta_data`: Dict of :class:`Metadata`
-    * :code:`node_templates`: List of :class:`NodeTemplate`
-    * :code:`group_templates`: List of :class:`GroupTemplate`
-    * :code:`policy_templates`: List of :class:`PolicyTemplate`
-    * :code:`substitution_template`: :class:`SubstituionTemplate`
-    * :code:`inputs`: Dict of :class:`Parameter`
-    * :code:`outputs`: Dict of :class:`Parameter`
-    * :code:`operation_templates`: Dict of :class:`OperationTemplate`
+    :ivar description: Human-readable description
+    :ivar meta_data: Dict of :class:`Metadata`
+    :ivar node_templates: List of :class:`NodeTemplate`
+    :ivar group_templates: List of :class:`GroupTemplate`
+    :ivar policy_templates: List of :class:`PolicyTemplate`
+    :ivar substitution_template: :class:`SubstituionTemplate`
+    :ivar inputs: Dict of :class:`Parameter`
+    :ivar outputs: Dict of :class:`Parameter`
+    :ivar operation_templates: Dict of :class:`OperationTemplate`
     """
 
     __tablename__ = 'service_template'
@@ -175,7 +173,7 @@ class ServiceTemplateBase(TemplateModelMixin):
 
         for name, the_input in context.modeling.inputs.iteritems():
             if name not in service.inputs:
-                context.validation.report('input "%s" is not supported' % name)
+                context.validation.report('input "{0}" is not supported'.format(name))
             else:
                 service.inputs[name].value = the_input
 
@@ -206,7 +204,7 @@ class ServiceTemplateBase(TemplateModelMixin):
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
-        dump_parameters(context, self.meta_data, 'Metadata')
+        utils.dump_parameters(context, self.meta_data, 'Metadata')
 
         for node_template in self.node_templates:
             node_template.dump(context)
@@ -216,29 +214,27 @@ class ServiceTemplateBase(TemplateModelMixin):
             policy_template.dump(context)
         if self.substitution_template is not None:
             self.substitution_template.dump(context)
-        dump_parameters(context, self.inputs, 'Inputs')
-        dump_parameters(context, self.outputs, 'Outputs')
+        utils.dump_parameters(context, self.inputs, 'Inputs')
+        utils.dump_parameters(context, self.outputs, 'Outputs')
         utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
-class NodeTemplateBase(TemplateModelMixin):
+class NodeTemplateBase(_TemplateModelMixin):
     """
     A template for creating zero or more :class:`Node` instances.
 
-    Properties:
-
-    * :code:`name`: Name (will be used as a prefix for node IDs)
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`default_instances`: Default number nodes that will appear in the deployment plan
-    * :code:`min_instances`: Minimum number nodes that will appear in the deployment plan
-    * :code:`max_instances`: Maximum number nodes that will appear in the deployment plan
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
-    * :code:`artifact_templates`: Dict of :class:`ArtifactTemplate`
-    * :code:`capability_templates`: Dict of :class:`CapabilityTemplate`
-    * :code:`requirement_templates`: List of :class:`RequirementTemplate`
-    * :code:`target_node_template_constraints`: List of :class:`FunctionType`
+    :ivar name: Name (will be used as a prefix for node IDs)
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar default_instances: Default number nodes that will appear in the deployment plan
+    :ivar min_instances: Minimum number nodes that will appear in the deployment plan
+    :ivar max_instances: Maximum number nodes that will appear in the deployment plan
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
+    :ivar artifact_templates: Dict of :class:`ArtifactTemplate`
+    :ivar capability_templates: Dict of :class:`CapabilityTemplate`
+    :ivar requirement_templates: List of :class:`RequirementTemplate`
+    :ivar target_node_template_constraints: List of :class:`FunctionType`
     """
 
     __tablename__ = 'node_template'
@@ -325,7 +321,9 @@ class NodeTemplateBase(TemplateModelMixin):
 
     def instantiate(self, context, *args, **kwargs):
         from . import model
-        node = model.Node(template_name=self.name,
+        name = context.modeling.generate_node_id(self.name) 
+        node = model.Node(name=name,
+                          template_name=self.name,
                           type_name=self.type_name)
         utils.instantiate_dict(context, node, node.properties, self.properties)
         utils.instantiate_dict(context, node, node.interfaces, self.interface_templates)
@@ -335,9 +333,9 @@ class NodeTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.type_name) is None:
-            context.validation.report('node template "%s" has an unknown type: %s'
-                                      % (self.name,
-                                         formatting.safe_repr(self.type_name)),
+            context.validation.report('node template "{0}" has an unknown type: {1}'.format(
+                                        self.name,
+                                        formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -354,40 +352,38 @@ class NodeTemplateBase(TemplateModelMixin):
         utils.coerce_list_values(context, self, self.requirement_templates, report_issues)
 
     def dump(self, context):
-        console.puts('Node template: %s' % context.style.node(self.name))
+        console.puts('Node template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            console.puts('Instances: %d (%d%s)'
-                         % (self.default_instances,
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
+            console.puts('Instances: {0:d} ({1:d}{2})'.format(
+                            self.default_instances,
                             self.min_instances,
-                            (' to %d' % self.max_instances
-                             if self.max_instances is not None
-                             else ' or more')))
-            dump_parameters(context, self.properties)
+                            ' to {0:d}'.format(self.max_instances)
+                                if self.max_instances is not None
+                                else ' or more'))
+            utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interface_templates)
-            utils.dump_dict_values(context, self.artifact_templates, 'Artifact tempaltes')
+            utils.dump_dict_values(context, self.artifact_templates, 'Artifact templates')
             utils.dump_dict_values(context, self.capability_templates, 'Capability templates')
             utils.dump_list_values(context, self.requirement_templates, 'Requirement templates')
 
 
-class GroupTemplateBase(TemplateModelMixin):
+class GroupTemplateBase(_TemplateModelMixin):
     """
     A template for creating zero or more :class:`Group` instances.
 
     Groups are logical containers for zero or more nodes that allow applying zero or more
     :class:`GroupPolicy` instances to the nodes together.
 
-    Properties:
-
-    * :code:`name`: Name (will be used as a prefix for group IDs)
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
-    * :code:`member_node_template_names`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`member_group_template_names`: Must be represented in the :class:`ServiceTemplate`
+    :ivar name: Name (will be used as a prefix for group IDs)
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
+    :ivar member_node_template_names: Must be represented in the :class:`ServiceTemplate`
+    :ivar member_group_template_names: Must be represented in the :class:`ServiceTemplate`
     """
 
     __tablename__ = 'group_template'
@@ -448,8 +444,8 @@ class GroupTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         if context.modeling.group_types.get_descendant(self.type_name) is None:
-            context.validation.report('group template "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
+            context.validation.report('group template "{0}" has an unknown type: {1}'.format(
+                                        self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -460,32 +456,30 @@ class GroupTemplateBase(TemplateModelMixin):
         utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
 
     def dump(self, context):
-        console.puts('Group template: %s' % context.style.node(self.name))
+        console.puts('Group template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             if self.type_name:
-                console.puts('Type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.properties)
+                console.puts('Type: {0}'.format(context.style.type(self.type_name)))
+            utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interface_templates)
             if self.member_node_template_names:
-                console.puts('Member node templates: %s' % ', '.join(
-                    (str(context.style.node(v)) for v in self.member_node_template_names)))
+                console.puts('Member node templates: {0}'.format(', '.join(
+                    (str(context.style.node(v)) for v in self.member_node_template_names))))
 
 
-class PolicyTemplateBase(TemplateModelMixin):
+class PolicyTemplateBase(_TemplateModelMixin):
     """
     Policies can be applied to zero or more :class:`NodeTemplate` or :class:`GroupTemplate`
     instances.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`target_node_template_names`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`target_group_template_names`: Must be represented in the :class:`ServiceTemplate`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar target_node_template_names: Must be represented in the :class:`ServiceTemplate`
+    :ivar target_group_template_names: Must be represented in the :class:`ServiceTemplate`
     """
     __tablename__ = 'policy_template'
 
@@ -539,8 +533,8 @@ class PolicyTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         if context.modeling.policy_types.get_descendant(self.type_name) is None:
-            context.validation.report('policy template "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
+            context.validation.report('policy template "{0}" has an unknown type: {1}'.format(
+                                        self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -549,28 +543,26 @@ class PolicyTemplateBase(TemplateModelMixin):
         utils.coerce_dict_values(context, self, self.properties, report_issues)
 
     def dump(self, context):
-        console.puts('Policy template: %s' % context.style.node(self.name))
+        console.puts('Policy template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.properties)
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
+            utils.dump_parameters(context, self.properties)
             if self.target_node_template_names:
-                console.puts('Target node templates: %s' % ', '.join(
-                    (str(context.style.node(v)) for v in self.target_node_template_names)))
+                console.puts('Target node templates: {0}'.format(', '.join(
+                    (str(context.style.node(v)) for v in self.target_node_template_names))))
             if self.target_group_template_names:
-                console.puts('Target group templates: %s' % ', '.join(
-                    (str(context.style.node(v)) for v in self.target_group_template_names)))
+                console.puts('Target group templates: {0}'.format(', '.join(
+                    (str(context.style.node(v)) for v in self.target_group_template_names))))
 
 
-class SubstitutionTemplateBase(TemplateModelMixin):
+class SubstitutionTemplateBase(_TemplateModelMixin):
     """
     Used to substitute a single node for the entire deployment.
 
-    Properties:
-
-    * :code:`node_type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`mappings`: Dict of :class:` SubstitutionTemplateMapping`
+    :ivar node_type_name: Must be represented in the :class:`ModelingContext`
+    :ivar mappings: Dict of :class:` SubstitutionTemplateMapping`
     """
 
     __tablename__ = 'substitution_template'
@@ -585,19 +577,18 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('node_type_name', self.node_type_name),
-            ('mappings', formatting.as_raw_list(self.mappings))))
+            ('mappings', formatting.as_raw_dict(self.mappings))))
 
     def instantiate(self, context, container):
         from . import model
         substitution = model.Substitution(node_type_name=self.node_type_name)
-        utils.instantiate_dict(context, container, substitution.mappings,
-                               self.mappings)
+        utils.instantiate_dict(context, container, substitution.mappings, self.mappings)
         return substitution
 
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.node_type_name) is None:
-            context.validation.report('substitution template has an unknown type: %s'
-                                      % formatting.safe_repr(self.node_type_name),
+            context.validation.report('substitution template has an unknown type: {0}'.format(
+                                        formatting.safe_repr(self.node_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.mappings)
@@ -608,20 +599,17 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     def dump(self, context):
         console.puts('Substitution template:')
         with context.style.indent:
-            console.puts('Node type: %s' % context.style.type(self.node_type_name))
-            utils.dump_dict_values(context, self.mappings,
-                                   'Mappings')
+            console.puts('Node type: {0}'.format(context.style.type(self.node_type_name)))
+            utils.dump_dict_values(context, self.mappings, 'Mappings')
 
 
-class SubstitutionTemplateMappingBase(TemplateModelMixin):
+class SubstitutionTemplateMappingBase(_TemplateModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
 
-    Properties:
-
-    * :code:`mapped_name`: Exposed capability or requirement name
-    * :code:`node_template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`name`: Name of capability or requirement at the node template
+    :ivar mapped_name: Exposed capability or requirement name
+    :ivar node_template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar name: Name of capability or requirement at the node template
     """
 
     __tablename__ = 'substitution_template_mapping'
@@ -651,30 +639,30 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
         nodes = context.modeling.instance.find_nodes(self.node_template_name)
         if len(nodes) == 0:
             context.validation.report(
-                'mapping "%s" refers to node template "%s" but there are no '
-                'node instances' % (self.mapped_name,
-                                    self.node_template_name),
+                'mapping "{0}" refers to node template "{1}" but there are no '
+                'node instances'.format(self.mapped_name, self.node_template_name),
                 level=validation.Issue.BETWEEN_INSTANCES)
             return None
         return model.SubstitutionMapping(mapped_name=self.mapped_name,
-                                         node_id=nodes[0].id,
+                                         node_id=nodes[0].name,
                                          name=self.name)
 
     def validate(self, context):
         if self.node_template_name not in (v.name for v in context.modeling.model.node_templates):
-            context.validation.report('mapping "%s" refers to an unknown node template: %s'
-                                      % (
+            context.validation.report('mapping "{0}" refers to an unknown node template: {1}' \
+                                      .format(
                                           self.mapped_name,
                                           formatting.safe_repr(self.node_template_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
     def dump(self, context):
-        console.puts('%s -> %s.%s' % (context.style.node(self.mapped_name),
-                                      context.style.node(self.node_template_name),
-                                      context.style.node(self.name)))
+        console.puts('{0} -> {1}.{2}'.format(
+            context.style.node(self.mapped_name),
+            context.style.node(self.node_template_name),
+            context.style.node(self.name)))
 
 
-class RequirementTemplateBase(TemplateModelMixin):
+class RequirementTemplateBase(_TemplateModelMixin):
     """
     A requirement for a :class:`NodeTemplate`. During instantiation will be matched with a
     capability of another
@@ -683,33 +671,39 @@ class RequirementTemplateBase(TemplateModelMixin):
     Requirements may optionally contain a :class:`RelationshipTemplate` that will be created between
     the nodes.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`target_node_type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`target_node_template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`target_node_template_constraints`: List of :class:`FunctionType`
-    * :code:`target_capability_type_name`: Type of capability in target node
-    * :code:`target_capability_name`: Name of capability in target node
-    * :code:`relationship_template`: :class:`RelationshipTemplate`
+    :ivar name: Name
+    :ivar target_node_type_name: Must be represented in the :class:`ModelingContext`
+    :ivar target_node_template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar target_node_template_constraints: List of :class:`FunctionType`
+    :ivar target_capability_type_name: Type of capability in target node
+    :ivar target_capability_name: Name of capability in target node
+    :ivar relationship_template: :class:`RelationshipTemplate`
     """
 
     __tablename__ = 'requirement_template'
 
-    __private_fields__ = ['node_template_fk']
+    __private_fields__ = ['node_template_fk',
+                          'relationship_template_fk']
 
     target_node_type_name = Column(Text)
     target_node_template_name = Column(Text)
     target_node_template_constraints = Column(modeling_type.StrictList(FunctionType))
     target_capability_type_name = Column(Text)
     target_capability_name = Column(Text)
-    relationship_template = Column(Text) # TODO
+
+    @declared_attr
+    def relationship_template(cls):
+        return cls.one_to_one_relationship('relationship_template')
 
     # region foreign keys
 
     @declared_attr
     def node_template_fk(cls):
         return cls.foreign_key('node_template', nullable=True)
+
+    @declared_attr
+    def relationship_template_fk(cls):
+        return cls.foreign_key('relationship_template', nullable=True)
 
     # endregion
 
@@ -723,11 +717,11 @@ class RequirementTemplateBase(TemplateModelMixin):
                 context.modeling.model.get_node_template(self.target_node_template_name)
 
             if not source_node_template.is_target_node_valid(target_node_template):
-                context.validation.report('requirement "%s" of node template "%s" is for node '
-                                          'template "%s" but it does not match constraints'
-                                          % (self.name,
-                                             self.target_node_template_name,
-                                             source_node_template.name),
+                context.validation.report('requirement "{0}" of node template "{1}" is for node '
+                                          'template "{2}" but it does not match constraints'.format(
+                                              self.name,
+                                              self.target_node_template_name,
+                                              source_node_template.name),
                                           level=validation.Issue.BETWEEN_TYPES)
                 return None, None
 
@@ -787,15 +781,17 @@ class RequirementTemplateBase(TemplateModelMixin):
         capability_types = context.modeling.capability_types
         if self.target_node_type_name \
                 and node_types.get_descendant(self.target_node_type_name) is None:
-            context.validation.report('requirement "%s" refers to an unknown node type: %s'
-                                      % (self.name,
-                                         formatting.safe_repr(self.target_node_type_name)),
+            context.validation.report('requirement "{0}" refers to an unknown node type: {1}' \
+                                        .format(
+                                            self.name,
+                                            formatting.safe_repr(self.target_node_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
         if self.target_capability_type_name and \
                 capability_types.get_descendant(self.target_capability_type_name is None):
-            context.validation.report('requirement "%s" refers to an unknown capability type: %s'
-                                      % (self.name,
-                                         formatting.safe_repr(self.target_capability_type_name)),
+            context.validation.report('requirement "{0}" refers to an unknown capability type: '
+                                      '{1}'.format(
+                                          self.name,
+                                          formatting.safe_repr(self.target_capability_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
         if self.relationship_template:
             self.relationship_template.validate(context)
@@ -811,17 +807,17 @@ class RequirementTemplateBase(TemplateModelMixin):
             console.puts('Requirement:')
         with context.style.indent:
             if self.target_node_type_name is not None:
-                console.puts('Target node type: %s'
-                             % context.style.type(self.target_node_type_name))
+                console.puts('Target node type: {0}'.format(
+                    context.style.type(self.target_node_type_name)))
             elif self.target_node_template_name is not None:
-                console.puts('Target node template: %s'
-                             % context.style.node(self.target_node_template_name))
+                console.puts('Target node template: {0}'.format(
+                    context.style.node(self.target_node_template_name)))
             if self.target_capability_type_name is not None:
-                console.puts('Target capability type: %s'
-                             % context.style.type(self.target_capability_type_name))
+                console.puts('Target capability type: {0}'.format(
+                    context.style.type(self.target_capability_type_name)))
             elif self.target_capability_name is not None:
-                console.puts('Target capability name: %s'
-                             % context.style.node(self.target_capability_name))
+                console.puts('Target capability name: {0}'.format(
+                    context.style.node(self.target_capability_name)))
             if self.target_node_template_constraints:
                 console.puts('Target node template constraints:')
                 with context.style.indent:
@@ -833,23 +829,22 @@ class RequirementTemplateBase(TemplateModelMixin):
                     self.relationship_template.dump(context)
 
 
-class RelationshipTemplateBase(TemplateModelMixin):
+class RelationshipTemplateBase(_TemplateModelMixin):
     """
-    Optional addition to a :class:`Requirement` in :class:`NodeTemplate` that can be applied when
-    the requirement is matched with a capability.
+    Optional addition to a :class:`RequirementTemplate` in :class:`NodeTemplate` that can be applied
+    when the requirement is matched with a capability.
 
-    Properties:
-
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`description`: Description
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interface_templates`: Dict of :class:`InterfaceTemplate`
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar description: Description
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
     """
 
     __tablename__ = 'relationship_template'
 
     type_name = Column(Text)
+    template_name = Column(Text)
     description = Column(Text)
 
     @declared_attr
@@ -909,20 +904,18 @@ class RelationshipTemplateBase(TemplateModelMixin):
             utils.dump_interfaces(context, self.interface_templates, 'Interface templates')
 
 
-class CapabilityTemplateBase(TemplateModelMixin):
+class CapabilityTemplateBase(_TemplateModelMixin):
     """
     A capability of a :class:`NodeTemplate`. Nodes expose zero or more capabilities that can be
     matched with :class:`Requirement` instances of other nodes.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`min_occurrences`: Minimum number of requirement matches required
-    * :code:`max_occurrences`: Maximum number of requirement matches allowed
-    * :code:`valid_source_node_type_names`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar min_occurrences: Minimum number of requirement matches required
+    :ivar max_occurrences: Maximum number of requirement matches allowed
+    :ivar valid_source_node_type_names: Must be represented in the :class:`ModelingContext`
+    :ivar properties: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'capability_template'
@@ -997,8 +990,8 @@ class CapabilityTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         if context.modeling.capability_types.get_descendant(self.type_name) is None:
-            context.validation.report('capability "%s" refers to an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
+            context.validation.report('capability "{0}" refers to an unknown type: {1}'.format(
+                                        self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
                                       #  TODO fix self.type reference
                                       level=validation.Issue.BETWEEN_TYPES)
 
@@ -1012,29 +1005,29 @@ class CapabilityTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             console.puts(
-                'Occurrences: %d%s'
-                % (self.min_occurrences or 0, (' to %d' % self.max_occurrences)
-                   if self.max_occurrences is not None else ' or more'))
+                'Occurrences: {0:d}{1}'.format(
+                    self.min_occurrences or 0,
+                    ' to {0:d}'.format(self.max_occurrences)
+                        if self.max_occurrences is not None
+                        else ' or more'))
             if self.valid_source_node_type_names:
-                console.puts('Valid source node types: %s'
-                             % ', '.join((str(context.style.type(v))
-                                          for v in self.valid_source_node_type_names)))
-            dump_parameters(context, self.properties)
+                console.puts('Valid source node types: {0}'.format(
+                                ', '.join((str(context.style.type(v))
+                                           for v in self.valid_source_node_type_names))))
+            utils.dump_parameters(context, self.properties)
 
 
-class InterfaceTemplateBase(TemplateModelMixin):
+class InterfaceTemplateBase(_TemplateModelMixin):
     """
     A typed set of :class:`OperationTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`inputs`: Dict of :class:`Parameter`
-    * :code:`operation_templates`: Dict of :class:`OperationTemplate`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar inputs: Dict of :class:`Parameter`
+    :ivar operation_templates: Dict of :class:`OperationTemplate`
     """
 
     __tablename__ = 'interface_template'
@@ -1076,7 +1069,7 @@ class InterfaceTemplateBase(TemplateModelMixin):
             ('name', self.name),
             ('description', self.description),
             ('type_name', self.type_name),
-            ('inputs', formatting.as_raw_dict(self.properties)),  # pylint: disable=no-member
+            ('inputs', formatting.as_raw_dict(self.inputs)),  # pylint: disable=no-member
             # TODO fix self.properties reference
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
 
@@ -1092,8 +1085,8 @@ class InterfaceTemplateBase(TemplateModelMixin):
     def validate(self, context):
         if self.type_name:
             if context.modeling.interface_types.get_descendant(self.type_name) is None:
-                context.validation.report('interface "%s" has an unknown type: %s'
-                                          % (self.name, formatting.safe_repr(self.type_name)),
+                context.validation.report('interface "{0}" has an unknown type: {1}'.format(
+                                            self.name, formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.inputs)
@@ -1108,25 +1101,23 @@ class InterfaceTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Interface type: %s' % context.style.type(self.type_name))
-            dump_parameters(context, self.inputs, 'Inputs')
+            console.puts('Interface type: {0}'.format(context.style.type(self.type_name)))
+            utils.dump_parameters(context, self.inputs, 'Inputs')
             utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
-class OperationTemplateBase(TemplateModelMixin):
+class OperationTemplateBase(_TemplateModelMixin):
     """
     An operation in a :class:`InterfaceTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`implementation`: Implementation string (interpreted by the orchestrator)
-    * :code:`dependencies`: List of strings (interpreted by the orchestrator)
-    * :code:`executor`: Executor string (interpreted by the orchestrator)
-    * :code:`max_retries`: Maximum number of retries allowed in case of failure
-    * :code:`retry_interval`: Interval between retries
-    * :code:`inputs`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar implementation: Implementation string (interpreted by the orchestrator)
+    :ivar dependencies: List of strings (interpreted by the orchestrator)
+    :ivar executor: Executor string (interpreted by the orchestrator)
+    :ivar max_retries: Maximum number of retries allowed in case of failure
+    :ivar retry_interval: Interval between retries
+    :ivar inputs: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'operation_template'
@@ -1179,7 +1170,8 @@ class OperationTemplateBase(TemplateModelMixin):
 
     def instantiate(self, context, container):
         from . import model
-        operation = model.Operation(description=deepcopy_with_locators(self.description),
+        operation = model.Operation(name=self.name,
+                                    description=deepcopy_with_locators(self.description),
                                     implementation=self.implementation,
                                     dependencies=self.dependencies,
                                     executor=self.executor,
@@ -1200,33 +1192,33 @@ class OperationTemplateBase(TemplateModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             if self.implementation is not None:
-                console.puts('Implementation: %s' % context.style.literal(self.implementation))
+                console.puts('Implementation: {0}'.format(
+                    context.style.literal(self.implementation)))
             if self.dependencies:
-                console.puts('Dependencies: %s' % ', '.join(
-                    (str(context.style.literal(v)) for v in self.dependencies)))
+                console.puts('Dependencies: {0}'.format(
+                        ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
             if self.executor is not None:
-                console.puts('Executor: %s' % context.style.literal(self.executor))
+                console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
             if self.max_retries is not None:
-                console.puts('Max retries: %s' % context.style.literal(self.max_retries))
+                console.puts('Max retries: {0}'.format(context.style.literal(self.max_retries)))
             if self.retry_interval is not None:
-                console.puts('Retry interval: %s' % context.style.literal(self.retry_interval))
-            dump_parameters(context, self.inputs, 'Inputs')
+                console.puts('Retry interval: {0}'.format(
+                    context.style.literal(self.retry_interval)))
+            utils.dump_parameters(context, self.inputs, 'Inputs')
 
 
-class ArtifactTemplateBase(TemplateModelMixin):
+class ArtifactTemplateBase(_TemplateModelMixin):
     """
     A file associated with a :class:`NodeTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`source_path`: Source path (CSAR or repository)
-    * :code:`target_path`: Path at destination machine
-    * :code:`repository_url`: Repository URL
-    * :code:`repository_credential`: Dict of string
-    * :code:`properties`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar source_path: Source path (CSAR or repository)
+    :ivar target_path: Path at destination machine
+    :ivar repository_url: Repository URL
+    :ivar repository_credential: Dict of string
+    :ivar properties: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'artifact_template'
@@ -1263,7 +1255,7 @@ class ArtifactTemplateBase(TemplateModelMixin):
             ('target_path', self.target_path),
             ('repository_url', self.repository_url),
             ('repository_credential', formatting.as_agnostic(self.repository_credential)),
-            ('properties', formatting.as_raw_dict(self.properties.iteritems()))))
+            ('properties', formatting.as_raw_dict(self.properties))))
 
     def instantiate(self, context, container):
         from . import model
@@ -1279,8 +1271,8 @@ class ArtifactTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         if context.modeling.artifact_types.get_descendant(self.type_name) is None:
-            context.validation.report('artifact "%s" has an unknown type: %s'
-                                      % (self.name, formatting.safe_repr(self.type_name)),
+            context.validation.report('artifact "{0}" has an unknown type: {1}'.format(
+                                        self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -1293,24 +1285,30 @@ class ArtifactTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Artifact type: %s' % context.style.type(self.type_name))
-            console.puts('Source path: %s' % context.style.literal(self.source_path))
+            console.puts('Artifact type: {0}'.format(context.style.type(self.type_name)))
+            console.puts('Source path: {0}'.format(context.style.literal(self.source_path)))
             if self.target_path is not None:
-                console.puts('Target path: %s' % context.style.literal(self.target_path))
+                console.puts('Target path: {0}'.format(context.style.literal(self.target_path)))
             if self.repository_url is not None:
-                console.puts('Repository URL: %s' % context.style.literal(self.repository_url))
+                console.puts('Repository URL: {0}'.format(
+                    context.style.literal(self.repository_url)))
             if self.repository_credential:
-                console.puts('Repository credential: %s'
-                             % context.style.literal(self.repository_credential))
-            dump_parameters(context, self.properties)
+                console.puts('Repository credential: {0}'.format(
+                                context.style.literal(self.repository_credential)))
+            utils.dump_parameters(context, self.properties)
 
 
 
-class ParameterBase(TemplateModelMixin):
+class ParameterBase(_TemplateModelMixin):
     """
     Represents a typed value.
 
     This class is used by both service template and service instance elements.
+    
+    :ivar name: Name
+    :ivar type_name: Type name
+    :ivar value: Value
+    :ivar description: Description
     """
 
     __tablename__ = 'parameter'
@@ -1365,11 +1363,14 @@ class ParameterBase(TemplateModelMixin):
                                                        report_issues)
 
 
-class MetadataBase(TemplateModelMixin):
+class MetadataBase(_TemplateModelMixin):
     """
     Custom values associated with the service.
 
     This class is used by both service template and service instance elements.
+
+    :ivar name: Name
+    :ivar value: Value
     """
 
     __tablename__ = 'metadata'
@@ -1406,23 +1407,6 @@ class Function(object):
     def __deepcopy__(self, memo):
         # Circumvent cloning in order to maintain our state
         return self
-
-
-def dump_parameters(context, parameters, name='Properties'):
-    if not parameters:
-        return
-    console.puts('%s:' % name)
-    with context.style.indent:
-        for parameter_name, parameter in parameters.items():
-            if hasattr(parameter, 'type_name') and (parameter.type_name is not None):
-                console.puts('%s = %s (%s)' % (context.style.property(parameter_name),
-                                               context.style.literal(parameter.value),
-                                               context.style.type(parameter.type_name)))
-            else:
-                console.puts('%s = %s' % (context.style.property(parameter_name),
-                                          context.style.literal(parameter.value)))
-            if hasattr(parameter, 'description') and parameter.description:
-                console.puts(context.style.meta(parameter.description))
 
 
 # TODO (left for tal): Move following two methods to some place parser specific

@@ -22,7 +22,6 @@ from sqlalchemy import (
 from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.ext.orderinglist import ordering_list
 
 from .base import ModelMixin
 from ..parser import validation
@@ -36,7 +35,7 @@ from . import (
 # pylint: disable=no-self-argument, no-member, abstract-method
 
 
-class InstanceModelMixin(ModelMixin):
+class _InstanceModelMixin(ModelMixin):
     """
     Mixin for :class:`ServiceInstance` models.
 
@@ -58,23 +57,21 @@ class InstanceModelMixin(ModelMixin):
         pass
 
 
-class ServiceBase(InstanceModelMixin):
+class ServiceBase(_InstanceModelMixin):
     """
     A service instance is an instance of a :class:`ServiceTemplate`.
 
     You will usually not create it programmatically, but instead instantiate it from the template.
 
-    Properties:
-
-    * :code:`description`: Human-readable description
-    * :code:`meta_data`: Dict of :class:`Metadata`
-    * :code:`nodes`: Dict of :class:`Node`
-    * :code:`groups`: Dict of :class:`Group`
-    * :code:`policies`: Dict of :class:`Policy`
-    * :code:`substitution`: :class:`Substitution`
-    * :code:`inputs`: Dict of :class:`Parameter`
-    * :code:`outputs`: Dict of :class:`Parameter`
-    * :code:`operations`: Dict of :class:`Operation`
+    :ivar description: Human-readable description
+    :ivar meta_data: Dict of :class:`Metadata`
+    :ivar nodes: Dict of :class:`Node`
+    :ivar groups: Dict of :class:`Group`
+    :ivar policies: Dict of :class:`Policy`
+    :ivar substitution: :class:`Substitution`
+    :ivar inputs: Dict of :class:`Parameter`
+    :ivar outputs: Dict of :class:`Parameter`
+    :ivar operations: Dict of :class:`Operation`
     """
 
     __tablename__ = 'service'
@@ -151,8 +148,6 @@ class ServiceBase(InstanceModelMixin):
 
     # endregion
 
-    # association proxies
-
     def satisfy_requirements(self, context):
         satisfied = True
         for node in self.nodes:
@@ -175,7 +170,7 @@ class ServiceBase(InstanceModelMixin):
         return collections.FrozenList(nodes)
 
     def get_node_ids(self, node_template_name):
-        return collections.FrozenList((node.id for node in self.find_nodes(node_template_name)))
+        return collections.FrozenList((node.name for node in self.find_nodes(node_template_name)))
 
     def find_groups(self, group_template_name):
         groups = []
@@ -185,7 +180,7 @@ class ServiceBase(InstanceModelMixin):
         return collections.FrozenList(groups)
 
     def get_group_ids(self, group_template_name):
-        return collections.FrozenList((group.id for group in self.find_groups(group_template_name)))
+        return collections.FrozenList((group.name for group in self.find_groups(group_template_name)))
 
     def is_node_a_target(self, context, target_node):
         for node in self.nodes:
@@ -196,7 +191,7 @@ class ServiceBase(InstanceModelMixin):
     def _is_node_a_target(self, context, source_node, target_node):
         if source_node.relationships:
             for relationship in source_node.relationships:
-                if relationship.target_node_id == target_node.id:
+                if relationship.target_node_id == target_node.name:
                     return True
                 else:
                     node = context.modeling.instance.nodes.get(relationship.target_node_id)
@@ -205,23 +200,96 @@ class ServiceBase(InstanceModelMixin):
                             return True
         return False
 
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('description', self.description),
+            ('metadata', formatting.as_raw_dict(self.meta_data)),
+            ('nodes', formatting.as_raw_list(self.nodes)),
+            ('groups', formatting.as_raw_list(self.groups)),
+            ('policies', formatting.as_raw_list(self.policies)),
+            ('substitution', formatting.as_raw(self.substitution)),
+            ('inputs', formatting.as_raw_dict(self.inputs)),
+            ('outputs', formatting.as_raw_dict(self.outputs)),
+            ('operations', formatting.as_raw_list(self.operations))))
 
-class NodeBase(InstanceModelMixin):
+    def validate(self, context):
+        utils.validate_dict_values(context, self.meta_data)
+        utils.validate_list_values(context, self.nodes)
+        utils.validate_list_values(context, self.groups)
+        utils.validate_list_values(context, self.policies)
+        if self.substitution is not None:
+            self.substitution.validate(context)
+        utils.validate_dict_values(context, self.inputs)
+        utils.validate_dict_values(context, self.outputs)
+        utils.validate_dict_values(context, self.operations)
+
+    def coerce_values(self, context, container, report_issues):
+        utils.coerce_dict_values(context, container, self.meta_data, report_issues)
+        utils.coerce_list_values(context, container, self.nodes, report_issues)
+        utils.coerce_list_values(context, container, self.groups, report_issues)
+        utils.coerce_list_values(context, container, self.policies, report_issues)
+        if self.substitution is not None:
+            self.substitution.coerce_values(context, container, report_issues)
+        utils.coerce_dict_values(context, container, self.inputs, report_issues)
+        utils.coerce_dict_values(context, container, self.outputs, report_issues)
+        utils.coerce_dict_values(context, container, self.operations, report_issues)
+
+    def dump(self, context):
+        if self.description is not None:
+            console.puts(context.style.meta(self.description))
+        utils.dump_parameters(context, self.meta_data, 'Metadata')
+        for node in self.nodes:
+            node.dump(context)
+        for group in self.groups:
+            group.dump(context)
+        for policy in self.policies:
+            policy.dump(context)
+        if self.substitution is not None:
+            self.substitution.dump(context)
+        utils.dump_parameters(context, self.inputs, 'Inputs')
+        utils.dump_parameters(context, self.outputs, 'Outputs')
+        utils.dump_dict_values(context, self.operations, 'Operations')
+
+    def dump_graph(self, context):
+        for node in self.nodes.itervalues():
+            if not self.is_node_a_target(context, node):
+                self._dump_graph_node(context, node)
+
+    def _dump_graph_node(self, context, node):
+        console.puts(context.style.node(node.name))
+        if node.relationships:
+            with context.style.indent:
+                for relationship in node.relationships:
+                    relationship_name = (context.style.node(relationship.template_name)
+                                         if relationship.template_name is not None
+                                         else context.style.type(relationship.type_name))
+                    capability_name = (context.style.node(relationship.target_capability_name)
+                                       if relationship.target_capability_name is not None
+                                       else None)
+                    if capability_name is not None:
+                        console.puts('-> {0} {1}'.format(relationship_name, capability_name))
+                    else:
+                        console.puts('-> {0}'.format(relationship_name))
+                    target_node = self.nodes.get(relationship.target_node_id)
+                    with console.indent(3):
+                        self._dump_graph_node(context, target_node)
+
+
+class NodeBase(_InstanceModelMixin):
     """
     An instance of a :class:`NodeTemplate`.
 
     Nodes may have zero or more :class:`Relationship` instances to other nodes.
 
-    Properties:
-
-    * :code:`id`: Unique ID (prefixed with the template name)
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interfaces`: Dict of :class:`Interface`
-    * :code:`artifacts`: Dict of :class:`Artifact`
-    * :code:`capabilities`: Dict of :class:`CapabilityTemplate`
-    * :code:`relationships`: List of :class:`Relationship`
+    :ivar name: Unique ID (prefixed with the template name)
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interfaces: Dict of :class:`Interface`
+    :ivar artifacts: Dict of :class:`Artifact`
+    :ivar capabilities: Dict of :class:`CapabilityTemplate`
+    :ivar relationships: List of :class:`Relationship`
     """
 
     __tablename__ = 'node'
@@ -336,9 +404,8 @@ class NodeBase(InstanceModelMixin):
                                                      requirement_template,
                                                      requirement_template_index=i)
             else:
-                context.validation.report('requirement "%s" of node "%s" has no target node '
-                                          'template' % (requirement_template.name,
-                                                        self.id),
+                context.validation.report('requirement "{0}" of node "{1}" has no target node '
+                                          'template'.format(requirement_template.name, self.name),
                                           level=validation.Issue.BETWEEN_INSTANCES)
                 satisfied = False
         return satisfied
@@ -367,26 +434,26 @@ class NodeBase(InstanceModelMixin):
                 relationship = model.Relationship(
                     name=requirement_template.name,
                     source_requirement_index=requirement_template_index,
-                    target_node_id=target_node.id
+                    target_node_id=target_node.name
                 )
                 if target_capability is not None:
                     relationship.target_capability_name = target_capability.name
                 self.outbound_relationships.append(relationship)
             else:
-                context.validation.report('requirement "%s" of node "%s" targets node '
-                                          'template "%s" but its instantiated nodes do not '
-                                          'have enough capacity'
-                                          % (requirement_template.name,
-                                             self.id,
-                                             target_node_template.name),
+                context.validation.report('requirement "{0}" of node "{1}" targets node '
+                                          'template "{2}" but its instantiated nodes do not '
+                                          'have enough capacity'.format(
+                                              requirement_template.name,
+                                              self.name,
+                                              target_node_template.name),
                                           level=validation.Issue.BETWEEN_INSTANCES)
                 return False
         else:
-            context.validation.report('requirement "%s" of node "%s" targets node template '
-                                      '"%s" but it has no instantiated nodes'
-                                      % (requirement_template.name,
-                                         self.id,
-                                         target_node_template.name),
+            context.validation.report('requirement "{0}" of node "{1}" targets node template '
+                                      '"{2}" but it has no instantiated nodes'.format(
+                                          requirement_template.name,
+                                          self.name,
+                                          target_node_template.name),
                                       level=validation.Issue.BETWEEN_INSTANCES)
             return False
 
@@ -394,12 +461,12 @@ class NodeBase(InstanceModelMixin):
         satisfied = False
         for capability in self.capabilities.itervalues():
             if not capability.has_enough_relationships:
-                context.validation.report('capability "%s" of node "%s" requires at least %d '
-                                          'relationships but has %d'
-                                          % (capability.name,
-                                             self.id,
-                                             capability.min_occurrences,
-                                             capability.occurrences),
+                context.validation.report('capability "{0}" of node "{1}" requires at least {2:d} '
+                                          'relationships but has {3:d}'.format(
+                                              capability.name,
+                                              self.name,
+                                              capability.min_occurrences,
+                                              capability.occurrences),
                                           level=validation.Issue.BETWEEN_INSTANCES)
                 satisfied = False
         return satisfied
@@ -407,21 +474,22 @@ class NodeBase(InstanceModelMixin):
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('id', self.id),
+            ('name', self.name),
             ('type_name', self.type_name),
             ('template_name', self.template_name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces)),
             ('artifacts', formatting.as_raw_list(self.artifacts)),
             ('capabilities', formatting.as_raw_list(self.capabilities)),
-            ('relationships', formatting.as_raw_list(self.relationships))))
+            ('relationships', formatting.as_raw_list(self.outbound_relationships))))
 
     def validate(self, context):
-        if len(self.id) > context.modeling.id_max_length:
-            context.validation.report('"%s" has an ID longer than the limit of %d characters: %d'
-                                      % (self.id,
-                                         context.modeling.id_max_length,
-                                         len(self.id)),
+        if len(self.name) > context.modeling.id_max_length:
+            context.validation.report('"{0}" has an ID longer than the limit of {1:d} characters: '
+                                      '{2:d}'.format(
+                                            self.name,
+                                            context.modeling.id_max_length,
+                                            len(self.name)),
                                       level=validation.Issue.BETWEEN_INSTANCES)
 
         # TODO: validate that node template is of type?
@@ -430,40 +498,38 @@ class NodeBase(InstanceModelMixin):
         utils.validate_dict_values(context, self.interfaces)
         utils.validate_dict_values(context, self.artifacts)
         utils.validate_dict_values(context, self.capabilities)
-        utils.validate_list_values(context, self.relationships)
+        utils.validate_list_values(context, self.outbound_relationships)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, self, self.properties, report_issues)
         utils.coerce_dict_values(context, self, self.interfaces, report_issues)
         utils.coerce_dict_values(context, self, self.artifacts, report_issues)
         utils.coerce_dict_values(context, self, self.capabilities, report_issues)
-        utils.coerce_list_values(context, self, self.relationships, report_issues)
+        utils.coerce_list_values(context, self, self.outbound_relationships, report_issues)
 
     def dump(self, context):
-        console.puts('Node: %s' % context.style.node(self.id))
+        console.puts('Node: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
-            console.puts('Template: %s' % context.style.node(self.template_name))
-            console.puts('Type: %s' % context.style.type(self.type_name))
+            console.puts('Template: {0}'.format(context.style.node(self.template_name)))
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interfaces)
             utils.dump_dict_values(context, self.artifacts, 'Artifacts')
             utils.dump_dict_values(context, self.capabilities, 'Capabilities')
-            utils.dump_list_values(context, self.relationships, 'Relationships')
+            utils.dump_list_values(context, self.outbound_relationships, 'Relationships')
 
 
-class GroupBase(InstanceModelMixin):
+class GroupBase(_InstanceModelMixin):
     """
     An instance of a :class:`GroupTemplate`.
 
-    Properties:
-
-    * :code:`id`: Unique ID (prefixed with the template name)
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interfaces`: Dict of :class:`Interface`
-    * :code:`member_node_ids`: Must be represented in the :class:`ServiceInstance`
-    * :code:`member_group_ids`: Must be represented in the :class:`ServiceInstance`
+    :ivar name: Unique ID (prefixed with the template name)
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interfaces: Dict of :class:`Interface`
+    :ivar member_node_ids: Must be represented in the :class:`ServiceInstance`
+    :ivar member_group_ids: Must be represented in the :class:`ServiceInstance`
     """
 
     __tablename__ = 'group'
@@ -496,40 +562,36 @@ class GroupBase(InstanceModelMixin):
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('id', self.id),
+            ('name', self.name),
             ('type_name', self.type_name),
             ('template_name', self.template_name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces)),
-            ('policies', formatting.as_raw_list(self.policies)),
             ('member_node_ids', self.member_node_ids),
             ('member_group_ids', self.member_group_ids)))
 
     def validate(self, context):
         if context.modeling.group_types.get_descendant(self.type_name) is None:
-            context.validation.report('group "%s" has an unknown type: %s'
-                                      % (self.name,  # pylint: disable=no-member
-                                         # TODO fix self.name reference
-                                         formatting.safe_repr(self.type_name)),
+            context.validation.report('group "{0}" has an unknown type: {1}'.format(
+                                        self.name,  # pylint: disable=no-member
+                                        # TODO fix self.name reference
+                                        formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interfaces)
-        utils.validate_dict_values(context, self.policies)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, container, self.properties, report_issues)
         utils.coerce_dict_values(context, container, self.interfaces, report_issues)
-        utils.coerce_dict_values(context, container, self.policies, report_issues)
 
     def dump(self, context):
-        console.puts('Group: %s' % context.style.node(self.id))
+        console.puts('Group: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            console.puts('Template: %s' % context.style.type(self.template_name))
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
+            console.puts('Template: {0}'.format(context.style.type(self.template_name)))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interfaces)
-            utils.dump_dict_values(context, self.policies, 'Policies')
             if self.member_node_ids:
                 console.puts('Member nodes:')
                 with context.style.indent:
@@ -537,17 +599,15 @@ class GroupBase(InstanceModelMixin):
                         console.puts(context.style.node(node_id))
 
 
-class PolicyBase(InstanceModelMixin):
+class PolicyBase(_InstanceModelMixin):
     """
     An instance of a :class:`PolicyTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`target_node_ids`: Must be represented in the :class:`ServiceInstance`
-    * :code:`target_group_ids`: Must be represented in the :class:`ServiceInstance`
+    :ivar name: Name
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar target_node_ids: Must be represented in the :class:`ServiceInstance`
+    :ivar target_group_ids: Must be represented in the :class:`ServiceInstance`
     """
 
     __tablename__ = 'policy'
@@ -583,8 +643,8 @@ class PolicyBase(InstanceModelMixin):
 
     def validate(self, context):
         if context.modeling.policy_types.get_descendant(self.type_name) is None:
-            context.validation.report('policy "%s" has an unknown type: %s'
-                                      % (self.name, utils.safe_repr(self.type_name)),
+            context.validation.report('policy "{0}" has an unknown type: {1}'.format(
+                                        self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -593,9 +653,9 @@ class PolicyBase(InstanceModelMixin):
         utils.coerce_dict_values(context, container, self.properties, report_issues)
 
     def dump(self, context):
-        console.puts('Policy: %s' % context.style.node(self.name))
+        console.puts('Policy: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             utils.dump_parameters(context, self.properties)
             if self.target_node_ids:
                 console.puts('Target nodes:')
@@ -609,14 +669,12 @@ class PolicyBase(InstanceModelMixin):
                         console.puts(context.style.node(group_id))
 
 
-class SubstitutionBase(InstanceModelMixin):
+class SubstitutionBase(_InstanceModelMixin):
     """
     An instance of a :class:`SubstitutionTemplate`.
 
-    Properties:
-
-    * :code:`node_type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`mappings`: Dict of :class:` SubstitutionMapping`
+    :ivar node_type_name: Must be represented in the :class:`ModelingContext`
+    :ivar mappings: Dict of :class:` SubstitutionMapping`
     """
 
     __tablename__ = 'substitution'
@@ -635,41 +693,35 @@ class SubstitutionBase(InstanceModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('node_type_name', self.node_type_name),
-            ('capabilities', formatting.as_raw_list(self.capabilities)),
-            ('requirements', formatting.as_raw_list(self.requirements))))
+            ('mappings', formatting.as_raw_dict(self.mappings))))
 
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.node_type_name) is None:
-            context.validation.report('substitution "%s" has an unknown type: %s'
-                                      % (self.name,  # pylint: disable=no-member
-                                         # TODO fix self.name reference
-                                         formatting.safe_repr(self.node_type_name)),
+            context.validation.report('substitution "{0}" has an unknown type: {1}'.format(
+                                        self.name,  # pylint: disable=no-member
+                                        # TODO fix self.name reference
+                                        formatting.safe_repr(self.node_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
-        utils.validate_dict_values(context, self.capabilities)
-        utils.validate_dict_values(context, self.requirements)
+        utils.validate_dict_values(context, self.mappings)
 
     def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.capabilities, report_issues)
-        utils.coerce_dict_values(context, container, self.requirements, report_issues)
+        utils.coerce_dict_values(context, container, self.mappings, report_issues)
 
     def dump(self, context):
         console.puts('Substitution:')
         with context.style.indent:
-            console.puts('Node type: %s' % context.style.type(self.node_type_name))
-            utils.dump_dict_values(context, self.capabilities, 'Capability mappings')
-            utils.dump_dict_values(context, self.requirements, 'Requirement mappings')
+            console.puts('Node type: {0}'.format(context.style.type(self.node_type_name)))
+            utils.dump_dict_values(context, self.mappings, 'Mappings')
 
 
-class SubstitutionMappingBase(InstanceModelMixin):
+class SubstitutionMappingBase(_InstanceModelMixin):
     """
     An instance of a :class:`MappingTemplate`.
 
-    Properties:
-
-    * :code:`mapped_name`: Exposed capability or requirement name
-    * :code:`node_id`: Must be represented in the :class:`ServiceInstance`
-    * :code:`name`: Name of capability or requirement at the node
+    :ivar mapped_name: Exposed capability or requirement name
+    :ivar node_id: Must be represented in the :class:`ServiceInstance`
+    :ivar name: Name of capability or requirement at the node
     """
 
     __tablename__ = 'substitution_mapping'
@@ -695,28 +747,26 @@ class SubstitutionMappingBase(InstanceModelMixin):
             ('name', self.name)))
 
     def dump(self, context):
-        console.puts('%s -> %s.%s'
-                     % (context.style.node(self.mapped_name),
+        console.puts('{0} -> {1}.{2}'.format(
+                        context.style.node(self.mapped_name),
                         context.style.node(self.node_id),
                         context.style.node(self.name)))
 
 
-class RelationshipBase(InstanceModelMixin):
+class RelationshipBase(_InstanceModelMixin):
     """
     Connects :class:`Node` to another node.
 
     An instance of a :class:`RelationshipTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name (usually the name of the requirement at the source node template)
-    * :code:`source_requirement_index`: Must be represented in the source node template
-    * :code:`target_node_id`: Must be represented in the :class:`ServiceInstance`
-    * :code:`target_capability_name`: Matches the capability at the target node
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`template_name`: Must be represented in the :class:`ServiceTemplate`
-    * :code:`properties`: Dict of :class:`Parameter`
-    * :code:`interfaces`: Dict of :class:`Interface`
+    :ivar name: Name (usually the name of the requirement at the source node template)
+    :ivar source_requirement_index: Must be represented in the source node template
+    :ivar target_node_id: Must be represented in the :class:`ServiceInstance`
+    :ivar target_capability_name: Matches the capability at the target node
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
+    :ivar properties: Dict of :class:`Parameter`
+    :ivar interfaces: Dict of :class:`Interface`
     """
 
     __tablename__ = 'relationship'
@@ -773,9 +823,9 @@ class RelationshipBase(InstanceModelMixin):
     def validate(self, context):
         if self.type_name:
             if context.modeling.relationship_types.get_descendant(self.type_name) is None:
-                context.validation.report('relationship "%s" has an unknown type: %s'
-                                          % (self.name,
-                                             formatting.safe_repr(self.type_name)),
+                context.validation.report('relationship "{0}" has an unknown type: {1}'.format(
+                                            self.name,
+                                            formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interfaces)
@@ -787,38 +837,38 @@ class RelationshipBase(InstanceModelMixin):
     def dump(self, context):
         if self.name:
             if self.source_requirement_index is not None:
-                console.puts('%s (%d) ->' % (
-                    context.style.node(self.name),
-                    self.source_requirement_index))
+                console.puts('{0} ({1:d}) ->'.format(
+                                context.style.node(self.name),
+                                self.source_requirement_index))
             else:
-                console.puts('%s ->' % context.style.node(self.name))
+                console.puts('{0} ->'.format(context.style.node(self.name)))
         else:
             console.puts('->')
         with context.style.indent:
-            console.puts('Node: %s' % context.style.node(self.target_node_id))
+            console.puts('Node: {0}'.format(context.style.node(self.target_node_id)))
             if self.target_capability_name is not None:
-                console.puts('Capability: %s' % context.style.node(self.target_capability_name))
+                console.puts('Capability: {0}'.format(
+                    context.style.node(self.target_capability_name)))
             if self.type_name is not None:
-                console.puts('Relationship type: %s' % context.style.type(self.type_name))
+                console.puts('Relationship type: {0}'.format(context.style.type(self.type_name)))
             if self.template_name is not None:
-                console.puts('Relationship template: %s' % context.style.node(self.template_name))
+                console.puts('Relationship template: {0}'.format(
+                    context.style.node(self.template_name)))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interfaces, 'Interfaces')
 
 
-class CapabilityBase(InstanceModelMixin):
+class CapabilityBase(_InstanceModelMixin):
     """
     A capability of a :class:`Node`.
 
     An instance of a :class:`CapabilityTemplate`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`min_occurrences`: Minimum number of requirement matches required
-    * :code:`max_occurrences`: Maximum number of requirement matches allowed
-    * :code:`properties`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar min_occurrences: Minimum number of requirement matches required
+    :ivar max_occurrences: Maximum number of requirement matches allowed
+    :ivar properties: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'capability'
@@ -865,9 +915,9 @@ class CapabilityBase(InstanceModelMixin):
 
     def validate(self, context):
         if context.modeling.capability_types.get_descendant(self.type_name) is None:
-            context.validation.report('capability "%s" has an unknown type: %s'
-                                      % (self.name,
-                                         formatting.safe_repr(self.type_name)),
+            context.validation.report('capability "{0}" has an unknown type: {1}'.format(
+                                        self.name,
+                                        formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -878,28 +928,26 @@ class CapabilityBase(InstanceModelMixin):
     def dump(self, context):
         console.puts(context.style.node(self.name))
         with context.style.indent:
-            console.puts('Type: %s' % context.style.type(self.type_name))
-            console.puts('Occurrences: %s (%s%s)'
-                         % (self.occurrences,
+            console.puts('Type: {0}'.format(context.style.type(self.type_name)))
+            console.puts('Occurrences: {0:d} ({1:d}{2})'.format(
+                            self.occurrences,
                             self.min_occurrences or 0,
-                            (' to %d' % self.max_occurrences)
-                            if self.max_occurrences is not None
-                            else ' or more'))
+                            ' to {0:d}'.format(self.max_occurrences)
+                                if self.max_occurrences is not None
+                                else ' or more'))
             utils.dump_parameters(context, self.properties)
 
 
-class InterfaceBase(InstanceModelMixin):
+class InterfaceBase(_InstanceModelMixin):
     """
     A typed set of :class:`Operation`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`edge`: Edge
-    * :code:`inputs`: Dict of :class:`Parameter`
-    * :code:`operations`: Dict of :class:`Operation`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar edge: Edge
+    :ivar inputs: Dict of :class:`Parameter`
+    :ivar operations: Dict of :class:`Operation`
     """
 
     __tablename__ = 'interface'
@@ -949,9 +997,9 @@ class InterfaceBase(InstanceModelMixin):
     def validate(self, context):
         if self.type_name:
             if context.modeling.interface_types.get_descendant(self.type_name) is None:
-                context.validation.report('interface "%s" has an unknown type: %s'
-                                          % (self.name,
-                                             formatting.safe_repr(self.type_name)),
+                context.validation.report('interface "{0}" has an unknown type: {1}'.format(
+                                            self.name,
+                                            formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.inputs)
@@ -966,25 +1014,23 @@ class InterfaceBase(InstanceModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Interface type: %s' % context.style.type(self.type_name))
+            console.puts('Interface type: {0}'.format(context.style.type(self.type_name)))
             utils.dump_parameters(context, self.inputs, 'Inputs')
             utils.dump_dict_values(context, self.operations, 'Operations')
 
 
-class OperationBase(InstanceModelMixin):
+class OperationBase(_InstanceModelMixin):
     """
     An operation in a :class:`Interface`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`implementation`: Implementation string (interpreted by the orchestrator)
-    * :code:`dependencies`: List of strings (interpreted by the orchestrator)
-    * :code:`executor`: Executor string (interpreted by the orchestrator)
-    * :code:`max_retries`: Maximum number of retries allowed in case of failure
-    * :code:`retry_interval`: Interval between retries
-    * :code:`inputs`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar implementation: Implementation string (interpreted by the orchestrator)
+    :ivar dependencies: List of strings (interpreted by the orchestrator)
+    :ivar executor: Executor string (interpreted by the orchestrator)
+    :ivar max_retries: Maximum number of retries allowed in case of failure
+    :ivar retry_interval: Interval between retries
+    :ivar inputs: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'operation'
@@ -997,8 +1043,8 @@ class OperationBase(InstanceModelMixin):
     implementation = Column(Text)
     dependencies = Column(modeling_type.StrictList(item_cls=basestring))
     executor = Column(Text)
-    max_retries = Column(Integer, default=None)
-    retry_interval = Column(Integer, default=None)
+    max_retries = Column(Integer)
+    retry_interval = Column(Integer)
 
     @declared_attr
     def inputs(cls):
@@ -1044,34 +1090,34 @@ class OperationBase(InstanceModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             if self.implementation is not None:
-                console.puts('Implementation: %s' % context.style.literal(self.implementation))
+                console.puts('Implementation: {0}'.format(
+                    context.style.literal(self.implementation)))
             if self.dependencies:
                 console.puts(
-                    'Dependencies: %s'
-                    % ', '.join((str(context.style.literal(v)) for v in self.dependencies)))
+                    'Dependencies: {0}'.format(
+                        ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
             if self.executor is not None:
-                console.puts('Executor: %s' % context.style.literal(self.executor))
+                console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
             if self.max_retries is not None:
-                console.puts('Max retries: %s' % context.style.literal(self.max_retries))
+                console.puts('Max retries: {0}'.format(context.style.literal(self.max_retries)))
             if self.retry_interval is not None:
-                console.puts('Retry interval: %s' % context.style.literal(self.retry_interval))
+                console.puts('Retry interval: {0}'.format(
+                    context.style.literal(self.retry_interval)))
             utils.dump_parameters(context, self.inputs, 'Inputs')
 
 
-class ArtifactBase(InstanceModelMixin):
+class ArtifactBase(_InstanceModelMixin):
     """
     A file associated with a :class:`Node`.
 
-    Properties:
-
-    * :code:`name`: Name
-    * :code:`description`: Description
-    * :code:`type_name`: Must be represented in the :class:`ModelingContext`
-    * :code:`source_path`: Source path (CSAR or repository)
-    * :code:`target_path`: Path at destination machine
-    * :code:`repository_url`: Repository URL
-    * :code:`repository_credential`: Dict of string
-    * :code:`properties`: Dict of :class:`Parameter`
+    :ivar name: Name
+    :ivar description: Description
+    :ivar type_name: Must be represented in the :class:`ModelingContext`
+    :ivar source_path: Source path (CSAR or repository)
+    :ivar target_path: Path at destination machine
+    :ivar repository_url: Repository URL
+    :ivar repository_credential: Dict of string
+    :ivar properties: Dict of :class:`Parameter`
     """
 
     __tablename__ = 'artifact'
@@ -1112,9 +1158,9 @@ class ArtifactBase(InstanceModelMixin):
 
     def validate(self, context):
         if context.modeling.artifact_types.get_descendant(self.type_name) is None:
-            context.validation.report('artifact "%s" has an unknown type: %s'
-                                      % (self.name,
-                                         formatting.safe_repr(self.type_name)),
+            context.validation.report('artifact "{0}" has an unknown type: {1}'.format(
+                                        self.name,
+                                        formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
         utils.validate_dict_values(context, self.properties)
 
@@ -1126,13 +1172,14 @@ class ArtifactBase(InstanceModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            console.puts('Artifact type: %s' % context.style.type(self.type_name))
-            console.puts('Source path: %s' % context.style.literal(self.source_path))
+            console.puts('Artifact type: {0}'.format(context.style.type(self.type_name)))
+            console.puts('Source path: {0}'.format(context.style.literal(self.source_path)))
             if self.target_path is not None:
-                console.puts('Target path: %s' % context.style.literal(self.target_path))
+                console.puts('Target path: {0}'.format(context.style.literal(self.target_path)))
             if self.repository_url is not None:
-                console.puts('Repository URL: %s' % context.style.literal(self.repository_url))
+                console.puts('Repository URL: {0}'.format(
+                    context.style.literal(self.repository_url)))
             if self.repository_credential:
-                console.puts('Repository credential: %s'
-                             % context.style.literal(self.repository_credential))
+                console.puts('Repository credential: {0}'.format(
+                    context.style.literal(self.repository_credential)))
             utils.dump_parameters(context, self.properties)

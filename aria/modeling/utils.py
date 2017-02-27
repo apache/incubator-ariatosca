@@ -110,17 +110,19 @@ def dump_dict_values(context, the_dict, name):
 def dump_parameters(context, parameters, name='Properties'):
     if not parameters:
         return
-    puts('%s:' % name)
+    puts('{0}:'.format(name))
     with context.style.indent:
-        for parameter_name, parameter in parameters.iteritems():
-            if parameter.type_name is not None:
-                puts('%s = %s (%s)' % (context.style.property(parameter_name),
-                                       context.style.literal(parameter.value),
-                                       context.style.type(parameter.type_name)))
+        for parameter_name, parameter in parameters.items():
+            if hasattr(parameter, 'type_name') and (parameter.type_name is not None):
+                puts('{0} = {1} ({2})'.format(
+                    context.style.property(parameter_name),
+                    context.style.literal(parameter.value),
+                    context.style.type(parameter.type_name)))
             else:
-                puts('%s = %s' % (context.style.property(parameter_name),
-                                  context.style.literal(parameter.value)))
-            if parameter.description:
+                puts('{0} = {1}'.format(
+                    context.style.property(parameter_name),
+                    context.style.literal(parameter.value)))
+            if hasattr(parameter, 'description') and parameter.description:
                 puts(context.style.meta(parameter.description))
 
 

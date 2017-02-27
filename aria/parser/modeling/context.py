@@ -45,6 +45,7 @@ class ModelingContext(object):
 
     * :code:`model`: The generated service model
     * :code:`instance`: The generated service instance
+    * :code:`node_id_format`: Format for node instance IDs 
     * :code:`id_type`: Type of IDs to use for instances
     * :code:`id_max_length`: Maximum allowed instance ID length
     * :code:`inputs`: Dict of inputs values
@@ -61,6 +62,7 @@ class ModelingContext(object):
     def __init__(self):
         self.model = None
         self.instance = None
+        self.node_id_format = '{template}_{id}'
         #self.id_type = IdType.LOCAL_SERIAL
         #self.id_type = IdType.LOCAL_RANDOM
         self.id_type = IdType.UNIVERSAL_RANDOM
@@ -77,6 +79,11 @@ class ModelingContext(object):
 
         self._serial_id_counter = itertools.count(1)
         self._locally_unique_ids = set()
+
+    def generate_node_id(self, template_name):
+        return self.node_id_format.format(
+            template=template_name,
+            id=self.generate_id())
 
     def generate_id(self):
         if self.id_type == IdType.LOCAL_SERIAL:
