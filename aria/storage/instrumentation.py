@@ -17,11 +17,11 @@ import copy
 
 import sqlalchemy.event
 
-from ..modeling import model as _model
+from ..modeling import models as _models
 
 _STUB = object()
 _INSTRUMENTED = {
-    _model.Node.runtime_properties: dict
+    _models.Node.runtime_properties: dict
 }
 
 

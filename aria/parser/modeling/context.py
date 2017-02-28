@@ -43,7 +43,7 @@ class ModelingContext(object):
     """
     Properties:
 
-    * :code:`model`: The generated service model
+    * :code:`template`: The generated service template
     * :code:`instance`: The generated service instance
     * :code:`node_id_format`: Format for node instance IDs 
     * :code:`id_type`: Type of IDs to use for instances
@@ -60,7 +60,7 @@ class ModelingContext(object):
     """
 
     def __init__(self):
-        self.model = None
+        self.template = None
         self.instance = None
         self.node_id_format = '{template}_{id}'
         #self.id_type = IdType.LOCAL_SERIAL

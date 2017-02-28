@@ -31,7 +31,7 @@ class BaseOperationContext(BaseContext):
                  name,
                  model_storage,
                  resource_storage,
-                 service_instance_id,
+                 service_id,
                  task_id,
                  actor_id,
                  **kwargs):
@@ -39,7 +39,7 @@ class BaseOperationContext(BaseContext):
             name=name,
             model_storage=model_storage,
             resource_storage=resource_storage,
-            service_instance_id=service_instance_id,
+            service_id=service_id,
             **kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
@@ -69,7 +69,7 @@ class BaseOperationContext(BaseContext):
         if not self.task.plugin_name:
             return None
         plugin_workdir = '{0}/plugins/{1}/{2}'.format(self._workdir,
-                                                      self.service_instance.id,
+                                                      self.service.id,
                                                       self.task.plugin_name)
         file.makedirs(plugin_workdir)
         return plugin_workdir
@@ -79,7 +79,7 @@ class BaseOperationContext(BaseContext):
         context_cls = self.__class__
         context_dict = {
             'name': self.name,
-            'service_instance_id': self._service_instance_id,
+            'service_id': self._service_id,
             'task_id': self._task_id,
             'actor_id': self._actor_id,
             'workdir': self._workdir,

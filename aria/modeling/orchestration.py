@@ -44,10 +44,9 @@ from sqlalchemy import (
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
-from ..orchestrator.exceptions import TaskAbortException, TaskRetryException
-
-from .type import List, Dict
-from .base import ModelMixin
+from ..orchestrator.exceptions import (TaskAbortException, TaskRetryException)
+from .types import (List, Dict)
+from .bases import ModelMixin
 
 __all__ = (
     'Execution',
@@ -65,8 +64,7 @@ class Execution(ModelMixin):
     """
     Execution model representation.
     """
-    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
-    __tablename__ = 'execution'
+    __tablename__ = 'execution' # redundancy for PyLint: SqlAlchemy injects this
 
     __private_fields__ = ['service_fk']
 
@@ -118,10 +116,6 @@ class Execution(ModelMixin):
         return association_proxy('service', 'service_template')
 
     @declared_attr
-    def service_fk(cls):
-        return cls.foreign_key('service')
-
-    @declared_attr
     def service(cls):
         return cls.many_to_one_relationship('service')
 
@@ -132,6 +126,14 @@ class Execution(ModelMixin):
     @declared_attr
     def service_template_name(cls):
         return association_proxy('service', 'service_template_name')
+
+    # region foreign keys
+    
+    @declared_attr
+    def service_fk(cls):
+        return cls.foreign_key('service')
+
+    # endregion
 
     def __str__(self):
         return '<{0} id=`{1}` (status={2})>'.format(
@@ -148,7 +150,8 @@ class ServiceUpdateBase(ModelMixin):
     # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
     steps = None
 
-    __tablename__ = 'service_update'
+    __tablename__ = 'service_update'  # redundancy for PyLint: SqlAlchemy injects this
+
     __private_fields__ = ['service_fk',
                           'execution_fk']
 
@@ -163,10 +166,6 @@ class ServiceUpdateBase(ModelMixin):
     state = Column(Text)
 
     @declared_attr
-    def execution_fk(cls):
-        return cls.foreign_key('execution', nullable=True)
-
-    @declared_attr
     def execution(cls):
         return cls.many_to_one_relationship('execution')
 
@@ -175,16 +174,24 @@ class ServiceUpdateBase(ModelMixin):
         return association_proxy('execution', cls.name_column_name())
 
     @declared_attr
-    def service_fk(cls):
-        return cls.foreign_key('service')
-
-    @declared_attr
     def service(cls):
         return cls.many_to_one_relationship('service')
 
     @declared_attr
     def service_name(cls):
         return association_proxy('service', cls.name_column_name())
+
+    # region foreign keys
+    
+    @declared_attr
+    def execution_fk(cls):
+        return cls.foreign_key('execution', nullable=True)
+
+    @declared_attr
+    def service_fk(cls):
+        return cls.foreign_key('service')
+
+    # endregion
 
     def to_dict(self, suppress_error=False, **kwargs):
         dep_update_dict = super(ServiceUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
@@ -197,8 +204,8 @@ class ServiceUpdateStepBase(ModelMixin):
     """
     Deployment update step model representation.
     """
-    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
-    __tablename__ = 'service_update_step'
+    __tablename__ = 'service_update_step' # redundancy for PyLint: SqlAlchemy injects this
+
     __private_fields__ = ['service_update_fk']
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
@@ -226,10 +233,6 @@ class ServiceUpdateStepBase(ModelMixin):
     entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
 
     @declared_attr
-    def service_update_fk(cls):
-        return cls.foreign_key('service_update')
-
-    @declared_attr
     def service_update(cls):
         return cls.many_to_one_relationship('service_update',
                                             backreference='steps')
@@ -237,6 +240,14 @@ class ServiceUpdateStepBase(ModelMixin):
     @declared_attr
     def deployment_update_name(cls):
         return association_proxy('deployment_update', cls.name_column_name())
+
+    # region foreign keys
+    
+    @declared_attr
+    def service_update_fk(cls):
+        return cls.foreign_key('service_update')
+    
+    # endregion
 
     def __hash__(self):
         return hash((getattr(self, self.id_column_name()), self.entity_id))
@@ -270,7 +281,8 @@ class ServiceModificationBase(ModelMixin):
     """
     Deployment modification model representation.
     """
-    __tablename__ = 'service_modification'
+    __tablename__ = 'service_modification' # redundancy for PyLint: SqlAlchemy injects this
+
     __private_fields__ = ['service_fk']
 
     STARTED = 'started'
@@ -305,7 +317,9 @@ class PluginBase(ModelMixin):
     """
     Plugin model representation.
     """
-    __tablename__ = 'plugin'
+    __tablename__ = 'plugin' # redundancy for PyLint: SqlAlchemy injects this
+
+    __private_fields__ = ['service_template_fk']
 
     archive_name = Column(Text, nullable=False, index=True)
     distribution = Column(Text)
@@ -319,20 +333,25 @@ class PluginBase(ModelMixin):
     uploaded_at = Column(DateTime, nullable=False, index=True)
     wheels = Column(List, nullable=False)
 
+    # region foreign keys
+
+    @declared_attr
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template', nullable=True)
+
+    # endregion
+
 
 class TaskBase(ModelMixin):
     """
     A Model which represents an task
     """
-    __tablename__ = 'task'
+    __tablename__ = 'task' # redundancy for PyLint: SqlAlchemy injects this
+
     __private_fields__ = ['node_fk',
                           'relationship_fk',
-                          'execution_fk',
-                          'plugin_fk']
-
-    @declared_attr
-    def node_fk(cls):
-        return cls.foreign_key('node', nullable=True)
+                          'plugin_fk',
+                          'execution_fk']
 
     @declared_attr
     def node_name(cls):
@@ -343,10 +362,6 @@ class TaskBase(ModelMixin):
         return cls.many_to_one_relationship('node')
 
     @declared_attr
-    def relationship_fk(cls):
-        return cls.foreign_key('relationship', nullable=True)
-
-    @declared_attr
     def relationship_name(cls):
         return association_proxy('relationship', cls.name_column_name())
 
@@ -355,16 +370,8 @@ class TaskBase(ModelMixin):
         return cls.many_to_one_relationship('relationship')
 
     @declared_attr
-    def plugin_fk(cls):
-        return cls.foreign_key('plugin', nullable=True)
-
-    @declared_attr
     def plugin(cls):
         return cls.many_to_one_relationship('plugin')
-
-    @declared_attr
-    def execution_fk(cls):
-        return cls.foreign_key('execution', nullable=True)
 
     @declared_attr
     def execution(cls):
@@ -373,6 +380,31 @@ class TaskBase(ModelMixin):
     @declared_attr
     def execution_name(cls):
         return association_proxy('execution', cls.name_column_name())
+
+    @declared_attr
+    def inputs(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
+                                             key_column_name='name')
+
+    # region foreign keys
+    
+    @declared_attr
+    def node_fk(cls):
+        return cls.foreign_key('node', nullable=True)
+
+    @declared_attr
+    def relationship_fk(cls):
+        return cls.foreign_key('relationship', nullable=True)
+
+    @declared_attr
+    def plugin_fk(cls):
+        return cls.foreign_key('plugin', nullable=True)
+
+    @declared_attr
+    def execution_fk(cls):
+        return cls.foreign_key('execution', nullable=True)
+
+    # endregion
 
     PENDING = 'pending'
     RETRYING = 'retrying'
@@ -394,8 +426,8 @@ class TaskBase(ModelMixin):
 
     RUNS_ON_SOURCE = 'source'
     RUNS_ON_TARGET = 'target'
-    RUNS_ON_NODE_INSTANCE = 'node_instance'
-    RUNS_ON = (RUNS_ON_NODE_INSTANCE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
+    RUNS_ON_NODE = 'node'
+    RUNS_ON = (RUNS_ON_NODE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
 
     @orm.validates('max_attempts')
     def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
@@ -419,7 +451,6 @@ class TaskBase(ModelMixin):
 
     # Operation specific fields
     implementation = Column(String)
-    inputs = Column(Dict)
     # This is unrelated to the plugin of the task. This field is related to the plugin name
     # received from the blueprint.
     plugin_name = Column(String)
@@ -427,7 +458,7 @@ class TaskBase(ModelMixin):
 
     @property
     def runs_on(self):
-        if self._runs_on == self.RUNS_ON_NODE_INSTANCE:
+        if self._runs_on == self.RUNS_ON_NODE:
             return self.node
         elif self._runs_on == self.RUNS_ON_SOURCE:
             return self.relationship.source_node  # pylint: disable=no-member
@@ -444,11 +475,11 @@ class TaskBase(ModelMixin):
         return self.node or self.relationship
 
     @classmethod
-    def as_node_instance(cls, instance, runs_on, **kwargs):
+    def as_node_task(cls, instance, runs_on, **kwargs):
         return cls(node=instance, _runs_on=runs_on, **kwargs)
 
     @classmethod
-    def as_relationship_instance(cls, instance, runs_on, **kwargs):
+    def as_relationship_task(cls, instance, runs_on, **kwargs):
         return cls(relationship=instance, _runs_on=runs_on, **kwargs)
 
     @staticmethod

@@ -32,7 +32,7 @@ class Derive(Consumer):
                                            '"_get_service_model"')
             return
 
-        self.context.modeling.model = \
+        self.context.modeling.template = \
             self.context.presentation.presenter._get_service_model(self.context)
 
 
@@ -42,7 +42,7 @@ class CoerceModelValues(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.model.coerce_values(self.context, None, True)
+        self.context.modeling.template.coerce_values(self.context, None, True)
 
 
 class ValidateModel(Consumer):
@@ -51,7 +51,7 @@ class ValidateModel(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.model.validate(self.context)
+        self.context.modeling.template.validate(self.context)
 
 class Model(ConsumerChain):
     """
@@ -64,14 +64,14 @@ class Model(ConsumerChain):
     def dump(self):
         if self.context.has_arg_switch('yaml'):
             indent = self.context.get_arg_value_int('indent', 2)
-            raw = self.context.modeling.model_as_raw
+            raw = self.context.modeling.template_as_raw
             self.context.write(yaml_dumps(raw, indent=indent))
         elif self.context.has_arg_switch('json'):
             indent = self.context.get_arg_value_int('indent', 2)
-            raw = self.context.modeling.model_as_raw
+            raw = self.context.modeling.template_as_raw
             self.context.write(json_dumps(raw, indent=indent))
         else:
-            self.context.modeling.model.dump(self.context)
+            self.context.modeling.template.dump(self.context)
 
 class Types(Consumer):
     """
@@ -96,11 +96,11 @@ class Instantiate(Consumer):
     """
 
     def consume(self):
-        if self.context.modeling.model is None:
+        if self.context.modeling.template is None:
             self.context.validation.report('Instantiate consumer: missing service model')
             return
 
-        self.context.modeling.model.instantiate(self.context, None)
+        self.context.modeling.template.instantiate(self.context, None)
 
 class CoerceInstanceValues(Consumer):
     """

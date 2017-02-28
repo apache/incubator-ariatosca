@@ -47,7 +47,7 @@ from aria.utils import imports
 from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.storage import instrumentation
-from aria.modeling import type as storage_type
+from aria.modeling import types as modeling_types
 
 _IS_WIN = os.name == 'nt'
 
@@ -323,7 +323,7 @@ def _main():
 
     # This is required for the instrumentation work properly.
     # See docstring of `remove_mutable_association_listener` for further details
-    storage_type.remove_mutable_association_listener()
+    modeling_types.remove_mutable_association_listener()
 
     with instrumentation.track_changes() as instrument:
         try:

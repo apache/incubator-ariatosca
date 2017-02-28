@@ -16,7 +16,6 @@
 from random import randrange
 
 from shortuuid import ShortUUID
-from sqlalchemy.orm.exc import DetachedInstanceError
 from networkx.release import name
 
 from ..utils.console import puts
@@ -29,7 +28,7 @@ UUID = ShortUUID(alphabet='abcdefghijklmnopqrstuvwxyz0123456789')  # alphanumeri
 
 def generate_id_string(length=None):
     """
-    A random string with a strong guarantee of universal uniqueness (uses UUID).
+    A random string with a strong guarantee of universal uniqueness (uses ShortUUID).
 
     The default length is 25 characters.
     """
@@ -150,13 +149,3 @@ class classproperty(object):                                                    
 
     def __get__(self, instance, owner):
         return self._func(owner)
-
-
-def query_has_item_named(the_list, name):
-    print dir(the_list)
-    try:
-        # This is most efficient, however it will not work if we don't have a session
-        return the_list.filter_by(name=name).count() > 0
-    except DetachedInstanceError:
-        # This will always work
-        return name in [v.name for v in the_list.all()]

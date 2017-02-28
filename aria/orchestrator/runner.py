@@ -50,7 +50,7 @@ class Runner(object):
     """
 
     def __init__(self, workflow_name, workflow_fn, inputs, initialize_model_storage_fn,
-                 service_instance_id, storage_path='', is_storage_temporary=True):
+                 service_id_fn, storage_path='', is_storage_temporary=True):
         if storage_path == '':
             # Temporary file storage
             the_file, storage_path = tempfile.mkstemp(suffix='.db', prefix='aria-')
@@ -61,8 +61,8 @@ class Runner(object):
         self._storage_name = os.path.basename(storage_path)
         self._is_storage_temporary = is_storage_temporary
 
-        workflow_context = self.create_workflow_context(workflow_name, service_instance_id,
-                                                        initialize_model_storage_fn)
+        workflow_context = self.create_workflow_context(workflow_name, initialize_model_storage_fn,
+                                                        service_id_fn)
 
         tasks_graph = workflow_fn(ctx=workflow_context, **inputs)
 
@@ -79,20 +79,21 @@ class Runner(object):
 
     def create_workflow_context(self,
                                 workflow_name,
-                                service_instance_id,
-                                initialize_model_storage_fn):
+                                initialize_model_storage_fn,
+                                service_id_fn):
         self.cleanup()
         model_storage = application_model_storage(
             sql_mapi.SQLAlchemyModelAPI,
             initiator_kwargs=dict(base_dir=self._storage_dir, filename=self._storage_name))
-        initialize_model_storage_fn(model_storage)
+        if initialize_model_storage_fn:
+            initialize_model_storage_fn(model_storage)
         resource_storage = application_resource_storage(
             filesystem_rapi.FileSystemResourceAPI, api_kwargs=dict(directory='.'))
         return WorkflowContext(
             name=workflow_name,
             model_storage=model_storage,
             resource_storage=resource_storage,
-            service_instance_id=service_instance_id,
+            service_id=service_id_fn(),
             workflow_name=self.__class__.__name__,
             task_max_attempts=1,
             task_retry_interval=1)

@@ -16,20 +16,19 @@
 from sqlalchemy import (
     Column,
     Text,
-    Integer,
-    Boolean,
+    Integer
 )
 from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
-from .base import ModelMixin
+from .bases import ModelMixin
 from ..parser import validation
 from ..utils import collections, formatting, console
 
 from . import (
     utils,
-    type as modeling_type
+    types as modeling_types
 )
 
 # pylint: disable=no-self-argument, no-member, abstract-method
@@ -74,10 +73,10 @@ class ServiceBase(_InstanceModelMixin):
     :ivar operations: Dict of :class:`Operation`
     """
 
-    __tablename__ = 'service'
+    __tablename__ = 'service' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_template_fk',
-                          'substituion_fk']
+    __private_fields__ = ['substituion_fk',
+                          'service_template_fk']
 
     description = Column(Text)
 
@@ -123,12 +122,10 @@ class ServiceBase(_InstanceModelMixin):
     # region orchestrator required columns
 
     created_at = Column(DateTime, nullable=False, index=True)
-    permalink = Column(Text)
-    policy_triggers = Column(modeling_type.Dict)
-    policy_types = Column(modeling_type.Dict)
-    scaling_groups = Column(modeling_type.Dict)
     updated_at = Column(DateTime)
-    workflows = Column(modeling_type.Dict)
+    permalink = Column(Text)
+    scaling_groups = Column(modeling_types.Dict)
+    workflows = Column(modeling_types.Dict)
 
     @declared_attr
     def service_template_name(cls):
@@ -138,13 +135,15 @@ class ServiceBase(_InstanceModelMixin):
 
     # region foreign keys
 
-    @declared_attr
-    def service_template_fk(cls):
-        return cls.foreign_key('service_template')
-
+    # Service one-to-one to Substitution
     @declared_attr
     def substitution_fk(cls):
         return cls.foreign_key('substitution', nullable=True)
+
+    # Service many-to-one to ServiceTemplate
+    @declared_attr
+    def service_template_fk(cls):
+        return cls.foreign_key('service_template')
 
     # endregion
 
@@ -165,7 +164,7 @@ class ServiceBase(_InstanceModelMixin):
     def find_nodes(self, node_template_name):
         nodes = []
         for node in self.nodes:
-            if node.template_name == node_template_name:
+            if node.node_template.name == node_template_name:
                 nodes.append(node)
         return collections.FrozenList(nodes)
 
@@ -284,7 +283,6 @@ class NodeBase(_InstanceModelMixin):
 
     :ivar name: Unique ID (prefixed with the template name)
     :ivar type_name: Must be represented in the :class:`ModelingContext`
-    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
     :ivar properties: Dict of :class:`Parameter`
     :ivar interfaces: Dict of :class:`Interface`
     :ivar artifacts: Dict of :class:`Artifact`
@@ -292,14 +290,13 @@ class NodeBase(_InstanceModelMixin):
     :ivar relationships: List of :class:`Relationship`
     """
 
-    __tablename__ = 'node'
+    __tablename__ = 'node' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_fk',
-                          'node_template_fk',
-                          'host_fk']
+    __private_fields__ = ['host_fk',
+                          'service_fk',
+                          'node_template_fk']
 
     type_name = Column(Text)
-    template_name = Column(Text)
 
     @declared_attr
     def properties(cls):
@@ -330,10 +327,18 @@ class NodeBase(_InstanceModelMixin):
                                             foreign_key_name='target_node_fk',
                                             backreference='target_node')
 
+    @declared_attr
+    def host(cls):
+        return cls.relationship_to_self('host_fk')
+
+    @declared_attr
+    def node_template(cls):
+        return cls.many_to_one_relationship('node_template')
+
     # region orchestrator required columns
 
-    runtime_properties = Column(modeling_type.Dict)
-    scaling_groups = Column(modeling_type.List)
+    runtime_properties = Column(modeling_types.Dict)
+    scaling_groups = Column(modeling_types.List)
     state = Column(Text, nullable=False)
     version = Column(Integer, default=1)
 
@@ -342,15 +347,12 @@ class NodeBase(_InstanceModelMixin):
         return association_proxy('node_template', 'plugins')
 
     @declared_attr
-    def host(cls):
-        return cls.relationship_to_self('host_fk')
-
-    @declared_attr
     def service_name(cls):
         return association_proxy('service', 'name')
 
     @property
     def ip(self):
+        # TODO: totally broken
         if not self.host_fk:
             return None
         host_node = self.host
@@ -362,38 +364,31 @@ class NodeBase(_InstanceModelMixin):
             return host_ip_property[0].value
         return None
 
-    @declared_attr
-    def node_template(cls):
-        return cls.many_to_one_relationship('node_template')
-
-    @declared_attr
-    def service_template(cls):
-        return association_proxy('service', 'service_template')
-
     # endregion
 
     # region foreign_keys
 
-    @declared_attr
-    def service_fk(cls):
-        return cls.foreign_key('service')
-
-    @declared_attr
-    def node_template_fk(cls):
-        return cls.foreign_key('node_template')
-
+    # Node one-to-one to Node
     @declared_attr
     def host_fk(cls):
         return cls.foreign_key('node', nullable=True)
 
+    # Service one-to-many to Node
+    @declared_attr
+    def service_fk(cls):
+        return cls.foreign_key('service')
+
+    # Node many-to-one to NodeTemplate
+    @declared_attr
+    def node_template_fk(cls):
+        return cls.foreign_key('node_template')
+
     # endregion
 
     def satisfy_requirements(self, context):
-        node_template = context.modeling.model.get_node_template(self.template_name)
+        node_template = self.node_template
         satisfied = True
-        for i in range(len(node_template.requirement_templates)):
-            requirement_template = node_template.requirement_templates[i]
-
+        for requirement_template in node_template.requirement_templates:
             # Find target template
             target_node_template, target_node_capability = \
                 requirement_template.find_target(context, node_template)
@@ -401,8 +396,7 @@ class NodeBase(_InstanceModelMixin):
                 satisfied = self._satisfy_capability(context,
                                                      target_node_capability,
                                                      target_node_template,
-                                                     requirement_template,
-                                                     requirement_template_index=i)
+                                                     requirement_template)
             else:
                 context.validation.report('requirement "{0}" of node "{1}" has no target node '
                                           'template'.format(requirement_template.name, self.name),
@@ -411,8 +405,8 @@ class NodeBase(_InstanceModelMixin):
         return satisfied
 
     def _satisfy_capability(self, context, target_node_capability, target_node_template,
-                            requirement_template, requirement_template_index):
-        from . import model
+                            requirement_template):
+        from . import models
         # Find target nodes
         target_nodes = context.modeling.instance.find_nodes(target_node_template.name)
         if target_nodes:
@@ -431,13 +425,12 @@ class NodeBase(_InstanceModelMixin):
                 target_node = target_nodes[0]
 
             if target_node is not None:
-                relationship = model.Relationship(
+                relationship = models.Relationship(
                     name=requirement_template.name,
-                    source_requirement_index=requirement_template_index,
-                    target_node_id=target_node.name
+                    requirement_template=requirement_template,
+                    target_node=target_node,
+                    capability=target_capability
                 )
-                if target_capability is not None:
-                    relationship.target_capability_name = target_capability.name
                 self.outbound_relationships.append(relationship)
             else:
                 context.validation.report('requirement "{0}" of node "{1}" targets node '
@@ -476,7 +469,6 @@ class NodeBase(_InstanceModelMixin):
         return collections.OrderedDict((
             ('name', self.name),
             ('type_name', self.type_name),
-            ('template_name', self.template_name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces)),
             ('artifacts', formatting.as_raw_list(self.artifacts)),
@@ -510,7 +502,7 @@ class NodeBase(_InstanceModelMixin):
     def dump(self, context):
         console.puts('Node: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
-            console.puts('Template: {0}'.format(context.style.node(self.template_name)))
+            console.puts('Template: {0}'.format(context.style.node(self.node_template.name)))
             console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interfaces)
@@ -532,9 +524,10 @@ class GroupBase(_InstanceModelMixin):
     :ivar member_group_ids: Must be represented in the :class:`ServiceInstance`
     """
 
-    __tablename__ = 'group'
+    __tablename__ = 'group' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_fk']
+    __private_fields__ = ['service_fk',
+                          'group_template_fk']
 
     type_name = Column(Text)
     template_name = Column(Text)
@@ -548,14 +541,24 @@ class GroupBase(_InstanceModelMixin):
     def interfaces(cls):
         return cls.one_to_many_relationship('interface', key_column_name='name')
 
-    member_node_ids = Column(modeling_type.StrictList(basestring))
-    member_group_ids = Column(modeling_type.StrictList(basestring))
+    member_node_ids = Column(modeling_types.StrictList(basestring))
+    member_group_ids = Column(modeling_types.StrictList(basestring))
+
+    @declared_attr
+    def group_template(cls):
+        return cls.many_to_one_relationship('group_template')
 
     # region foreign_keys
 
+    # Service one-to-many to Group
     @declared_attr
     def service_fk(cls):
         return cls.foreign_key('service')
+
+    # Group many-to-one to GroupTemplate
+    @declared_attr
+    def group_template_fk(cls):
+        return cls.foreign_key('group_template')
 
     # endregion
 
@@ -610,9 +613,10 @@ class PolicyBase(_InstanceModelMixin):
     :ivar target_group_ids: Must be represented in the :class:`ServiceInstance`
     """
 
-    __tablename__ = 'policy'
+    __tablename__ = 'policy' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_fk']
+    __private_fields__ = ['service_fk',
+                          'policy_template_fk']
 
     type_name = Column(Text)
 
@@ -621,14 +625,24 @@ class PolicyBase(_InstanceModelMixin):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              key_column_name='name')
 
-    target_node_ids = Column(modeling_type.StrictList(basestring))
-    target_group_ids = Column(modeling_type.StrictList(basestring))
+    target_node_ids = Column(modeling_types.StrictList(basestring))
+    target_group_ids = Column(modeling_types.StrictList(basestring))
+
+    @declared_attr
+    def policy_template(cls):
+        return cls.many_to_one_relationship('policy_template')
 
     # region foreign_keys
 
+    # Service one-to-many to Policy
     @declared_attr
     def service_fk(cls):
         return cls.foreign_key('service')
+
+    # Policy many-to-one to PolicyTemplate
+    @declared_attr
+    def policy_template_fk(cls):
+        return cls.foreign_key('policy_template')
 
     # endregion
 
@@ -677,18 +691,28 @@ class SubstitutionBase(_InstanceModelMixin):
     :ivar mappings: Dict of :class:` SubstitutionMapping`
     """
 
-    __tablename__ = 'substitution'
+    __tablename__ = 'substitution' # redundancy for PyLint: SqlAlchemy injects this
+
+    __private_fields__ = ['substitution_template_fk']
 
     node_type_name = Column(Text)
-
-    # region one-to-many relationships
 
     @declared_attr
     def mappings(cls):
         return cls.one_to_many_relationship('substitution_mapping', key_column_name='name')
 
-    # endregion
+    @declared_attr
+    def substitution_template(cls):
+        return cls.many_to_one_relationship('substitution_template')
 
+    # region foreign_keys
+
+    # Substitution many-to-one to SubstitutionTemplate
+    @declared_attr
+    def substitution_template_fk(cls):
+        return cls.foreign_key('substitution_template')
+
+    # endregion
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -717,14 +741,14 @@ class SubstitutionBase(_InstanceModelMixin):
 
 class SubstitutionMappingBase(_InstanceModelMixin):
     """
-    An instance of a :class:`MappingTemplate`.
+    An instance of a :class:`SubstitutionMappingTemplate`.
 
     :ivar mapped_name: Exposed capability or requirement name
     :ivar node_id: Must be represented in the :class:`ServiceInstance`
     :ivar name: Name of capability or requirement at the node
     """
 
-    __tablename__ = 'substitution_mapping'
+    __tablename__ = 'substitution_mapping' # redundancy for PyLint: SqlAlchemy injects this
 
     __private_fields__ = ['substitution_fk']
 
@@ -733,9 +757,10 @@ class SubstitutionMappingBase(_InstanceModelMixin):
 
     # region foreign keys
 
+    # Substitution one-to-many to SubstitutionMapping
     @declared_attr
     def substitution_fk(cls):
-        return cls.foreign_key('substitution', nullable=True)
+        return cls.foreign_key('substitution')
 
     # endregion
 
@@ -760,25 +785,20 @@ class RelationshipBase(_InstanceModelMixin):
     An instance of a :class:`RelationshipTemplate`.
 
     :ivar name: Name (usually the name of the requirement at the source node template)
-    :ivar source_requirement_index: Must be represented in the source node template
-    :ivar target_node_id: Must be represented in the :class:`ServiceInstance`
-    :ivar target_capability_name: Matches the capability at the target node
     :ivar type_name: Must be represented in the :class:`ModelingContext`
-    :ivar template_name: Must be represented in the :class:`ServiceTemplate`
     :ivar properties: Dict of :class:`Parameter`
     :ivar interfaces: Dict of :class:`Interface`
     """
 
-    __tablename__ = 'relationship'
+    __tablename__ = 'relationship' # redundancy for PyLint: SqlAlchemy injects this
 
     __private_fields__ = ['source_node_fk',
-                          'target_node_fk']
+                          'target_node_fk',
+                          'capability_fk',
+                          'requirement_template_fk',
+                          'relationship_template_fk']
 
-    source_requirement_index = Column(Integer)
-    target_node_id = Column(Text)
-    target_capability_name = Column(Text)
     type_name = Column(Text)
-    template_name = Column(Text)
 
     @declared_attr
     def properties(cls):
@@ -789,22 +809,51 @@ class RelationshipBase(_InstanceModelMixin):
     def interfaces(cls):
         return cls.one_to_many_relationship('interface', key_column_name='name')
 
+    @declared_attr
+    def capability(cls):
+        return cls.one_to_one_relationship('capability')
+
+    @declared_attr
+    def requirement_template(cls):
+        return cls.many_to_one_relationship('requirement_template')
+
+    @declared_attr
+    def relationship_template(cls):
+        return cls.many_to_one_relationship('relationship_template')
+
     # region orchestrator required columns
 
-    source_position = Column(Integer)
-    target_position = Column(Integer)
+    source_position = Column(Integer) # ???
+    target_position = Column(Integer) # ???
 
     # endregion
 
     # region foreign keys
 
+    # Node one-to-many to Relationship
     @declared_attr
     def source_node_fk(cls):
-        return cls.foreign_key('node', nullable=True)
+        return cls.foreign_key('node')
 
+    # Node one-to-many to Relationship
     @declared_attr
     def target_node_fk(cls):
-        return cls.foreign_key('node', nullable=True)
+        return cls.foreign_key('node')
+
+    # Relationship one-to-one to Capability
+    @declared_attr
+    def capability_fk(cls):
+        return cls.foreign_key('capability', nullable=True)
+
+    # Relationship many-to-one to RequirementTemplate
+    @declared_attr
+    def requirement_template_fk(cls):
+        return cls.foreign_key('requirement_template')
+
+    # Relationship many-to-one to RelationshipTemplate
+    @declared_attr
+    def relationship_template_fk(cls):
+        return cls.foreign_key('relationship_template', nullable=True)
 
     # endregion
 
@@ -812,9 +861,7 @@ class RelationshipBase(_InstanceModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('name', self.name),
-            ('source_requirement_index', self.source_requirement_index),
-            ('target_node_id', self.target_node_id),
-            ('target_capability_name', self.target_capability_name),
+            ('target_node_id', self.target_node.name),
             ('type_name', self.type_name),
             ('template_name', self.template_name),
             ('properties', formatting.as_raw_dict(self.properties)),
@@ -836,24 +883,16 @@ class RelationshipBase(_InstanceModelMixin):
 
     def dump(self, context):
         if self.name:
-            if self.source_requirement_index is not None:
-                console.puts('{0} ({1:d}) ->'.format(
-                                context.style.node(self.name),
-                                self.source_requirement_index))
-            else:
-                console.puts('{0} ->'.format(context.style.node(self.name)))
+            console.puts('{0} ->'.format(context.style.node(self.name)))
         else:
             console.puts('->')
         with context.style.indent:
-            console.puts('Node: {0}'.format(context.style.node(self.target_node_id)))
-            if self.target_capability_name is not None:
-                console.puts('Capability: {0}'.format(
-                    context.style.node(self.target_capability_name)))
+            console.puts('Node: {0}'.format(context.style.node(self.target_node.name)))
             if self.type_name is not None:
                 console.puts('Relationship type: {0}'.format(context.style.type(self.type_name)))
-            if self.template_name is not None:
-                console.puts('Relationship template: {0}'.format(
-                    context.style.node(self.template_name)))
+            #if self.template_name is not None:
+            #    console.puts('Relationship template: {0}'.format(
+            #        context.style.node(self.template_name)))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interfaces, 'Interfaces')
 
@@ -871,9 +910,10 @@ class CapabilityBase(_InstanceModelMixin):
     :ivar properties: Dict of :class:`Parameter`
     """
 
-    __tablename__ = 'capability'
+    __tablename__ = 'capability' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['node_fk']
+    __private_fields__ = ['node_fk',
+                          'capability_template_fk']
 
     type_name = Column(Text)
     min_occurrences = Column(Integer, default=None) # optional
@@ -885,11 +925,21 @@ class CapabilityBase(_InstanceModelMixin):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              key_column_name='name')
 
+    @declared_attr
+    def capability_template(cls):
+        return cls.many_to_one_relationship('capability_template')
+
     # region foreign_keys
 
+    # Node one-to-many to Capability
     @declared_attr
     def node_fk(cls):
         return cls.foreign_key('node')
+
+    # Capability many-to-one to CapabilityTemplate
+    @declared_attr
+    def capability_template_fk(cls):
+        return cls.foreign_key('capability_template')
 
     # endregion
 
@@ -945,20 +995,19 @@ class InterfaceBase(_InstanceModelMixin):
     :ivar name: Name
     :ivar description: Description
     :ivar type_name: Must be represented in the :class:`ModelingContext`
-    :ivar edge: Edge
     :ivar inputs: Dict of :class:`Parameter`
     :ivar operations: Dict of :class:`Operation`
     """
 
-    __tablename__ = 'interface'
+    __tablename__ = 'interface' # redundancy for PyLint: SqlAlchemy injects this
 
     __private_fields__ = ['node_fk',
                           'group_fk',
-                          'relationship_fk']
+                          'relationship_fk',
+                          'interface_template_fk']
 
     description = Column(Text)
     type_name = Column(Text)
-    edge = Column(Text)
 
     @declared_attr
     def inputs(cls):
@@ -969,19 +1018,31 @@ class InterfaceBase(_InstanceModelMixin):
     def operations(cls):
         return cls.one_to_many_relationship('operation', key_column_name='name')
 
+    @declared_attr
+    def interface_template(cls):
+        return cls.many_to_one_relationship('interface_template')
+
     # region foreign_keys
 
+    # Node one-to-many to Interface
     @declared_attr
     def node_fk(cls):
         return cls.foreign_key('node', nullable=True)
 
+    # Group one-to-many to Interface
     @declared_attr
     def group_fk(cls):
         return cls.foreign_key('group', nullable=True)
 
+    # Relationship one-to-many to Interface
     @declared_attr
     def relationship_fk(cls):
         return cls.foreign_key('relationship', nullable=True)
+
+    # Interface many-to-one to InterfaceTemplate
+    @declared_attr
+    def interface_template_fk(cls):
+        return cls.foreign_key('interface_template')
 
     # endregion
 
@@ -1033,15 +1094,16 @@ class OperationBase(_InstanceModelMixin):
     :ivar inputs: Dict of :class:`Parameter`
     """
 
-    __tablename__ = 'operation'
+    __tablename__ = 'operation' # redundancy for PyLint: SqlAlchemy injects this
 
     __private_fields__ = ['service_fk',
-                          'interface_fk']
-
+                          'interface_fk',
+                          'plugin_fk',
+                          'operation_template_fk']
 
     description = Column(Text)
     implementation = Column(Text)
-    dependencies = Column(modeling_type.StrictList(item_cls=basestring))
+    dependencies = Column(modeling_types.StrictList(item_cls=basestring))
     executor = Column(Text)
     max_retries = Column(Integer)
     retry_interval = Column(Integer)
@@ -1051,18 +1113,35 @@ class OperationBase(_InstanceModelMixin):
         return cls.many_to_many_relationship('parameter', table_prefix='inputs',
                                              key_column_name='name')
 
-    plugin = Column(Text)
-    operation = Column(Boolean)
+    @declared_attr
+    def plugin(cls):
+        return cls.one_to_one_relationship('plugin')
+
+    @declared_attr
+    def operation_template(cls):
+        return cls.many_to_one_relationship('operation_template')
 
     # region foreign_keys
 
+    # Service one-to-many to Operation
     @declared_attr
     def service_fk(cls):
         return cls.foreign_key('service', nullable=True)
 
+    # Interface one-to-many to Operation
     @declared_attr
     def interface_fk(cls):
         return cls.foreign_key('interface', nullable=True)
+
+    # Operation one-to-one to Plugin
+    @declared_attr
+    def plugin_fk(cls):
+        return cls.foreign_key('plugin', nullable=True)
+
+    # Operation many-to-one to OperationTemplate
+    @declared_attr
+    def operation_template_fk(cls):
+        return cls.foreign_key('operation_template')
 
     # endregion
 
@@ -1120,27 +1199,38 @@ class ArtifactBase(_InstanceModelMixin):
     :ivar properties: Dict of :class:`Parameter`
     """
 
-    __tablename__ = 'artifact'
+    __tablename__ = 'artifact' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['node_fk']
+    __private_fields__ = ['node_fk',
+                          'artifact_template_fk']
 
     description = Column(Text)
     type_name = Column(Text)
     source_path = Column(Text)
     target_path = Column(Text)
     repository_url = Column(Text)
-    repository_credential = Column(modeling_type.StrictDict(basestring, basestring))
+    repository_credential = Column(modeling_types.StrictDict(basestring, basestring))
 
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              key_column_name='name')
 
+    @declared_attr
+    def artifact_template(cls):
+        return cls.many_to_one_relationship('artifact_template')
+
     # region foreign_keys
 
+    # Node one-to-many to Artifact
     @declared_attr
     def node_fk(cls):
         return cls.foreign_key('node')
+
+    # Artifact many-to-one to ArtifactTemplate
+    @declared_attr
+    def artifact_template_fk(cls):
+        return cls.foreign_key('artifact_template')
 
     # endregion
 

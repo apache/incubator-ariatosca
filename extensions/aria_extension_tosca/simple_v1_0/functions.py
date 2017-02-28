@@ -139,7 +139,7 @@ class GetInput(Function):
             raise CannotEvaluateFunctionException()
         the_input = context.modeling.instance.inputs.get(
             self.input_property_name,
-            context.modeling.model.inputs.get(self.input_property_name))
+            context.modeling.template.inputs.get(self.input_property_name))
         return the_input.value if the_input is not None else None
 
 @dsl_specification('4.4.2', 'tosca-simple-1.0')

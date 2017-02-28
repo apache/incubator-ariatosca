@@ -24,7 +24,7 @@ from functools import (
 )
 
 from aria import logger
-from aria.modeling import model
+from aria.modeling import models
 from aria.orchestrator.context import operation as operation_context
 
 from .. import exceptions
@@ -66,7 +66,7 @@ class StubTask(BaseTask):
 
     def __init__(self, *args, **kwargs):
         super(StubTask, self).__init__(*args, **kwargs)
-        self.status = model.Task.PENDING
+        self.status = models.Task.PENDING
         self.due_at = datetime.utcnow()
 
 
@@ -107,24 +107,20 @@ class OperationTask(BaseTask):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
         model_storage = api_task._workflow_context.model
+        plugin = api_task.plugin
 
         base_task_model = model_storage.task.model_cls
-        if isinstance(api_task.actor, model.Node):
+        if isinstance(api_task.actor, models.Node):
             context_cls = operation_context.NodeOperationContext
-            task_model_cls = base_task_model.as_node_instance
-        elif isinstance(api_task.actor, model.Relationship):
+            task_model_cls = base_task_model.as_node_task
+        elif isinstance(api_task.actor, models.Relationship):
             context_cls = operation_context.RelationshipOperationContext
-            task_model_cls = base_task_model.as_relationship_instance
+            task_model_cls = base_task_model.as_relationship_task
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
-        plugin = api_task.plugin
-        plugins = model_storage.plugin.list(filters={
-            'package_name': plugin.get('package_name', ''),
-            'package_version': plugin.get('package_version', '')
-        })
-        # Validation during installation ensures that at most one plugin can exists with provided
-        # package_name and package_version
+
+        print '>>>', api_task.inputs
         operation_task = task_model_cls(
             name=api_task.name,
             implementation=api_task.implementation,
@@ -134,8 +130,8 @@ class OperationTask(BaseTask):
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
-            plugin=plugins[0] if plugins else None,
-            plugin_name=plugin.get('name'),
+            plugin=plugin,
+            plugin_name=plugin.name if plugin is not None else 'execution',
             execution=self._workflow_context.execution,
             runs_on=api_task.runs_on
         )
@@ -144,7 +140,7 @@ class OperationTask(BaseTask):
         self._ctx = context_cls(name=api_task.name,
                                 model_storage=self._workflow_context.model,
                                 resource_storage=self._workflow_context.resource,
-                                service_instance_id=self._workflow_context._service_instance_id,
+                                service_id=self._workflow_context._service_id,
                                 task_id=operation_task.id,
                                 actor_id=api_task.actor.id,
                                 workdir=self._workflow_context._workdir)

@@ -42,7 +42,6 @@ from ..parser.consumption import (
     Instance
 )
 from ..parser.loading import LiteralLocation, UriLocation
-from ..parser.modeling.storage import initialize_storage
 from ..utils.application import StorageManager
 from ..utils.caching import cachedmethod
 from ..utils.console import (puts, Colored, indent)
@@ -211,10 +210,9 @@ class WorkflowCommand(BaseCommand):
     def __call__(self, args_namespace, unknown_args):
         super(WorkflowCommand, self).__call__(args_namespace, unknown_args)
 
-        service_instance_id = args_namespace.service_instance_id or 1 
         context = self._parse(args_namespace.uri)
         workflow_fn, inputs = self._get_workflow(context, args_namespace.workflow)
-        self._run(context, args_namespace.workflow, workflow_fn, inputs, service_instance_id)
+        self._run(context, args_namespace.workflow, workflow_fn, inputs)
     
     def _parse(self, uri):
         # Parse
@@ -259,14 +257,15 @@ class WorkflowCommand(BaseCommand):
         
         return workflow_fn, inputs
     
-    def _run(self, context, workflow_name, workflow_fn, inputs, service_instance_id):
+    def _run(self, context, workflow_name, workflow_fn, inputs):
         # Storage
         def _initialize_storage(model_storage):
-            initialize_storage(context, model_storage, service_instance_id)
+            model_storage.service_template.put(context.modeling.template)
+            model_storage.service.put(context.modeling.instance)
 
         # Create runner
         runner = Runner(workflow_name, workflow_fn, inputs, _initialize_storage,
-                        service_instance_id)
+                        lambda: context.modeling.instance.id)
         
         # Run
         runner.run()

@@ -137,10 +137,6 @@ def add_workflow_parser(workflow):
         '-w', '--workflow',
         default='install',
         help='The workflow name')
-    workflow.add_argument(
-        '-i', '--service-instance-id',
-        required=False,
-        help='A unique ID for the service instance')
 
 
 @sub_parser_decorator(

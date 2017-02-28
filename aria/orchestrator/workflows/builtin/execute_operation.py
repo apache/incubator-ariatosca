@@ -104,13 +104,13 @@ def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_name
 
 
 def _create_node_instance_task(
-        nodes,
+        node,
         operation,
         operation_kwargs,
         allow_kwargs_override):
     """
     A workflow which executes a single operation
-    :param nodes: the node instance to install
+    :param node: the node instance to install
     :param basestring operation: the operation name
     :param dict operation_kwargs:
     :param bool allow_kwargs_override:
@@ -120,7 +120,7 @@ def _create_node_instance_task(
     if allow_kwargs_override is not None:
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
-    return OperationTask.node(
-        instance=nodes,
+    return OperationTask.for_node(
+        instance=node,
         name=operation,
         inputs=operation_kwargs)

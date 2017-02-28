@@ -15,26 +15,32 @@
 
 import re
 from types import FunctionType
+from datetime import datetime
 
 from aria.parser.modeling import Type, RelationshipType, PolicyType
-from aria.modeling.model import (ServiceTemplate as ServiceModel, NodeTemplate,
-                                 RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
-                                 GroupTemplate, PolicyTemplate, SubstitutionTemplate,
-                                 SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
-                                 ArtifactTemplate, Metadata, Parameter)
+from aria.modeling.models import (ServiceTemplate, NodeTemplate,
+                                  RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
+                                  GroupTemplate, PolicyTemplate, SubstitutionTemplate,
+                                  SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
+                                  ArtifactTemplate, Metadata, Parameter, Plugin)
+from aria.utils.console import puts, Colored
+from aria.utils.formatting import safe_repr
 
-#from aria.modeling.model import (Type, RelationshipType, PolicyType, ServiceModel, NodeTemplate,
+#from aria.modeling.model import (Type, RelationshipType, PolicyType, ServiceTemplate, NodeTemplate,
 #                                 RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
 #                                 GroupTemplate, PolicyTemplate, SubstitutionTemplate,
 #                                 MappingTemplate, InterfaceTemplate, OperationTemplate,
 #                                 ArtifactTemplate, Metadata, Parameter)
 
 from ..data_types import coerce_value
-from platform import node
+
+#from platform import node
 
 
 def create_service_model(context): # pylint: disable=too-many-locals,too-many-branches
-    model = ServiceModel()
+    now = datetime.now()
+    model = ServiceTemplate(created_at=now,
+                            updated_at=now)
 
     model.description = context.presentation.get('service_template', 'description', 'value')
 
@@ -80,24 +86,28 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
         create_properties_from_values(model.inputs, topology_template._get_input_values(context))
         create_properties_from_values(model.outputs, topology_template._get_output_values(context))
 
+    # Policies
+    # (We need to do this before node and group templates, because we need plugins populated)
+    policies = context.presentation.get('service_template', 'topology_template', 'policies')
+    if policies:
+        for policy in policies.itervalues():
+            model.policy_templates.append(create_policy_template(context, policy))
+            
+            if context.modeling.policy_types.get_role(policy.type) == 'plugin':
+                model.plugins[policy._name] = create_plugin(context, policy)
+
     # Node templates
     node_templates = context.presentation.get('service_template', 'topology_template',
                                               'node_templates')
     if node_templates:
         for node_template in node_templates.itervalues():
-            model.node_templates.append(create_node_template(context, node_template))
+            model.node_templates.append(create_node_template(context, model, node_template))
 
     # Groups
     groups = context.presentation.get('service_template', 'topology_template', 'groups')
     if groups:
         for group in groups.itervalues():
-            model.group_templates.append(create_group_template(context, group))
-
-    # Policies
-    policies = context.presentation.get('service_template', 'topology_template', 'policies')
-    if policies:
-        for policy in policies.itervalues():
-            model.policy_templates.append(create_policy_template(context, policy))
+            model.group_templates.append(create_group_template(context, model, group))
 
     # Substitution
     substitution_mappings = context.presentation.get('service_template', 'topology_template',
@@ -123,7 +133,31 @@ def create_service_model(context): # pylint: disable=too-many-locals,too-many-br
     return model
 
 
-def create_node_template(context, node_template):
+def create_plugin(context, policy):
+    properties = policy.properties
+
+    def get(name):
+        prop = properties.get(name)
+        return prop.value if prop is not None else None
+
+    now = datetime.now()
+
+    model = Plugin(name=policy._name,
+                   archive_name=get('archive_name') or '',
+                   distribution=get('distribution'),
+                   distribution_release=get('distribution_release'),
+                   distribution_version=get('distribution_version'),
+                   package_name=get('package_name') or '',
+                   package_source=get('package_source'),
+                   package_version=get('package_version'),
+                   supported_platform=get('supported_platform'),
+                   supported_py_versions=get('supported_py_versions'),
+                   uploaded_at=now,
+                   wheels=get('wheels') or [])
+
+    return model
+
+def create_node_template(context, service_template, node_template):
     node_type = node_template._get_type(context)
     model = NodeTemplate(name=node_template._name, type_name=node_type._name)
     
@@ -134,7 +168,7 @@ def create_node_template(context, node_template):
         model.description = node_template.description.value
 
     create_properties_from_values(model.properties, node_template._get_property_values(context))
-    create_interface_templates(context, model.interface_templates,
+    create_interface_templates(context, service_template, model.interface_templates,
                                node_template._get_interfaces(context))
 
     artifacts = node_template._get_artifacts(context)
@@ -145,7 +179,9 @@ def create_node_template(context, node_template):
     requirements = node_template._get_requirements(context)
     if requirements:
         for _, requirement in requirements:
-            model.requirement_templates.append(create_requirement_template(context, requirement))
+            model.requirement_templates.append(create_requirement_template(context,
+                                                                           service_template,
+                                                                           requirement))
 
     capabilities = node_template._get_capabilities(context)
     if capabilities:
@@ -161,7 +197,7 @@ def create_node_template(context, node_template):
     return model
 
 
-def create_interface_template(context, interface):
+def create_interface_template(context, service_template, interface):
     interface_type = interface._get_type(context)
     model = InterfaceTemplate(name=interface._name, type_name=interface_type._name)
 
@@ -171,28 +207,32 @@ def create_interface_template(context, interface):
     inputs = interface.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(type_name=the_input.value.type,
-                                                 str_value=the_input.value.value,
+            model.inputs[input_name] = Parameter(name=input_name,
+                                                 type_name=the_input.value.type,
+                                                 str_value=str(the_input.value.value),
                                                  description=the_input.value.description)
 
     operations = interface.operations
     if operations:
         for operation_name, operation in operations.iteritems():
             model.operation_templates[operation_name] = create_operation_template(context,
+                                                                                  service_template,
                                                                                   operation)
 
     return model if model.operation_templates else None
 
 
-def create_operation_template(context, operation): # pylint: disable=unused-argument
+def create_operation_template(context, service_template, operation): # pylint: disable=unused-argument
     model = OperationTemplate(name=operation._name)
 
     if operation.description:
         model.description = operation.description.value
 
     implementation = operation.implementation
-    if implementation is not None:
-        model.implementation = implementation.primary
+    if (implementation is not None) and operation.implementation.primary:
+        model.plugin, model.implementation = \
+            _parse_implementation(context, service_template, operation.implementation.primary)
+
         dependencies = implementation.dependencies
         if dependencies is not None:
             model.dependencies = dependencies
@@ -200,11 +240,71 @@ def create_operation_template(context, operation): # pylint: disable=unused-argu
     inputs = operation.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(type_name=the_input.value.type,
-                                                 str_value=the_input.value.value,
+            model.inputs[input_name] = Parameter(name=input_name,
+                                                 type_name=the_input.value.type,
+                                                 str_value=str(the_input.value.value),
                                                  description=the_input.value.description)
 
+    # Dry
+    implementation = model.implementation
+    model.implementation = '{0}.{1}'.format(__name__, '_dry_node')
+    model.inputs['_implementation'] = Parameter(name='_implementation',
+                                                type_name='str',
+                                                str_value=implementation)
+    model.inputs['_plugin'] = Parameter(name='_plugin',
+                                        type_name='str',
+                                        str_value=model.plugin.name
+                                            if model.plugin is not None
+                                            else None)
+
     return model
+
+from aria.orchestrator.decorators import operation
+from threading import RLock
+
+_TERMINAL_LOCK = RLock()
+
+@operation
+def _dry_node(ctx, _plugin, _implementation, **kwargs):
+    with _TERMINAL_LOCK:
+        puts('> node instance: %s' % Colored.red(ctx.node.name))
+        _dump_implementation(_plugin, _implementation)
+
+
+@operation
+def _dry_relationship(ctx, _plugin, _implementation, **kwargs):
+    with _TERMINAL_LOCK:
+        puts('> relationship instance: %s -> %s' % (
+            Colored.red(ctx.relationship.source_node.name),
+            Colored.red(ctx.relationship.target_node.name)))
+        _dump_implementation(_plugin, _implementation)
+
+
+def _dump_implementation(plugin, implementation):
+    if plugin:
+        puts('  plugin: %s' % Colored.magenta(plugin))
+    if implementation:
+        puts('  implementation: %s' % Colored.yellow(safe_repr(implementation)))
+
+
+def _parse_implementation(context, service_template, implementation):
+    if not implementation:
+        return None, ''
+
+    index = implementation.find('>')
+    if index == -1:
+        return None, implementation
+    plugin_name = implementation[:index].strip()
+    
+    if plugin_name == 'execution':
+        plugin = None
+    else:
+        plugin = service_template.plugins.get(plugin_name)
+        if plugin is None:
+            raise ValueError('unknown plugin: "{0}"'.format(plugin_name))
+
+    implementation = implementation[index+1:].strip()
+    return plugin, implementation
 
 
 def create_artifact_template(context, artifact):
@@ -230,7 +330,7 @@ def create_artifact_template(context, artifact):
     return model
 
 
-def create_requirement_template(context, requirement):
+def create_requirement_template(context, service_template, requirement):
     model = {'name': requirement._name}
 
     node, node_variant = requirement._get_node(context)
@@ -256,7 +356,8 @@ def create_requirement_template(context, requirement):
 
     relationship = requirement.relationship
     if relationship is not None:
-        model.relationship_template = create_relationship_template(context, relationship)
+        model.relationship_template = create_relationship_template(context, service_template,
+                                                                   relationship)
 
     return model
 
@@ -269,7 +370,7 @@ def create_policy_type(context, policy_type): # pylint: disable=unused-argument
     return PolicyType(policy_type._name)
 
 
-def create_relationship_template(context, relationship):
+def create_relationship_template(context, service_template, relationship):
     relationship_type, relationship_type_variant = relationship._get_type(context)
     if relationship_type_variant == 'relationship_type':
         model = RelationshipTemplate(type_name=relationship_type._name)
@@ -282,7 +383,8 @@ def create_relationship_template(context, relationship):
             model.description = relationship_template.description.value
 
     create_properties_from_assignments(model.properties, relationship.properties)
-    create_interface_templates(context, model.interface_templates, relationship.interfaces)
+    create_interface_templates(context, service_template, model.interface_templates,
+                               relationship.interfaces)
 
     return model
 
@@ -309,7 +411,7 @@ def create_capability_template(context, capability):
     return model
 
 
-def create_group_template(context, group):
+def create_group_template(context, service_template, group):
     group_type = group._get_type(context)
     model = GroupTemplate(name=group._name, type_name=group_type._name)
 
@@ -317,7 +419,8 @@ def create_group_template(context, group):
         model.description = group.description.value
 
     create_properties_from_values(model.properties, group._get_property_values(context))
-    create_interface_templates(context, model.interface_templates, group._get_interfaces(context))
+    create_interface_templates(context, service_template, model.interface_templates,
+                               group._get_interfaces(context))
 
     members = group.members
     if members:
@@ -386,23 +489,25 @@ def create_types(context, root, types, normalize=None):
 def create_properties_from_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(type_name=prop.type,
-                                                  str_value=prop.value,
+            properties[property_name] = Parameter(name=property_name,
+                                                  type_name=prop.type,
+                                                  str_value=str(prop.value),
                                                   description=prop.description)
 
 
 def create_properties_from_assignments(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(type_name=prop.value.type,
-                                                  str_value=prop.value.value,
+            properties[property_name] = Parameter(name=property_name,
+                                                  type_name=prop.value.type,
+                                                  str_value=str(prop.value.value),
                                                   description=prop.value.description)
 
 
-def create_interface_templates(context, interfaces, source_interfaces):
+def create_interface_templates(context, service_template, interfaces, source_interfaces):
     if source_interfaces:
         for interface_name, interface in source_interfaces.iteritems():
-            interface = create_interface_template(context, interface)
+            interface = create_interface_template(context, service_template, interface)
             if interface is not None:
                 interfaces[interface_name] = interface
 
