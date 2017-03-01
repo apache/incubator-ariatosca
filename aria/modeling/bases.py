@@ -111,14 +111,11 @@ class ModelMixin(object):
                                  key_column_name=None,
                                  relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
-        
-        #foreign_keys = lambda: '{0}.{1}'.format(cls._get_cls_by_tablename(child_table_name).__name__,
-        #                                foreign_key_name) \
+
         foreign_keys = lambda: getattr(cls._get_cls_by_tablename(child_table_name),
                                        foreign_key_name) \
             if foreign_key_name \
             else None
-        #foreign_keys = foreign_key_name or None
 
         collection_class = attribute_mapped_collection(key_column_name) \
             if key_column_name \
@@ -183,10 +180,10 @@ class ModelMixin(object):
         :param other_table_name: The class of the table we're connecting to
         :param table_prefix: Custom prefix for the helper table name and the
                              backreference name
-        :param key_column_name: If provided, will use a dict class with this column as the key 
+        :param key_column_name: If provided, will use a dict class with this column as the key
         """
         relationship_kwargs = relationship_kwargs or {}
-        
+
         current_table_name = cls.__tablename__
         current_column_name = '{0}_id'.format(current_table_name)
         current_foreign_key = '{0}.id'.format(current_table_name)

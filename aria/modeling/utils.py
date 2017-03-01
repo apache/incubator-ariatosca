@@ -16,7 +16,6 @@
 from random import randrange
 
 from shortuuid import ShortUUID
-from networkx.release import name
 
 from ..utils.console import puts
 

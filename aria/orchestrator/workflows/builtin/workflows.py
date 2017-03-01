@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-A set of builtin workflows.
+TSOCA normative lifecycle workflows.
 """
 
 from .utils import (create_node_task, create_relationship_tasks)
@@ -66,108 +66,128 @@ __all__ = (
 
 @workflow(suffix_template='{node.name}')
 def install_node(graph, node, **kwargs):
+    dry = kwargs.get('dry', True)
+
     sequence = []
 
     # Create
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE,
-            node))
+            node,
+            dry))
 
     # Configure
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_SOURCE,
             'source',
-            node)
+            node,
+            dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_TARGET,
             'target',
-            node)
+            node,
+            dry)
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE,
-            node))
+            node,
+            dry))
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_SOURCE,
             'source',
-            node)
+            node,
+            dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_TARGET,
             'target',
-            node)
+            node,
+            dry)
 
     # Start
-    sequence += _create_start_tasks(node)
+    sequence += _create_start_tasks(node, dry)
 
     graph.sequence(*sequence)
 
 
 @workflow(suffix_template='{node.name}')
 def uninstall_node(graph, node, **kwargs):
+    dry = kwargs.get('dry', True)
+
     # Stop
-    sequence = _create_stop_tasks(node)
+    sequence = _create_stop_tasks(node, dry)
 
     # Delete
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_DELETE,
-            node))
+            node,
+            dry))
 
     graph.sequence(*sequence)
 
 
 @workflow(suffix_template='{node.name}')
 def start_node(graph, node, **kwargs):
-    graph.sequence(*_create_start_tasks(node))
+    dry = kwargs.get('dry', True)
+    graph.sequence(*_create_start_tasks(node, dry))
 
 
 @workflow(suffix_template='{node.name}')
 def stop_node(graph, node, **kwargs):
-    graph.sequence(*_create_stop_tasks(node))
+    dry = kwargs.get('dry', True)
+    graph.sequence(*_create_stop_tasks(node, dry))
 
 
-def _create_start_tasks(node):
+def _create_start_tasks(node, dry):
     sequence = []
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START,
-            node))
+            node,
+            dry))
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_SOURCE,
             'source',
-            node)
+            node,
+            dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_TARGET,
             'target',
-            node)
+            node,
+            dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
             'target',
-            node)
+            node,
+            dry)
     return sequence
 
 
-def _create_stop_tasks(node):
+def _create_stop_tasks(node, dry):
     sequence = []
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_REMOVE_TARGET,
             'target',
-            node)
+            node,
+            dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
             'target',
-            node)
+            node,
+            dry)
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP,
-            node))
+            node,
+            dry))
     return sequence

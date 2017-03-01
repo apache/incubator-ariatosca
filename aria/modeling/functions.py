@@ -13,10 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...exceptions import AriaException
-
-
-class CannotEvaluateFunctionException(AriaException):
+class Function(object):
     """
-    ARIA modeling exception: cannot evaluate the function at this time.
+    An intrinsic function.
+
+    Serves as a placeholder for a value that should eventually be derived by calling the function.
     """
+
+    @property
+    def as_raw(self):
+        raise NotImplementedError
+
+    def _evaluate(self, context, container):
+        raise NotImplementedError
+
+    def __deepcopy__(self, memo):
+        # Circumvent cloning in order to maintain our state
+        return self

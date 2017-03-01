@@ -56,7 +56,7 @@ class _InstanceModelMixin(ModelMixin):
         pass
 
 
-class ServiceBase(_InstanceModelMixin):
+class ServiceBase(_InstanceModelMixin): # pylint: disable=too-many-public-methods
     """
     A service instance is an instance of a :class:`ServiceTemplate`.
 
@@ -179,7 +179,8 @@ class ServiceBase(_InstanceModelMixin):
         return collections.FrozenList(groups)
 
     def get_group_ids(self, group_template_name):
-        return collections.FrozenList((group.name for group in self.find_groups(group_template_name)))
+        return collections.FrozenList((group.name
+                                       for group in self.find_groups(group_template_name)))
 
     def is_node_a_target(self, context, target_node):
         for node in self.nodes:
@@ -479,9 +480,9 @@ class NodeBase(_InstanceModelMixin):
         if len(self.name) > context.modeling.id_max_length:
             context.validation.report('"{0}" has an ID longer than the limit of {1:d} characters: '
                                       '{2:d}'.format(
-                                            self.name,
-                                            context.modeling.id_max_length,
-                                            len(self.name)),
+                                          self.name,
+                                          context.modeling.id_max_length,
+                                          len(self.name)),
                                       level=validation.Issue.BETWEEN_INSTANCES)
 
         # TODO: validate that node template is of type?
@@ -576,9 +577,9 @@ class GroupBase(_InstanceModelMixin):
     def validate(self, context):
         if context.modeling.group_types.get_descendant(self.type_name) is None:
             context.validation.report('group "{0}" has an unknown type: {1}'.format(
-                                        self.name,  # pylint: disable=no-member
-                                        # TODO fix self.name reference
-                                        formatting.safe_repr(self.type_name)),
+                self.name,  # pylint: disable=no-member
+                # TODO fix self.name reference
+                formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -658,7 +659,7 @@ class PolicyBase(_InstanceModelMixin):
     def validate(self, context):
         if context.modeling.policy_types.get_descendant(self.type_name) is None:
             context.validation.report('policy "{0}" has an unknown type: {1}'.format(
-                                        self.name, formatting.safe_repr(self.type_name)),
+                self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -722,9 +723,9 @@ class SubstitutionBase(_InstanceModelMixin):
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.node_type_name) is None:
             context.validation.report('substitution "{0}" has an unknown type: {1}'.format(
-                                        self.name,  # pylint: disable=no-member
-                                        # TODO fix self.name reference
-                                        formatting.safe_repr(self.node_type_name)),
+                self.name,  # pylint: disable=no-member
+                # TODO fix self.name reference
+                formatting.safe_repr(self.node_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.mappings)
@@ -743,17 +744,27 @@ class SubstitutionMappingBase(_InstanceModelMixin):
     """
     An instance of a :class:`SubstitutionMappingTemplate`.
 
-    :ivar mapped_name: Exposed capability or requirement name
-    :ivar node_id: Must be represented in the :class:`ServiceInstance`
-    :ivar name: Name of capability or requirement at the node
+    :ivar name: Exposed capability or requirement name
     """
 
     __tablename__ = 'substitution_mapping' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['substitution_fk']
+    __private_fields__ = ['substitution_fk',
+                          'node_fk',
+                          'capability_fk',
+                          'requirement_template_fk']
 
-    mapped_name = Column(Text)
-    node_id = Column(Text)
+    @declared_attr
+    def node(cls):
+        return cls.one_to_one_relationship('node')
+
+    @declared_attr
+    def capability(cls):
+        return cls.one_to_one_relationship('capability')
+
+    @declared_attr
+    def requirement_template(cls):
+        return cls.one_to_one_relationship('requirement_template')
 
     # region foreign keys
 
@@ -762,20 +773,43 @@ class SubstitutionMappingBase(_InstanceModelMixin):
     def substitution_fk(cls):
         return cls.foreign_key('substitution')
 
+    # Substitution one-to-one to NodeTemplate
+    @declared_attr
+    def node_fk(cls):
+        return cls.foreign_key('node')
+
+    # Substitution one-to-one to Capability
+    @declared_attr
+    def capability_fk(cls):
+        return cls.foreign_key('capability', nullable=True)
+
+    # Substitution one-to-one to RequirementTemplate
+    @declared_attr
+    def requirement_template_fk(cls):
+        return cls.foreign_key('requirement_template', nullable=True)
+
     # endregion
 
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('mapped_name', self.mapped_name),
-            ('node_id', self.node_id),
             ('name', self.name)))
+
+    def validate(self, context):
+        if (self.capability is None) and (self.requirement_template is None):
+            context.validation.report('mapping "{0}" refers to neither capability nor a requirement'
+                                      ' in node: {1}'.format(
+                                          self.name,
+                                          formatting.safe_repr(self.node.name)),
+                                      level=validation.Issue.BETWEEN_TYPES)
 
     def dump(self, context):
         console.puts('{0} -> {1}.{2}'.format(
-                        context.style.node(self.mapped_name),
-                        context.style.node(self.node_id),
-                        context.style.node(self.name)))
+            context.style.node(self.name),
+            context.style.node(self.node.name),
+            context.style.node(self.capability.name
+                               if self.capability
+                               else self.requirement_template.name)))
 
 
 class RelationshipBase(_InstanceModelMixin):
@@ -871,8 +905,8 @@ class RelationshipBase(_InstanceModelMixin):
         if self.type_name:
             if context.modeling.relationship_types.get_descendant(self.type_name) is None:
                 context.validation.report('relationship "{0}" has an unknown type: {1}'.format(
-                                            self.name,
-                                            formatting.safe_repr(self.type_name)),
+                    self.name,
+                    formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interfaces)
@@ -966,8 +1000,8 @@ class CapabilityBase(_InstanceModelMixin):
     def validate(self, context):
         if context.modeling.capability_types.get_descendant(self.type_name) is None:
             context.validation.report('capability "{0}" has an unknown type: {1}'.format(
-                                        self.name,
-                                        formatting.safe_repr(self.type_name)),
+                self.name,
+                formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -980,11 +1014,11 @@ class CapabilityBase(_InstanceModelMixin):
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             console.puts('Occurrences: {0:d} ({1:d}{2})'.format(
-                            self.occurrences,
-                            self.min_occurrences or 0,
-                            ' to {0:d}'.format(self.max_occurrences)
-                                if self.max_occurrences is not None
-                                else ' or more'))
+                self.occurrences,
+                self.min_occurrences or 0,
+                ' to {0:d}'.format(self.max_occurrences)
+                if self.max_occurrences is not None
+                else ' or more'))
             utils.dump_parameters(context, self.properties)
 
 
@@ -1059,8 +1093,8 @@ class InterfaceBase(_InstanceModelMixin):
         if self.type_name:
             if context.modeling.interface_types.get_descendant(self.type_name) is None:
                 context.validation.report('interface "{0}" has an unknown type: {1}'.format(
-                                            self.name,
-                                            formatting.safe_repr(self.type_name)),
+                    self.name,
+                    formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.inputs)
@@ -1249,8 +1283,8 @@ class ArtifactBase(_InstanceModelMixin):
     def validate(self, context):
         if context.modeling.artifact_types.get_descendant(self.type_name) is None:
             context.validation.report('artifact "{0}" has an unknown type: {1}'.format(
-                                        self.name,
-                                        formatting.safe_repr(self.type_name)),
+                self.name,
+                formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
         utils.validate_dict_values(context, self.properties)
 

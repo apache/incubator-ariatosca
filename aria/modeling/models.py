@@ -25,7 +25,7 @@ from . import (
 __all__ = (
     'aria_declarative_base',
 
-     # Service template models
+    # Service template models
     'ServiceTemplate',
     'NodeTemplate',
     'GroupTemplate',

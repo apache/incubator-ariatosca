@@ -27,13 +27,13 @@ class Derive(Consumer):
             self.context.validation.report('Derive consumer: missing presenter')
             return
 
-        if not hasattr(self.context.presentation.presenter, '_get_service_model'):
+        if not hasattr(self.context.presentation.presenter, '_get_model'):
             self.context.validation.report('Derive consumer: presenter does not support '
-                                           '"_get_service_model"')
+                                           '"_get_model"')
             return
 
         self.context.modeling.template = \
-            self.context.presentation.presenter._get_service_model(self.context)
+            self.context.presentation.presenter._get_model(self.context)
 
 
 class CoerceModelValues(Consumer):

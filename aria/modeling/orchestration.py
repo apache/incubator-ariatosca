@@ -128,7 +128,7 @@ class Execution(ModelMixin):
         return association_proxy('service', 'service_template_name')
 
     # region foreign keys
-    
+
     @declared_attr
     def service_fk(cls):
         return cls.foreign_key('service')
@@ -182,7 +182,7 @@ class ServiceUpdateBase(ModelMixin):
         return association_proxy('service', cls.name_column_name())
 
     # region foreign keys
-    
+
     @declared_attr
     def execution_fk(cls):
         return cls.foreign_key('execution', nullable=True)
@@ -242,11 +242,11 @@ class ServiceUpdateStepBase(ModelMixin):
         return association_proxy('deployment_update', cls.name_column_name())
 
     # region foreign keys
-    
+
     @declared_attr
     def service_update_fk(cls):
         return cls.foreign_key('service_update')
-    
+
     # endregion
 
     def __hash__(self):
@@ -387,7 +387,7 @@ class TaskBase(ModelMixin):
                                              key_column_name='name')
 
     # region foreign keys
-    
+
     @declared_attr
     def node_fk(cls):
         return cls.foreign_key('node', nullable=True)
@@ -441,7 +441,7 @@ class TaskBase(ModelMixin):
 
     status = Column(Enum(*STATES, name='status'), default=PENDING)
 
-    due_at = Column(DateTime, default=datetime.utcnow)
+    due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
     started_at = Column(DateTime, default=None)
     ended_at = Column(DateTime, default=None)
     max_attempts = Column(Integer, default=1)

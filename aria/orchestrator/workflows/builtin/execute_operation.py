@@ -68,7 +68,7 @@ def execute_operation(
     for node in filtered_nodes:
         graph.add_tasks(
             _create_node_instance_task(
-                nodes=node,
+                node=node,
                 operation=operation,
                 operation_kwargs=operation_kwargs,
                 allow_kwargs_override=allow_kwargs_override
@@ -121,6 +121,7 @@ def _create_node_instance_task(
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
     return OperationTask.for_node(
-        instance=node,
-        name=operation,
+        node=node,
+        interface_name=None, # TODO
+        operation_name=operation,
         inputs=operation_kwargs)

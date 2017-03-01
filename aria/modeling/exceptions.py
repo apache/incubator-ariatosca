@@ -13,16 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .context import IdType, ModelingContext
-from .types import TypeHierarchy, Type, RelationshipType, PolicyType, PolicyTriggerType
+from ..exceptions import AriaException
 
 
-__all__ = (
-    'IdType',
-    'ModelingContext',
-    'TypeHierarchy',
-    'Type',
-    'RelationshipType',
-    'PolicyType',
-    'PolicyTriggerType',
-)
+class CannotEvaluateFunctionException(AriaException):
+    """
+    ARIA modeling exception: cannot evaluate the function at this time.
+    """

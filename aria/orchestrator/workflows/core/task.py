@@ -120,7 +120,6 @@ class OperationTask(BaseTask):
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
 
-        print '>>>', api_task.inputs
         operation_task = task_model_cls(
             name=api_task.name,
             implementation=api_task.implementation,

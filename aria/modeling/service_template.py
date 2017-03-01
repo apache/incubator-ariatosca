@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=too-many-lines
+
 from __future__ import absolute_import  # so we can import standard 'types'
 
 
@@ -133,7 +135,7 @@ class ServiceTemplateBase(_TemplateModelMixin):
         return cls.foreign_key('substitution_template', nullable=True)
 
     # endregion
-    
+
     def get_node_template(self, node_template_name):
         if self.node_templates:
             for node_template in self.node_templates:
@@ -321,7 +323,7 @@ class NodeTemplateBase(_TemplateModelMixin):
 
     def instantiate(self, context, *args, **kwargs):
         from . import models
-        name = context.modeling.generate_node_id(self.name) 
+        name = context.modeling.generate_node_id(self.name)
         node = models.Node(name=name,
                            type_name=self.type_name,
                            state='',
@@ -335,8 +337,8 @@ class NodeTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.type_name) is None:
             context.validation.report('node template "{0}" has an unknown type: {1}'.format(
-                                        self.name,
-                                        formatting.safe_repr(self.type_name)),
+                self.name,
+                formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -359,11 +361,11 @@ class NodeTemplateBase(_TemplateModelMixin):
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type_name)))
             console.puts('Instances: {0:d} ({1:d}{2})'.format(
-                            self.default_instances,
-                            self.min_instances,
-                            ' to {0:d}'.format(self.max_instances)
-                                if self.max_instances is not None
-                                else ' or more'))
+                self.default_instances,
+                self.min_instances,
+                ' to {0:d}'.format(self.max_instances)
+                if self.max_instances is not None
+                else ' or more'))
             utils.dump_parameters(context, self.properties)
             utils.dump_interfaces(context, self.interface_templates)
             utils.dump_dict_values(context, self.artifact_templates, 'Artifact templates')
@@ -393,7 +395,7 @@ class GroupTemplateBase(_TemplateModelMixin):
 
     description = Column(Text)
     type_name = Column(Text)
-    
+
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
@@ -448,7 +450,7 @@ class GroupTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.group_types.get_descendant(self.type_name) is None:
             context.validation.report('group template "{0}" has an unknown type: {1}'.format(
-                                        self.name, formatting.safe_repr(self.type_name)),
+                self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -539,7 +541,7 @@ class PolicyTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.policy_types.get_descendant(self.type_name) is None:
             context.validation.report('policy template "{0}" has an unknown type: {1}'.format(
-                                        self.name, formatting.safe_repr(self.type_name)),
+                self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -594,7 +596,7 @@ class SubstitutionTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.node_types.get_descendant(self.node_type_name) is None:
             context.validation.report('substitution template has an unknown type: {0}'.format(
-                                        formatting.safe_repr(self.node_type_name)),
+                formatting.safe_repr(self.node_type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.mappings)
@@ -613,17 +615,27 @@ class SubstitutionTemplateMappingBase(_TemplateModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
 
-    :ivar mapped_name: Exposed capability or requirement name
-    :ivar node_template_name: Must be represented in the :class:`ServiceTemplate`
-    :ivar name: Name of capability or requirement at the node template
+    :ivar name: Exposed capability or requirement name
     """
 
     __tablename__ = 'substitution_template_mapping' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['substitution_template_fk']
+    __private_fields__ = ['substitution_template_fk',
+                          'node_template_fk',
+                          'capability_template_fk',
+                          'requirement_template_fk']
 
-    mapped_name = Column(Text)
-    node_template_name = Column(Text)
+    @declared_attr
+    def node_template(cls):
+        return cls.one_to_one_relationship('node_template')
+
+    @declared_attr
+    def capability_template(cls):
+        return cls.one_to_one_relationship('capability_template')
+
+    @declared_attr
+    def requirement_template(cls):
+        return cls.one_to_one_relationship('requirement_template')
 
     # region foreign keys
 
@@ -632,41 +644,65 @@ class SubstitutionTemplateMappingBase(_TemplateModelMixin):
     def substitution_template_fk(cls):
         return cls.foreign_key('substitution_template')
 
+    # SubstitutionTemplate one-to-one to NodeTemplate
+    @declared_attr
+    def node_template_fk(cls):
+        return cls.foreign_key('node_template')
+
+    # SubstitutionTemplate one-to-one to CapabilityTemplate
+    @declared_attr
+    def capability_template_fk(cls):
+        return cls.foreign_key('capability_template', nullable=True)
+
+    # SubstitutionTemplate one-to-one to RequirementTemplate
+    @declared_attr
+    def requirement_template_fk(cls):
+        return cls.foreign_key('requirement_template', nullable=True)
+
     # endregion
 
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('mapped_name', self.mapped_name),
-            ('node_template_name', self.node_template_name),
             ('name', self.name)))
 
     def instantiate(self, context, *args, **kwargs):
         from . import models
-        nodes = context.modeling.instance.find_nodes(self.node_template_name)
+        nodes = context.modeling.instance.find_nodes(self.node_template.name)
         if len(nodes) == 0:
             context.validation.report(
                 'mapping "{0}" refers to node template "{1}" but there are no '
-                'node instances'.format(self.mapped_name, self.node_template_name),
+                'node instances'.format(self.mapped_name, self.node_template.name),
                 level=validation.Issue.BETWEEN_INSTANCES)
             return None
-        return models.SubstitutionMapping(mapped_name=self.mapped_name,
-                                          node_id=nodes[0].name,
-                                          name=self.name)
+        # The TOSCA spec does not provide a way to choose the node, so we will just pick the first
+        # one
+        node = nodes[0]
+        capability = None
+        if self.capability_template:
+            for a_capability in node.capabilities.itervalues():
+                if a_capability.capability_template.name == self.capability_template.name:
+                    capability = a_capability
+        return models.SubstitutionMapping(name=self.name,
+                                          node=node,
+                                          capability=capability,
+                                          requirement_template=self.requirement_template)
 
     def validate(self, context):
-        if self.node_template_name not in (v.name for v in context.modeling.template.node_templates):
-            context.validation.report('mapping "{0}" refers to an unknown node template: {1}' \
-                                      .format(
-                                          self.mapped_name,
-                                          formatting.safe_repr(self.node_template_name)),
+        if (self.capability_template is None) and (self.requirement_template is None):
+            context.validation.report('mapping "{0}" refers to neither capability nor a requirement'
+                                      ' in node template: {1}'.format(
+                                          self.name,
+                                          formatting.safe_repr(self.node_template.name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
     def dump(self, context):
         console.puts('{0} -> {1}.{2}'.format(
-            context.style.node(self.mapped_name),
-            context.style.node(self.node_template_name),
-            context.style.node(self.name)))
+            context.style.node(self.name),
+            context.style.node(self.node_template.name),
+            context.style.node(self.capability_template.name
+                               if self.capability_template
+                               else self.requirement_template.name)))
 
 
 class RequirementTemplateBase(_TemplateModelMixin):
@@ -1003,7 +1039,7 @@ class CapabilityTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.capability_types.get_descendant(self.type_name) is None:
             context.validation.report('capability "{0}" refers to an unknown type: {1}'.format(
-                                        self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
+                self.name, formatting.safe_repr(self.type)),  # pylint: disable=no-member
                                       #  TODO fix self.type reference
                                       level=validation.Issue.BETWEEN_TYPES)
 
@@ -1022,12 +1058,12 @@ class CapabilityTemplateBase(_TemplateModelMixin):
                 'Occurrences: {0:d}{1}'.format(
                     self.min_occurrences or 0,
                     ' to {0:d}'.format(self.max_occurrences)
-                        if self.max_occurrences is not None
-                        else ' or more'))
+                    if self.max_occurrences is not None
+                    else ' or more'))
             if self.valid_source_node_type_names:
                 console.puts('Valid source node types: {0}'.format(
-                                ', '.join((str(context.style.type(v))
-                                           for v in self.valid_source_node_type_names))))
+                    ', '.join((str(context.style.type(v))
+                               for v in self.valid_source_node_type_names))))
             utils.dump_parameters(context, self.properties)
 
 
@@ -1102,7 +1138,7 @@ class InterfaceTemplateBase(_TemplateModelMixin):
         if self.type_name:
             if context.modeling.interface_types.get_descendant(self.type_name) is None:
                 context.validation.report('interface "{0}" has an unknown type: {1}'.format(
-                                            self.name, formatting.safe_repr(self.type_name)),
+                    self.name, formatting.safe_repr(self.type_name)),
                                           level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.inputs)
@@ -1223,7 +1259,7 @@ class OperationTemplateBase(_TemplateModelMixin):
                     context.style.literal(self.implementation)))
             if self.dependencies:
                 console.puts('Dependencies: {0}'.format(
-                        ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
+                    ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
             if self.executor is not None:
                 console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
             if self.max_retries is not None:
@@ -1301,7 +1337,7 @@ class ArtifactTemplateBase(_TemplateModelMixin):
     def validate(self, context):
         if context.modeling.artifact_types.get_descendant(self.type_name) is None:
             context.validation.report('artifact "{0}" has an unknown type: {1}'.format(
-                                        self.name, formatting.safe_repr(self.type_name)),
+                self.name, formatting.safe_repr(self.type_name)),
                                       level=validation.Issue.BETWEEN_TYPES)
 
         utils.validate_dict_values(context, self.properties)
@@ -1323,7 +1359,7 @@ class ArtifactTemplateBase(_TemplateModelMixin):
                     context.style.literal(self.repository_url)))
             if self.repository_credential:
                 console.puts('Repository credential: {0}'.format(
-                                context.style.literal(self.repository_credential)))
+                    context.style.literal(self.repository_credential)))
             utils.dump_parameters(context, self.properties)
 
 
@@ -1333,7 +1369,7 @@ class ParameterBase(_TemplateModelMixin):
     Represents a typed value.
 
     This class is used by both service template and service instance elements.
-    
+
     :ivar name: Name
     :ivar type_name: Type name
     :ivar value: Value
@@ -1421,25 +1457,6 @@ class MetadataBase(_TemplateModelMixin):
         from . import models
         return models.Metadata(name=self.name,
                                value=self.value)
-
-
-class Function(object):
-    """
-    An intrinsic function.
-
-    Serves as a placeholder for a value that should eventually be derived by calling the function.
-    """
-
-    @property
-    def as_raw(self):
-        raise NotImplementedError
-
-    def _evaluate(self, context, container):
-        raise NotImplementedError
-
-    def __deepcopy__(self, memo):
-        # Circumvent cloning in order to maintain our state
-        return self
 
 
 def deepcopy_with_locators(value):

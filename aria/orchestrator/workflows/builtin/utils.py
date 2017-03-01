@@ -17,7 +17,7 @@ from ..api.task import OperationTask
 from .. import exceptions
 
 
-def create_node_task(interface_name, operation_name, node):
+def create_node_task(interface_name, operation_name, node, dry=False):
     """
     Returns a new operation task if the operation exists in the node, otherwise returns None.
     """
@@ -25,13 +25,14 @@ def create_node_task(interface_name, operation_name, node):
     try:
         return OperationTask.for_node(node=node,
                                       interface_name=interface_name,
-                                      operation_name=operation_name)
+                                      operation_name=operation_name,
+                                      dry=dry)
     except exceptions.TaskException:
         pass
     return None
 
 
-def create_relationship_tasks(interface_name, operation_name, runs_on, node):
+def create_relationship_tasks(interface_name, operation_name, runs_on, node, dry=False):
     """
     Returns a list of operation tasks for each outbound relationship of the node if the operation
     exists there.
@@ -45,7 +46,8 @@ def create_relationship_tasks(interface_name, operation_name, runs_on, node):
                                                interface_name=interface_name,
                                                operation_name=operation_name,
                                                edge='source',
-                                               runs_on=runs_on))
+                                               runs_on=runs_on,
+                                               dry=dry))
         except exceptions.TaskException:
             pass
     return sequence

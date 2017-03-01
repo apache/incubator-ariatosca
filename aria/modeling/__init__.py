@@ -35,7 +35,7 @@ model_bases = _ModelBasesCls(service_template=_service_template_bases,
 
 
 __all__ = (
-    'base',
+    'bases',
     'types',
     'models',
     'model_bases',

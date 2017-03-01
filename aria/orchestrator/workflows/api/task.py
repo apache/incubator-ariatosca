@@ -19,7 +19,7 @@ Provides the tasks to be entered into the task graph
 from uuid import uuid4
 
 from ....modeling import models
-from ....utils.collections import (OrderedDict, merge)
+from ....utils.collections import OrderedDict
 from ... import context
 from .. import exceptions
 
@@ -70,7 +70,8 @@ class OperationTask(BaseTask):
                  ignore_failure=None,
                  inputs=None,
                  plugin=None,
-                 runs_on=None):
+                 runs_on=None,
+                 dry=False):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
 
@@ -78,12 +79,28 @@ class OperationTask(BaseTask):
         :param actor: the operation host on which this operation is registered.
         :param inputs: operation inputs.
         """
+
         assert isinstance(actor, (models.Node, models.Relationship))
         super(OperationTask, self).__init__()
+
+        if dry:
+            from ..dry import convert_to_dry
+            plugin, implementation, inputs = convert_to_dry(plugin, implementation, inputs)
+
+        # Coerce inputs
+        if inputs is None:
+            inputs = {}
+        else:
+            for k, v in inputs.iteritems():
+                if not isinstance(v, models.Parameter):
+                    inputs[k] = models.Parameter(name=k,
+                                                 type_name='str',
+                                                 str_value=str(v))
+
         self.name = name
         self.actor = actor
         self.implementation = implementation
-        self.inputs = inputs or {}
+        self.inputs = inputs
         self.plugin = plugin
         self.max_attempts = (self.workflow_context._task_max_attempts
                              if max_attempts is None else max_attempts)
@@ -111,7 +128,6 @@ class OperationTask(BaseTask):
                 'Could not find operation "{0}" on interface "{1}" for node "{2}"'.format(
                     operation_name, interface_name, node.name))
 
-        print '====',operation.plugin, operation.implementation, operation.inputs
         return cls(
             actor=node,
             name='{0}.{1}@{2}'.format(interface_name, operation_name, node.name),
@@ -158,9 +174,9 @@ class OperationTask(BaseTask):
 
     @classmethod
     def _merge_inputs(cls, operation_inputs, override_inputs=None):
-        final_inputs = OrderedDict((k, v.value) for k, v in operation_inputs.iteritems())
+        final_inputs = OrderedDict(operation_inputs)
         if override_inputs:
-            merge(final_inputs, override_inputs)
+            final_inputs.update(override_inputs)
         return final_inputs
 
 

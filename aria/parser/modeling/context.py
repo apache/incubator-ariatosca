@@ -45,7 +45,7 @@ class ModelingContext(object):
 
     * :code:`template`: The generated service template
     * :code:`instance`: The generated service instance
-    * :code:`node_id_format`: Format for node instance IDs 
+    * :code:`node_id_format`: Format for node instance IDs
     * :code:`id_type`: Type of IDs to use for instances
     * :code:`id_max_length`: Maximum allowed instance ID length
     * :code:`inputs`: Dict of inputs values
@@ -115,8 +115,8 @@ class ModelingContext(object):
             ('interface_types', as_raw(self.interface_types))))
 
     @property
-    def model_as_raw(self):
-        raw = self.model.as_raw
+    def template_as_raw(self):
+        raw = self.template.as_raw
         prune(raw)
         return raw
 
