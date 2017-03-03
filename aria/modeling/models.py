@@ -13,61 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=abstract-method
+
 from sqlalchemy.ext.declarative import declarative_base
 
 from . import (
     service_template,
     service,
     orchestration,
+    misc,
     bases,
 )
 
-__all__ = (
-    'aria_declarative_base',
-
-    # Service template models
-    'ServiceTemplate',
-    'NodeTemplate',
-    'GroupTemplate',
-    'PolicyTemplate',
-    'SubstitutionTemplate',
-    'SubstitutionTemplateMapping',
-    'RequirementTemplate',
-    'RelationshipTemplate',
-    'CapabilityTemplate',
-    'InterfaceTemplate',
-    'OperationTemplate',
-    'ArtifactTemplate',
-
-    # Service template and instance models
-    'Parameter',
-    'Metadata',
-
-    # Service instance models
-    'Service',
-    'Node',
-    'Group',
-    'Policy',
-    'Substitution',
-    'SubstitutionMapping',
-    'Relationship',
-    'Capability',
-    'Interface',
-    'Operation',
-    'Artifact',
-
-    # Orchestrator models
-    'Execution',
-    'ServiceUpdate',
-    'ServiceUpdateStep',
-    'ServiceModification',
-    'Plugin',
-    'Task'
-)
 
 aria_declarative_base = declarative_base(cls=bases.ModelIDMixin)
-
-# pylint: disable=abstract-method
 
 
 # region service template models
@@ -118,18 +77,6 @@ class OperationTemplate(aria_declarative_base, service_template.OperationTemplat
 
 
 class ArtifactTemplate(aria_declarative_base, service_template.ArtifactTemplateBase):
-    pass
-
-# endregion
-
-
-# region service template and instance models
-
-class Parameter(aria_declarative_base, service_template.ParameterBase):
-    pass
-
-
-class Metadata(aria_declarative_base, service_template.MetadataBase):
     pass
 
 # endregion
@@ -209,3 +156,107 @@ class Task(aria_declarative_base, orchestration.TaskBase):
     pass
 
 # endregion
+
+
+# region misc models
+
+class Parameter(aria_declarative_base, misc.ParameterBase):
+    pass
+
+
+class Type(aria_declarative_base, misc.TypeBase):
+    pass
+
+
+class Metadata(aria_declarative_base, misc.MetadataBase):
+    pass
+
+# endregion
+
+
+models_to_register = [
+    # Service template models
+    ServiceTemplate,
+    NodeTemplate,
+    GroupTemplate,
+    PolicyTemplate,
+    SubstitutionTemplate,
+    SubstitutionTemplateMapping,
+    RequirementTemplate,
+    RelationshipTemplate,
+    CapabilityTemplate,
+    InterfaceTemplate,
+    OperationTemplate,
+    ArtifactTemplate,
+
+    # Service instance models
+    Service,
+    Node,
+    Group,
+    Policy,
+    SubstitutionMapping,
+    Substitution,
+    Relationship,
+    Capability,
+    Interface,
+    Operation,
+    Artifact,
+
+    # Orchestration models
+    Execution,
+    ServiceUpdate,
+    ServiceUpdateStep,
+    ServiceModification,
+    Plugin,
+    Task,
+
+    # Misc models
+    Parameter,
+    Type,
+    Metadata
+]
+
+__all__ = (
+    'aria_declarative_base',
+    'models_to_register',
+
+    # Service template models
+    'ServiceTemplate',
+    'NodeTemplate',
+    'GroupTemplate',
+    'PolicyTemplate',
+    'SubstitutionTemplate',
+    'SubstitutionTemplateMapping',
+    'RequirementTemplate',
+    'RelationshipTemplate',
+    'CapabilityTemplate',
+    'InterfaceTemplate',
+    'OperationTemplate',
+    'ArtifactTemplate',
+
+    # Service instance models
+    'Service',
+    'Node',
+    'Group',
+    'Policy',
+    'Substitution',
+    'SubstitutionMapping',
+    'Relationship',
+    'Capability',
+    'Interface',
+    'Operation',
+    'Artifact',
+
+    # Orchestration models
+    'Execution',
+    'ServiceUpdate',
+    'ServiceUpdateStep',
+    'ServiceModification',
+    'Plugin',
+    'Task',
+
+    # Misc models
+    'Parameter',
+    'Type',
+    'Metadata'
+)

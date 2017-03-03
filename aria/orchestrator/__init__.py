@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Aria orchestrator
+ARIA orchestrator
 """
 from .decorators import workflow, operation, WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
 

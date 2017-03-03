@@ -177,6 +177,7 @@ class _MutableList(mutable.MutableList):
         except ValueError as e:
             raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
 
+
 _StrictDictID = namedtuple('_StrictDictID', 'key_cls, value_cls')
 _StrictValue = namedtuple('_StrictValue', 'type_cls, listener_cls')
 
@@ -214,6 +215,7 @@ class _StrictDict(object):
 
         return self._strict_map[strict_dict_map_key].type_cls
 
+
 StrictDict = _StrictDict()
 
 
@@ -249,6 +251,7 @@ class _StrictList(object):
 
         return self._strict_map[item_cls].type_cls
 
+
 StrictList = _StrictList()
 
 
@@ -274,6 +277,8 @@ def _mutable_association_listener(mapper, cls):
                 getattr(cls, prop.key))
         elif isinstance(column_type, List):
             _MutableList.associate_with_attribute(getattr(cls, prop.key))
+
+
 _LISTENER_ARGS = (mutable.mapper, 'mapper_configured', _mutable_association_listener)
 
 
@@ -298,5 +303,6 @@ def remove_mutable_association_listener():
     """
     if event.contains(*_LISTENER_ARGS):
         event.remove(*_LISTENER_ARGS)
+
 
 _register_mutable_association_listener()

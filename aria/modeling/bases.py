@@ -53,15 +53,15 @@ class ModelMixin(object):
         raise NotImplementedError
 
     @classmethod
-    def foreign_key(cls, parent_table_name, nullable=False):
+    def foreign_key(cls, parent_table, nullable=False):
         """
         Return a ForeignKey object.
 
-        :param parent_table_name: Parent table name
+        :param parent_table: Parent table name
         :param nullable: Should the column be allowed to remain empty
         """
         return Column(Integer,
-                      ForeignKey('{table}.id'.format(table=parent_table_name),
+                      ForeignKey('{table}.id'.format(table=parent_table),
                                  ondelete='CASCADE'),
                       nullable=nullable)
 
@@ -71,68 +71,75 @@ class ModelMixin(object):
                              relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
-        remote_side_str = '{cls}.{remote_column}'.format(
+        remote_side = '{cls}.{remote_column}'.format(
             cls=cls.__name__,
             remote_column=cls.id_column_name()
         )
 
-        primaryjoin_str = '{remote_side_str} == {cls}.{column}'.format(
-            remote_side_str=remote_side_str,
+        primaryjoin = '{remote_side} == {cls}.{column}'.format(
+            remote_side=remote_side,
             cls=cls.__name__,
             column=column_name
         )
 
         return relationship(
             cls._get_cls_by_tablename(cls.__tablename__).__name__,
-            primaryjoin=primaryjoin_str,
-            remote_side=remote_side_str,
+            primaryjoin=primaryjoin,
+            remote_side=remote_side,
             post_update=True,
             **relationship_kwargs
         )
 
     @classmethod
-    def one_to_one_relationship(cls,
-                                other_table_name,
-                                backreference=None,
-                                relationship_kwargs=None):
+    def one_to_many_relationship_to_self(cls,
+                                         key,
+                                         dict_key=None,
+                                         relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
-        return relationship(
-            lambda: cls._get_cls_by_tablename(other_table_name),
-            backref=backref(backreference or cls.__tablename__, uselist=False),
-            **relationship_kwargs
-        )
+        relationship_kwargs.setdefault('remote_side', '{cls}.{remote_column}'.format(
+            cls=cls.__name__,
+            remote_column=key
+        ))
+
+        return cls._create_relationship(cls.__tablename__, None, relationship_kwargs,
+                                        backreference='', dict_key=dict_key)
 
     @classmethod
+    def one_to_one_relationship(cls,
+                                other_table,
+                                key=None,
+                                foreign_key=None,
+                                backreference=None,
+                                backref_kwargs=None,
+                                relationship_kwargs=None):
+        backref_kwargs = backref_kwargs or {}
+        backref_kwargs.setdefault('uselist', False)
+
+        return cls._create_relationship(other_table, backref_kwargs, relationship_kwargs,
+                                        backreference, key=key, foreign_key=foreign_key)
+    
+    @classmethod
     def one_to_many_relationship(cls,
-                                 child_table_name,
-                                 foreign_key_name=None,
+                                 child_table,
+                                 key=None,
+                                 foreign_key=None,
+                                 dict_key=None,
                                  backreference=None,
-                                 key_column_name=None,
+                                 backref_kwargs=None,
                                  relationship_kwargs=None):
-        relationship_kwargs = relationship_kwargs or {}
+        backref_kwargs = backref_kwargs or {}
+        backref_kwargs.setdefault('uselist', False)
 
-        foreign_keys = lambda: getattr(cls._get_cls_by_tablename(child_table_name),
-                                       foreign_key_name) \
-            if foreign_key_name \
-            else None
-
-        collection_class = attribute_mapped_collection(key_column_name) \
-            if key_column_name \
-            else list
-
-        return relationship(
-            lambda: cls._get_cls_by_tablename(child_table_name),
-            backref=backref(backreference or cls.__tablename__, uselist=False),
-            foreign_keys=foreign_keys,
-            collection_class=collection_class,
-            **relationship_kwargs
-        )
+        return cls._create_relationship(child_table, backref_kwargs, relationship_kwargs,
+                                        backreference, key=key, foreign_key=foreign_key,
+                                        dict_key=dict_key)
 
     @classmethod
     def many_to_one_relationship(cls,
-                                 parent_table_name,
-                                 foreign_key_column=None,
+                                 parent_table,
+                                 key=None,
+                                 foreign_key=None,
                                  backreference=None,
                                  backref_kwargs=None,
                                  relationship_kwargs=None):
@@ -140,33 +147,32 @@ class ModelMixin(object):
         Return a one-to-many SQL relationship object
         Meant to be used from inside the *child* object
 
-        :param parent_class: Class of the parent table
-        :param cls: Class of the child table
-        :param foreign_key_column: The column of the foreign key (from the child table)
+        :param parent_table: Name of the parent table
+        :param foreign_key: The column of the foreign key (from the child table)
         :param backreference: The name to give to the reference to the child (on the parent table)
         """
-        relationship_kwargs = relationship_kwargs or {}
 
-        if foreign_key_column:
-            relationship_kwargs.setdefault('foreign_keys', getattr(cls, foreign_key_column))
+        if backreference is None:
+            backreference = utils.pluralize(cls.__tablename__)
 
         backref_kwargs = backref_kwargs or {}
+        backref_kwargs.setdefault('uselist', True)
         backref_kwargs.setdefault('lazy', 'dynamic')
         # The following line make sure that when the *parent* is deleted, all its connected children
         # are deleted as well
         backref_kwargs.setdefault('cascade', 'all')
 
-        return relationship(
-            lambda: cls._get_cls_by_tablename(parent_table_name),
-            backref=backref(backreference or utils.pluralize(cls.__tablename__), **backref_kwargs),
-            **relationship_kwargs
-        )
+        return cls._create_relationship(parent_table, backref_kwargs, relationship_kwargs,
+                                        backreference, key=key, foreign_key=foreign_key)
 
     @classmethod
     def many_to_many_relationship(cls,
-                                  other_table_name,
+                                  other_table,
                                   table_prefix=None,
-                                  key_column_name=None,
+                                  key=None,
+                                  dict_key=None,
+                                  backreference=None,
+                                  backref_kwargs=None,
                                   relationship_kwargs=None):
         """
         Return a many-to-many SQL relationship object
@@ -177,80 +183,41 @@ class ModelMixin(object):
         2. This method creates a new helper table in the DB
 
         :param cls: The class of the table we're connecting from
-        :param other_table_name: The class of the table we're connecting to
-        :param table_prefix: Custom prefix for the helper table name and the
-                             backreference name
-        :param key_column_name: If provided, will use a dict class with this column as the key
+        :param other_table: The class of the table we're connecting to
+        :param table_prefix: Custom prefix for the helper table name and the backreference name
+        :param dict_key: If provided, will use a dict class with this column as the key
         """
+
+        this_table = cls.__tablename__
+        this_column_name = '{0}_id'.format(this_table)
+        this_foreign_key = '{0}.id'.format(this_table)
+
+        other_column_name = '{0}_id'.format(other_table)
+        other_foreign_key = '{0}.id'.format(other_table)
+
+        helper_table = '{0}_{1}'.format(this_table, other_table)
+
+        if backreference is None:
+            backreference = this_table
+            if table_prefix:
+                helper_table = '{0}_{1}'.format(table_prefix, helper_table)
+                backreference = '{0}_{1}'.format(table_prefix, backreference)
+
+        backref_kwargs = backref_kwargs or {}
+        backref_kwargs.setdefault('uselist', True)
+
         relationship_kwargs = relationship_kwargs or {}
-
-        current_table_name = cls.__tablename__
-        current_column_name = '{0}_id'.format(current_table_name)
-        current_foreign_key = '{0}.id'.format(current_table_name)
-
-        other_column_name = '{0}_id'.format(other_table_name)
-        other_foreign_key = '{0}.id'.format(other_table_name)
-
-        helper_table_name = '{0}_{1}'.format(current_table_name, other_table_name)
-
-        backref_name = current_table_name
-        if table_prefix:
-            helper_table_name = '{0}_{1}'.format(table_prefix, helper_table_name)
-            backref_name = '{0}_{1}'.format(table_prefix, backref_name)
-
-        secondary_table = cls.get_secondary_table(
+        relationship_kwargs.setdefault('secondary', cls._get_secondary_table(
             cls.metadata,
-            helper_table_name,
-            current_column_name,
+            helper_table,
+            this_column_name,
             other_column_name,
-            current_foreign_key,
+            this_foreign_key,
             other_foreign_key
-        )
+        ))
 
-        collection_class = attribute_mapped_collection(key_column_name) \
-            if key_column_name \
-            else list
-
-        return relationship(
-            lambda: cls._get_cls_by_tablename(other_table_name),
-            secondary=secondary_table,
-            backref=backref(backref_name),
-            collection_class=collection_class,
-            **relationship_kwargs
-        )
-
-    @staticmethod
-    def get_secondary_table(metadata,
-                            helper_table_name,
-                            first_column_name,
-                            second_column_name,
-                            first_foreign_key,
-                            second_foreign_key):
-        """
-        Create a helper table for a many-to-many relationship
-
-        :param helper_table_name: The name of the table
-        :param first_column_name: The name of the first column in the table
-        :param second_column_name: The name of the second column in the table
-        :param first_foreign_key: The string representing the first foreign key,
-               for example `blueprint.storage_id`, or `tenants.id`
-        :param second_foreign_key: The string representing the second foreign key
-        :return: A Table object
-        """
-        return Table(
-            helper_table_name,
-            metadata,
-            Column(
-                first_column_name,
-                Integer,
-                ForeignKey(first_foreign_key)
-            ),
-            Column(
-                second_column_name,
-                Integer,
-                ForeignKey(second_foreign_key)
-            )
-        )
+        return cls._create_relationship(other_table, backref_kwargs, relationship_kwargs,
+                                        backreference, key=key, dict_key=dict_key)
 
     def to_dict(self, fields=None, suppress_error=False):
         """
@@ -260,6 +227,7 @@ class ModelMixin(object):
                                it's unable to retrieve (e.g., if a relationship wasn't established
                                yet, and so it's impossible to access a property through it)
         """
+
         res = dict()
         fields = fields or self.fields()
         for field in fields:
@@ -281,6 +249,76 @@ class ModelMixin(object):
         return res
 
     @classmethod
+    def _create_relationship(cls, table, backref_kwargs, relationship_kwargs, backreference,
+                             key=None, foreign_key=None, dict_key=None):
+        relationship_kwargs = relationship_kwargs or {}
+
+        if key:
+            relationship_kwargs.setdefault('foreign_keys',
+                                           lambda: getattr(
+                                               cls._get_cls_by_tablename(cls.__tablename__),
+                                               key))
+
+        elif foreign_key:
+            relationship_kwargs.setdefault('foreign_keys',
+                                           lambda: getattr(
+                                               cls._get_cls_by_tablename(table),
+                                               foreign_key))
+
+        if dict_key:
+            relationship_kwargs.setdefault('collection_class',
+                                           attribute_mapped_collection(dict_key))
+
+        if backreference == '':
+            return relationship(
+                lambda: cls._get_cls_by_tablename(table),
+                **relationship_kwargs
+            )
+        else:
+            if backreference is None:
+                backreference = cls.__tablename__
+            backref_kwargs = backref_kwargs or {}
+            return relationship(
+                lambda: cls._get_cls_by_tablename(table),
+                backref=backref(backreference, **backref_kwargs),
+                **relationship_kwargs
+            )
+
+    @staticmethod
+    def _get_secondary_table(metadata,
+                             helper_table,
+                             first_column,
+                             second_column,
+                             first_foreign_key,
+                             second_foreign_key):
+        """
+        Create a helper table for a many-to-many relationship
+
+        :param helper_table: The name of the table
+        :param first_column_name: The name of the first column in the table
+        :param second_column_name: The name of the second column in the table
+        :param first_foreign_key: The string representing the first foreign key,
+               for example `blueprint.storage_id`, or `tenants.id`
+        :param second_foreign_key: The string representing the second foreign key
+        :return: A Table object
+        """
+
+        return Table(
+            helper_table,
+            metadata,
+            Column(
+                first_column,
+                Integer,
+                ForeignKey(first_foreign_key)
+            ),
+            Column(
+                second_column,
+                Integer,
+                ForeignKey(second_foreign_key)
+            )
+        )
+
+    @classmethod
     def _association_proxies(cls):
         for col, value in vars(cls).items():
             if isinstance(value, associationproxy.AssociationProxy):
@@ -293,6 +331,7 @@ class ModelMixin(object):
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
+
         fields = set(cls._association_proxies())
         fields.update(cls.__table__.columns.keys())
         return fields - set(getattr(cls, '__private_fields__', []))
@@ -302,9 +341,10 @@ class ModelMixin(object):
         """
         Return class reference mapped to table.
 
-         :param tablename: String with name of table.
-         :return: Class reference or None.
-         """
+        :param tablename: String with name of table.
+        :return: Class reference or None.
+        """
+
         if tablename in (cls.__name__, cls.__tablename__):
             return cls
 
@@ -329,3 +369,36 @@ class ModelIDMixin(object):
     @classmethod
     def name_column_name(cls):
         return 'name'
+
+
+class InstanceModelMixin(ModelMixin):
+    """
+    Mixin for :class:`ServiceInstance` models.
+
+    All models support validation, diagnostic dumping, and representation as
+    raw data (which can be translated into JSON or YAML) via :code:`as_raw`.
+    """
+
+    @property
+    def as_raw(self):
+        raise NotImplementedError
+
+    def validate(self, context):
+        pass
+
+    def coerce_values(self, context, container, report_issues):
+        pass
+
+    def dump(self, context):
+        pass
+
+
+class TemplateModelMixin(InstanceModelMixin):
+    """
+    Mixin for :class:`ServiceTemplate` models.
+
+    All model models can be instantiated into :class:`ServiceInstance` models.
+    """
+
+    def instantiate(self, context, container):
+        raise NotImplementedError

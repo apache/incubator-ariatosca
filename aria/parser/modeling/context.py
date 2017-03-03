@@ -18,7 +18,6 @@ import itertools
 from ...utils.collections import StrictDict, prune, OrderedDict
 from ...utils.formatting import as_raw
 from ...utils.console import puts
-from .types import TypeHierarchy
 from .utils import generate_id_string
 
 
@@ -54,12 +53,12 @@ class ModelingContext(object):
     * :code:`capability_types`: The generated hierarchy of capability types
     * :code:`relationship_types`: The generated hierarchy of relationship types
     * :code:`policy_types`: The generated hierarchy of policy types
-    * :code:`policy_trigger_types`: The generated hierarchy of policy trigger types
     * :code:`artifact_types`: The generated hierarchy of artifact types
     * :code:`interface_types`: The generated hierarchy of interface types
     """
 
     def __init__(self):
+        from ...modeling.models import Type
         self.template = None
         self.instance = None
         self.node_id_format = '{template}_{id}'
@@ -68,17 +67,29 @@ class ModelingContext(object):
         self.id_type = IdType.UNIVERSAL_RANDOM
         self.id_max_length = 63 # See: http://www.faqs.org/rfcs/rfc1035.html
         self.inputs = StrictDict(key_class=basestring)
-        self.node_types = TypeHierarchy()
-        self.group_types = TypeHierarchy()
-        self.capability_types = TypeHierarchy()
-        self.relationship_types = TypeHierarchy()
-        self.policy_types = TypeHierarchy()
-        self.policy_trigger_types = TypeHierarchy()
-        self.artifact_types = TypeHierarchy()
-        self.interface_types = TypeHierarchy()
+        self.node_types = Type()
+        self.group_types = Type()
+        self.capability_types = Type()
+        self.relationship_types = Type()
+        self.policy_types = Type()
+        self.artifact_types = Type()
+        self.interface_types = Type()
 
         self._serial_id_counter = itertools.count(1)
         self._locally_unique_ids = set()
+
+    def store(self, model_storage):
+        if self.template is not None:
+            model_storage.service_template.put(self.template)
+        if self.instance is not None:
+            model_storage.service.put(self.instance)
+        model_storage.type.put(self.node_types)
+        model_storage.type.put(self.group_types)
+        model_storage.type.put(self.capability_types)
+        model_storage.type.put(self.relationship_types)
+        model_storage.type.put(self.policy_types)
+        model_storage.type.put(self.artifact_types)
+        model_storage.type.put(self.interface_types)
 
     def generate_node_id(self, template_name):
         return self.node_id_format.format(

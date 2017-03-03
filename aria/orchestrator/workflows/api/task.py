@@ -94,8 +94,8 @@ class OperationTask(BaseTask):
             for k, v in inputs.iteritems():
                 if not isinstance(v, models.Parameter):
                     inputs[k] = models.Parameter(name=k,
-                                                 type_name='str',
-                                                 str_value=str(v))
+                                                 type_name='string',
+                                                 value=str(v) if v is not None else None)
 
         self.name = name
         self.actor = actor

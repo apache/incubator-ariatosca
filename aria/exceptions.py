@@ -14,8 +14,8 @@
 # limitations under the License.
 
 """
-Aria exceptions module
-Every sub-package in Aria has a module with its exceptions.
+ARIA exceptions module
+Every sub-package in ARIA has a module with its exceptions.
 aria.exceptions module conveniently collects all these exceptions for easier imports.
 """
 

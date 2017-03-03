@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Aria top level package
+ARIA top level package
 """
 
 import pkgutil
@@ -62,45 +62,9 @@ def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kw
     """
     Initiate model storage
     """
-    models_to_register = [
-        modeling.models.ServiceTemplate,
-        modeling.models.NodeTemplate,
-        modeling.models.GroupTemplate,
-        modeling.models.PolicyTemplate,
-        modeling.models.SubstitutionTemplate,
-        modeling.models.SubstitutionTemplateMapping,
-        modeling.models.RequirementTemplate,
-        modeling.models.RelationshipTemplate,
-        modeling.models.CapabilityTemplate,
-        modeling.models.InterfaceTemplate,
-        modeling.models.OperationTemplate,
-        modeling.models.ArtifactTemplate,
-
-        modeling.models.Parameter,
-        modeling.models.Metadata,
-
-        modeling.models.Service,
-        modeling.models.Node,
-        modeling.models.Group,
-        modeling.models.Policy,
-        modeling.models.SubstitutionMapping,
-        modeling.models.Substitution,
-        modeling.models.Relationship,
-        modeling.models.Capability,
-        modeling.models.Interface,
-        modeling.models.Operation,
-        modeling.models.Artifact,
-
-        modeling.models.Execution,
-        modeling.models.ServiceUpdate,
-        modeling.models.ServiceUpdateStep,
-        modeling.models.ServiceModification,
-        modeling.models.Plugin,
-        modeling.models.Task
-    ]
     return storage.ModelStorage(api_cls=api,
                                 api_kwargs=api_kwargs,
-                                items=models_to_register,
+                                items=modeling.models.models_to_register,
                                 initiator=initiator,
                                 initiator_kwargs=initiator_kwargs or {})
 

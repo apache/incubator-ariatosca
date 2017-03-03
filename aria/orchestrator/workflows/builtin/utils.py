@@ -45,7 +45,6 @@ def create_relationship_tasks(interface_name, operation_name, runs_on, node, dry
                 OperationTask.for_relationship(relationship=relationship,
                                                interface_name=interface_name,
                                                operation_name=operation_name,
-                                               edge='source',
                                                runs_on=runs_on,
                                                dry=dry))
         except exceptions.TaskException:

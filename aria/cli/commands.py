@@ -260,8 +260,7 @@ class WorkflowCommand(BaseCommand):
     def _run(self, context, workflow_name, workflow_fn, inputs):
         # Storage
         def _initialize_storage(model_storage):
-            model_storage.service_template.put(context.modeling.template)
-            model_storage.service.put(context.modeling.instance)
+            context.modeling.store(model_storage)
 
         # Create runner
         runner = Runner(workflow_name, workflow_fn, inputs, _initialize_storage,

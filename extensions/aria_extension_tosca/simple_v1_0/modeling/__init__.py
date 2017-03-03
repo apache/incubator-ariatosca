@@ -17,8 +17,7 @@ import re
 from types import FunctionType
 from datetime import datetime
 
-from aria.parser.modeling import Type, RelationshipType, PolicyType
-from aria.modeling.models import (ServiceTemplate, NodeTemplate,
+from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                   GroupTemplate, PolicyTemplate, SubstitutionTemplate,
                                   SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
@@ -29,7 +28,7 @@ from ..data_types import coerce_value
 
 def create_service_template_model(context): # pylint: disable=too-many-locals,too-many-branches
     model = ServiceTemplate(created_at=datetime.now(),
-                            main_file_name='')
+                            main_file_name=str(context.presentation.location))
 
     model.description = context.presentation.get('service_template', 'description', 'value')
 
@@ -47,27 +46,32 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     # Types
     create_types(context,
                  context.modeling.node_types,
-                 context.presentation.get('service_template', 'node_types'))
+                 context.presentation.get('service_template', 'node_types'),
+                 'node')
     create_types(context,
                  context.modeling.group_types,
-                 context.presentation.get('service_template', 'group_types'))
-    create_types(context,
-                 context.modeling.capability_types,
-                 context.presentation.get('service_template', 'capability_types'))
-    create_types(context,
-                 context.modeling.relationship_types,
-                 context.presentation.get('service_template', 'relationship_types'),
-                 create_relationship_type_model)
+                 context.presentation.get('service_template', 'group_types'),
+                 'group')
     create_types(context,
                  context.modeling.policy_types,
                  context.presentation.get('service_template', 'policy_types'),
-                 create_policy_type_model)
+                 'policy')
     create_types(context,
-                 context.modeling.artifact_types,
-                 context.presentation.get('service_template', 'artifact_types'))
+                 context.modeling.relationship_types,
+                 context.presentation.get('service_template', 'relationship_types'),
+                 'relationship')
+    create_types(context,
+                 context.modeling.capability_types,
+                 context.presentation.get('service_template', 'capability_types'),
+                 'capability')
     create_types(context,
                  context.modeling.interface_types,
-                 context.presentation.get('service_template', 'interface_types'))
+                 context.presentation.get('service_template', 'interface_types'),
+                 'interface')
+    create_types(context,
+                 context.modeling.artifact_types,
+                 context.presentation.get('service_template', 'artifact_types'),
+                 'artifact')
 
     # Topology template
     topology_template = context.presentation.get('service_template', 'topology_template')
@@ -77,13 +81,10 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
         create_parameter_models_from_values(model.outputs,
                                             topology_template._get_output_values(context))
 
-    # Policy templates
-    # (We need to do this before node and group templates, because we need plugins populated)
+    # Plugins
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
     if policies:
         for policy in policies.itervalues():
-            model.policy_templates.append(create_policy_template_model(context, policy))
-            
             if context.modeling.policy_types.get_role(policy.type) == 'plugin':
                 model.plugins[policy._name] = create_plugin_model(context, policy)
 
@@ -93,6 +94,8 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     if node_templates:
         for node_template in node_templates.itervalues():
             model.node_templates.append(create_node_template_model(context, model, node_template))
+        for node_template in node_templates.itervalues():
+            fix_node_template_model(context, model, node_template)
 
     # Group templates
     groups = context.presentation.get('service_template', 'topology_template', 'groups')
@@ -100,18 +103,285 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
         for group in groups.itervalues():
             model.group_templates.append(create_group_template_model(context, model, group))
 
+    # Policy templates
+    policies = context.presentation.get('service_template', 'topology_template', 'policies')
+    if policies:
+        for policy in policies.itervalues():
+            model.policy_templates.append(create_policy_template_model(context, model, policy))
+
     # Substitution template
     substitution_mappings = context.presentation.get('service_template', 'topology_template',
                                                      'substitution_mappings')
     if substitution_mappings:
-        model.substitution_template = create_substituion_template_model(context, model,
-                                                                        substitution_mappings)
+        model.substitution_template = create_substitution_template_model(context, model,
+                                                                         substitution_mappings)
 
     return model
 
 
-def create_substituion_template_model(context, service_template, substitution_mappings):
-    model = SubstitutionTemplate(node_type_name=substitution_mappings.node_type)
+def create_node_template_model(context, service_template, node_template):
+    node_type = node_template._get_type(context)
+    node_type = context.modeling.node_types.get_descendant(node_type._name)
+    model = NodeTemplate(name=node_template._name,
+                         type=node_type)
+    
+    model.default_instances = 1
+    model.min_instances = 0
+
+    if node_template.description:
+        model.description = node_template.description.value
+
+    create_parameter_models_from_values(model.properties,
+                                        node_template._get_property_values(context))
+    create_interface_template_models(context, service_template, model.interface_templates,
+                                     node_template._get_interfaces(context))
+
+    artifacts = node_template._get_artifacts(context)
+    if artifacts:
+        for artifact_name, artifact in artifacts.iteritems():
+            model.artifact_templates[artifact_name] = create_artifact_template_model(context,
+                                                                                     artifact)
+
+    capabilities = node_template._get_capabilities(context)
+    if capabilities:
+        for capability_name, capability in capabilities.iteritems():
+            model.capability_templates[capability_name] = \
+                create_capability_template_model(context, capability)
+
+    if model.target_node_template_constraints:
+        model.target_node_template_constraints = []
+        create_node_filter_constraint_lambdas(context, node_template.node_filter,
+                                              model.target_node_template_constraints)
+
+    return model
+
+
+def fix_node_template_model(context, service_template, node_template):
+    # Requirements have to be created after all node templates have been created, because
+    # requirements might reference another node template
+    model = service_template.get_node_template(node_template._name)
+    requirements = node_template._get_requirements(context)
+    if requirements:
+        for _, requirement in requirements:
+            model.requirement_templates.append(create_requirement_template_model(context,
+                                                                                 service_template,
+                                                                                 requirement))
+
+
+def create_group_template_model(context, service_template, group):
+    group_type = group._get_type(context)
+    group_type = context.modeling.group_types.get_descendant(group_type._name)
+    model = GroupTemplate(name=group._name,
+                          type=group_type)
+
+    if group.description:
+        model.description = group.description.value
+
+    create_parameter_models_from_values(model.properties, group._get_property_values(context))
+    create_interface_template_models(context, service_template, model.interface_templates,
+                                     group._get_interfaces(context))
+
+    members = group.members
+    if members:
+        for member in members:
+            node_template = service_template.get_node_template(member)
+            assert node_template
+            model.node_templates.append(node_template)
+
+    return model
+
+
+def create_policy_template_model(context, service_template, policy):
+    policy_type = policy._get_type(context)
+    policy_type = context.modeling.policy_types.get_descendant(policy_type._name)
+    model = PolicyTemplate(name=policy._name,
+                           type=policy_type)
+
+    if policy.description:
+        model.description = policy.description.value
+
+    create_parameter_models_from_values(model.properties, policy._get_property_values(context))
+
+    node_templates, groups = policy._get_targets(context)
+    if node_templates:
+        for target in node_templates:
+            node_template = service_template.get_node_template(target._name)
+            assert node_template
+            model.node_templates.append(node_template)
+    if groups:
+        for target in groups:
+            group_template = service_template.get_group_template(target._name)
+            assert group_template
+            model.group_templates.append(group_template)
+
+    return model
+
+
+def create_requirement_template_model(context, service_template, requirement):
+    model = {'name': requirement._name}
+
+    node, node_variant = requirement._get_node(context)
+    if node is not None:
+        if node_variant == 'node_type':
+            node_type = context.modeling.node_types.get_descendant(node._name)
+            model['target_node_type'] = node_type
+        else:
+            node_template = service_template.get_node_template(node._name)
+            model['target_node_template'] = node_template
+
+    capability, capability_variant = requirement._get_capability(context)
+    if capability is not None:
+        if capability_variant == 'capability_type':
+            model['target_capability_type_name'] = capability._name
+        else:
+            model['target_capability_name'] = capability._name
+
+    model = RequirementTemplate(**model)
+
+    if model.target_node_template_constraints:
+        model.target_node_template_constraints = []
+        create_node_filter_constraint_lambdas(context, requirement.node_filter,
+                                              model.target_node_template_constraints)
+
+    relationship = requirement.relationship
+    if relationship is not None:
+        model.relationship_template = \
+            create_relationship_template_model(context, service_template, relationship)
+
+    return model
+
+
+def create_relationship_template_model(context, service_template, relationship):
+    relationship_type, relationship_type_variant = relationship._get_type(context)
+    if relationship_type_variant == 'relationship_type':
+        relationship_type = context.modeling.relationship_types.get_descendant(
+            relationship_type._name)
+        model = RelationshipTemplate(type=relationship_type)
+    else:
+        relationship_template = relationship_type
+        relationship_type = relationship_template._get_type(context)
+        relationship_type = context.modeling.relationship_types.get_descendant(
+            relationship_type._name)
+        model = RelationshipTemplate(type=relationship_type,
+                                     name=relationship_template._name)
+        if relationship_template.description:
+            model.description = relationship_template.description.value
+
+    create_parameter_models_from_assignments(model.properties, relationship.properties)
+    create_interface_template_models(context, service_template, model.interface_templates,
+                                     relationship.interfaces)
+
+    return model
+
+
+def create_capability_template_model(context, capability):
+    capability_type = capability._get_type(context)
+    capability_type = context.modeling.capability_types.get_descendant(capability_type._name)
+    model = CapabilityTemplate(name=capability._name,
+                               type=capability_type)
+
+    capability_definition = capability._get_definition(context)
+    if capability_definition.description:
+        model.description = capability_definition.description.value
+    occurrences = capability_definition.occurrences
+    if occurrences is not None:
+        model.min_occurrences = occurrences.value[0]
+        if occurrences.value[1] != 'UNBOUNDED':
+            model.max_occurrences = occurrences.value[1]
+
+    valid_source_types = capability_definition.valid_source_types
+    if valid_source_types:
+        for valid_source_type in valid_source_types:
+            # TODO: handle shortcut type names
+            node_type = context.modeling.node_types.get_descendant(valid_source_type)
+            model.valid_source_node_types.append(node_type)
+
+    create_parameter_models_from_assignments(model.properties, capability.properties)
+
+    return model
+
+
+def create_interface_template_model(context, service_template, interface):
+    interface_type = interface._get_type(context)
+    interface_type = context.modeling.interface_types.get_descendant(interface_type._name)
+    model = InterfaceTemplate(name=interface._name,
+                              type=interface_type)
+
+    if interface_type.description:
+        model.description = interface_type.description
+
+    inputs = interface.inputs
+    if inputs:
+        for input_name, the_input in inputs.iteritems():
+            model.inputs[input_name] = Parameter(name=input_name,
+                                                 type_name=the_input.value.type,
+                                                 value=the_input.value.value,
+                                                 description=the_input.value.description)
+
+    operations = interface.operations
+    if operations:
+        for operation_name, operation in operations.iteritems():
+            model.operation_templates[operation_name] = \
+                create_operation_template_model(context, service_template, operation)
+
+    return model if model.operation_templates else None
+
+
+def create_operation_template_model(context, service_template, operation): # pylint: disable=unused-argument
+    model = OperationTemplate(name=operation._name)
+
+    if operation.description:
+        model.description = operation.description.value
+
+    implementation = operation.implementation
+    if (implementation is not None) and operation.implementation.primary:
+        model.plugin, model.implementation = \
+            parse_implementation_string(context, service_template, operation.implementation.primary)
+
+        dependencies = implementation.dependencies
+        if dependencies is not None:
+            model.dependencies = dependencies
+
+    inputs = operation.inputs
+    if inputs:
+        for input_name, the_input in inputs.iteritems():
+            model.inputs[input_name] = Parameter(name=input_name,
+                                                 type_name=the_input.value.type,
+                                                 value=the_input.value.value,
+                                                 description=the_input.value.description)
+
+    return model
+
+
+def create_artifact_template_model(context, artifact):
+    artifact_type = artifact._get_type(context)
+    artifact_type = context.modeling.artifact_types.get_descendant(artifact_type._name)
+    model = ArtifactTemplate(name=artifact._name,
+                             type=artifact_type,
+                             source_path=artifact.file)
+
+    if artifact.description:
+        model.description = artifact.description.value
+
+    model.target_path = artifact.deploy_path
+
+    repository = artifact._get_repository(context)
+    if repository is not None:
+        model.repository_url = repository.url
+        credential = repository._get_credential(context)
+        if credential:
+            model.repository_credential = {}
+            for k, v in credential.iteritems():
+                model.repository_credential[k] = v
+
+    create_parameter_models_from_values(model.properties, artifact._get_property_values(context))
+
+    return model
+
+
+def create_substitution_template_model(context, service_template, substitution_mappings):
+    node_type = context.modeling.node_types.get_descendant(substitution_mappings.node_type)
+    model = SubstitutionTemplate(node_type=node_type)
 
     capabilities = substitution_mappings.capabilities
     if capabilities:
@@ -168,249 +438,11 @@ def create_plugin_model(context, policy):
     return model
 
 
-def create_node_template_model(context, service_template, node_template):
-    node_type = node_template._get_type(context)
-    model = NodeTemplate(name=node_template._name, type_name=node_type._name)
-    
-    model.default_instances = 1
-    model.min_instances = 0
-
-    if node_template.description:
-        model.description = node_template.description.value
-
-    create_parameter_models_from_values(model.properties,
-                                        node_template._get_property_values(context))
-    create_interface_template_models(context, service_template, model.interface_templates,
-                                     node_template._get_interfaces(context))
-
-    artifacts = node_template._get_artifacts(context)
-    if artifacts:
-        for artifact_name, artifact in artifacts.iteritems():
-            model.artifact_templates[artifact_name] = create_artifact_template_model(context,
-                                                                                     artifact)
-
-    requirements = node_template._get_requirements(context)
-    if requirements:
-        for _, requirement in requirements:
-            model.requirement_templates.append(create_requirement_template_model(context,
-                                                                                 service_template,
-                                                                                 requirement))
-
-    capabilities = node_template._get_capabilities(context)
-    if capabilities:
-        for capability_name, capability in capabilities.iteritems():
-            model.capability_templates[capability_name] = \
-                create_capability_template_model(context, capability)
-
-    if model.target_node_template_constraints:
-        model.target_node_template_constraints = []
-        create_node_filter_constraint_lambdas(context, node_template.node_filter,
-                                              model.target_node_template_constraints)
-
-    return model
-
-
-def create_interface_template_model(context, service_template, interface):
-    interface_type = interface._get_type(context)
-    model = InterfaceTemplate(name=interface._name, type_name=interface_type._name)
-
-    if interface_type.description:
-        model.description = interface_type.description.value
-
-    inputs = interface.inputs
-    if inputs:
-        for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name,
-                                                 type_name=the_input.value.type,
-                                                 str_value=str(the_input.value.value),
-                                                 description=the_input.value.description)
-
-    operations = interface.operations
-    if operations:
-        for operation_name, operation in operations.iteritems():
-            model.operation_templates[operation_name] = \
-                create_operation_template_model(context, service_template, operation)
-
-    return model if model.operation_templates else None
-
-
-def create_operation_template_model(context, service_template, operation): # pylint: disable=unused-argument
-    model = OperationTemplate(name=operation._name)
-
-    if operation.description:
-        model.description = operation.description.value
-
-    implementation = operation.implementation
-    if (implementation is not None) and operation.implementation.primary:
-        model.plugin, model.implementation = \
-            parse_implementation_string(context, service_template, operation.implementation.primary)
-
-        dependencies = implementation.dependencies
-        if dependencies is not None:
-            model.dependencies = dependencies
-
-    inputs = operation.inputs
-    if inputs:
-        for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name,
-                                                 type_name=the_input.value.type,
-                                                 str_value=str(the_input.value.value),
-                                                 description=the_input.value.description)
-
-    return model
-
-
-def create_artifact_template_model(context, artifact):
-    model = ArtifactTemplate(name=artifact._name, type_name=artifact.type,
-                             source_path=artifact.file)
-
-    if artifact.description:
-        model.description = artifact.description.value
-
-    model.target_path = artifact.deploy_path
-
-    repository = artifact._get_repository(context)
-    if repository is not None:
-        model.repository_url = repository.url
-        credential = repository._get_credential(context)
-        if credential:
-            model.repository_credential = {}
-            for k, v in credential.iteritems():
-                model.repository_credential[k] = v
-
-    create_parameter_models_from_values(model.properties, artifact._get_property_values(context))
-
-    return model
-
-
-def create_requirement_template_model(context, service_template, requirement):
-    model = {'name': requirement._name}
-
-    node, node_variant = requirement._get_node(context)
-    if node is not None:
-        if node_variant == 'node_type':
-            model['target_node_type_name'] = node._name
-        else:
-            model['target_node_template_name'] = node._name
-
-    capability, capability_variant = requirement._get_capability(context)
-    if capability is not None:
-        if capability_variant == 'capability_type':
-            model['target_capability_type_name'] = capability._name
-        else:
-            model['target_capability_name'] = capability._name
-
-    model = RequirementTemplate(**model)
-
-    if model.target_node_template_constraints:
-        model.target_node_template_constraints = []
-        create_node_filter_constraint_lambdas(context, requirement.node_filter,
-                                              model.target_node_template_constraints)
-
-    relationship = requirement.relationship
-    if relationship is not None:
-        model.relationship_template = \
-            create_relationship_template_model(context, service_template, relationship)
-
-    return model
-
-
-def create_relationship_type_model(context, relationship_type): # pylint: disable=unused-argument
-    return RelationshipType(relationship_type._name)
-
-
-def create_policy_type_model(context, policy_type): # pylint: disable=unused-argument
-    return PolicyType(policy_type._name)
-
-
-def create_relationship_template_model(context, service_template, relationship):
-    relationship_type, relationship_type_variant = relationship._get_type(context)
-    if relationship_type_variant == 'relationship_type':
-        model = RelationshipTemplate(type_name=relationship_type._name)
-    else:
-        relationship_template = relationship_type
-        relationship_type = relationship_template._get_type(context)
-        model = RelationshipTemplate(type_name=relationship_type._name,
-                                     template_name=relationship_template._name)
-        if relationship_template.description:
-            model.description = relationship_template.description.value
-
-    create_parameter_models_from_assignments(model.properties, relationship.properties)
-    create_interface_template_models(context, service_template, model.interface_templates,
-                                     relationship.interfaces)
-
-    return model
-
-
-def create_capability_template_model(context, capability):
-    capability_type = capability._get_type(context)
-    model = CapabilityTemplate(name=capability._name, type_name=capability_type._name)
-
-    capability_definition = capability._get_definition(context)
-    if capability_definition.description:
-        model.description = capability_definition.description.value
-    occurrences = capability_definition.occurrences
-    if occurrences is not None:
-        model.min_occurrences = occurrences.value[0]
-        if occurrences.value[1] != 'UNBOUNDED':
-            model.max_occurrences = occurrences.value[1]
-
-    valid_source_types = capability_definition.valid_source_types
-    if valid_source_types:
-        model.valid_source_node_type_names = valid_source_types
-
-    create_parameter_models_from_assignments(model.properties, capability.properties)
-
-    return model
-
-
-def create_group_template_model(context, service_template, group):
-    group_type = group._get_type(context)
-    model = GroupTemplate(name=group._name, type_name=group_type._name)
-
-    if group.description:
-        model.description = group.description.value
-
-    create_parameter_models_from_values(model.properties, group._get_property_values(context))
-    create_interface_template_models(context, service_template, model.interface_templates,
-                                     group._get_interfaces(context))
-
-    members = group.members
-    if members:
-        model.member_node_template_names = []
-        for member in members:
-            model.member_node_template_names.append(member)
-
-    return model
-
-
-def create_policy_template_model(context, policy):
-    policy_type = policy._get_type(context)
-    model = PolicyTemplate(name=policy._name, type_name=policy_type._name)
-
-    if policy.description:
-        model.description = policy.description.value
-
-    create_parameter_models_from_values(model.properties, policy._get_property_values(context))
-
-    node_templates, groups = policy._get_targets(context)
-    if node_templates:
-        model.target_node_template_names = []
-        for node_template in node_templates:
-            model.target_node_template_names.append(node_template._name)
-    if groups:
-        model.target_group_template_names = []
-        for group in groups:
-            model.target_group_template_names.append(group._name)
-
-    return model
-
-
 #
 # Utils
 #
 
-def create_types(context, root, types, normalize=None):
+def create_types(context, root, types, variant):
     if types is None:
         return
 
@@ -424,10 +456,8 @@ def create_types(context, root, types, normalize=None):
         for name, the_type in types.iteritems():
             if root.get_descendant(name) is None:
                 parent_type = the_type._get_parent(context)
-                if normalize:
-                    model = normalize(context, the_type)
-                else:
-                    model = Type(the_type._name)
+                model = Type(name=the_type._name,
+                             variant=variant)
                 if the_type.description:
                     model.description = the_type.description.value
                 model.role = the_type._get_extension('role')
@@ -444,7 +474,7 @@ def create_parameter_models_from_values(properties, source_properties):
         for property_name, prop in source_properties.iteritems():
             properties[property_name] = Parameter(name=property_name,
                                                   type_name=prop.type,
-                                                  str_value=str(prop.value),
+                                                  value=prop.value,
                                                   description=prop.description)
 
 
@@ -453,7 +483,7 @@ def create_parameter_models_from_assignments(properties, source_properties):
         for property_name, prop in source_properties.iteritems():
             properties[property_name] = Parameter(name=property_name,
                                                   type_name=prop.value.type,
-                                                  str_value=str(prop.value.value),
+                                                  value=prop.value.value,
                                                   description=prop.value.description)
 
 

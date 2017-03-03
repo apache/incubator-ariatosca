@@ -28,7 +28,7 @@ def convert_to_dry(plugin, implementation, inputs): # pylint: disable=unused-arg
     dry_implementation = '{0}.{1}'.format(__name__, 'dry_operation')
     dry_inputs = OrderedDict()
     dry_inputs['_implementation'] = implementation
-    dry_inputs['_plugin'] = plugin
+    dry_inputs['_plugin'] = plugin.name if plugin is not None else None
     return None, dry_implementation, dry_inputs
 
 

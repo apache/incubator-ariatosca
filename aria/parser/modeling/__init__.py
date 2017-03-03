@@ -14,15 +14,9 @@
 # limitations under the License.
 
 from .context import IdType, ModelingContext
-from .types import TypeHierarchy, Type, RelationshipType, PolicyType, PolicyTriggerType
 
 
 __all__ = (
     'IdType',
-    'ModelingContext',
-    'TypeHierarchy',
-    'Type',
-    'RelationshipType',
-    'PolicyType',
-    'PolicyTriggerType',
+    'ModelingContext'
 )

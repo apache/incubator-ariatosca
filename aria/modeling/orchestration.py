@@ -27,6 +27,9 @@ classes:
     * Plugin - plugin implementation model.
     * Task - a task
 """
+
+# pylint: disable=no-self-argument, no-member, abstract-method
+
 from collections import namedtuple
 from datetime import datetime
 
@@ -57,16 +60,13 @@ __all__ = (
     'TaskBase'
 )
 
-# pylint: disable=no-self-argument, no-member, abstract-method
-
 
 class Execution(ModelMixin):
     """
     Execution model representation.
     """
-    __tablename__ = 'execution' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_fk']
+    __tablename__ = 'execution'
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -129,6 +129,8 @@ class Execution(ModelMixin):
 
     # region foreign keys
 
+    __private_fields__ = ['service_fk']
+
     @declared_attr
     def service_fk(cls):
         return cls.foreign_key('service')
@@ -147,13 +149,10 @@ class ServiceUpdateBase(ModelMixin):
     """
     Deployment update model representation.
     """
-    # Needed only for pylint. the id will be populated by sqlalcehmy and the proper column.
+
     steps = None
 
-    __tablename__ = 'service_update'  # redundancy for PyLint: SqlAlchemy injects this
-
-    __private_fields__ = ['service_fk',
-                          'execution_fk']
+    __tablename__ = 'service_update' 
 
     _private_fields = ['execution_fk', 'deployment_fk']
 
@@ -183,6 +182,9 @@ class ServiceUpdateBase(ModelMixin):
 
     # region foreign keys
 
+    __private_fields__ = ['service_fk',
+                          'execution_fk']
+
     @declared_attr
     def execution_fk(cls):
         return cls.foreign_key('execution', nullable=True)
@@ -204,9 +206,8 @@ class ServiceUpdateStepBase(ModelMixin):
     """
     Deployment update step model representation.
     """
-    __tablename__ = 'service_update_step' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_update_fk']
+    __tablename__ = 'service_update_step'
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
@@ -242,6 +243,8 @@ class ServiceUpdateStepBase(ModelMixin):
         return association_proxy('deployment_update', cls.name_column_name())
 
     # region foreign keys
+
+    __private_fields__ = ['service_update_fk']
 
     @declared_attr
     def service_update_fk(cls):
@@ -281,9 +284,8 @@ class ServiceModificationBase(ModelMixin):
     """
     Deployment modification model representation.
     """
-    __tablename__ = 'service_modification' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_fk']
+    __tablename__ = 'service_modification'
 
     STARTED = 'started'
     FINISHED = 'finished'
@@ -300,10 +302,6 @@ class ServiceModificationBase(ModelMixin):
     status = Column(Enum(*STATES, name='deployment_modification_status'))
 
     @declared_attr
-    def service_fk(cls):
-        return cls.foreign_key('service')
-
-    @declared_attr
     def service(cls):
         return cls.many_to_one_relationship('service',
                                             backreference='modifications')
@@ -312,14 +310,23 @@ class ServiceModificationBase(ModelMixin):
     def service_name(cls):
         return association_proxy('service', cls.name_column_name())
 
+    # region foreign keys
+
+    __private_fields__ = ['service_fk']
+
+    @declared_attr
+    def service_fk(cls):
+        return cls.foreign_key('service')
+
+    # endregion
+
 
 class PluginBase(ModelMixin):
     """
     Plugin model representation.
     """
-    __tablename__ = 'plugin' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['service_template_fk']
+    __tablename__ = 'plugin'
 
     archive_name = Column(Text, nullable=False, index=True)
     distribution = Column(Text)
@@ -335,6 +342,8 @@ class PluginBase(ModelMixin):
 
     # region foreign keys
 
+    __private_fields__ = ['service_template_fk']
+
     @declared_attr
     def service_template_fk(cls):
         return cls.foreign_key('service_template', nullable=True)
@@ -346,12 +355,33 @@ class TaskBase(ModelMixin):
     """
     A Model which represents an task
     """
-    __tablename__ = 'task' # redundancy for PyLint: SqlAlchemy injects this
 
-    __private_fields__ = ['node_fk',
-                          'relationship_fk',
-                          'plugin_fk',
-                          'execution_fk']
+    __tablename__ = 'task'
+
+    PENDING = 'pending'
+    RETRYING = 'retrying'
+    SENT = 'sent'
+    STARTED = 'started'
+    SUCCESS = 'success'
+    FAILED = 'failed'
+    STATES = (
+        PENDING,
+        RETRYING,
+        SENT,
+        STARTED,
+        SUCCESS,
+        FAILED,
+    )
+
+    WAIT_STATES = [PENDING, RETRYING]
+    END_STATES = [SUCCESS, FAILED]
+
+    RUNS_ON_SOURCE = 'source'
+    RUNS_ON_TARGET = 'target'
+    RUNS_ON_NODE = 'node'
+    RUNS_ON = (RUNS_ON_NODE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
+
+    INFINITE_RETRIES = -1
 
     @declared_attr
     def node_name(cls):
@@ -384,60 +414,7 @@ class TaskBase(ModelMixin):
     @declared_attr
     def inputs(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             key_column_name='name')
-
-    # region foreign keys
-
-    @declared_attr
-    def node_fk(cls):
-        return cls.foreign_key('node', nullable=True)
-
-    @declared_attr
-    def relationship_fk(cls):
-        return cls.foreign_key('relationship', nullable=True)
-
-    @declared_attr
-    def plugin_fk(cls):
-        return cls.foreign_key('plugin', nullable=True)
-
-    @declared_attr
-    def execution_fk(cls):
-        return cls.foreign_key('execution', nullable=True)
-
-    # endregion
-
-    PENDING = 'pending'
-    RETRYING = 'retrying'
-    SENT = 'sent'
-    STARTED = 'started'
-    SUCCESS = 'success'
-    FAILED = 'failed'
-    STATES = (
-        PENDING,
-        RETRYING,
-        SENT,
-        STARTED,
-        SUCCESS,
-        FAILED,
-    )
-
-    WAIT_STATES = [PENDING, RETRYING]
-    END_STATES = [SUCCESS, FAILED]
-
-    RUNS_ON_SOURCE = 'source'
-    RUNS_ON_TARGET = 'target'
-    RUNS_ON_NODE = 'node'
-    RUNS_ON = (RUNS_ON_NODE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
-
-    @orm.validates('max_attempts')
-    def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
-        """Validates that max attempts is either -1 or a positive number"""
-        if value < 1 and value != TaskBase.INFINITE_RETRIES:
-            raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
-                             'Got {value}'.format(value=value))
-        return value
-
-    INFINITE_RETRIES = -1
+                                             dict_key='name')
 
     status = Column(Enum(*STATES, name='status'), default=PENDING)
 
@@ -473,6 +450,39 @@ class TaskBase(ModelMixin):
         :return:
         """
         return self.node or self.relationship
+
+    @orm.validates('max_attempts')
+    def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
+        """Validates that max attempts is either -1 or a positive number"""
+        if value < 1 and value != TaskBase.INFINITE_RETRIES:
+            raise ValueError('Max attempts can be either -1 (infinite) or any positive number. '
+                             'Got {value}'.format(value=value))
+        return value
+
+    # region foreign keys
+
+    __private_fields__ = ['node_fk',
+                          'relationship_fk',
+                          'plugin_fk',
+                          'execution_fk']
+
+    @declared_attr
+    def node_fk(cls):
+        return cls.foreign_key('node', nullable=True)
+
+    @declared_attr
+    def relationship_fk(cls):
+        return cls.foreign_key('relationship', nullable=True)
+
+    @declared_attr
+    def plugin_fk(cls):
+        return cls.foreign_key('plugin', nullable=True)
+
+    @declared_attr
+    def execution_fk(cls):
+        return cls.foreign_key('execution', nullable=True)
+
+    # endregion
 
     @classmethod
     def as_node_task(cls, instance, runs_on, **kwargs):
