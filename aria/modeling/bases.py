@@ -36,6 +36,7 @@ from sqlalchemy import (
 )
 
 from . import utils
+from ..utils import formatting
 
 
 class ModelMixin(object):
@@ -153,7 +154,7 @@ class ModelMixin(object):
         """
 
         if backreference is None:
-            backreference = utils.pluralize(cls.__tablename__)
+            backreference = formatting.pluralize(cls.__tablename__)
 
         backref_kwargs = backref_kwargs or {}
         backref_kwargs.setdefault('uselist', True)
@@ -360,7 +361,7 @@ class ModelMixin(object):
 
 class ModelIDMixin(object):
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(Text, nullable=True, index=True)
+    name = Column(Text, index=True)
 
     @classmethod
     def id_column_name(cls):

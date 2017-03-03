@@ -12,15 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
 A common context for both workflow and operation
 """
-from uuid import uuid4
 
 import jinja2
 
-from aria import logger
-from aria.storage import exceptions
+from ... import logger
+from ...storage import exceptions
+from ...utils.uuid import generate_uuid
 
 
 class BaseContext(logger.LoggerMixin):
@@ -38,7 +39,7 @@ class BaseContext(logger.LoggerMixin):
             **kwargs):
         super(BaseContext, self).__init__(**kwargs)
         self._name = name
-        self._id = str(uuid4())
+        self._id = generate_uuid(variant='uuid')
         self._model = model_storage
         self._resource = resource_storage
         self._service_id = service_id

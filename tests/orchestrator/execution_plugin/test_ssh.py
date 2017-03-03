@@ -24,7 +24,7 @@ import fabric.api
 from fabric.contrib import files
 from fabric import context_managers
 
-from aria.storage import model
+from aria.modeling import models
 from aria.orchestrator import events
 from aria.orchestrator import workflow
 from aria.orchestrator.workflows import api
@@ -222,8 +222,8 @@ class TestWithActualSSHServer(object):
                 op,
                 dict(implementation='{0}.{1}'.format(operations.__name__, operation.__name__))
             )]
-            graph.sequence(*[api.task.OperationTask.node(
-                instance=node,
+            graph.sequence(*[api.task.OperationTask.for_node(
+                node=node,
                 name=op,
                 inputs={
                     'script_path': script_path,

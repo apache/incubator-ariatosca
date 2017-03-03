@@ -228,30 +228,35 @@ class WorkflowCommand(BaseCommand):
     
     def _get_workflow(self, context, workflow_name):
         if workflow_name in BUILTIN_WORKFLOWS:
-            workflow_fn = import_fullname('aria.orchestrator.workflows.builtin.%s' % workflow_name)
+            workflow_fn = import_fullname('aria.orchestrator.workflows.builtin.{0}'.format(
+                workflow_name))
             inputs = {}
         else:
+            workflow = None
+            for policy in context.modeling.instance.policies:
+                if policy.name == workflow_name:
+                    workflow = policy
+                    break
+
+            if workflow is None:
+                raise AttributeError('workflow policy does not exist: "{0}"'.format(workflow_name))
+            if workflow.type.role != 'workflow':
+                raise AttributeError('policy is not a workflow: "{0}"'.format(workflow_name))
+
             try:
-                policy = context.modeling.instance.policies[workflow_name]
-            except KeyError:
-                raise AttributeError('workflow policy does not exist: "%s"' % workflow_name)
-            if context.modeling.policy_types.get_role(policy.type_name) != 'workflow':
-                raise AttributeError('policy is not a workflow: "%s"' % workflow_name)
-    
-            try:
-                sys.path.append(policy.properties['implementation'].value)
+                sys.path.append(workflow.properties['implementation'].value)
             except KeyError:
                 pass
     
-            workflow_fn = import_fullname(policy.properties['function'].value)
+            workflow_fn = import_fullname(workflow.properties['function'].value)
     
-            for k in policy.properties:
+            for k in workflow.properties:
                 if k in WORKFLOW_DECORATOR_RESERVED_ARGUMENTS:
-                    raise AttributeError('workflow policy "%s" defines a reserved property: "%s"' %
-                                         (workflow_name, k))
+                    raise AttributeError('workflow policy "{0}" defines a reserved property: "{1}"'
+                                         .format(workflow_name, k))
     
             inputs = OrderedDict([
-                (k, v.value) for k, v in policy.properties.iteritems()
+                (k, v.value) for k, v in workflow.properties.iteritems()
                 if k not in WorkflowCommand.WORKFLOW_POLICY_INTERNAL_PROPERTIES
             ])
         

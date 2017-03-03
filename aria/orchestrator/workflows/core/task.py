@@ -16,6 +16,7 @@
 """
 Workflow tasks
 """
+
 from contextlib import contextmanager
 from datetime import datetime
 from functools import (
@@ -37,7 +38,7 @@ def _locked(func=None):
     @wraps(func)
     def _wrapper(self, value, **kwargs):
         if self._update_fields is None:
-            raise exceptions.TaskException("Task is not in update mode")
+            raise exceptions.TaskException('Task is not in update mode')
         return func(self, value, **kwargs)
     return _wrapper
 
@@ -72,35 +73,35 @@ class StubTask(BaseTask):
 
 class StartWorkflowTask(StubTask):
     """
-    Tasks marking a workflow start
+    Task marking a workflow start
     """
     pass
 
 
 class EndWorkflowTask(StubTask):
     """
-    Tasks marking a workflow end
+    Task marking a workflow end
     """
     pass
 
 
 class StartSubWorkflowTask(StubTask):
     """
-    Tasks marking a subworkflow start
+    Task marking a subworkflow start
     """
     pass
 
 
 class EndSubWorkflowTask(StubTask):
     """
-    Tasks marking a subworkflow end
+    Task marking a subworkflow end
     """
     pass
 
 
 class OperationTask(BaseTask):
     """
-    Operation tasks
+    Operation task
     """
 
     def __init__(self, api_task, *args, **kwargs):

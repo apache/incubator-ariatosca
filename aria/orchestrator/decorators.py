@@ -17,10 +17,10 @@
 Workflow and operation decorators
 """
 
-from uuid import uuid4
 from functools import partial, wraps
 
-from aria.utils.validation import validate_function_arguments
+from ..utils.validation import validate_function_arguments
+from ..utils.uuid import generate_uuid
 
 from . import context
 from .workflows.api import task_graph
@@ -74,4 +74,4 @@ def operation(func=None, toolbelt=False, suffix_template=''):
 def _generate_name(func_name, ctx, suffix_template, **custom_kwargs):
     return '{func_name}.{suffix}'.format(
         func_name=func_name,
-        suffix=suffix_template.format(ctx=ctx, **custom_kwargs) or str(uuid4()))
+        suffix=suffix_template.format(ctx=ctx, **custom_kwargs) or generate_uuid(variant='uuid'))

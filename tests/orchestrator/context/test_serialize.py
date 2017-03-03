@@ -66,7 +66,7 @@ def _mock_operation(ctx):
     assert ctx.name is not None
     assert ctx.name == ctx.task.name
     # a correct ctx.deployment.name tells us we kept the correct deployment_id
-    assert ctx.service_instance.name == mock.models.DEPLOYMENT_NAME
+    assert ctx.service_instance.name == mock.models.SERVICE_NAME
     # Here we test that the resource storage was properly re-created
     test_file_content = ctx.resource.blueprint.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
     assert test_file_content == TEST_FILE_CONTENT

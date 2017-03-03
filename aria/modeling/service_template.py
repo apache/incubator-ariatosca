@@ -97,6 +97,34 @@ class ServiceTemplateBase(TemplateModelMixin):
     def operation_templates(cls):
         return cls.one_to_many_relationship('operation_template', dict_key='name')
 
+    @declared_attr
+    def node_types(cls):
+        return cls.one_to_one_relationship('type', key='node_type_fk', backreference='')
+
+    @declared_attr
+    def group_types(cls):
+        return cls.one_to_one_relationship('type', key='group_type_fk', backreference='')
+
+    @declared_attr
+    def capability_types(cls):
+        return cls.one_to_one_relationship('type', key='capability_type_fk', backreference='')
+
+    @declared_attr
+    def relationship_types(cls):
+        return cls.one_to_one_relationship('type', key='relationship_type_fk', backreference='')
+
+    @declared_attr
+    def policy_types(cls):
+        return cls.one_to_one_relationship('type', key='policy_type_fk', backreference='')
+
+    @declared_attr
+    def artifact_types(cls):
+        return cls.one_to_one_relationship('type', key='artifact_type_fk', backreference='')
+
+    @declared_attr
+    def interface_types(cls):
+        return cls.one_to_one_relationship('type', key='interface_type_fk', backreference='')
+
     # region orchestration
 
     created_at = Column(DateTime, nullable=False, index=True)
@@ -117,6 +145,41 @@ class ServiceTemplateBase(TemplateModelMixin):
     @declared_attr
     def substitution_template_fk(cls):
         return cls.foreign_key('substitution_template', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def node_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def group_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def capability_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def relationship_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def policy_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def artifact_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def interface_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
 
     # endregion
 
@@ -146,6 +209,17 @@ class ServiceTemplateBase(TemplateModelMixin):
             ('inputs', formatting.as_raw_dict(self.inputs)),
             ('outputs', formatting.as_raw_dict(self.outputs)),
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
+
+    @property
+    def types_as_raw(self):
+        return collections.OrderedDict((
+            ('node_types', formatting.as_raw(self.node_types)),
+            ('group_types', formatting.as_raw(self.group_types)),
+            ('capability_types', formatting.as_raw(self.capability_types)),
+            ('relationship_types', formatting.as_raw(self.relationship_types)),
+            ('policy_types', formatting.as_raw(self.policy_types)),
+            ('artifact_types', formatting.as_raw(self.artifact_types)),
+            ('interface_types', formatting.as_raw(self.interface_types))))
 
     def instantiate(self, context, container):
         from . import models
@@ -208,7 +282,7 @@ class ServiceTemplateBase(TemplateModelMixin):
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
-        utils.dump_parameters(context, self.meta_data, 'Metadata')
+        utils.dump_dict_values(context, self.meta_data, 'Metadata')
 
         for node_template in self.node_templates:
             node_template.dump(context)
@@ -218,9 +292,35 @@ class ServiceTemplateBase(TemplateModelMixin):
             policy_template.dump(context)
         if self.substitution_template is not None:
             self.substitution_template.dump(context)
-        utils.dump_parameters(context, self.inputs, 'Inputs')
-        utils.dump_parameters(context, self.outputs, 'Outputs')
+        utils.dump_dict_values(context, self.inputs, 'Inputs')
+        utils.dump_dict_values(context, self.outputs, 'Outputs')
         utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
+
+    def dump_types(self, context):
+        if self.node_types.children:
+            console.puts('Node types:')
+            self.node_types.dump(context)
+        if self.group_types.children:
+            console.puts('Group types:')
+            self.group_types.dump(context)
+        if self.capability_types.children:
+            console.puts('Capability types:')
+            self.capability_types.dump(context)
+        if self.relationship_types.children:
+            console.puts('Relationship types:')
+            self.relationship_types.dump(context)
+        if self.policy_types.children:
+            console.puts('Policy types:')
+            self.policy_types.dump(context)
+        if self.policy_trigger_types.children:
+            console.puts('Policy trigger types:')
+            self.policy_trigger_types.dump(context)
+        if self.artifact_types.children:
+            console.puts('Artifact types:')
+            self.artifact_types.dump(context)
+        if self.interface_types.children:
+            console.puts('Interface types:')
+            self.interface_types.dump(context)
 
 
 class NodeTemplateBase(TemplateModelMixin):
@@ -360,7 +460,7 @@ class NodeTemplateBase(TemplateModelMixin):
                 ' to {0:d}'.format(self.max_instances)
                 if self.max_instances is not None
                 else ' or more'))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interface_templates)
             utils.dump_dict_values(context, self.artifact_templates, 'Artifact templates')
             utils.dump_dict_values(context, self.capability_templates, 'Capability templates')
@@ -453,7 +553,7 @@ class GroupTemplateBase(TemplateModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interface_templates)
             if self.node_templates:
                 console.puts('Member node templates: {0}'.format(', '.join(
@@ -542,7 +642,7 @@ class PolicyTemplateBase(TemplateModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             if self.node_templates:
                 console.puts('Target node templates: {0}'.format(', '.join(
                     (str(context.style.node(v.name)) for v in self.node_templates))))
@@ -943,7 +1043,7 @@ class RelationshipTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interface_templates, 'Interface templates')
 
 
@@ -1063,7 +1163,7 @@ class CapabilityTemplateBase(TemplateModelMixin):
                 console.puts('Valid source node types: {0}'.format(
                     ', '.join((str(context.style.type(v.name))
                                for v in self.valid_source_node_types))))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
 
 
 class InterfaceTemplateBase(TemplateModelMixin):
@@ -1155,7 +1255,7 @@ class InterfaceTemplateBase(TemplateModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             console.puts('Interface type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.inputs, 'Inputs')
+            utils.dump_dict_values(context, self.inputs, 'Inputs')
             utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
 
 
@@ -1268,7 +1368,7 @@ class OperationTemplateBase(TemplateModelMixin):
             if self.retry_interval is not None:
                 console.puts('Retry interval: {0}'.format(
                     context.style.literal(self.retry_interval)))
-            utils.dump_parameters(context, self.inputs, 'Inputs')
+            utils.dump_dict_values(context, self.inputs, 'Inputs')
 
 
 class ArtifactTemplateBase(TemplateModelMixin):
@@ -1364,7 +1464,7 @@ class ArtifactTemplateBase(TemplateModelMixin):
             if self.repository_credential:
                 console.puts('Repository credential: {0}'.format(
                     context.style.literal(self.repository_credential)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
 
 
 def deepcopy_with_locators(value):

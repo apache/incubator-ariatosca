@@ -112,7 +112,7 @@ def test_model_to_dict(context):
 
 
 def test_relationship_model_ordering(context):
-    service_instance = context.model.service_instance.get_by_name(models.DEPLOYMENT_NAME)
+    service_instance = context.model.service_instance.get_by_name(models.SERVICE_NAME)
     source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_INSTANCE_NAME)
     target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_INSTANCE_NAME)
     new_node_template = modeling.models.NodeTemplate(

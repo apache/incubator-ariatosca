@@ -17,7 +17,7 @@
 Task graph. Used by users to build workflows
 """
 
-from uuid import uuid4
+from ....utils.uuid import generate_uuid
 from collections import Iterable
 
 from networkx import DiGraph, topological_sort
@@ -49,7 +49,7 @@ class TaskGraph(object):
 
     def __init__(self, name):
         self.name = name
-        self._id = str(uuid4())
+        self._id = generate_uuid(variant='uuid')
         self._graph = DiGraph()
 
     def __repr__(self):

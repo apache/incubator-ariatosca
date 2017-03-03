@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Creates ARIA service template models based on the TOSCA presentation.
+
+Relies on many helper methods in the presentation classes. 
+"""
+
 import re
 from types import FunctionType
 from datetime import datetime
@@ -35,43 +41,37 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     # Metadata
     metadata = context.presentation.get('service_template', 'metadata')
     if metadata is not None:
-        model.meta_data['template_name'] = Metadata(value=metadata.template_name)
-        model.meta_data['template_author'] = Metadata(value=metadata.template_author)
-        model.meta_data['template_version'] = Metadata(value=metadata.template_version)
-        custom = metadata.custom
-        if custom:
-            for name, v in custom.iteritems():
-                model.meta_data[name] = Metadata(value=v)
+        create_metadata_models(context, model, metadata)
 
     # Types
+    model.node_types = Type(variant='node')
     create_types(context,
-                 context.modeling.node_types,
-                 context.presentation.get('service_template', 'node_types'),
-                 'node')
+                 model.node_types,
+                 context.presentation.get('service_template', 'node_types'))
+    model.group_types = Type(variant='group')
     create_types(context,
-                 context.modeling.group_types,
-                 context.presentation.get('service_template', 'group_types'),
-                 'group')
+                 model.group_types,
+                 context.presentation.get('service_template', 'group_types'))
+    model.policy_types = Type(variant='policy')
     create_types(context,
-                 context.modeling.policy_types,
-                 context.presentation.get('service_template', 'policy_types'),
-                 'policy')
+                 model.policy_types,
+                 context.presentation.get('service_template', 'policy_types'))
+    model.relationship_types = Type(variant='relationship')
     create_types(context,
-                 context.modeling.relationship_types,
-                 context.presentation.get('service_template', 'relationship_types'),
-                 'relationship')
+                 model.relationship_types,
+                 context.presentation.get('service_template', 'relationship_types'))
+    model.capability_types = Type(variant='capability')
     create_types(context,
-                 context.modeling.capability_types,
-                 context.presentation.get('service_template', 'capability_types'),
-                 'capability')
+                 model.capability_types,
+                 context.presentation.get('service_template', 'capability_types'))
+    model.artifact_types = Type(variant='artifact')
     create_types(context,
-                 context.modeling.interface_types,
-                 context.presentation.get('service_template', 'interface_types'),
-                 'interface')
+                 model.artifact_types,
+                 context.presentation.get('service_template', 'artifact_types'))
+    model.interface_types = Type(variant='interface')
     create_types(context,
-                 context.modeling.artifact_types,
-                 context.presentation.get('service_template', 'artifact_types'),
-                 'artifact')
+                 model.interface_types,
+                 context.presentation.get('service_template', 'interface_types'))
 
     # Topology template
     topology_template = context.presentation.get('service_template', 'topology_template')
@@ -85,7 +85,7 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
     if policies:
         for policy in policies.itervalues():
-            if context.modeling.policy_types.get_role(policy.type) == 'plugin':
+            if model.policy_types.get_descendant(policy.type).role == 'plugin':
                 model.plugins[policy._name] = create_plugin_model(context, policy)
 
     # Node templates
@@ -119,9 +119,23 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     return model
 
 
+def create_metadata_models(context, service_template, metadata):
+    service_template.meta_data['template_name'] = Metadata(name='template_name',
+                                                           value=metadata.template_name)
+    service_template.meta_data['template_author'] = Metadata(name='template_author',
+                                                             value=metadata.template_author)
+    service_template.meta_data['template_version'] = Metadata(name='template_version',
+                                                              value=metadata.template_version)
+    custom = metadata.custom
+    if custom:
+        for name, value in custom.iteritems():
+            service_template.meta_data[name] = Metadata(name=name,
+                                                        value=value)
+
+
 def create_node_template_model(context, service_template, node_template):
     node_type = node_template._get_type(context)
-    node_type = context.modeling.node_types.get_descendant(node_type._name)
+    node_type = service_template.node_types.get_descendant(node_type._name)
     model = NodeTemplate(name=node_template._name,
                          type=node_type)
     
@@ -139,14 +153,14 @@ def create_node_template_model(context, service_template, node_template):
     artifacts = node_template._get_artifacts(context)
     if artifacts:
         for artifact_name, artifact in artifacts.iteritems():
-            model.artifact_templates[artifact_name] = create_artifact_template_model(context,
-                                                                                     artifact)
+            model.artifact_templates[artifact_name] = \
+                create_artifact_template_model(context, service_template, artifact)
 
     capabilities = node_template._get_capabilities(context)
     if capabilities:
         for capability_name, capability in capabilities.iteritems():
             model.capability_templates[capability_name] = \
-                create_capability_template_model(context, capability)
+                create_capability_template_model(context, service_template, capability)
 
     if model.target_node_template_constraints:
         model.target_node_template_constraints = []
@@ -170,7 +184,7 @@ def fix_node_template_model(context, service_template, node_template):
 
 def create_group_template_model(context, service_template, group):
     group_type = group._get_type(context)
-    group_type = context.modeling.group_types.get_descendant(group_type._name)
+    group_type = service_template.group_types.get_descendant(group_type._name)
     model = GroupTemplate(name=group._name,
                           type=group_type)
 
@@ -193,7 +207,7 @@ def create_group_template_model(context, service_template, group):
 
 def create_policy_template_model(context, service_template, policy):
     policy_type = policy._get_type(context)
-    policy_type = context.modeling.policy_types.get_descendant(policy_type._name)
+    policy_type = service_template.policy_types.get_descendant(policy_type._name)
     model = PolicyTemplate(name=policy._name,
                            type=policy_type)
 
@@ -223,7 +237,7 @@ def create_requirement_template_model(context, service_template, requirement):
     node, node_variant = requirement._get_node(context)
     if node is not None:
         if node_variant == 'node_type':
-            node_type = context.modeling.node_types.get_descendant(node._name)
+            node_type = service_template.node_types.get_descendant(node._name)
             model['target_node_type'] = node_type
         else:
             node_template = service_template.get_node_template(node._name)
@@ -254,13 +268,13 @@ def create_requirement_template_model(context, service_template, requirement):
 def create_relationship_template_model(context, service_template, relationship):
     relationship_type, relationship_type_variant = relationship._get_type(context)
     if relationship_type_variant == 'relationship_type':
-        relationship_type = context.modeling.relationship_types.get_descendant(
+        relationship_type = service_template.relationship_types.get_descendant(
             relationship_type._name)
         model = RelationshipTemplate(type=relationship_type)
     else:
         relationship_template = relationship_type
         relationship_type = relationship_template._get_type(context)
-        relationship_type = context.modeling.relationship_types.get_descendant(
+        relationship_type = service_template.relationship_types.get_descendant(
             relationship_type._name)
         model = RelationshipTemplate(type=relationship_type,
                                      name=relationship_template._name)
@@ -274,9 +288,9 @@ def create_relationship_template_model(context, service_template, relationship):
     return model
 
 
-def create_capability_template_model(context, capability):
+def create_capability_template_model(context, service_template, capability):
     capability_type = capability._get_type(context)
-    capability_type = context.modeling.capability_types.get_descendant(capability_type._name)
+    capability_type = service_template.capability_types.get_descendant(capability_type._name)
     model = CapabilityTemplate(name=capability._name,
                                type=capability_type)
 
@@ -293,7 +307,7 @@ def create_capability_template_model(context, capability):
     if valid_source_types:
         for valid_source_type in valid_source_types:
             # TODO: handle shortcut type names
-            node_type = context.modeling.node_types.get_descendant(valid_source_type)
+            node_type = service_template.node_types.get_descendant(valid_source_type)
             model.valid_source_node_types.append(node_type)
 
     create_parameter_models_from_assignments(model.properties, capability.properties)
@@ -303,7 +317,7 @@ def create_capability_template_model(context, capability):
 
 def create_interface_template_model(context, service_template, interface):
     interface_type = interface._get_type(context)
-    interface_type = context.modeling.interface_types.get_descendant(interface_type._name)
+    interface_type = service_template.interface_types.get_descendant(interface_type._name)
     model = InterfaceTemplate(name=interface._name,
                               type=interface_type)
 
@@ -353,9 +367,9 @@ def create_operation_template_model(context, service_template, operation): # pyl
     return model
 
 
-def create_artifact_template_model(context, artifact):
+def create_artifact_template_model(context, service_template, artifact):
     artifact_type = artifact._get_type(context)
-    artifact_type = context.modeling.artifact_types.get_descendant(artifact_type._name)
+    artifact_type = service_template.artifact_types.get_descendant(artifact_type._name)
     model = ArtifactTemplate(name=artifact._name,
                              type=artifact_type,
                              source_path=artifact.file)
@@ -380,7 +394,7 @@ def create_artifact_template_model(context, artifact):
 
 
 def create_substitution_template_model(context, service_template, substitution_mappings):
-    node_type = context.modeling.node_types.get_descendant(substitution_mappings.node_type)
+    node_type = service_template.node_types.get_descendant(substitution_mappings.node_type)
     model = SubstitutionTemplate(node_type=node_type)
 
     capabilities = substitution_mappings.capabilities
@@ -442,7 +456,7 @@ def create_plugin_model(context, policy):
 # Utils
 #
 
-def create_types(context, root, types, variant):
+def create_types(context, root, types):
     if types is None:
         return
 
@@ -457,15 +471,18 @@ def create_types(context, root, types, variant):
             if root.get_descendant(name) is None:
                 parent_type = the_type._get_parent(context)
                 model = Type(name=the_type._name,
-                             variant=variant)
+                             role=the_type._get_extension('role'))
                 if the_type.description:
                     model.description = the_type.description.value
-                model.role = the_type._get_extension('role')
                 if parent_type is None:
+                    model.parent = root
+                    model.variant = root.variant
                     root.children.append(model)
                 else:
                     container = root.get_descendant(parent_type._name)
                     if container is not None:
+                        model.parent = container
+                        model.variant = container.variant
                         container.children.append(model)
 
 

@@ -59,15 +59,15 @@ def _empty_storage():
 
 def _service_template_storage():
     storage = _empty_storage()
-    service_template = mock.models.get_blueprint()
+    service_template = mock.models.get_service_template()
     storage.service_template.put(service_template)
     return storage
 
 
 def _service_instance_storage():
     storage = _service_template_storage()
-    service_instance = mock.models.get_deployment(
-        storage.service_template.get_by_name(mock.models.BLUEPRINT_NAME))
+    service_instance = mock.models.get_service(
+        storage.service_template.get_by_name(mock.models.SERVICE_TEMPLATE_NAME))
     storage.service_instance.put(service_instance)
     return storage
 
@@ -85,19 +85,19 @@ def _service_instance_update_storage():
 
 def _node_template_storage():
     storage = _service_instance_storage()
-    node_template = mock.models.get_dependency_node(storage.service_instance.list()[0])
+    node_template = mock.models.get_dependency_node_template(storage.service_instance.list()[0])
     storage.node_template.put(node_template)
     return storage
 
 
 def _nodes_storage():
     storage = _nodes_storage()
-    service_instance = storage.service_instance.get_by_name(mock.models.DEPLOYMENT_NAME)
+    service_instance = storage.service_instance.get_by_name(mock.models.SERVICE_NAME)
     dependent_node_template = storage.node_template.get_by_name(mock.models.DEPENDENT_NODE_NAME)
     dependency_node_template = storage.node_template.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    dependency_node = mock.models.get_dependency_node_instance(dependency_node_template,
+    dependency_node = mock.models.get_dependency_node(dependency_node_template,
                                                                service_instance)
-    dependent_node = mock.models.get_dependent_node_instance(dependent_node_template,
+    dependent_node = mock.models.get_dependent_node(dependent_node_template,
                                                              service_instance)
     storage.node.put(dependency_node)
     storage.node.put(dependent_node)
@@ -172,23 +172,23 @@ def _test_model(is_valid, storage, model_cls, model_kwargs):
 class TestServiceTemplate(object):
 
     @pytest.mark.parametrize(
-        'is_valid, plan, description, created_at, updated_at, main_file_name',
+        'is_valid, description, created_at, updated_at, main_file_name',
         [
-            (False, None, 'description', now, now, '/path'),
-            (False, {}, {}, now, now, '/path'),
-            (False, {}, 'description', 'error', now, '/path'),
-            (False, {}, 'description', now, 'error', '/path'),
-            (False, {}, 'description', now, now, {}),
-            (True, {}, 'description', now, now, '/path'),
+            (False, 'description', now, now, '/path'),
+            (False, {}, now, now, '/path'),
+            (False, 'description', 'error', now, '/path'),
+            (False, 'description', now, 'error', '/path'),
+            (False, 'description', now, now, {}),
+            (True, 'description', now, now, '/path'),
         ]
     )
-    def test_blueprint_model_creation(self, empty_storage, is_valid, plan, description, created_at,
+
+    def test_blueprint_model_creation(self, empty_storage, is_valid, description, created_at,
                                       updated_at, main_file_name):
         _test_model(is_valid=is_valid,
                     storage=empty_storage,
                     model_cls=ServiceTemplate,
                     model_kwargs=dict(
-                        plan=plan,
                         description=description,
                         created_at=created_at,
                         updated_at=updated_at,

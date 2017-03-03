@@ -13,37 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from random import randrange
-
-from shortuuid import ShortUUID
-
+from ..parser.exceptions import InvalidValueError
+from ..parser.presentation import Value
+from ..utils.collections import OrderedDict
 from ..utils.console import puts
+from .exceptions import CannotEvaluateFunctionException
 
 
-# UUID = ShortUUID() # default alphabet is base57, which is alphanumeric without visually ambiguous
-# characters; ID length is 22
-UUID = ShortUUID(alphabet='abcdefghijklmnopqrstuvwxyz0123456789')  # alphanumeric; ID length is 25
+def coerce_value(context, container, value, report_issues=False):
+    if isinstance(value, Value):
+        value = value.value
 
-
-def generate_id_string(length=None):
-    """
-    A random string with a strong guarantee of universal uniqueness (uses ShortUUID).
-
-    The default length is 25 characters.
-    """
-
-    the_id = UUID.uuid()
-    if length is not None:
-        the_id = the_id[:length]
-    return the_id
-
-
-def generate_hex_string():
-    """
-    A random string of 5 hex digits with no guarantee of universal uniqueness.
-    """
-
-    return '%05x' % randrange(16 ** 5)
+    if isinstance(value, list):
+        return [coerce_value(context, container, v, report_issues) for v in value]
+    elif isinstance(value, dict):
+        return OrderedDict((k, coerce_value(context, container, v, report_issues))
+                           for k, v in value.items())
+    elif hasattr(value, '_evaluate'):
+        try:
+            value = value._evaluate(context, container)
+            value = coerce_value(context, container, value, report_issues)
+        except CannotEvaluateFunctionException:
+            pass
+        except InvalidValueError as e:
+            if report_issues:
+                context.validation.report(e.issue)
+    return value
 
 
 def validate_dict_values(context, the_dict):
@@ -105,25 +100,6 @@ def dump_dict_values(context, the_dict, name):
     dump_list_values(context, the_dict.itervalues(), name)
 
 
-def dump_parameters(context, parameters, name='Properties'):
-    if not parameters:
-        return
-    puts('{0}:'.format(name))
-    with context.style.indent:
-        for parameter_name, parameter in parameters.items():
-            if hasattr(parameter, 'type_name') and (parameter.type_name is not None):
-                puts('{0} = {1} ({2})'.format(
-                    context.style.property(parameter_name),
-                    context.style.literal(parameter.value),
-                    context.style.type(parameter.type_name)))
-            else:
-                puts('{0} = {1}'.format(
-                    context.style.property(parameter_name),
-                    context.style.literal(parameter.value)))
-            if hasattr(parameter, 'description') and parameter.description:
-                puts(context.style.meta(parameter.description))
-
-
 def dump_interfaces(context, interfaces, name='Interfaces'):
     if not interfaces:
         return
@@ -131,15 +107,6 @@ def dump_interfaces(context, interfaces, name='Interfaces'):
     with context.style.indent:
         for interface in interfaces.itervalues():
             interface.dump(context)
-
-
-def pluralize(noun):
-    if noun.endswith('s'):
-        return '{0}es'.format(noun)
-    elif noun.endswith('y'):
-        return '{0}ies'.format(noun[:-1])
-    else:
-        return '{0}s'.format(noun)
 
 
 class classproperty(object):                                                                        # pylint: disable=invalid-name

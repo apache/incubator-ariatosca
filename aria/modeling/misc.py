@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import cPickle as pickle
+import logging
 
 from sqlalchemy import (
     Column,
@@ -23,9 +24,9 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..storage import exceptions
-from ..parser.modeling import utils as parser_utils
 from ..utils import collections, formatting, console
 from .bases import InstanceModelMixin, TemplateModelMixin
+from . import utils
 
 
 class ParameterBase(TemplateModelMixin):
@@ -42,11 +43,11 @@ class ParameterBase(TemplateModelMixin):
 
     __tablename__ = 'parameter'
 
-    name = Column(Text, nullable=False)
-    type_name = Column(Text, nullable=False)
+    name = Column(Text)
+    type_name = Column(Text)
 
     # Check: value type
-    _value = Column(Binary, nullable=True)
+    _value = Column(Binary, name='value')
     description = Column(Text)
 
     @property
@@ -64,7 +65,7 @@ class ParameterBase(TemplateModelMixin):
         try:
             return pickle.loads(self._value)
         except BaseException:
-            raise exceptions.StorageError('Bad format for parameter of type "{0}": {1}'.format(
+            raise exceptions.StorageError('bad format for parameter of type "{0}": {1}'.format(
                 self.type_name, self._value))
 
     @value.setter
@@ -74,8 +75,9 @@ class ParameterBase(TemplateModelMixin):
         else:
             try:
                 self._value = pickle.dumps(value)
-            except pickle.PicklingError:
-                # TODO debug log
+            except (pickle.PicklingError, TypeError):
+                logging.getLogger('aria').warn('Could not pickle parameter of type "{0}": {1}'
+                                               .format(self.type_name, value))
                 self._value = pickle.dumps(str(value))
  
     def instantiate(self, context, container):
@@ -87,8 +89,21 @@ class ParameterBase(TemplateModelMixin):
 
     def coerce_values(self, context, container, report_issues):
         if self.value is not None:
-            self.value = parser_utils.coerce_value(context, container, self.value,
-                                                   report_issues)
+            self.value = utils.coerce_value(context, container, self.value,
+                                            report_issues)
+
+    def dump(self, context):
+        if self.type_name is not None:
+            console.puts('{0}: {1} ({2})'.format(
+                context.style.property(self.name),
+                context.style.literal(self.value),
+                context.style.type(self.type_name)))
+        else:
+            console.puts('{0}: {1}'.format(
+                context.style.property(self.name),
+                context.style.literal(self.value)))
+        if self.description:
+            console.puts(context.style.meta(self.description))
 
 
 class TypeBase(InstanceModelMixin):
@@ -98,9 +113,9 @@ class TypeBase(InstanceModelMixin):
 
     __tablename__ = 'type'
 
-    variant = Column(Text) 
+    variant = Column(Text, nullable=False) 
     description = Column(Text)
-    role = Column(Text)
+    _role = Column(Text, name='role')
 
     @declared_attr
     def parent(cls):
@@ -120,6 +135,21 @@ class TypeBase(InstanceModelMixin):
         return cls.foreign_key('type', nullable=True)
 
     # endregion
+    
+    @property
+    def role(self):
+        def get_role(the_type):
+            if the_type is None:
+                return None
+            elif the_type._role is None:
+                return get_role(the_type.parent)
+            return the_type._role
+
+        return get_role(self)
+
+    @role.setter
+    def role(self, value):
+        self._role = value
 
     def is_descendant(self, base_name, name):
         base = self.get_descendant(base_name)
@@ -142,16 +172,6 @@ class TypeBase(InstanceModelMixin):
             yield child
             for descendant in child.iter_descendants():
                 yield descendant
-
-    def get_role(self, name):
-        def _get_role(the_type):
-            if the_type is None:
-                return None
-            elif the_type.role is None:
-                return _get_role(self.parent)
-            return the_type.role
-
-        return _get_role(self.get_descendant(name))
 
     @property
     def as_raw(self):
@@ -193,7 +213,6 @@ class MetadataBase(TemplateModelMixin):
 
     __tablename__ = 'metadata'
 
-    name = Column(Text, nullable=False)
     value = Column(Text)
 
     @property
@@ -206,3 +225,8 @@ class MetadataBase(TemplateModelMixin):
         from . import models
         return models.Metadata(name=self.name,
                                value=self.value)
+
+    def dump(self, context):
+        console.puts('{0}: {1}'.format(
+            context.style.property(self.name),
+            context.style.literal(self.value)))

@@ -23,7 +23,7 @@ from aria.orchestrator import (
     workflow,
     operation,
 )
-from aria.modeling import model
+from aria.modeling import models
 from aria.orchestrator.workflows import (
     api,
     exceptions,
@@ -66,8 +66,8 @@ class BaseTest(object):
             operation_kwargs=dict(implementation='{name}.{func.__name__}'.format(name=__name__,
                                                                                  func=func))
         )]
-        return api.task.OperationTask.node(
-            instance=node,
+        return api.task.OperationTask.for_node(
+            node=node,
             name='aria.interfaces.lifecycle.create',
             inputs=inputs,
             max_attempts=max_attempts,
@@ -147,7 +147,7 @@ class TestEngine(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is None
-        assert execution.status == model.Execution.TERMINATED
+        assert execution.status == models.Execution.TERMINATED
 
     def test_single_task_successful_execution(self, workflow_context, executor):
         @workflow
@@ -176,7 +176,7 @@ class TestEngine(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is not None
-        assert execution.status == model.Execution.FAILED
+        assert execution.status == models.Execution.FAILED
 
     def test_two_tasks_execution_order(self, workflow_context, executor):
         @workflow
@@ -241,7 +241,7 @@ class TestCancel(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is None
-        assert execution.status == model.Execution.CANCELLED
+        assert execution.status == models.Execution.CANCELLED
 
     def test_cancel_pending_execution(self, workflow_context, executor):
         @workflow
@@ -252,7 +252,7 @@ class TestCancel(BaseTest):
                            executor=executor)
         eng.cancel_execution()
         execution = workflow_context.execution
-        assert execution.status == model.Execution.CANCELLED
+        assert execution.status == models.Execution.CANCELLED
 
 
 class TestRetries(BaseTest):

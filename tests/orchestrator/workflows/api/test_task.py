@@ -18,7 +18,7 @@ import pytest
 
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
-from aria.modeling import model
+from aria.modeling import models
 from tests import mock, storage
 
 
@@ -55,9 +55,9 @@ class TestOperationTask(object):
         ignore_failure = True
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.node(
+            api_task = api.task.OperationTask.for_node(
+                node=node,
                 name=operation_name,
-                instance=node,
                 inputs=inputs,
                 max_attempts=max_attempts,
                 retry_interval=retry_interval,
@@ -73,7 +73,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
-        assert api_task.runs_on == model.Task.RUNS_ON_NODE_INSTANCE
+        assert api_task.runs_on == models.Task.RUNS_ON_NODE
 
     def test_source_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
@@ -94,9 +94,9 @@ class TestOperationTask(object):
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.relationship(
+            api_task = api.task.OperationTask.for_relationship(
+                relationship=relationship,
                 name=operation_name,
-                instance=relationship,
                 edge='source',
                 inputs=inputs,
                 max_attempts=max_attempts,
@@ -111,7 +111,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
-        assert api_task.runs_on == model.Task.RUNS_ON_SOURCE
+        assert api_task.runs_on == models.Task.RUNS_ON_SOURCE
 
     def test_target_relationship_operation_task_creation(self, ctx):
         operation_name = 'aria.interfaces.relationship_lifecycle.preconfigure'
@@ -131,9 +131,9 @@ class TestOperationTask(object):
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.relationship(
+            api_task = api.task.OperationTask.for_relationship(
+                relationship=relationship,
                 name=operation_name,
-                instance=relationship,
                 edge='target',
                 inputs=inputs,
                 max_attempts=max_attempts,
@@ -148,7 +148,7 @@ class TestOperationTask(object):
         assert api_task.plugin == {'name': 'plugin',
                                    'package_name': 'package',
                                    'package_version': '0.1'}
-        assert api_task.runs_on == model.Task.RUNS_ON_TARGET
+        assert api_task.runs_on == models.Task.RUNS_ON_TARGET
 
     def test_operation_task_default_values(self, ctx):
         dependency_node_instance = ctx.model.node.get_by_name(

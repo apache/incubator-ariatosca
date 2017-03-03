@@ -25,7 +25,7 @@ _VARIABLES_TEMPLATE_PATH = 'variables.template'
 
 def test_get_resource_and_render_implicit_ctx_no_variables(ctx):
     content = ctx.get_resource_and_render(_IMPLICIT_CTX_TEMPLATE_PATH)
-    assert content == mock.models.DEPLOYMENT_NAME
+    assert content == mock.models.SERVICE_NAME
 
 
 def test_get_resource_and_render_provided_variables(ctx):
@@ -39,7 +39,7 @@ def test_download_resource_and_render_implicit_ctx_no_variables(tmpdir, ctx):
     destination = tmpdir.join('destination')
     ctx.download_resource_and_render(destination=str(destination),
                                      path=_IMPLICIT_CTX_TEMPLATE_PATH)
-    assert destination.read() == mock.models.DEPLOYMENT_NAME
+    assert destination.read() == mock.models.SERVICE_NAME
 
 
 def test_download_resource_and_render_provided_variables(tmpdir, ctx):

@@ -35,17 +35,19 @@ def convert_to_dry(plugin, implementation, inputs): # pylint: disable=unused-arg
 @operation
 def dry_operation(ctx, _plugin, _implementation, **kwargs):
     with _TERMINAL_LOCK:
+        print ctx.name
         if hasattr(ctx, 'relationship'):
-            puts('> relationship instance: %s -> %s' % (
+            puts('> Relationship: {0} -> {1}'.format(
                 Colored.red(ctx.relationship.source_node.name),
                 Colored.red(ctx.relationship.target_node.name)))
         else:
-            puts('> node instance: %s' % Colored.red(ctx.node.name))
+            puts('> Node: {0}'.format(Colored.red(ctx.node.name)))
+        puts('  Operation: {0}'.format(Colored.green(ctx.name)))
         _dump_implementation(_plugin, _implementation)
 
 
 def _dump_implementation(plugin, implementation):
     if plugin:
-        puts('  plugin: %s' % Colored.magenta(plugin))
+        puts('  Plugin: {0}'.format(Colored.magenta(plugin, bold=True)))
     if implementation:
-        puts('  implementation: %s' % Colored.yellow(safe_repr(implementation)))
+        puts('  Implementation: {0}'.format(Colored.magenta(safe_repr(implementation))))

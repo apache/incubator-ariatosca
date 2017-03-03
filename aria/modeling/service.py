@@ -216,7 +216,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
-        utils.dump_parameters(context, self.meta_data, 'Metadata')
+        utils.dump_dict_values(context, self.meta_data, 'Metadata')
         for node in self.nodes:
             node.dump(context)
         for group in self.groups:
@@ -225,8 +225,8 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             policy.dump(context)
         if self.substitution is not None:
             self.substitution.dump(context)
-        utils.dump_parameters(context, self.inputs, 'Inputs')
-        utils.dump_parameters(context, self.outputs, 'Outputs')
+        utils.dump_dict_values(context, self.inputs, 'Inputs')
+        utils.dump_dict_values(context, self.outputs, 'Outputs')
         utils.dump_dict_values(context, self.operations, 'Operations')
 
     def dump_graph(self, context):
@@ -493,7 +493,7 @@ class NodeBase(InstanceModelMixin):
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
             console.puts('Template: {0}'.format(context.style.node(self.node_template.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interfaces)
             utils.dump_dict_values(context, self.artifacts, 'Artifacts')
             utils.dump_dict_values(context, self.capabilities, 'Capabilities')
@@ -574,7 +574,7 @@ class GroupBase(InstanceModelMixin):
         console.puts('Group: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interfaces)
             if self.nodes:
                 console.puts('Member nodes:')
@@ -654,7 +654,7 @@ class PolicyBase(InstanceModelMixin):
         console.puts('Policy: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             if self.nodes:
                 console.puts('Target nodes:')
                 with context.style.indent:
@@ -914,7 +914,7 @@ class RelationshipBase(InstanceModelMixin):
             if (self.relationship_template is not None) and self.relationship_template.name:
                 console.puts('Relationship template: {0}'.format(
                     context.style.node(self.relationship_template.name)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
             utils.dump_interfaces(context, self.interfaces, 'Interfaces')
 
 
@@ -1008,7 +1008,7 @@ class CapabilityBase(InstanceModelMixin):
                 ' to {0:d}'.format(self.max_occurrences)
                 if self.max_occurrences is not None
                 else ' or more'))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')
 
 
 class InterfaceBase(InstanceModelMixin):
@@ -1102,7 +1102,7 @@ class InterfaceBase(InstanceModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             console.puts('Interface type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_parameters(context, self.inputs, 'Inputs')
+            utils.dump_dict_values(context, self.inputs, 'Inputs')
             utils.dump_dict_values(context, self.operations, 'Operations')
 
 
@@ -1211,7 +1211,7 @@ class OperationBase(InstanceModelMixin):
             if self.retry_interval is not None:
                 console.puts('Retry interval: {0}'.format(
                     context.style.literal(self.retry_interval)))
-            utils.dump_parameters(context, self.inputs, 'Inputs')
+            utils.dump_dict_values(context, self.inputs, 'Inputs')
 
 
 class ArtifactBase(InstanceModelMixin):
@@ -1307,4 +1307,4 @@ class ArtifactBase(InstanceModelMixin):
             if self.repository_credential:
                 console.puts('Repository credential: {0}'.format(
                     context.style.literal(self.repository_credential)))
-            utils.dump_parameters(context, self.properties)
+            utils.dump_dict_values(context, self.properties, 'Properties')

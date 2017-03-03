@@ -28,7 +28,7 @@ except ImportError:
     _celery = None
     app = None
 
-from aria.modeling import model
+from aria.modeling import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
     thread,
@@ -98,7 +98,7 @@ class MockContext(object):
 
 class MockTask(object):
 
-    INFINITE_RETRIES = model.Task.INFINITE_RETRIES
+    INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
     def __init__(self, func, inputs=None):
         self.states = []
@@ -117,7 +117,7 @@ class MockTask(object):
         self.plugin_fk = None
         self.ignore_failure = False
 
-        for state in model.Task.STATES:
+        for state in models.Task.STATES:
             setattr(self, state.upper(), state)
 
     @contextmanager

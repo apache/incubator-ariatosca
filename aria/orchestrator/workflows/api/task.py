@@ -16,10 +16,10 @@
 """
 Provides the tasks to be entered into the task graph
 """
-from uuid import uuid4
 
 from ....modeling import models
 from ....utils.collections import OrderedDict
+from ....utils.uuid import generate_uuid
 from ... import context
 from .. import exceptions
 
@@ -34,7 +34,7 @@ class BaseTask(object):
             self._workflow_context = ctx
         else:
             self._workflow_context = context.workflow.current.get()
-        self._id = str(uuid4())
+        self._id = generate_uuid(variant='uuid')
 
     @property
     def id(self):
@@ -122,7 +122,7 @@ class OperationTask(BaseTask):
         """
 
         assert isinstance(node, models.Node)
-        operation = _get_operation(node.interfaces, interface_name, operation_name)
+        operation = cls._get_operation(node.interfaces, interface_name, operation_name)
         if operation is None:
             raise exceptions.TaskException(
                 'Could not find operation "{0}" on interface "{1}" for node "{2}"'.format(
@@ -130,7 +130,7 @@ class OperationTask(BaseTask):
 
         return cls(
             actor=node,
-            name='{0}.{1}@{2}'.format(interface_name, operation_name, node.name),
+            name='{0}.{1}'.format(interface_name, operation_name),
             plugin=operation.plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
@@ -153,7 +153,7 @@ class OperationTask(BaseTask):
 
         assert isinstance(relationship, models.Relationship)
         assert runs_on in models.Task.RUNS_ON
-        operation = _get_operation(relationship.interfaces, interface_name, operation_name)
+        operation = cls._get_operation(relationship.interfaces, interface_name, operation_name)
         if operation is None:
             raise exceptions.TaskException(
                 'Could not find operation "{0}" on interface "{1}" for relationship "{2}"'.format(
@@ -161,16 +161,20 @@ class OperationTask(BaseTask):
 
         return cls(
             actor=relationship,
-            name='{0}.{1}@{2}->{3}'.format(interface_name,
-                                           operation_name,
-                                           relationship.source_node.name,
-                                           relationship.target_node.name),
+            name='{0}.{1}'.format(interface_name, operation_name),
             plugin=operation.plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
             runs_on=runs_on,
             *args,
             **kwargs)
+
+    @classmethod
+    def _get_operation(cls, interfaces, interface_name, operation_name):
+        interface = interfaces.get(interface_name)
+        if interface is not None:
+            return interface.operations.get(operation_name)
+        return None
 
     @classmethod
     def _merge_inputs(cls, operation_inputs, override_inputs=None):
@@ -216,10 +220,3 @@ class StubTask(BaseTask):
     """
 
     pass
-
-
-def _get_operation(interfaces, interface_name, operation_name):
-    interface = interfaces.get(interface_name)
-    if interface is not None:
-        return interface.operations.get(operation_name)
-    return None

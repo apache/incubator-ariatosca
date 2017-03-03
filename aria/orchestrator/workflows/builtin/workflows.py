@@ -17,8 +17,9 @@
 TSOCA normative lifecycle workflows.
 """
 
-from .utils import (create_node_task, create_relationship_tasks)
 from ... import workflow
+from ....modeling.models import Task
+from .utils import (create_node_task, create_relationship_tasks)
 
 
 NORMATIVE_STANDARD_INTERFACE = 'Standard' # 'tosca.interfaces.node.lifecycle.Standard'
@@ -81,13 +82,13 @@ def install_node(graph, node, **kwargs):
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_SOURCE,
-            'source',
+            Task.RUNS_ON_SOURCE,
             node,
             dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_TARGET,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
     sequence.append(
@@ -98,13 +99,13 @@ def install_node(graph, node, **kwargs):
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_SOURCE,
-            'source',
+            Task.RUNS_ON_SOURCE,
             node,
             dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_TARGET,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
 
@@ -153,19 +154,19 @@ def _create_start_tasks(node, dry):
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_SOURCE,
-            'source',
+            Task.RUNS_ON_SOURCE,
             node,
             dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_TARGET,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
     return sequence
@@ -176,13 +177,13 @@ def _create_stop_tasks(node, dry):
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_REMOVE_TARGET,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
-            'target',
+            Task.RUNS_ON_TARGET,
             node,
             dry)
     sequence.append(
