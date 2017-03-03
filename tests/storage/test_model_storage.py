@@ -37,7 +37,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.model.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
 
 
 def test_storage_base(storage):

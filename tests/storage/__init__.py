@@ -27,18 +27,18 @@ from sqlalchemy import (
 )
 
 
-from aria.storage import (
-    model,
-    type as aria_type,
-    structure
+from aria.modeling import (
+    models,
+    types as modeling_types,
+    bases
 )
 from aria import modeling
 
 
-class MockModel(model.aria_declarative_base, structure.ModelMixin): #pylint: disable=abstract-method
+class MockModel(models.aria_declarative_base, bases.ModelMixin): #pylint: disable=abstract-method
     __tablename__ = 'mock_model'
-    model_dict = Column(aria_type.Dict)
-    model_list = Column(aria_type.List)
+    model_dict = Column(modeling_types.Dict)
+    model_list = Column(modeling_types.List)
     value = Column(Integer)
     name = Column(Text)
 
@@ -65,7 +65,7 @@ def release_sqlite_storage(storage):
             session.rollback()
             session.close()
         for engine in set(mapi._engine for mapi in mapis):
-            model.aria_declarative_base.metadata.drop_all(engine)
+            models.aria_declarative_base.metadata.drop_all(engine)
 
 
 def init_inmemory_model_storage():

@@ -20,12 +20,15 @@ import sqlalchemy
 from aria.storage import (
     ModelStorage,
     sql_mapi,
-    exceptions,
-    type
+    exceptions
 )
 from aria import modeling
 
-from ..storage import release_sqlite_storage, structure, init_inmemory_model_storage
+from ..storage import (
+    release_sqlite_storage,
+    bases,
+    init_inmemory_model_storage
+)
 from . import MockModel
 from ..mock import (
     models,
@@ -44,7 +47,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.model.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
 
 
 @pytest.fixture
@@ -112,7 +115,7 @@ def test_relationship_model_ordering(context):
     service_instance = context.model.service_instance.get_by_name(models.DEPLOYMENT_NAME)
     source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_INSTANCE_NAME)
     target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_INSTANCE_NAME)
-    new_node_template = modeling.model.NodeTemplate(
+    new_node_template = modeling.models.NodeTemplate(
         name='new_node',
         type_name='test_node_type',
         type_hierarchy=[],
@@ -121,7 +124,7 @@ def test_relationship_model_ordering(context):
         max_instances=1,
         service_template=service_instance.service_template
     )
-    new_node = modeling.model.Node(
+    new_node = modeling.models.Node(
         name='new_node_instance',
         runtime_properties={},
         service_instance=service_instance,
@@ -131,12 +134,12 @@ def test_relationship_model_ordering(context):
         scaling_groups=[]
     )
 
-    source_to_new_relationship = modeling.model.Relationship(
+    source_to_new_relationship = modeling.models.Relationship(
         target_node=new_node,
         source_node=source_node,
     )
 
-    new_to_target_relationship = modeling.model.Relationship(
+    new_to_target_relationship = modeling.models.Relationship(
         source_node=new_node,
         target_node=target_node,
     )
@@ -169,11 +172,11 @@ def test_relationship_model_ordering(context):
     flip_and_assert(target_node, 'inbound')
 
 
-class StrictClass(modeling.model.aria_declarative_base, structure.ModelMixin):
+class StrictClass(modeling.models.aria_declarative_base, bases.ModelMixin):
     __tablename__ = 'strict_class'
 
-    strict_dict = sqlalchemy.Column(type.StrictDict(basestring, basestring))
-    strict_list = sqlalchemy.Column(type.StrictList(basestring))
+    strict_dict = sqlalchemy.Column(modeling.types.StrictDict(basestring, basestring))
+    strict_list = sqlalchemy.Column(modeling.types.StrictList(basestring))
 
 
 def test_strict_dict():

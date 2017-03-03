@@ -16,15 +16,18 @@
 import pytest
 from sqlalchemy import Column, Text, Integer, event
 
+from aria.modeling import (
+    bases,
+    exceptions,
+    types as modeling_types,
+    models
+)
 from aria.storage import (
-    structure,
     ModelStorage,
     sql_mapi,
-    instrumentation,
-    exceptions,
-    type as aria_type,
-    model
+    instrumentation
 )
+
 from ..storage import release_sqlite_storage, init_inmemory_model_storage
 
 STUB = instrumentation._STUB
@@ -334,27 +337,27 @@ def storage():
     release_sqlite_storage(result)
 
 
-class _MockModel(structure.ModelMixin):
+class _MockModel(bases.ModelMixin):
     name = Column(Text)
-    dict1 = Column(aria_type.Dict)
-    dict2 = Column(aria_type.Dict)
-    list1 = Column(aria_type.List)
-    list2 = Column(aria_type.List)
+    dict1 = Column(modeling_types.Dict)
+    dict2 = Column(modeling_types.Dict)
+    list1 = Column(modeling_types.List)
+    list2 = Column(modeling_types.List)
     int1 = Column(Integer)
     int2 = Column(Integer)
     string2 = Column(Text)
 
 
-class MockModel1(_MockModel, model.aria_declarative_base):
+class MockModel1(_MockModel, models.aria_declarative_base):
     __tablename__ = 'mock_model_1'
 
 
-class MockModel2(_MockModel, model.aria_declarative_base):
+class MockModel2(_MockModel, models.aria_declarative_base):
     __tablename__ = 'mock_model_2'
 
 
-class StrictMockModel(structure.ModelMixin, model.aria_declarative_base):
+class StrictMockModel(bases.ModelMixin, models.aria_declarative_base):
     __tablename__ = 'strict_mock_model'
 
-    strict_dict = Column(aria_type.StrictDict(basestring, basestring))
-    strict_list = Column(aria_type.StrictList(basestring))
+    strict_dict = Column(modeling_types.StrictDict(basestring, basestring))
+    strict_list = Column(modeling_types.StrictList(basestring))

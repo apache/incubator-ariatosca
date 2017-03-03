@@ -22,12 +22,12 @@ from aria.storage import (
     exceptions,
     sql_mapi,
 )
-from aria.modeling.model import (
+from aria.modeling.models import (
     ServiceTemplate,
-    ServiceInstance,
-    ServiceInstanceUpdate,
-    ServiceInstanceUpdateStep,
-    ServiceInstanceModification,
+    Service,
+    ServiceUpdate,
+    ServiceUpdateStep,
+    ServiceModification,
     Execution,
     Task,
     Plugin,
@@ -74,7 +74,7 @@ def _service_instance_storage():
 
 def _service_instance_update_storage():
     storage = _service_instance_storage()
-    service_instance_update = ServiceInstanceUpdate(
+    service_instance_update = ServiceUpdate(
         service_instance=storage.service_instance.list()[0],
         created_at=now,
         service_instance_plan={},
@@ -196,7 +196,7 @@ class TestServiceTemplate(object):
                    )
 
 
-class TestServiceInstance(object):
+class TestService(object):
 
     @pytest.mark.parametrize(
         'is_valid, name, created_at, description, inputs, permalink, policy_triggers, '
@@ -233,7 +233,7 @@ class TestServiceInstance(object):
         service_instance = _test_model(
             is_valid=is_valid,
             storage=service_instance_storage,
-            model_cls=ServiceInstance,
+            model_cls=Service,
             model_kwargs=dict(
                 name=name,
                 service_template=service_instance_storage.service_template.list()[0],
@@ -361,7 +361,7 @@ class TestExecution(object):
                     execution.status = transitioned_status
 
 
-class TestServiceInstanceUpdate(object):
+class TestServiceUpdate(object):
     @pytest.mark.parametrize(
         'is_valid, created_at, deployment_plan, service_instance_update_node_instances, '
         'service_instance_update_service_instance, service_instance_update_nodes, '
@@ -390,7 +390,7 @@ class TestServiceInstanceUpdate(object):
         service_instance_update = _test_model(
             is_valid=is_valid,
             storage=service_instance_storage,
-            model_cls=ServiceInstanceUpdate,
+            model_cls=ServiceUpdate,
             model_kwargs=dict(
                 service_instance=service_instance_storage.service_instance.list()[0],
                 created_at=created_at,
@@ -406,18 +406,18 @@ class TestServiceInstanceUpdate(object):
                    service_instance_storage.service_instance.list()[0]
 
 
-class TestServiceInstanceUpdateStep(object):
+class TestServiceUpdateStep(object):
 
     @pytest.mark.parametrize(
         'is_valid, action, entity_id, entity_type',
         [
-            (False, m_cls, 'id', ServiceInstanceUpdateStep.ENTITY_TYPES.NODE),
-            (False, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, m_cls,
-             ServiceInstanceUpdateStep.ENTITY_TYPES.NODE),
-            (False, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, 'id', m_cls),
+            (False, m_cls, 'id', ServiceUpdateStep.ENTITY_TYPES.NODE),
+            (False, ServiceUpdateStep.ACTION_TYPES.ADD, m_cls,
+             ServiceUpdateStep.ENTITY_TYPES.NODE),
+            (False, ServiceUpdateStep.ACTION_TYPES.ADD, 'id', m_cls),
 
-            (True, ServiceInstanceUpdateStep.ACTION_TYPES.ADD, 'id',
-             ServiceInstanceUpdateStep.ENTITY_TYPES.NODE)
+            (True, ServiceUpdateStep.ACTION_TYPES.ADD, 'id',
+             ServiceUpdateStep.ENTITY_TYPES.NODE)
         ]
     )
     def test_deployment_update_step_model_creation(self, service_instance_update_storage, is_valid,
@@ -425,7 +425,7 @@ class TestServiceInstanceUpdateStep(object):
         service_instance_update_step = _test_model(
             is_valid=is_valid,
             storage=service_instance_update_storage,
-            model_cls=ServiceInstanceUpdateStep,
+            model_cls=ServiceUpdateStep,
             model_kwargs=dict(
                 service_instance_update=
                 service_instance_update_storage.service_instance_update.list()[0],
@@ -438,19 +438,19 @@ class TestServiceInstanceUpdateStep(object):
                    service_instance_update_storage.service_instance_update.list()[0]
 
     def test_deployment_update_step_order(self):
-        add_node = ServiceInstanceUpdateStep(
+        add_node = ServiceUpdateStep(
             id='add_step',
             action='add',
             entity_type='node',
             entity_id='node_id')
 
-        modify_node = ServiceInstanceUpdateStep(
+        modify_node = ServiceUpdateStep(
             id='modify_step',
             action='modify',
             entity_type='node',
             entity_id='node_id')
 
-        remove_node = ServiceInstanceUpdateStep(
+        remove_node = ServiceUpdateStep(
             id='remove_step',
             action='remove',
             entity_type='node',
@@ -462,13 +462,13 @@ class TestServiceInstanceUpdateStep(object):
         assert remove_node < modify_node < add_node
         assert not remove_node > modify_node > add_node
 
-        add_rel = ServiceInstanceUpdateStep(
+        add_rel = ServiceUpdateStep(
             id='add_step',
             action='add',
             entity_type='relationship',
             entity_id='relationship_id')
 
-        remove_rel = ServiceInstanceUpdateStep(
+        remove_rel = ServiceUpdateStep(
             id='remove_step',
             action='remove',
             entity_type='relationship',
@@ -482,17 +482,17 @@ class TestDeploymentModification(object):
     @pytest.mark.parametrize(
         'is_valid, context, created_at, ended_at, modified_node_templates, nodes, status',
         [
-            (False, m_cls, now, now, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, m_cls, now, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, m_cls, {}, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, now, m_cls, {}, ServiceInstanceModification.STARTED),
-            (False, {}, now, now, {}, m_cls, ServiceInstanceModification.STARTED),
+            (False, m_cls, now, now, {}, {}, ServiceModification.STARTED),
+            (False, {}, m_cls, now, {}, {}, ServiceModification.STARTED),
+            (False, {}, now, m_cls, {}, {}, ServiceModification.STARTED),
+            (False, {}, now, now, m_cls, {}, ServiceModification.STARTED),
+            (False, {}, now, now, {}, m_cls, ServiceModification.STARTED),
             (False, {}, now, now, {}, {}, m_cls),
 
-            (True, {}, now, now, {}, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, None, {}, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, now, None, {}, ServiceInstanceModification.STARTED),
-            (True, {}, now, now, {}, None, ServiceInstanceModification.STARTED),
+            (True, {}, now, now, {}, {}, ServiceModification.STARTED),
+            (True, {}, now, None, {}, {}, ServiceModification.STARTED),
+            (True, {}, now, now, None, {}, ServiceModification.STARTED),
+            (True, {}, now, now, {}, None, ServiceModification.STARTED),
         ]
     )
     def test_deployment_modification_model_creation(
@@ -501,7 +501,7 @@ class TestDeploymentModification(object):
         deployment_modification = _test_model(
             is_valid=is_valid,
             storage=service_instance_storage,
-            model_cls=ServiceInstanceModification,
+            model_cls=ServiceModification,
             model_kwargs=dict(
                 service_instance=service_instance_storage.service_instance.list()[0],
                 context=context,
