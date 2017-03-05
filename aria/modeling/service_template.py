@@ -88,6 +88,9 @@ class ServiceTemplateBase(TemplateModelMixin):
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
     :vartype updated_at: :class:`datetime.datetime`
+
+    :ivar services: Instantiated services
+    :vartype services: [:class:`Service`]
     """
 
     __tablename__ = 'service_template'
@@ -406,6 +409,17 @@ class NodeTemplateBase(TemplateModelMixin):
     :vartype target_node_template_constraints: [:class:`FunctionType`]
     :ivar plugins: Plugins required to be installed on the node's host
     :vartype plugins: {basestring: :class:`Plugin`}
+
+    :ivar service_template: Containing service template
+    :vartype service_template: :class:`ServiceTemplate`
+    :ivar group_templates: We are a member of these groups
+    :vartype group_templates: [:class:`GroupTemplate`]
+    :ivar policy_templates: Policy templates enacted on this node
+    :vartype policy_templates: [:class:`PolicyTemplate`]
+    :ivar substitution_template_mapping: Our contribution to service substitution
+    :vartype substitution_template_mapping: :class:`SubstitutionTemplateMapping`
+    :ivar nodes: Instantiated nodes
+    :vartype nodes: [:class:`Node`]
     """
 
     __tablename__ = 'node_template'
@@ -552,6 +566,13 @@ class GroupTemplateBase(TemplateModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interface_templates: Bundles of operations
     :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
+
+    :ivar service_template: Containing service template
+    :vartype service_template: :class:`ServiceTemplate`
+    :ivar policy_templates: Policy templates enacted on this group
+    :vartype policy_templates: [:class:`PolicyTemplate`]
+    :ivar groups: Instantiated groups
+    :vartype groups: [:class:`Group`]
     """
 
     __tablename__ = 'group_template'
@@ -652,6 +673,11 @@ class PolicyTemplateBase(TemplateModelMixin):
     :vartype group_templates: [:class:`GroupTemplate`]
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar service_template: Containing service template
+    :vartype service_template: :class:`ServiceTemplate`
+    :ivar policies: Instantiated policies
+    :vartype policies: [:class:`Policy`]
     """
 
     __tablename__ = 'policy_template'
@@ -744,6 +770,11 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     :vartype node_type: :class:`Type`
     :ivar mappings: Requirement and capability mappings
     :vartype mappings: {basestring: :class:`SubstitutionTemplateMapping`}
+
+    :ivar service_template: Containing service template
+    :vartype service_template: :class:`ServiceTemplate`
+    :ivar substitutions: Instantiated substitutions
+    :vartype substitutions: [:class:`Substitution`]
     """
 
     __tablename__ = 'substitution_template'
@@ -807,6 +838,9 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
     :vartype capability_template: :class:`CapabilityTemplate`
     :ivar requirement_template: Requirement template in the node template
     :vartype requirement_template: :class:`RequirementTemplate`
+
+    :ivar substitution_template: Containing substitution template
+    :vartype substitution_template: :class:`SubstitutionTemplate`
     """
 
     __tablename__ = 'substitution_template_mapping'
@@ -918,6 +952,13 @@ class RequirementTemplateBase(TemplateModelMixin):
     :vartype target_node_template_constraints: [:class:`FunctionType`]
     :ivar relationship_template: Template for relationships (optional)
     :vartype relationship_template: :class:`RelationshipTemplate`
+
+    :ivar node_template: Containing node template
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar substitution_template_mapping: Our contribution to service substitution
+    :vartype substitution_template_mapping: :class:`SubstitutionTemplateMapping`
+    :ivar substitution_mapping: Our contribution to service substitution
+    :vartype substitution_mapping: :class:`SubstitutionMapping`
     """
 
     __tablename__ = 'requirement_template'
@@ -1094,6 +1135,11 @@ class RelationshipTemplateBase(TemplateModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interface_templates: Bundles of operations
     :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
+
+    :ivar requirement_template: Containing requirement template
+    :vartype requirement_template: :class:`RequirementTemplate`
+    :ivar relationships: Instantiated relationships
+    :vartype relationships: [:class:`Relationship`]
     """
 
     __tablename__ = 'relationship_template'
@@ -1176,12 +1222,21 @@ class CapabilityTemplateBase(TemplateModelMixin):
     :vartype type: :class:`Type`
     :ivar description: Human-readable description
     :vartype description: basestring
+    :ivar valid_source_node_types: Reject requirements that are not from these node types (optional)
+    :vartype valid_source_node_types: [:class:`Type`]
     :ivar min_occurrences: Minimum number of requirement matches required
     :vartype min_occurrences: int
     :ivar max_occurrences: Maximum number of requirement matches allowed
     :vartype min_occurrences: int
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar node_template: Containing node template
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar substitution_template_mapping: Our contribution to service substitution
+    :vartype substitution_template_mapping: :class:`SubstitutionTemplateMapping`
+    :ivar capabilities: Instantiated capabilities
+    :vartype capabilities: [:class:`Capability`]
     """
 
     __tablename__ = 'capability_template'
@@ -1305,6 +1360,15 @@ class InterfaceTemplateBase(TemplateModelMixin):
     :vartype inputs: {basestring: :class:`Parameter`}
     :ivar operation_templates: Operations
     :vartype operation_templates: {basestring: :class:`OperationTemplate`}
+
+    :ivar node_template: Containing node template
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar group_template: Containing group template
+    :vartype group_template: :class:`GroupTemplate`
+    :ivar relationship_template: Containing relationship template
+    :vartype relationship_template: :class:`RelationshipTemplate`
+    :ivar interfaces: Instantiated interfaces
+    :vartype interfaces: [:class:`Interface`]
     """
 
     __tablename__ = 'interface_template'
@@ -1414,6 +1478,13 @@ class OperationTemplateBase(TemplateModelMixin):
     :vartype max_retries: int
     :ivar retry_interval: Interval between retries (in seconds)
     :vartype retry_interval: int
+
+    :ivar interface_template: Containing interface template
+    :vartype interface_template: :class:`InterfaceTemplate`
+    :ivar service_template: Containing service template
+    :vartype service_template: :class:`ServiceTemplate`
+    :ivar operations: Instantiated operations
+    :vartype operations: [:class:`Operation`]
     """
 
     __tablename__ = 'operation_template'
@@ -1532,6 +1603,11 @@ class ArtifactTemplateBase(TemplateModelMixin):
     :vartype repository_credential: {basestring: basestring}
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar node_template: Containing node template
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar artifacts: Instantiated artifacts
+    :vartype artifacts: [:class:`Artifact`]
     """
 
     __tablename__ = 'artifact_template'

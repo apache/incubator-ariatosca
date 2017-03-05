@@ -199,7 +199,7 @@ class ModelMixin(object):
         helper_table = '{0}_{1}'.format(this_table, other_table)
 
         if backreference is None:
-            backreference = this_table
+            backreference = formatting.pluralize(this_table)
             if table_prefix:
                 helper_table = '{0}_{1}'.format(table_prefix, helper_table)
                 backreference = '{0}_{1}'.format(table_prefix, backreference)

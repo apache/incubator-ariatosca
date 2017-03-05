@@ -174,7 +174,8 @@ class ServiceUpdateBase(ModelMixin):
 
     @declared_attr
     def service(cls):
-        return cls.many_to_one_relationship('service')
+        return cls.many_to_one_relationship('service',
+                                            backreference='updates')
 
     @declared_attr
     def service_name(cls):

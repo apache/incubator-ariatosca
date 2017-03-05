@@ -69,6 +69,18 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
     :vartype updated_at: :class:`datetime.datetime`
+
+    :ivar permalink: ??
+    :vartype permalink: basestring
+    :ivar scaling_groups: ??
+    :vartype scaling_groups: {}
+
+    :ivar modifications: Modifications of this service
+    :vartype modifications: [:class:`ServiceModification`]
+    :ivar updates: Updates of this service
+    :vartype updates: [:class:`ServiceUpdate`]
+    :ivar executions: Executions on this service
+    :vartype executions: [:class:`Execution`]
     """
 
     __tablename__ = 'service'
@@ -304,6 +316,26 @@ class NodeBase(InstanceModelMixin):
     :vartype plugins: {basestring: :class:`Plugin`}
     :ivar host: Host node (can be self)
     :vartype host: :class:`Node`
+
+    :ivar runtime_properties: TODO: should be replaced with attributes
+    :vartype runtime_properties: {}
+    :ivar scaling_groups: ??
+    :vartype scaling_groups: []
+    :ivar state: ??
+    :vartype state: basestring
+    :ivar version: ??
+    :vartype version: int
+
+    :ivar service: Containing service
+    :vartype service: :class:`Service`
+    :ivar groups: We are a member of these groups
+    :vartype groups: [:class:`Group`]
+    :ivar policies: Policies enacted on this node
+    :vartype policies: [:class:`Policy`]
+    :ivar substitution_mapping: Our contribution to service substitution
+    :vartype substitution_mapping: :class:`SubstitutionMapping`
+    :ivar tasks: Tasks on this node
+    :vartype tasks: [:class:`Task`]
     """
 
     __tablename__ = 'node'
@@ -558,6 +590,11 @@ class GroupBase(InstanceModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interface`}
+
+    :ivar service: Containing service
+    :vartype service: :class:`Service`
+    :ivar policies: Policies enacted on this group
+    :vartype policies: [:class:`Policy`]
     """
 
     __tablename__ = 'group'
@@ -654,6 +691,9 @@ class PolicyBase(InstanceModelMixin):
     :vartype groups: [:class:`Group`]
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar service: Containing service
+    :vartype service: :class:`Service`
     """
 
     __tablename__ = 'policy'
@@ -746,6 +786,9 @@ class SubstitutionBase(InstanceModelMixin):
     :vartype node_type: :class:`Type`
     :ivar mappings: Requirement and capability mappings
     :vartype mappings: {basestring: :class:`SubstitutionTemplate`}
+
+    :ivar service: Containing service
+    :vartype service: :class:`Service`
     """
 
     __tablename__ = 'substitution'
@@ -814,6 +857,9 @@ class SubstitutionMappingBase(InstanceModelMixin):
     :vartype capability: :class:`Capability`
     :ivar requirement_template: Requirement template in the node template
     :vartype requirement_template: :class:`RequirementTemplate`
+
+    :ivar substitution: Containing substitution
+    :vartype substitution: :class:`Substitution`
     """
 
     __tablename__ = 'substitution_mapping'
@@ -891,18 +937,28 @@ class RelationshipBase(InstanceModelMixin):
     :vartype name: basestring
     :ivar relationship_template: Template from which this relationship was instantiated (optional)
     :vartype relationship_template: :class:`RelationshipTemplate`
+    :ivar requirement_template: Template from which this relationship was instantiated (optional)
+    :vartype requirement_template: :class:`RequirementTemplate`
     :ivar type: Relationship type
     :vartype type: :class:`Type`
-    :ivar source_node: Source node
-    :vartype source_node: :class:`Node`
-    :ivar target_node: Target node
-    :vartype target_node: :class:`Node`
     :ivar target_capability: Capability at the target node (optional)
     :vartype target_capability: :class:`Capability`
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
-    :ivar interface_templates: Bundles of operations
-    :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
+    :ivar interfaces: Bundles of operations
+    :vartype interfaces: {basestring: :class:`Interfaces`}
+
+    :ivar source_position: ??
+    :vartype source_position: int
+    :ivar target_position: ??
+    :vartype target_position: int
+
+    :ivar source_node: Source node
+    :vartype source_node: :class:`Node`
+    :ivar target_node: Target node
+    :vartype target_node: :class:`Node`
+    :ivar tasks: Tasks on this node
+    :vartype tasks: [:class:`Task`]
     """
 
     __tablename__ = 'relationship'
@@ -910,6 +966,10 @@ class RelationshipBase(InstanceModelMixin):
     @declared_attr
     def relationship_template(cls):
         return cls.many_to_one_relationship('relationship_template')
+
+    @declared_attr
+    def requirement_template(cls):
+        return cls.many_to_one_relationship('requirement_template')
 
     @declared_attr
     def type(cls):
@@ -928,10 +988,6 @@ class RelationshipBase(InstanceModelMixin):
     def interfaces(cls):
         return cls.one_to_many_relationship('interface', dict_key='name')
 
-    @declared_attr
-    def requirement_template(cls):
-        return cls.many_to_one_relationship('requirement_template')
-
     # region orchestration
 
     source_position = Column(Integer) # ???
@@ -944,7 +1000,7 @@ class RelationshipBase(InstanceModelMixin):
     __private_fields__ = ['type_fk',
                           'source_node_fk',
                           'target_node_fk',
-                          'capability_fk',
+                          'target_capability_fk',
                           'requirement_template_fk',
                           'relationship_template_fk']
 
@@ -965,7 +1021,7 @@ class RelationshipBase(InstanceModelMixin):
 
     # Relationship one-to-one to Capability
     @declared_attr
-    def capability_fk(cls):
+    def target_capability_fk(cls):
         return cls.foreign_key('capability', nullable=True)
 
     # Relationship many-to-one to RequirementTemplate
@@ -1037,6 +1093,13 @@ class CapabilityBase(InstanceModelMixin):
     :vartype occurrences: int
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar node: Containing node
+    :vartype node: :class:`Node`
+    :ivar relationship: Available when we are the target of a relationship
+    :vartype relationship: :class:`Relationship`
+    :ivar substitution_mapping: Our contribution to service substitution
+    :vartype substitution_mapping: :class:`SubstitutionMapping`
     """
 
     __tablename__ = 'capability'
@@ -1138,6 +1201,13 @@ class InterfaceBase(InstanceModelMixin):
     :vartype inputs: {basestring: :class:`Parameter`}
     :ivar operations: Operations
     :vartype operations: {basestring: :class:`Operation`}
+
+    :ivar node: Containing node
+    :vartype node: :class:`Node`
+    :ivar group: Containing group
+    :vartype group: :class:`Group`
+    :ivar relationship: Containing relationship
+    :vartype relationship: :class:`Relationship`
     """
 
     __tablename__ = 'interface'
@@ -1249,6 +1319,11 @@ class OperationBase(InstanceModelMixin):
     :vartype max_retries: int
     :ivar retry_interval: Interval between retries (in seconds)
     :vartype retry_interval: int
+
+    :ivar interface: Containing interface
+    :vartype interface: :class:`Interface`
+    :ivar service: Containing service
+    :vartype service: :class:`Service`
     """
 
     __tablename__ = 'operation'
@@ -1369,6 +1444,9 @@ class ArtifactBase(InstanceModelMixin):
     :vartype repository_credential: {basestring: basestring}
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
+
+    :ivar node: Containing node
+    :vartype node: :class:`Node`
     """
 
     __tablename__ = 'artifact'
