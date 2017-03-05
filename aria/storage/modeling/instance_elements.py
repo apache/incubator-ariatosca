@@ -1179,8 +1179,9 @@ class RelationshipBase(structure.ModelMixin):
     target_capability_name = Column(Text)
     type_name = Column(Text)
     template_name = Column(Text)
+    type_hierarchy = Column(aria_types.List)
 
-    # # region orchestrator required columns
+    # region orchestrator required columns
     source_position = Column(Integer)
     target_position = Column(Integer)
 

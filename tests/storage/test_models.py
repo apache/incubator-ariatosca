@@ -91,12 +91,20 @@ def _node_template_storage():
 
 
 def _nodes_storage():
-    storage = _nodes_storage()
+    storage = _node_template_storage()
     service_instance = storage.service_instance.get_by_name(mock.models.DEPLOYMENT_NAME)
-    dependent_node_template = storage.node_template.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+
     dependency_node_template = storage.node_template.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     dependency_node = mock.models.get_dependency_node_instance(dependency_node_template,
                                                                service_instance)
+
+    req_template, cap_template = mock.models.get_relationship(dependency_node)
+    storage.requirement_template.put(req_template)
+    storage.capability_template.put(cap_template)
+
+    dependent_node_template = mock.models.get_dependent_node(service_instance,
+                                                             req_template,
+                                                             cap_template)
     dependent_node = mock.models.get_dependent_node_instance(dependent_node_template,
                                                              service_instance)
     storage.node.put(dependency_node)
@@ -670,29 +678,54 @@ class TestNodeInstanceIP(object):
         return node_instance
 
 
-@pytest.mark.skip('Should be reworked into relationship')
 class TestRelationshipInstance(object):
-    def test_relatiship_instance_model_creation(self, nodes_storage):
-        relationship = mock.models.get_relationship(
-            target=nodes_storage.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-        )
-        nodes_storage.relationship.put(relationship)
-        node_instances = nodes_storage.node
-        source_node_instance = node_instances.get_by_name(mock.models.DEPENDENT_NODE_INSTANCE_NAME)
-        target_node_instance = node_instances.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    @pytest.mark.parametrize(
+        'is_valid, source_requirement_index, target_node_id, target_capability_name, type_name, '
+        'template_name, type_hierarchy, source_position, target_position',
+        [
+            (False, m_cls, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
+             0),
+            (False, 0, m_cls, 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
+            (False, 0, 'target_node_id', m_cls, 'type_name', 'template_name', [], 0, 0),
+            (False, 0, 'target_node_id', 'target_cap_name', m_cls, 'template_name', [], 0, 0),
+            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', m_cls, [], 0, 0),
+            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', m_cls, 0,
+             0),
+            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], m_cls,
+             0),
+            (False, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
+             m_cls),
 
-        relationship_instance = _test_model(
-            is_valid=True,
-            storage=nodes_storage,
-            model_cls=Relationship,
-            model_kwargs=dict(
-                relationship=relationship,
-                source_node_instance=source_node_instance,
-                target_node_instance=target_node_instance
-            ))
-        assert relationship_instance.relationship == relationship
-        assert relationship_instance.source_node_instance == source_node_instance
-        assert relationship_instance.target_node_instance == target_node_instance
+            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
+            (True, None, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
+             0),
+            (True, 0, None, 'target_cap_name', 'type_name', 'template_name', [], 0, 0),
+            (True, 0, 'target_node_id', None, 'type_name', 'template_name', [], 0, 0),
+            (True, 0, 'target_node_id', 'target_cap_name', None, 'template_name', [], 0, 0),
+            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', None, [], 0, 0),
+            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], None,
+             0),
+            (True, 0, 'target_node_id', 'target_cap_name', 'type_name', 'template_name', [], 0,
+             None),
+
+        ]
+    )
+    def test_relationship(self, nodes_storage, is_valid, source_requirement_index, target_node_id,
+                          target_capability_name, type_name, template_name, type_hierarchy,
+                          source_position, target_position):
+        _test_model(is_valid=is_valid,
+                    storage=nodes_storage,
+                    model_cls=Relationship,
+                    model_kwargs=dict(
+                        source_requirement_index=source_requirement_index,
+                        target_node_id=target_node_id,
+                        target_capability_name=target_capability_name,
+                        type_name=type_name,
+                        template_name=template_name,
+                        type_hierarchy=type_hierarchy,
+                        source_position=source_position,
+                        target_position=target_position
+                    ))
 
 
 class TestPlugin(object):
