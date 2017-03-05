@@ -32,10 +32,10 @@ class WorkflowContext(BaseContext):
     def __init__(self,
                  workflow_name,
                  parameters=None,
-                 execution_id=None,
                  task_max_attempts=1,
                  task_retry_interval=0,
                  task_ignore_failure=False,
+                 execution_id=None,
                  *args, **kwargs):
         super(WorkflowContext, self).__init__(*args, **kwargs)
         self._workflow_name = workflow_name
@@ -45,7 +45,7 @@ class WorkflowContext(BaseContext):
         self._task_ignore_failure = task_ignore_failure
         # TODO: execution creation should happen somewhere else
         # should be moved there, when such logical place exists
-        self._execution_id = self._create_execution() if execution_id is None else execution_id
+        self._execution_id = execution_id or self._create_execution()
         self._register_logger()
 
     def __repr__(self):

@@ -213,7 +213,7 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
 
 
 @pytest.fixture(params=[
-    (thread.ThreadExecutor, dict()),
+    # (thread.ThreadExecutor, dict()),
     (process.ProcessExecutor, dict(python_path=tests.ROOT_DIR))
 ])
 def executor(request):
@@ -252,7 +252,7 @@ def test_node_operation_logging(ctx, executor):
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
-    _assert_loggins(ctx.model.log.list(), inputs)
+    _assert_loggins(ctx, inputs)
 
 
 def test_relationship_operation_logging(ctx, executor):
@@ -283,14 +283,22 @@ def test_relationship_operation_logging(ctx, executor):
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
-    _assert_loggins(ctx.model.log.list(), inputs)
+    _assert_loggins(ctx, inputs)
 
 
-def _assert_loggins(logs, inputs):
+def _assert_loggins(ctx, inputs):
 
     # The logs should contain the following: Workflow Start, Operation Start, custom operation
     # log string (op_start), custom operation log string (op_end), Operation End, Workflow End.
-    assert len(logs) == 6
+
+    executions = ctx.model.execution.list()
+    assert len(executions) == 1
+    execution = executions[0]
+
+    logs = ctx.model.log.list()
+    assert len(logs) == execution.logs.count() == 6
+    assert all(l in logs for l in execution.logs)
+    assert all(l.execution == execution for l in logs)
 
     op_start_log = [l for l in logs if inputs['op_start'] in l.msg and l.level.lower() == 'info']
     assert len(op_start_log) == 1

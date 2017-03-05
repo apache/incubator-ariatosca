@@ -17,6 +17,7 @@ A common context for both workflow and operation
 """
 import logging
 from contextlib import contextmanager
+from datetime import datetime
 from functools import partial
 from uuid import uuid4
 
@@ -62,6 +63,17 @@ class BaseContext(object):
         self._workdir = workdir
         self.logger = None
 
+    def _create_execution(self):
+        now = datetime.utcnow()
+        execution = self.model.execution.model_cls(
+            service_instance=self.service_instance,
+            workflow_name=self._workflow_name,
+            created_at=now,
+            parameters=self.parameters,
+        )
+        self.model.execution.put(execution)
+        return execution.id
+
     def _register_logger(self, logger_name=None, level=None):
         self.logger = self.PrefixedLogger(logging.getLogger(logger_name or self.__class__.__name__),
                                           self.logging_id)
@@ -74,7 +86,9 @@ class BaseContext(object):
         if self._model._initiator:
             api_kwargs.update(self._model._initiator(**self._model._initiator_kwargs))
         api_kwargs.update(**self._model._api_kwargs)
-        return aria_logger.create_sqla_log_handler(log_cls=modeling.model.Log, **api_kwargs)
+        return aria_logger.create_sqla_log_handler(log_cls=modeling.model.Log,
+                                                   execution_id=self._execution_id,
+                                                   **api_kwargs)
 
     def __repr__(self):
         return (

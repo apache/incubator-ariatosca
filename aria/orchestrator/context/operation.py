@@ -34,6 +34,7 @@ class BaseOperationContext(BaseContext):
                  service_instance_id,
                  task_id,
                  actor_id,
+                 execution_id,
                  **kwargs):
         super(BaseOperationContext, self).__init__(
             name=name,
@@ -44,6 +45,7 @@ class BaseOperationContext(BaseContext):
         self._task_id = task_id
         self._actor_id = actor_id
         self._task = None
+        self._execution_id = execution_id
         self._register_logger()
 
     def __repr__(self):
@@ -89,7 +91,8 @@ class BaseOperationContext(BaseContext):
             'actor_id': self._actor_id,
             'workdir': self._workdir,
             'model_storage': self.model.serialization_dict if self.model else None,
-            'resource_storage': self.resource.serialization_dict if self.resource else None
+            'resource_storage': self.resource.serialization_dict if self.resource else None,
+            'execution_id': self._execution_id
         }
         return {
             'context_cls': context_cls,
