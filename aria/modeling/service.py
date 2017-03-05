@@ -36,22 +36,46 @@ from . import (
 
 class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     """
-    A service instance is usually an instance of a :class:`ServiceTemplate`.
+    A service is usually an instance of a :class:`ServiceTemplate`.
 
-    You will usually not create it programmatically, but instead instantiate it from the template.
+    You will usually not create it programmatically, but instead instantiate it from a service
+    template.
 
+    :ivar name: Name (unique for this ARIA installation)
+    :vartype name: basestring
+    :ivar service_template: Template from which this service was instantiated (optional)
+    :vartype service_template: :class:`ServiceTemplate`
     :ivar description: Human-readable description
-    :ivar meta_data: Dict of :class:`Metadata`
-    :ivar nodes: Dict of :class:`Node`
-    :ivar groups: Dict of :class:`Group`
-    :ivar policies: Dict of :class:`Policy`
-    :ivar substitution: :class:`Substitution`
-    :ivar inputs: Dict of :class:`Parameter`
-    :ivar outputs: Dict of :class:`Parameter`
-    :ivar operations: Dict of :class:`Operation`
+    :vartype description: string
+    :ivar meta_data: Custom annotations
+    :vartype meta_data: {basestring: :class:`Metadata`}
+    :ivar node: Nodes
+    :vartype node: [:class:`Node`]
+    :ivar groups: Groups of nodes
+    :vartype groups: [:class:`Group`]
+    :ivar policies: Policies
+    :vartype policies: [:class:`Policy`]
+    :ivar substitution: The entire service can appear as a node
+    :vartype substitution: :class:`Substitution`
+    :ivar inputs: Externally provided parameters
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar outputs: These parameters are filled in after service installation
+    :vartype outputs: {basestring: :class:`Parameter`}
+    :ivar operations: Custom operations that can be performed on the service
+    :vartype operations: {basestring: :class:`Operation`}
+    :ivar plugins: Plugins required to be installed
+    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar created_at: Creation timestamp
+    :vartype created_at: :class:`datetime.datetime`
+    :ivar updated_at: Update timestamp
+    :vartype updated_at: :class:`datetime.datetime`
     """
 
     __tablename__ = 'service'
+
+    @declared_attr
+    def service_template(cls):
+        return cls.many_to_one_relationship('service_template')
 
     description = Column(Text)
 
@@ -91,20 +115,16 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         return cls.one_to_many_relationship('operation', dict_key='name')
 
     @declared_attr
-    def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
-
-    # region orchestration
+    def plugins(cls):
+        return cls.many_to_many_relationship('plugin')
 
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
+
+    # region orchestration
+
     permalink = Column(Text)
     scaling_groups = Column(modeling_types.Dict)
-    workflows = Column(modeling_types.Dict)
-
-    @declared_attr
-    def service_template_name(cls):
-        return association_proxy('service_template', 'name')
 
     # endregion
 
@@ -260,19 +280,43 @@ class NodeBase(InstanceModelMixin):
 
     Nodes may have zero or more :class:`Relationship` instances to other nodes.
 
-    :ivar name: Unique ID (often prefixed with the template name)
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interfaces: Dict of :class:`Interface`
-    :ivar artifacts: Dict of :class:`Artifact`
-    :ivar capabilities: Dict of :class:`CapabilityTemplate`
-    :ivar relationships: List of :class:`Relationship`
+    :ivar name: Name (unique for this service)
+    :vartype name: basestring
+    :ivar node_template: Template from which this node was instantiated (optional)
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar type: Node type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: string
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interfaces: Bundles of operations
+    :vartype interfaces: {basestring: :class:`Interface`}
+    :ivar artifacts: Associated files
+    :vartype artifacts: {basestring: :class:`Artifact`}
+    :ivar capabilities: Exposed capabilities
+    :vartype capabilities: {basestring: :class:`Capability`}
+    :ivar outbound_relationships: Relationships to other nodes
+    :vartype outbound_relationships: [:class:`Relationship`]
+    :ivar inbound_relationships: Relationships from other nodes
+    :vartype inbound_relationships: [:class:`Relationship`]
+    :ivar plugins: Plugins required to be installed on the node's host
+    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar host: Host node (can be self)
+    :vartype host: :class:`Node`
     """
 
     __tablename__ = 'node'
 
     @declared_attr
+    def node_template(cls):
+        return cls.many_to_one_relationship('node_template')
+
+    @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
+
+    description = Column(Text)
 
     @declared_attr
     def properties(cls):
@@ -304,12 +348,12 @@ class NodeBase(InstanceModelMixin):
                                             backreference='target_node')
 
     @declared_attr
-    def host(cls):
-        return cls.relationship_to_self('host_fk')
+    def plugins(cls):
+        return cls.many_to_many_relationship('plugin')
 
     @declared_attr
-    def node_template(cls):
-        return cls.many_to_one_relationship('node_template')
+    def host(cls):
+        return cls.relationship_to_self('host_fk')
 
     # region orchestration
 
@@ -317,10 +361,6 @@ class NodeBase(InstanceModelMixin):
     scaling_groups = Column(modeling_types.List)
     state = Column(Text, nullable=False)
     version = Column(Integer, default=1)
-
-    @declared_attr
-    def plugins(cls):
-        return association_proxy('node_template', 'plugins')
 
     @declared_attr
     def service_name(cls):
@@ -335,9 +375,9 @@ class NodeBase(InstanceModelMixin):
         if 'ip' in host_node.runtime_properties:  # pylint: disable=no-member
             return host_node.runtime_properties['ip']  # pylint: disable=no-member
         host_node = host_node.node_template  # pylint: disable=no-member
-        host_ip_property = [prop for prop in host_node.properties if prop.name == 'ip']
+        host_ip_property = host_node.properties.get('ip')
         if host_ip_property:
-            return host_ip_property[0].value
+            return host_ip_property.value
         return None
 
     # endregion
@@ -415,7 +455,7 @@ class NodeBase(InstanceModelMixin):
                     relationship = \
                         requirement_template.relationship_template.instantiate(context, self)
                 else:
-                    relationship = models.Relationship(capability=target_capability)
+                    relationship = models.Relationship(target_capability=target_capability)
                 relationship.name = requirement_template.name
                 relationship.requirement_template = requirement_template
                 relationship.target_node = target_node
@@ -504,16 +544,37 @@ class GroupBase(InstanceModelMixin):
     """
     Usually an instance of a :class:`GroupTemplate`.
 
-    :ivar name: Unique ID (often equal to the template name)
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interfaces: Dict of :class:`Interface`
+    :ivar name: Name (unique for this service)
+    :vartype name: basestring
+    :ivar group_template: Template from which this group was instantiated (optional)
+    :vartype group_template: :class:`GroupTemplate`
+    :ivar type: Group type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: string
+    :ivar nodes: Members of this group
+    :vartype nodes: [:class:`Node`]
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interfaces: Bundles of operations
+    :vartype interfaces: {basestring: :class:`Interface`}
     """
 
     __tablename__ = 'group'
 
     @declared_attr
+    def group_template(cls):
+        return cls.many_to_one_relationship('group_template')
+
+    @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
+
+    description = Column(Text)
+
+    @declared_attr
+    def nodes(cls):
+        return cls.many_to_many_relationship('node')
 
     @declared_attr
     def properties(cls):
@@ -523,14 +584,6 @@ class GroupBase(InstanceModelMixin):
     @declared_attr
     def interfaces(cls):
         return cls.one_to_many_relationship('interface', dict_key='name')
-
-    @declared_attr
-    def nodes(cls):
-        return cls.many_to_many_relationship('node')
-
-    @declared_attr
-    def group_template(cls):
-        return cls.many_to_one_relationship('group_template')
 
     # region foreign_keys
 
@@ -587,15 +640,33 @@ class PolicyBase(InstanceModelMixin):
     """
     Usually an instance of a :class:`PolicyTemplate`.
 
-    :ivar name: Name
-    :ivar properties: Dict of :class:`Parameter`
+    :ivar name: Name (unique for this service)
+    :vartype name: basestring
+    :ivar policy_template: Template from which this policy was instantiated (optional)
+    :vartype policy_template: :class:`PolicyTemplate`
+    :ivar type: Policy type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: string
+    :ivar nodes: Policy will be enacted on all these nodes
+    :vartype nodes: [:class:`Node`]
+    :ivar groups: Policy will be enacted on all nodes in these groups
+    :vartype groups: [:class:`Group`]
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'policy'
 
     @declared_attr
+    def policy_template(cls):
+        return cls.many_to_one_relationship('policy_template')
+
+    @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
+
+    description = Column(Text)
 
     @declared_attr
     def properties(cls):
@@ -609,10 +680,6 @@ class PolicyBase(InstanceModelMixin):
     @declared_attr
     def groups(cls):
         return cls.many_to_many_relationship('group')
-
-    @declared_attr
-    def policy_template(cls):
-        return cls.many_to_one_relationship('policy_template')
 
     # region foreign_keys
 
@@ -669,12 +736,23 @@ class PolicyBase(InstanceModelMixin):
 
 class SubstitutionBase(InstanceModelMixin):
     """
+    Used to substitute a single node for the entire deployment.
+
     Usually an instance of a :class:`SubstitutionTemplate`.
 
-    :ivar mappings: Dict of :class:` SubstitutionMapping`
+    :ivar substitution_template: Template from which this substitution was instantiated (optional)
+    :vartype substitution_template: :class:`SubstitutionTemplate`
+    :ivar node_type: Exposed node type
+    :vartype node_type: :class:`Type`
+    :ivar mappings: Requirement and capability mappings
+    :vartype mappings: {basestring: :class:`SubstitutionTemplate`}
     """
 
     __tablename__ = 'substitution'
+
+    @declared_attr
+    def substitution_template(cls):
+        return cls.many_to_one_relationship('substitution_template')
 
     @declared_attr
     def node_type(cls):
@@ -683,10 +761,6 @@ class SubstitutionBase(InstanceModelMixin):
     @declared_attr
     def mappings(cls):
         return cls.one_to_many_relationship('substitution_mapping', dict_key='name')
-
-    @declared_attr
-    def substitution_template(cls):
-        return cls.many_to_one_relationship('substitution_template')
 
     # region foreign_keys
 
@@ -726,9 +800,20 @@ class SubstitutionBase(InstanceModelMixin):
 
 class SubstitutionMappingBase(InstanceModelMixin):
     """
-    An instance of a :class:`SubstitutionMappingTemplate`.
+    Used by :class:`Substitution` to map a capability or a requirement to a node.
+    
+    Only one of `capability_template` and `requirement_template` can be set.
+
+    Usually an instance of a :class:`SubstitutionTemplate`.
 
     :ivar name: Exposed capability or requirement name
+    :vartype name: basestring
+    :ivar node: Node
+    :vartype node: :class:`Node`
+    :ivar capability: Capability in the node
+    :vartype capability: :class:`Capability`
+    :ivar requirement_template: Requirement template in the node template
+    :vartype requirement_template: :class:`RequirementTemplate`
     """
 
     __tablename__ = 'substitution_mapping'
@@ -798,20 +883,41 @@ class SubstitutionMappingBase(InstanceModelMixin):
 
 class RelationshipBase(InstanceModelMixin):
     """
-    Connects :class:`Node` to another node.
+    Connects :class:`Node` to a capability in another node.
 
     Might be an instance of a :class:`RelationshipTemplate`.
 
     :ivar name: Name (usually the name of the requirement at the source node template)
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interfaces: Dict of :class:`Interface`
+    :vartype name: basestring
+    :ivar relationship_template: Template from which this relationship was instantiated (optional)
+    :vartype relationship_template: :class:`RelationshipTemplate`
+    :ivar type: Relationship type
+    :vartype type: :class:`Type`
+    :ivar source_node: Source node
+    :vartype source_node: :class:`Node`
+    :ivar target_node: Target node
+    :vartype target_node: :class:`Node`
+    :ivar target_capability: Capability at the target node (optional)
+    :vartype target_capability: :class:`Capability`
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interface_templates: Bundles of operations
+    :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     """
 
     __tablename__ = 'relationship'
 
     @declared_attr
+    def relationship_template(cls):
+        return cls.many_to_one_relationship('relationship_template')
+
+    @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
+
+    @declared_attr
+    def target_capability(cls):
+        return cls.one_to_one_relationship('capability')
 
     @declared_attr
     def properties(cls):
@@ -823,16 +929,8 @@ class RelationshipBase(InstanceModelMixin):
         return cls.one_to_many_relationship('interface', dict_key='name')
 
     @declared_attr
-    def capability(cls):
-        return cls.one_to_one_relationship('capability')
-
-    @declared_attr
     def requirement_template(cls):
         return cls.many_to_one_relationship('requirement_template')
-
-    @declared_attr
-    def relationship_template(cls):
-        return cls.many_to_one_relationship('relationship_template')
 
     # region orchestration
 
@@ -907,8 +1005,9 @@ class RelationshipBase(InstanceModelMixin):
             console.puts('->')
         with context.style.indent:
             console.puts('Node: {0}'.format(context.style.node(self.target_node.name)))
-            if self.capability:
-                console.puts('Capability: {0}'.format(context.style.node(self.capability.name)))
+            if self.target_capability:
+                console.puts('Capability: {0}'.format(context.style.node(
+                    self.target_capability.name)))
             if self.type is not None:
                 console.puts('Relationship type: {0}'.format(context.style.type(self.type.name)))
             if (self.relationship_template is not None) and self.relationship_template.name:
@@ -924,30 +1023,40 @@ class CapabilityBase(InstanceModelMixin):
 
     Usually an instance of a :class:`CapabilityTemplate`.
 
-    :ivar name: Name
+    :ivar name: Name (unique for the node)
+    :vartype name: basestring
+    :ivar capability_template: Template from which this capability was instantiated (optional)
+    :vartype capability_template: :class:`capabilityTemplate`
+    :ivar type: Capability type
+    :vartype type: :class:`Type`
     :ivar min_occurrences: Minimum number of requirement matches required
+    :vartype min_occurrences: int
     :ivar max_occurrences: Maximum number of requirement matches allowed
-    :ivar properties: Dict of :class:`Parameter`
+    :vartype min_occurrences: int
+    :ivar occurrences: Actual number of requirement matches
+    :vartype occurrences: int
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'capability'
 
     @declared_attr
+    def capability_template(cls):
+        return cls.many_to_one_relationship('capability_template')
+
+    @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
 
-    min_occurrences = Column(Integer, default=None) # optional
-    max_occurrences = Column(Integer, default=None) # optional
+    min_occurrences = Column(Integer, default=None)
+    max_occurrences = Column(Integer, default=None)
     occurrences = Column(Integer, default=0)
 
     @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              dict_key='name')
-
-    @declared_attr
-    def capability_template(cls):
-        return cls.many_to_one_relationship('capability_template')
 
     # region foreign_keys
 
@@ -1017,13 +1126,25 @@ class InterfaceBase(InstanceModelMixin):
     
     Usually an instance of :class:`InterfaceTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
-    :ivar inputs: Dict of :class:`Parameter`
-    :ivar operations: Dict of :class:`Operation`
+    :ivar name: Name (unique for the node, group, or relationship)
+    :vartype name: basestring
+    :ivar interface_template: Template from which this interface was instantiated (optional)
+    :vartype interface_template: :class:`InterfaceTemplate`
+    :ivar type: Interface type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: string
+    :ivar inputs: Parameters that can be used by all operations in the interface
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar operations: Operations
+    :vartype operations: {basestring: :class:`Operation`}
     """
 
     __tablename__ = 'interface'
+
+    @declared_attr
+    def interface_template(cls):
+        return cls.many_to_one_relationship('interface_template')
 
     @declared_attr
     def type(cls):
@@ -1039,10 +1160,6 @@ class InterfaceBase(InstanceModelMixin):
     @declared_attr
     def operations(cls):
         return cls.one_to_many_relationship('operation', dict_key='name')
-
-    @declared_attr
-    def interface_template(cls):
-        return cls.many_to_one_relationship('interface_template')
 
     # region foreign_keys
 
@@ -1112,37 +1229,51 @@ class OperationBase(InstanceModelMixin):
     
     Might be an instance of :class:`OperationTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
-    :ivar implementation: Implementation string (interpreted by the orchestrator)
-    :ivar dependencies: List of strings (interpreted by the orchestrator)
-    :ivar executor: Executor string (interpreted by the orchestrator)
+    :ivar name: Name (unique for the interface or service)
+    :vartype name: basestring
+    :ivar operation_template: Template from which this operation was instantiated (optional)
+    :vartype operation_template: :class:`OperationTemplate`
+    :ivar description: Human-readable description
+    :vartype description: string
+    :ivar plugin: Associated plugin
+    :vartype plugin: :class:`Plugin`
+    :ivar implementation: Implementation string (interpreted by the plugin)
+    :vartype implementation: basestring
+    :ivar dependencies: Dependency strings (interpreted by the plugin)
+    :vartype dependencies: [basestring]
+    :ivar inputs: Parameters that can be used by this operation
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar executor: Executor name
+    :vartype executor: basestring
     :ivar max_retries: Maximum number of retries allowed in case of failure
-    :ivar retry_interval: Interval between retries
-    :ivar inputs: Dict of :class:`Parameter`
+    :vartype max_retries: int
+    :ivar retry_interval: Interval between retries (in seconds)
+    :vartype retry_interval: int
     """
 
     __tablename__ = 'operation'
 
+    @declared_attr
+    def operation_template(cls):
+        return cls.many_to_one_relationship('operation_template')
+
     description = Column(Text)
+
+    @declared_attr
+    def plugin(cls):
+        return cls.one_to_one_relationship('plugin')
+
     implementation = Column(Text)
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
-    executor = Column(Text)
-    max_retries = Column(Integer)
-    retry_interval = Column(Integer)
 
     @declared_attr
     def inputs(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='inputs',
                                              dict_key='name')
 
-    @declared_attr
-    def plugin(cls):
-        return cls.one_to_one_relationship('plugin')
-
-    @declared_attr
-    def operation_template(cls):
-        return cls.many_to_one_relationship('operation_template')
+    executor = Column(Text)
+    max_retries = Column(Integer)
+    retry_interval = Column(Integer)
 
     # region foreign_keys
 
@@ -1220,23 +1351,37 @@ class ArtifactBase(InstanceModelMixin):
     
     Usually an instance of :class:`ArtifactTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
+    :ivar name: Name (unique for the node)
+    :vartype name: basestring
+    :ivar artifact_template: Template from which this artifact was instantiated (optional)
+    :vartype artifact_template: :class:`ArtifactTemplate`
+    :ivar type: Artifact type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: string
     :ivar source_path: Source path (CSAR or repository)
+    :vartype source_path: basestring
     :ivar target_path: Path at destination machine
+    :vartype target_path: basestring
     :ivar repository_url: Repository URL
-    :ivar repository_credential: Dict of string
-    :ivar properties: Dict of :class:`Parameter`
+    :vartype repository_path: basestring
+    :ivar repository_credential: Credentials for accessing the repository
+    :vartype repository_credential: {basestring: basestring}
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'artifact'
+
+    @declared_attr
+    def artifact_template(cls):
+        return cls.many_to_one_relationship('artifact_template')
 
     @declared_attr
     def type(cls):
         return cls.many_to_one_relationship('type')
 
     description = Column(Text)
-    type_name = Column(Text)
     source_path = Column(Text)
     target_path = Column(Text)
     repository_url = Column(Text)
@@ -1246,10 +1391,6 @@ class ArtifactBase(InstanceModelMixin):
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              dict_key='name')
-
-    @declared_attr
-    def artifact_template(cls):
-        return cls.many_to_one_relationship('artifact_template')
 
     # region foreign_keys
 

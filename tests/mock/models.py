@@ -18,90 +18,17 @@ from datetime import datetime
 from aria.modeling import models
 from . import operations
 
-SERVICE_NAME = 'test_service_id'
-SERVICE_TEMPLATE_NAME = 'test_service_template_id'
-WORKFLOW_NAME = 'test_workflow_id'
-EXECUTION_NAME = 'test_execution_id'
+SERVICE_NAME = 'test_service_name'
+SERVICE_TEMPLATE_NAME = 'test_service_template_name'
+WORKFLOW_NAME = 'test_workflow_name'
+EXECUTION_NAME = 'test_execution_name'
 TASK_RETRY_INTERVAL = 1
 TASK_MAX_ATTEMPTS = 1
 
-DEPENDENCY_NODE_NAME = 'dependency_node_template'
-DEPENDENCY_NODE_INSTANCE_NAME = 'dependency_node'
-DEPENDENT_NODE_NAME = 'dependent_node_template'
-DEPENDENT_NODE_INSTANCE_NAME = 'dependent_node'
-
-
-def create_dependency_node_template(service):
-    return models.NodeTemplate(
-        name=DEPENDENCY_NODE_NAME,
-        type=service.service_template.node_types.get_descendant('test_node_type'),
-        default_instances=1,
-        min_instances=1,
-        max_instances=1,
-        service_template_fk=service.service_template.id,
-    )
-
-
-def create_dependency_node(dependency_node_template, service):
-    return models.Node(
-        name=DEPENDENCY_NODE_INSTANCE_NAME,
-        type=dependency_node_template.type,
-        service=service,
-        runtime_properties={'ip': '1.1.1.1'},
-        version=None,
-        node_template=dependency_node_template,
-        state='',
-        scaling_groups=[]
-    )
-
-
-def create_requirement(source):
-    requirement_template = models.RequirementTemplate(node_template=source)
-    capability_template = models.CapabilityTemplate(
-        node_template=source,
-        type=source.service_template.capability_types.get_descendant('test_capability_type'))
-    return requirement_template, capability_template
-
-
-def create_relationship(source_instance, target_instance):
-    return models.Relationship(
-        target_node=target_instance,
-        source_node=source_instance,
-    )
-
-
-def create_dependent_node_template(service, requirement_template, capability_template):
-    operation_templates = dict((op, models.OperationTemplate(
-        name=op,
-        implementation='test'))
-                                for op in operations.NODE_OPERATIONS)
-    interface_template = models.InterfaceTemplate(
-        type=service.service_template.interface_types.get_descendant('test_interface_type'),
-        operation_templates=operation_templates)
-
-    return models.NodeTemplate(
-        name=DEPENDENT_NODE_NAME,
-        type=service.service_template.node_types.get_descendant('test_node_type'),
-        default_instances=1,
-        min_instances=1,
-        max_instances=1,
-        service_template=service.service_template,
-        interface_templates=_dictify(interface_template),
-        requirement_templates=[requirement_template],
-        capability_templates=_dictify(capability_template),
-    )
-
-
-def create_dependent_node(dependent_node_template, service):
-    return models.Node(
-        name=DEPENDENT_NODE_INSTANCE_NAME,
-        service=service,
-        runtime_properties={},
-        version=None,
-        node_template=dependent_node_template,
-        state='',
-        scaling_groups=[],
-    )
+DEPENDENCY_NODE_TEMPLATE_NAME = 'dependency_node_template'
+DEPENDENCY_NODE_NAME = 'dependency_node'
+DEPENDENT_NODE_TEMPLATE_NAME = 'dependent_node_template'
+DEPENDENT_NODE_NAME = 'dependent_node'
 
 
 def create_service_template():
@@ -122,16 +49,6 @@ def create_service_template():
     )
 
 
-def create_execution(service):
-    return models.Execution(
-        service=service,
-        status=models.Execution.STARTED,
-        workflow_name=WORKFLOW_NAME,
-        started_at=datetime.utcnow(),
-        parameters=None
-    )
-
-
 def create_service(service_template):
     now = datetime.utcnow()
     return models.Service(
@@ -140,9 +57,132 @@ def create_service(service_template):
         description='',
         created_at=now,
         updated_at=now,
-        workflows={},
         permalink='',
         scaling_groups={},
+    )
+
+
+def create_dependency_node_template(service_template):
+    the_type = service_template.node_types.get_descendant('test_node_type')
+    
+    capability_template = models.CapabilityTemplate(
+        name='capability',
+        type=service_template.capability_types.get_descendant('test_capability_type')
+    )
+    
+    node_template = models.NodeTemplate(
+        name=DEPENDENCY_NODE_TEMPLATE_NAME,
+        type=the_type,
+        capability_templates=_dictify(capability_template),
+        default_instances=1,
+        min_instances=1,
+        max_instances=1,
+        service_template=service_template
+    )
+    service_template.node_templates.append(node_template)
+    return node_template
+
+
+def create_dependent_node_template(service_template, dependency_node_template):
+    the_type = service_template.node_types.get_descendant('test_node_type')
+
+    operation_templates = dict((op, models.OperationTemplate(
+        name=op,
+        implementation='test'))
+                                for op in operations.NODE_OPERATIONS)
+    interface_template = models.InterfaceTemplate(
+        type=service_template.interface_types.get_descendant('test_interface_type'),
+        operation_templates=operation_templates)
+
+    requirement_template = models.RequirementTemplate(
+        name='requirement',
+        target_node_template=dependency_node_template
+    )
+
+    node_template = models.NodeTemplate(
+        name=DEPENDENT_NODE_TEMPLATE_NAME,
+        type=the_type,
+        default_instances=1,
+        min_instances=1,
+        max_instances=1,
+        interface_templates=_dictify(interface_template),
+        requirement_templates=[requirement_template],
+        service_template=service_template
+    )
+    service_template.node_templates.append(node_template)
+    return node_template
+
+
+def create_dependency_node(dependency_node_template, service):
+    node = models.Node(
+        name=DEPENDENCY_NODE_NAME,
+        type=dependency_node_template.type,
+        runtime_properties={'ip': '1.1.1.1'},
+        version=None,
+        node_template=dependency_node_template,
+        state='',
+        scaling_groups=[]
+    )
+    service.nodes.append(node)
+    return node
+
+
+def create_dependent_node(dependent_node_template, service):
+    node = models.Node(
+        name=DEPENDENT_NODE_NAME,
+        type=dependent_node_template.type,
+        runtime_properties={},
+        version=None,
+        node_template=dependent_node_template,
+        state='',
+        scaling_groups=[],
+    )
+    service.nodes.append(node)
+    return node
+
+
+def create_relationship(source, target):
+    return models.Relationship(
+        source_node=source,
+        target_node=target
+    )
+
+
+def create_interface_template(service_template, operation_name, operation_kwargs=None,
+                              interface_kwargs=None):
+    the_type = service_template.interface_types.get_descendant('test_interface_type')
+    interface_name, operation_name = operation_name.rsplit('.', 1)
+    operation_template = models.OperationTemplate(
+        name=operation_name,
+        **(operation_kwargs or {})
+    )
+    return models.InterfaceTemplate(
+        type=the_type,
+        operation_templates=_dictify(operation_template),
+        name=interface_name,
+        **(interface_kwargs or {})
+    )
+
+
+def create_interface(service, operation_name, operation_kwargs=None, interface_kwargs=None):
+    the_type = service.service_template.interface_types.get_descendant('test_interface_type')
+    interface_name, operation_name = operation_name.rsplit('.', 1)
+    operation = models.Operation(name=operation_name, **(operation_kwargs or {}))
+    return models.Interface(
+        type=the_type,
+        operations=_dictify(operation),
+        name=interface_name,
+        **(interface_kwargs or {})
+    )
+
+
+def create_execution(service):
+    return models.Execution(
+        service=service,
+        status=models.Execution.STARTED,
+        workflow_name=WORKFLOW_NAME,
+        started_at=datetime.utcnow(),
+        parameters=None
     )
 
 
@@ -160,31 +200,6 @@ def create_plugin(package_name='package', package_version='0.1'):
         uploaded_at=datetime.now(),
         wheels=[],
     )
-
-
-def create_interface_template(operation_name, operation_kwargs=None, interface_kwargs=None):
-    operation_template = models.OperationTemplate(
-        name=operation_name,
-        **(operation_kwargs or {})
-
-    )
-    return models.InterfaceTemplate(
-        operation_templates=_dictify(operation_template),
-        name=operation_name.rsplit('.', 1)[0],
-        **(interface_kwargs or {})
-    )
-
-
-def create_interface(operation_name,
-                     operation_kwargs=None,
-                     interface_kwargs=None,
-                     edge=None):
-    operation = models.Operation(name=operation_name, **(operation_kwargs or {}))
-    interface_name = operation_name.rsplit('.', 1)[0]
-    return models.Interface(operations=_dictify(operation),
-                            name=interface_name,
-                            edge=edge,
-                            **(interface_kwargs or {}))
 
 
 def _dictify(item):

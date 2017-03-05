@@ -63,40 +63,40 @@ def test_application_storage_factory():
     storage = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
                                         initiator=init_inmemory_model_storage)
 
-    assert storage.parameter
-    assert storage.mapping_template
-    assert storage.substitution_template
     assert storage.service_template
     assert storage.node_template
     assert storage.group_template
+    assert storage.policy_template
+    assert storage.substitution_template
+    assert storage.substitution_template_mapping
+    assert storage.requirement_template
+    assert storage.relationship_template
+    assert storage.capability_template
     assert storage.interface_template
     assert storage.operation_template
     assert storage.artifact_template
-    assert storage.policy_template
-    assert storage.group_policy_template
-    assert storage.group_policy_trigger_template
-    assert storage.requirement_template
-    assert storage.capability_template
 
-    assert storage.mapping
-    assert storage.substitution
-    assert storage.service_instance
+    assert storage.service
     assert storage.node
     assert storage.group
+    assert storage.policy
+    assert storage.substitution
+    assert storage.substitution_mapping
+    assert storage.relationship
+    assert storage.capability
     assert storage.interface
     assert storage.operation
-    assert storage.capability
     assert storage.artifact
-    assert storage.policy
-    assert storage.group_policy
-    assert storage.group_policy_trigger
-    assert storage.relationship
 
     assert storage.execution
-    assert storage.service_instance_update
-    assert storage.service_instance_update_step
-    assert storage.service_instance_modification
+    assert storage.service_update
+    assert storage.service_update_step
+    assert storage.service_modification
     assert storage.plugin
     assert storage.task
+
+    assert storage.parameter
+    assert storage.type
+    assert storage.metadata
 
     release_sqlite_storage(storage)

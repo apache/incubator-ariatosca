@@ -18,11 +18,11 @@ from sqlalchemy import Column, Text, Integer, event
 
 from aria.modeling import (
     bases,
-    exceptions,
     types as modeling_types,
     models
 )
 from aria.storage import (
+    exceptions,
     ModelStorage,
     sql_mapi,
     instrumentation
@@ -281,8 +281,8 @@ class TestInstrumentation(object):
     def test_track_changes_to_strict_dict(self, storage):
         model_kwargs = dict(strict_dict={'key': 'value'},
                             strict_list=['item'])
-        mode_instance = StrictMockModel(**model_kwargs)
-        storage.strict_mock_model.put(mode_instance)
+        model_instance = StrictMockModel(**model_kwargs)
+        storage.strict_mock_model.put(model_instance)
 
         instrument = self._track_changes({
             StrictMockModel.strict_dict: dict,
@@ -291,7 +291,7 @@ class TestInstrumentation(object):
 
         assert not instrument.tracked_changes
 
-        storage_model_instance = storage.strict_mock_model.get(mode_instance.id)
+        storage_model_instance = storage.strict_mock_model.get(model_instance.id)
 
         with pytest.raises(exceptions.StorageError):
             storage_model_instance.strict_dict = {1: 1}
@@ -312,7 +312,7 @@ class TestInstrumentation(object):
 
         assert instrument.tracked_changes == {
             'strict_mock_model': {
-                mode_instance.id: {
+                model_instance.id: {
                     'strict_dict': Value(STUB, {'hello': 'world'}),
                     'strict_list': Value(STUB, ['hello']),
                 }

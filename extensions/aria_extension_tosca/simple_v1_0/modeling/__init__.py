@@ -64,14 +64,14 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     create_types(context,
                  model.capability_types,
                  context.presentation.get('service_template', 'capability_types'))
-    model.artifact_types = Type(variant='artifact')
-    create_types(context,
-                 model.artifact_types,
-                 context.presentation.get('service_template', 'artifact_types'))
     model.interface_types = Type(variant='interface')
     create_types(context,
                  model.interface_types,
                  context.presentation.get('service_template', 'interface_types'))
+    model.artifact_types = Type(variant='artifact')
+    create_types(context,
+                 model.artifact_types,
+                 context.presentation.get('service_template', 'artifact_types'))
 
     # Topology template
     topology_template = context.presentation.get('service_template', 'topology_template')
@@ -86,7 +86,7 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     if policies:
         for policy in policies.itervalues():
             if model.policy_types.get_descendant(policy.type).role == 'plugin':
-                model.plugins[policy._name] = create_plugin_model(context, policy)
+                model.plugins.append(create_plugin_model(context, policy))
 
     # Node templates
     node_templates = context.presentation.get('service_template', 'topology_template',
@@ -667,7 +667,11 @@ def parse_implementation_string(context, service_template, implementation):
     if plugin_name == 'execution':
         plugin = None
     else:
-        plugin = service_template.plugins.get(plugin_name)
+        plugin = None
+        for the_plugin in service_template.plugins:
+            if the_plugin.name == plugin_name:
+                plugin = the_plugin
+                break
         if plugin is None:
             raise ValueError('unknown plugin: "{0}"'.format(plugin_name))
 

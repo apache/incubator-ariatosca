@@ -154,13 +154,13 @@ class ServiceUpdateBase(ModelMixin):
 
     __tablename__ = 'service_update' 
 
-    _private_fields = ['execution_fk', 'deployment_fk']
+    _private_fields = ['execution_fk', 'service_fk']
 
     created_at = Column(DateTime, nullable=False, index=True)
     service_plan = Column(Dict, nullable=False)
-    service_update_node_instances = Column(Dict)
-    service_update_service_instance = Column(Dict)
-    service_update_nodes = Column(List)
+    service_update_nodes = Column(Dict)
+    service_update_service = Column(Dict)
+    service_update_node_templates = Column(List)
     modified_entity_ids = Column(Dict)
     state = Column(Text)
 
@@ -239,8 +239,8 @@ class ServiceUpdateStepBase(ModelMixin):
                                             backreference='steps')
 
     @declared_attr
-    def deployment_update_name(cls):
-        return association_proxy('deployment_update', cls.name_column_name())
+    def service_update_name(cls):
+        return association_proxy('service_update', cls.name_column_name())
 
     # region foreign keys
 
@@ -297,9 +297,9 @@ class ServiceModificationBase(ModelMixin):
     context = Column(Dict)
     created_at = Column(DateTime, nullable=False, index=True)
     ended_at = Column(DateTime, index=True)
-    modified_nodes = Column(Dict)
-    node_instances = Column(Dict)
-    status = Column(Enum(*STATES, name='deployment_modification_status'))
+    modified_node_templates = Column(Dict)
+    nodes = Column(Dict)
+    status = Column(Enum(*STATES, name='service_modification_status'))
 
     @declared_attr
     def service(cls):

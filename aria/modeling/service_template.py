@@ -17,7 +17,6 @@
 
 from __future__ import absolute_import  # so we can import standard 'types'
 
-from copy import deepcopy
 from types import FunctionType
 from datetime import datetime
 
@@ -40,27 +39,61 @@ from . import (
 
 class ServiceTemplateBase(TemplateModelMixin):
     """
-    A service template is a normalized blueprint from which :class:`ServiceInstance` instances can
-    be created.
+    A service template is a source for creating :class:`Service` instances.
 
     It is usually created by various DSL parsers, such as ARIA's TOSCA extension. However, it can
     also be created programmatically.
 
+    :ivar name: Name (unique for this ARIA installation)
+    :vartype name: basestring
     :ivar description: Human-readable description
-    :vartype description: string
-    :ivar meta_data: Dict of :class:`Metadata`
-    :ivar node_templates: List of :class:`NodeTemplate`
-    :ivar group_templates: List of :class:`GroupTemplate`
-    :ivar policy_templates: List of :class:`PolicyTemplate`
-    :ivar substitution_template: :class:`SubstitutionTemplate`
-    :ivar inputs: Dict of :class:`Parameter`
-    :ivar outputs: Dict of :class:`Parameter`
-    :ivar operation_templates: Dict of :class:`OperationTemplate`
+    :vartype description: basestring
+    :ivar main_file_name: Filename of CSAR or YAML file from which this service template was parsed
+    :vartype main_file_name: basestring
+    :ivar meta_data: Custom annotations
+    :vartype meta_data: {basestring: :class:`Metadata`}
+    :ivar node_templates: Templates for creating nodes
+    :vartype node_templates: [:class:`NodeTemplate`]
+    :ivar group_templates: Templates for creating groups
+    :vartype group_templates: [:class:`GroupTemplate`]
+    :ivar policy_templates: Templates for creating policies
+    :vartype policy_templates: [:class:`PolicyTemplate`]
+    :ivar substitution_template: The entire service can appear as a node
+    :vartype substitution_template: :class:`SubstitutionTemplate`
+    :ivar inputs: Externally provided parameters
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar outputs: These parameters are filled in after service installation
+    :vartype outputs: {basestring: :class:`Parameter`}
+    :ivar operation_templates: Custom operations that can be performed on the service
+    :vartype operation_templates: {basestring: :class:`OperationTemplate`}
+    :ivar plugins: Plugins required by services
+    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar node_types: Base for the node type hierarchy
+    :vartype node_types: :class:`Type`
+    :ivar group_types: Base for the group type hierarchy
+    :vartype group_types: :class:`Type`
+    :ivar policy_types: Base for the policy type hierarchy
+    :vartype policy_types: :class:`Type`
+    :ivar relationship_types: Base for the relationship type hierarchy
+    :vartype relationship_types: :class:`Type`
+    :ivar capability_types: Base for the capability type hierarchy
+    :vartype capability_types: :class:`Type`
+    :ivar interface_types: Base for the interface type hierarchy
+    :vartype interface_types: :class:`Type`
+    :ivar artifact_types: Base for the artifact type hierarchy
+    :vartype artifact_types: :class:`Type`
+    :ivar plugins: Plugins required to be installed
+    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar created_at: Creation timestamp
+    :vartype created_at: :class:`datetime.datetime`
+    :ivar updated_at: Update timestamp
+    :vartype updated_at: :class:`datetime.datetime`
     """
 
     __tablename__ = 'service_template'
 
     description = Column(Text)
+    main_file_name = Column(Text)
 
     @declared_attr
     def meta_data(cls):
@@ -98,6 +131,10 @@ class ServiceTemplateBase(TemplateModelMixin):
         return cls.one_to_many_relationship('operation_template', dict_key='name')
 
     @declared_attr
+    def plugins(cls):
+        return cls.one_to_many_relationship('plugin')
+
+    @declared_attr
     def node_types(cls):
         return cls.one_to_one_relationship('type', key='node_type_fk', backreference='')
 
@@ -106,40 +143,42 @@ class ServiceTemplateBase(TemplateModelMixin):
         return cls.one_to_one_relationship('type', key='group_type_fk', backreference='')
 
     @declared_attr
-    def capability_types(cls):
-        return cls.one_to_one_relationship('type', key='capability_type_fk', backreference='')
+    def policy_types(cls):
+        return cls.one_to_one_relationship('type', key='policy_type_fk', backreference='')
 
     @declared_attr
     def relationship_types(cls):
         return cls.one_to_one_relationship('type', key='relationship_type_fk', backreference='')
 
     @declared_attr
-    def policy_types(cls):
-        return cls.one_to_one_relationship('type', key='policy_type_fk', backreference='')
-
-    @declared_attr
-    def artifact_types(cls):
-        return cls.one_to_one_relationship('type', key='artifact_type_fk', backreference='')
+    def capability_types(cls):
+        return cls.one_to_one_relationship('type', key='capability_type_fk', backreference='')
 
     @declared_attr
     def interface_types(cls):
         return cls.one_to_one_relationship('type', key='interface_type_fk', backreference='')
 
+    @declared_attr
+    def artifact_types(cls):
+        return cls.one_to_one_relationship('type', key='artifact_type_fk', backreference='')
+
     # region orchestration
 
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
-    main_file_name = Column(Text)
-
-    @declared_attr
-    def plugins(cls):
-        return cls.one_to_many_relationship('plugin', dict_key='name')
 
     # endregion
 
     # region foreign keys
 
-    __private_fields__ = ['substitution_template_fk']
+    __private_fields__ = ['substitution_template_fk',
+                          'node_type_fk',
+                          'group_type_fk',
+                          'policy_type_fk',
+                          'relationship_type_fk',
+                          'capability_type_fk',
+                          'interface_type_fk',
+                          'artifact_type_fk']
 
     # ServiceTemplate one-to-one to SubstitutionTemplate
     @declared_attr
@@ -158,7 +197,7 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
-    def capability_type_fk(cls):
+    def policy_type_fk(cls):
         return cls.foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
@@ -168,17 +207,17 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
-    def policy_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
-
-    # ServiceTemplate one-to-one to Type
-    @declared_attr
-    def artifact_type_fk(cls):
+    def capability_type_fk(cls):
         return cls.foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def interface_type_fk(cls):
+        return cls.foreign_key('type', nullable=True)
+
+    # ServiceTemplate one-to-one to Type
+    @declared_attr
+    def artifact_type_fk(cls):
         return cls.foreign_key('type', nullable=True)
 
     # endregion
@@ -215,18 +254,18 @@ class ServiceTemplateBase(TemplateModelMixin):
         return collections.OrderedDict((
             ('node_types', formatting.as_raw(self.node_types)),
             ('group_types', formatting.as_raw(self.group_types)),
-            ('capability_types', formatting.as_raw(self.capability_types)),
-            ('relationship_types', formatting.as_raw(self.relationship_types)),
             ('policy_types', formatting.as_raw(self.policy_types)),
-            ('artifact_types', formatting.as_raw(self.artifact_types)),
-            ('interface_types', formatting.as_raw(self.interface_types))))
+            ('relationship_types', formatting.as_raw(self.relationship_types)),
+            ('capability_types', formatting.as_raw(self.capability_types)),
+            ('interface_types', formatting.as_raw(self.interface_types)),
+            ('artifact_types', formatting.as_raw(self.artifact_types))))
 
     def instantiate(self, context, container):
         from . import models
         now = datetime.now()
         service = models.Service(created_at=now,
                                  updated_at=now,
-                                 description=deepcopy_with_locators(self.description),
+                                 description=utils.deepcopy_with_locators(self.description),
                                  service_template=self)
         #service.name = '{0}_{1}'.format(self.name, service.id)
 
@@ -267,6 +306,20 @@ class ServiceTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(context, self.inputs)
         utils.validate_dict_values(context, self.outputs)
         utils.validate_dict_values(context, self.operation_templates)
+        if self.node_types is not None:
+            self.node_types.validate(context)
+        if self.group_types is not None:
+            self.group_types.validate(context)
+        if self.policy_types is not None:
+            self.policy_types.validate(context)
+        if self.relationship_types is not None:
+            self.relationship_types.validate(context)
+        if self.capability_types is not None:
+            self.capability_types.validate(context)
+        if self.interface_types is not None:
+            self.interface_types.validate(context)
+        if self.artifact_types is not None:
+            self.artifact_types.validate(context)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, container, self.meta_data, report_issues)
@@ -283,7 +336,6 @@ class ServiceTemplateBase(TemplateModelMixin):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
         utils.dump_dict_values(context, self.meta_data, 'Metadata')
-
         for node_template in self.node_templates:
             node_template.dump(context)
         for group_template in self.group_templates:
@@ -327,17 +379,33 @@ class NodeTemplateBase(TemplateModelMixin):
     """
     A template for creating zero or more :class:`Node` instances.
 
-    :ivar name: Name (will be used as a prefix for node IDs)
-    :ivar description: Description
-    :ivar default_instances: Default number nodes that will appear in the deployment plan
-    :ivar min_instances: Minimum number nodes that will appear in the deployment plan
-    :ivar max_instances: Maximum number nodes that will appear in the deployment plan
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
-    :ivar artifact_templates: Dict of :class:`ArtifactTemplate`
-    :ivar capability_templates: Dict of :class:`CapabilityTemplate`
-    :ivar requirement_templates: List of :class:`RequirementTemplate`
-    :ivar target_node_template_constraints: List of :class:`FunctionType`
+    :ivar name: Name (unique for this service template; will usually be used as a prefix for node
+                names)
+    :vartype name: basestring
+    :ivar type: Node type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar default_instances: Default number nodes that will appear in the service
+    :vartype default_instances: int
+    :ivar min_instances: Minimum number nodes that will appear in the service
+    :vartype min_instances: int
+    :ivar max_instances: Maximum number nodes that will appear in the service
+    :vartype max_instances: int
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interface_templates: Bundles of operations
+    :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
+    :ivar artifact_templates: Associated files
+    :vartype artifact_templates: {basestring: :class:`ArtifactTemplate`}
+    :ivar capability_templates: Exposed capabilities
+    :vartype capability_templates: {basestring: :class:`CapabilityTemplate`}
+    :ivar requirement_templates: Potential relationships with other nodes
+    :vartype requirement_templates: [:class:`RequirementTemplate`]
+    :ivar target_node_template_constraints: Constraints for filtering relationship targets
+    :vartype target_node_template_constraints: [:class:`FunctionType`]
+    :ivar plugins: Plugins required to be installed on the node's host
+    :vartype plugins: {basestring: :class:`Plugin`}
     """
 
     __tablename__ = 'node_template'
@@ -350,7 +418,6 @@ class NodeTemplateBase(TemplateModelMixin):
     default_instances = Column(Integer, default=1)
     min_instances = Column(Integer, default=0)
     max_instances = Column(Integer, default=None)
-    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
 
     @declared_attr
     def properties(cls):
@@ -372,15 +439,14 @@ class NodeTemplateBase(TemplateModelMixin):
     @declared_attr
     def requirement_templates(cls):
         return cls.one_to_many_relationship('requirement_template',
-                                            foreign_key='node_template_fk')
+                                            foreign_key='node_template_fk',
+                                            backreference='node_template')
 
-    # region orchestration
+    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
 
     @declared_attr
     def plugins(cls):
-        return cls.many_to_many_relationship('plugin', dict_key='name')
-
-    # endregion
+        return cls.many_to_many_relationship('plugin')
 
     # region foreign_keys
 
@@ -426,6 +492,7 @@ class NodeTemplateBase(TemplateModelMixin):
         name = context.modeling.generate_node_id(self.name)
         node = models.Node(name=name,
                            type=self.type,
+                           description=utils.deepcopy_with_locators(self.description),
                            state='',
                            node_template=self)
         utils.instantiate_dict(context, node, node.properties, self.properties)
@@ -469,15 +536,22 @@ class NodeTemplateBase(TemplateModelMixin):
 
 class GroupTemplateBase(TemplateModelMixin):
     """
-    A template for creating zero or more :class:`Group` instances.
+    A template for creating a :class:`Group` instance.
 
-    Groups are logical containers for zero or more nodes that allow applying zero or more
-    :class:`GroupPolicy` instances to the nodes together.
+    Groups are logical containers for zero or more nodes.
 
-    :ivar name: Name (will be used as a prefix for group IDs)
-    :ivar description: Description
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
+    :ivar name: Name (unique for this service template)
+    :vartype name: basestring
+    :ivar type: Group type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar node_templates: All nodes instantiated by these templates will be members of the group
+    :vartype node_templates: [:class:`NodeTemplate`]
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interface_templates: Bundles of operations
+    :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     """
 
     __tablename__ = 'group_template'
@@ -489,6 +563,10 @@ class GroupTemplateBase(TemplateModelMixin):
     description = Column(Text)
 
     @declared_attr
+    def node_templates(cls):
+        return cls.many_to_many_relationship('node_template')
+
+    @declared_attr
     def properties(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='properties',
                                              dict_key='name')
@@ -496,10 +574,6 @@ class GroupTemplateBase(TemplateModelMixin):
     @declared_attr
     def interface_templates(cls):
         return cls.one_to_many_relationship('interface_template', dict_key='name')
-
-    @declared_attr
-    def node_templates(cls):
-        return cls.many_to_many_relationship('node_template')
 
     # region foreign keys
 
@@ -531,6 +605,7 @@ class GroupTemplateBase(TemplateModelMixin):
         from . import models
         group = models.Group(name=self.name,
                              type=self.type,
+                             description=utils.deepcopy_with_locators(self.description),
                              group_template=self)
         utils.instantiate_dict(context, self, group.properties, self.properties)
         utils.instantiate_dict(context, self, group.interfaces, self.interface_templates)
@@ -565,9 +640,18 @@ class PolicyTemplateBase(TemplateModelMixin):
     Policies can be applied to zero or more :class:`NodeTemplate` or :class:`GroupTemplate`
     instances.
 
-    :ivar name: Name
-    :ivar description: Description
-    :ivar properties: Dict of :class:`Parameter`
+    :ivar name: Name (unique for this service template)
+    :vartype name: basestring
+    :ivar type: Policy type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar node_templates: Policy will be enacted on all nodes instantiated by these templates
+    :vartype node_templates: [:class:`NodeTemplate`]
+    :ivar group_templates: Policy will be enacted on all nodes in these groups
+    :vartype group_templates: [:class:`GroupTemplate`]
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'policy_template'
@@ -579,17 +663,17 @@ class PolicyTemplateBase(TemplateModelMixin):
     description = Column(Text)
 
     @declared_attr
-    def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
-
-    @declared_attr
     def node_templates(cls):
         return cls.many_to_many_relationship('node_template')
 
     @declared_attr
     def group_templates(cls):
         return cls.many_to_many_relationship('group_template')
+
+    @declared_attr
+    def properties(cls):
+        return cls.many_to_many_relationship('parameter', table_prefix='properties',
+                                             dict_key='name')
 
     # region foreign keys
 
@@ -620,6 +704,7 @@ class PolicyTemplateBase(TemplateModelMixin):
         from . import models
         policy = models.Policy(name=self.name,
                                type=self.type,
+                               description=utils.deepcopy_with_locators(self.description),
                                policy_template=self)
         utils.instantiate_dict(context, self, policy.properties, self.properties)
         if self.node_templates:
@@ -655,7 +740,10 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     """
     Used to substitute a single node for the entire deployment.
 
-    :ivar mappings: Dict of :class:` SubstitutionTemplateMapping`
+    :ivar node_type: Exposed node type
+    :vartype node_type: :class:`Type`
+    :ivar mappings: Requirement and capability mappings
+    :vartype mappings: {basestring: :class:`SubstitutionTemplateMapping`}
     """
 
     __tablename__ = 'substitution_template'
@@ -708,8 +796,17 @@ class SubstitutionTemplateBase(TemplateModelMixin):
 class SubstitutionTemplateMappingBase(TemplateModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
+    
+    Only one of `capability_template` and `requirement_template` can be set.
 
     :ivar name: Exposed capability or requirement name
+    :vartype name: basestring
+    :ivar node_template: Node template
+    :vartype node_template: :class:`NodeTemplate`
+    :ivar capability_template: Capability template in the node template
+    :vartype capability_template: :class:`CapabilityTemplate`
+    :ivar requirement_template: Requirement template in the node template
+    :vartype requirement_template: :class:`RequirementTemplate`
     """
 
     __tablename__ = 'substitution_template_mapping'
@@ -807,10 +904,20 @@ class RequirementTemplateBase(TemplateModelMixin):
     Requirements may optionally contain a :class:`RelationshipTemplate` that will be created between
     the nodes.
 
-    :ivar name: Name
-    :ivar target_node_template_constraints: List of :class:`FunctionType`
-    :ivar target_capability_name: Name of capability in target node
-    :ivar relationship_template: :class:`RelationshipTemplate`
+    :ivar name: Name (a node template can have multiple requirements with the same name)
+    :vartype name: basestring
+    :ivar target_node_type: Required node type (optional)
+    :vartype target_node_type: :class:`Type`
+    :ivar target_node_template: Required node template (optional)
+    :vartype target_node_template: :class:`NodeTemplate`
+    :ivar target_capability_type: Required capability type (optional)
+    :vartype target_capability_type: :class:`Type`
+    :ivar target_capability_name: Name of capability in target node (optional)
+    :vartype target_capability_name: basestring
+    :ivar target_node_template_constraints: Constraints for filtering relationship targets
+    :vartype target_node_template_constraints: [:class:`FunctionType`]
+    :ivar relationship_template: Template for relationships (optional)
+    :vartype relationship_template: :class:`RelationshipTemplate`
     """
 
     __tablename__ = 'requirement_template'
@@ -829,8 +936,8 @@ class RequirementTemplateBase(TemplateModelMixin):
         return cls.one_to_one_relationship('type', key='target_capability_type_fk',
                                            backreference='')
 
-    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
     target_capability_name = Column(Text)
+    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
 
     @declared_attr
     def relationship_template(cls):
@@ -972,10 +1079,21 @@ class RelationshipTemplateBase(TemplateModelMixin):
     """
     Optional addition to a :class:`RequirementTemplate` in :class:`NodeTemplate` that can be applied
     when the requirement is matched with a capability.
+    
+    Note that a relationship template here is not equivalent to a relationship template entity in
+    TOSCA. For example, a TOSCA requirement specifying a relationship type instead of a template
+    would still be represented here as a relationship template.
 
-    :ivar description: Description
-    :ivar properties: Dict of :class:`Parameter`
-    :ivar interface_templates: Dict of :class:`InterfaceTemplate`
+    :ivar name: Name (optional; if present is unique for this service template)
+    :vartype name: basestring
+    :ivar type: Relationship type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
+    :ivar interface_templates: Bundles of operations
+    :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     """
 
     __tablename__ = 'relationship_template'
@@ -1052,11 +1170,18 @@ class CapabilityTemplateBase(TemplateModelMixin):
     A capability of a :class:`NodeTemplate`. Nodes expose zero or more capabilities that can be
     matched with :class:`Requirement` instances of other nodes.
 
-    :ivar name: Name
-    :ivar description: Description
+    :ivar name: Name (unique for the node template)
+    :vartype name: basestring
+    :ivar type: Capability type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
     :ivar min_occurrences: Minimum number of requirement matches required
+    :vartype min_occurrences: int
     :ivar max_occurrences: Maximum number of requirement matches allowed
-    :ivar properties: Dict of :class:`Parameter`
+    :vartype min_occurrences: int
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'capability_template'
@@ -1170,10 +1295,16 @@ class InterfaceTemplateBase(TemplateModelMixin):
     """
     A typed set of :class:`OperationTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
-    :ivar inputs: Dict of :class:`Parameter`
-    :ivar operation_templates: Dict of :class:`OperationTemplate`
+    :ivar name: Name (unique for the node, group, or relationship template)
+    :vartype name: basestring
+    :ivar type: Interface type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar inputs: Parameters that can be used by all operations in the interface
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar operation_templates: Operations
+    :vartype operation_templates: {basestring: :class:`OperationTemplate`}
     """
 
     __tablename__ = 'interface_template'
@@ -1234,8 +1365,8 @@ class InterfaceTemplateBase(TemplateModelMixin):
     def instantiate(self, context, container):
         from . import models
         interface = models.Interface(name=self.name,
-                                     description=deepcopy_with_locators(self.description),
                                      type=self.type,
+                                     description=utils.deepcopy_with_locators(self.description),
                                      interface_template=self)
         utils.instantiate_dict(context, container, interface.inputs, self.inputs)
         utils.instantiate_dict(context, container, interface.operations, self.operation_templates)
@@ -1263,33 +1394,43 @@ class OperationTemplateBase(TemplateModelMixin):
     """
     An operation in a :class:`InterfaceTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
-    :ivar implementation: Implementation string (interpreted by the orchestrator)
-    :ivar dependencies: List of strings (interpreted by the orchestrator)
-    :ivar executor: Executor string (interpreted by the orchestrator)
+    Operations are executed by an associated :class:`Plugin` via an executor.
+
+    :ivar name: Name (unique for the interface or service template)
+    :vartype name: basestring
+    :ivar description: Human-readable description
+    :vartype description: basestring
+    :ivar plugin: Associated plugin
+    :vartype plugin: :class:`Plugin`
+    :ivar implementation: Implementation string (interpreted by the plugin)
+    :vartype implementation: basestring
+    :ivar dependencies: Dependency strings (interpreted by the plugin)
+    :vartype dependencies: [basestring]
+    :ivar inputs: Parameters that can be used by this operation
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar executor: Executor name
+    :vartype executor: basestring
     :ivar max_retries: Maximum number of retries allowed in case of failure
-    :ivar retry_interval: Interval between retries
-    :ivar inputs: Dict of :class:`Parameter`
+    :vartype max_retries: int
+    :ivar retry_interval: Interval between retries (in seconds)
+    :vartype retry_interval: int
     """
 
     __tablename__ = 'operation_template'
 
     description = Column(Text)
+
+    @declared_attr
+    def plugin(cls):
+        return cls.one_to_one_relationship('plugin')
+
     implementation = Column(Text)
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
-    executor = Column(Text)
-    max_retries = Column(Integer)
-    retry_interval = Column(Integer)
 
     @declared_attr
     def inputs(cls):
         return cls.many_to_many_relationship('parameter', table_prefix='inputs',
                                              dict_key='name')
-
-    @declared_attr
-    def plugin(cls):
-        return cls.one_to_one_relationship('plugin')
 
     executor = Column(Text)
     max_retries = Column(Integer)
@@ -1333,7 +1474,7 @@ class OperationTemplateBase(TemplateModelMixin):
     def instantiate(self, context, container):
         from . import models
         operation = models.Operation(name=self.name,
-                                     description=deepcopy_with_locators(self.description),
+                                     description=utils.deepcopy_with_locators(self.description),
                                      implementation=self.implementation,
                                      dependencies=self.dependencies,
                                      plugin=self.plugin,
@@ -1375,13 +1516,22 @@ class ArtifactTemplateBase(TemplateModelMixin):
     """
     A file associated with a :class:`NodeTemplate`.
 
-    :ivar name: Name
-    :ivar description: Description
+    :ivar name: Name (unique for the node template)
+    :vartype name: basestring
+    :ivar type: Artifact type
+    :vartype type: :class:`Type`
+    :ivar description: Human-readable description
+    :vartype description: basestring
     :ivar source_path: Source path (CSAR or repository)
+    :vartype source_path: basestring
     :ivar target_path: Path at destination machine
+    :vartype target_path: basestring
     :ivar repository_url: Repository URL
-    :ivar repository_credential: Dict of string
-    :ivar properties: Dict of :class:`Parameter`
+    :vartype repository_path: basestring
+    :ivar repository_credential: Credentials for accessing the repository
+    :vartype repository_credential: {basestring: basestring}
+    :ivar properties: Associated parameters
+    :vartype properties: {basestring: :class:`Parameter`}
     """
 
     __tablename__ = 'artifact_template'
@@ -1434,8 +1584,8 @@ class ArtifactTemplateBase(TemplateModelMixin):
         from . import models
         artifact = models.Artifact(name=self.name,
                                    type=self.type,
+                                   description=utils.deepcopy_with_locators(self.description),
                                    source_path=self.source_path,
-                                   description=deepcopy_with_locators(self.description),
                                    target_path=self.target_path,
                                    repository_url=self.repository_url,
                                    repository_credential=self.repository_credential,
@@ -1465,35 +1615,3 @@ class ArtifactTemplateBase(TemplateModelMixin):
                 console.puts('Repository credential: {0}'.format(
                     context.style.literal(self.repository_credential)))
             utils.dump_dict_values(context, self.properties, 'Properties')
-
-
-def deepcopy_with_locators(value):
-    """
-    Like :code:`deepcopy`, but also copies over locators.
-    """
-
-    res = deepcopy(value)
-    copy_locators(res, value)
-    return res
-
-
-def copy_locators(target, source):
-    """
-    Copies over :code:`_locator` for all elements, recursively.
-
-    Assumes that target and source have exactly the same list/dict structure.
-    """
-
-    locator = getattr(source, '_locator', None)
-    if locator is not None:
-        try:
-            setattr(target, '_locator', locator)
-        except AttributeError:
-            pass
-
-    if isinstance(target, list) and isinstance(source, list):
-        for i, _ in enumerate(target):
-            copy_locators(target[i], source[i])
-    elif isinstance(target, dict) and isinstance(source, dict):
-        for k, v in target.items():
-            copy_locators(v, source[k])

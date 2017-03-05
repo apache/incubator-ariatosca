@@ -92,73 +92,71 @@ def test_inner_list_update(storage):
 
 
 def test_model_to_dict(context):
-    service_instance = context.service_instance
-    service_instance = service_instance.to_dict()
+    service = context.service
+    service = service.to_dict()
 
     expected_keys = [
         'description',
-        '_metadata',
         'created_at',
         'permalink',
-        'policy_triggers',
-        'policy_types',
         'scaling_groups',
-        'updated_at',
-        'workflows',
+        'updated_at'
     ]
 
     for expected_key in expected_keys:
-        assert expected_key in service_instance
+        assert expected_key in service
 
 
 def test_relationship_model_ordering(context):
-    service_instance = context.model.service_instance.get_by_name(models.SERVICE_NAME)
-    source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_INSTANCE_NAME)
-    target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_INSTANCE_NAME)
+    service = context.model.service.get_by_name(models.SERVICE_NAME)
+    source_node = context.model.node.get_by_name(models.DEPENDENT_NODE_NAME)
+    target_node = context.model.node.get_by_name(models.DEPENDENCY_NODE_NAME)
+
     new_node_template = modeling.models.NodeTemplate(
-        name='new_node',
-        type_name='test_node_type',
-        type_hierarchy=[],
+        name='new_node_template',
+        type=source_node.type,
         default_instances=1,
         min_instances=1,
         max_instances=1,
-        service_template=service_instance.service_template
+        service_template=service.service_template
     )
+
     new_node = modeling.models.Node(
-        name='new_node_instance',
+        name='new_node',
+        type=source_node.type,
         runtime_properties={},
-        service_instance=service_instance,
+        service=service,
         version=None,
         node_template=new_node_template,
         state='',
         scaling_groups=[]
     )
 
-    source_to_new_relationship = modeling.models.Relationship(
-        target_node=new_node,
+    source_node.outbound_relationships.append(modeling.models.Relationship(
         source_node=source_node,
-    )
+        target_node=new_node,
+    ))
 
-    new_to_target_relationship = modeling.models.Relationship(
+    new_node.outbound_relationships.append(modeling.models.Relationship(
         source_node=new_node,
         target_node=target_node,
-    )
+    ))
 
     context.model.node_template.put(new_node_template)
     context.model.node.put(new_node)
-    context.model.relationship.put(source_to_new_relationship)
-    context.model.relationship.put(new_to_target_relationship)
+    context.model.node.refresh(source_node)
+    context.model.node.refresh(target_node)
 
     def flip_and_assert(node, direction):
         """
         Reversed the order of relationships and assert effects took place.
-        :param node: the node instance to operatate on
-        :param direction: the type of relationships to flip (inbound/outbount)
+        :param node: the node instance to operate on
+        :param direction: the type of relationships to flip (inbound/outbound)
         :return:
         """
         assert direction in ('inbound', 'outbound')
 
-        relationships = getattr(node, direction + '_relationships').all()
+        relationships = getattr(node, direction + '_relationships')
         assert len(relationships) == 2
 
         reversed_relationship_instances = list(reversed(relationships))
