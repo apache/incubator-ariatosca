@@ -106,8 +106,6 @@ def create_process_config(script_path, process, operation_kwargs, quote_json_env
 def patch_ctx(ctx):
     ctx._error = None
     task = ctx.task
-    task._original_abort = task.abort
-    task._original_retry = task.retry
 
     def _validate_legal_action():
         if ctx._error is not None:
@@ -133,14 +131,14 @@ def check_error(ctx, error_check_func=None, reraise=False):
     _error = ctx._error
     # this happens when a script calls task.abort/task.retry more than once
     if isinstance(_error, RuntimeError):
-        ctx.task._original_abort(str(_error))
+        ctx.task.abort(str(_error))
     # ScriptException is populated by the ctx proxy server when task.abort or task.retry
     # are called
     elif isinstance(_error, exceptions.ScriptException):
         if _error.retry:
-            ctx.task._original_retry(_error.message, _error.retry_interval)
+            ctx.task.retry(_error.message, _error.retry_interval)
         else:
-            ctx.task._original_abort(_error.message)
+            ctx.task.abort(_error.message)
     # local and ssh operations may pass an additional logic check for errors here
     if error_check_func:
         error_check_func()

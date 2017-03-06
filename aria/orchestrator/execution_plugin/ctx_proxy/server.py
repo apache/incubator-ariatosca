@@ -30,8 +30,9 @@ from .. import exceptions
 
 class CtxProxy(object):
 
-    def __init__(self, ctx):
+    def __init__(self, ctx, ctx_patcher=(lambda *args, **kwargs: None)):
         self.ctx = ctx
+        self._ctx_patcher = ctx_patcher
         self.port = _get_unused_port()
         self.socket_url = 'http://localhost:{0}'.format(self.port)
         self.server = None
@@ -69,6 +70,9 @@ class CtxProxy(object):
                 server.serve_forever(poll_interval=0.1)
 
         def serve():
+            # Since task is a thread_local object, we need to patch it inside the server thread.
+            self._ctx_patcher(self.ctx)
+
             bottle_app = bottle.Bottle()
             bottle_app.post('/', callback=self._request_handler)
             bottle.run(

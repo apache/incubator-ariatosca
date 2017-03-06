@@ -49,12 +49,21 @@ def ctx(tmpdir):
 
 
 @pytest.fixture
-def thread_executor():
-    result = thread.ThreadExecutor()
+def process_executor():
+    ex = process.ProcessExecutor(**dict(python_path=tests.ROOT_DIR))
     try:
-        yield result
+        yield ex
     finally:
-        result.close()
+        ex.close()
+
+
+@pytest.fixture
+def thread_executor():
+    ex = thread.ThreadExecutor()
+    try:
+        yield ex
+    finally:
+        ex.close()
 
 
 def test_node_operation_task_execution(ctx, thread_executor):
@@ -213,16 +222,16 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
 
 
 @pytest.fixture(params=[
-    # (thread.ThreadExecutor, dict()),
-    (process.ProcessExecutor, dict(python_path=tests.ROOT_DIR))
+    (thread.ThreadExecutor, {}),
+    (process.ProcessExecutor, {'python_path': [tests.ROOT_DIR]}),
 ])
 def executor(request):
-    ex_cls, kwargs = request.param
-    ex = ex_cls(**kwargs)
+    executor_cls, executor_kwargs = request.param
+    result = executor_cls(**executor_kwargs)
     try:
-        yield ex
+        yield result
     finally:
-        ex.close()
+        result.close()
 
 
 def test_node_operation_logging(ctx, executor):
@@ -295,10 +304,17 @@ def _assert_loggins(ctx, inputs):
     assert len(executions) == 1
     execution = executions[0]
 
+    tasks = ctx.model.task.list()
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert task.logs.count() == 4
+
     logs = ctx.model.log.list()
     assert len(logs) == execution.logs.count() == 6
-    assert all(l in logs for l in execution.logs)
+    assert set(logs) == set(execution.logs)
+
     assert all(l.execution == execution for l in logs)
+    assert all(l in logs and l.task == task for l in task.logs)
 
     op_start_log = [l for l in logs if inputs['op_start'] in l.msg and l.level.lower() == 'info']
     assert len(op_start_log) == 1

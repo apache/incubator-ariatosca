@@ -164,6 +164,7 @@ class _SQLAlchemyHandler(logging.Handler):
                                        '%Y-%m-%d %H:%M:%S,%f')
         log = self._cls(
             execution_fk=self._execution_id,
+            task_fk=record.task_id,
             actor=record.prefix,
             level=record.levelname,
             msg=record.msg,

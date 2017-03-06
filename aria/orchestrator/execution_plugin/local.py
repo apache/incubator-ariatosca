@@ -75,8 +75,7 @@ def _execute_func(script_path, ctx, process, operation_kwargs):
     env = os.environ.copy()
     env.update(process['env'])
     ctx.logger.info('Executing: {0}'.format(command))
-    common.patch_ctx(ctx)
-    with ctx_proxy.server.CtxProxy(ctx) as proxy:
+    with ctx_proxy.server.CtxProxy(ctx, common.patch_ctx) as proxy:
         env[ctx_proxy.client.CTX_SOCKET_URL] = proxy.socket_url
         running_process = subprocess.Popen(
             command,

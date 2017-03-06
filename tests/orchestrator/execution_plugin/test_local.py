@@ -30,7 +30,8 @@ from aria.orchestrator.execution_plugin import constants
 from aria.orchestrator.workflows.executor import process
 from aria.orchestrator.workflows.core import engine
 
-from tests import mock, storage
+from tests import mock
+from tests import storage
 from tests.orchestrator.workflows.helpers import events_collector
 
 IS_WINDOWS = os.name == 'nt'

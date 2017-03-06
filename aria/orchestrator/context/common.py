@@ -36,13 +36,15 @@ class BaseContext(object):
     """
 
     class PrefixedLogger(object):
-        def __init__(self, logger, prefix=''):
+        def __init__(self, logger, prefix='', task_id=None):
             self._logger = logger
             self._prefix = prefix
+            self._task_id = task_id
 
         def __getattr__(self, item):
             if item.upper() in logging._levelNames:
-                return partial(getattr(self._logger, item), extra={'prefix': self._prefix})
+                return partial(getattr(self._logger, item),
+                               extra={'prefix': self._prefix, 'task_id': self._task_id})
             else:
                 return getattr(self._logger, item)
 
@@ -74,9 +76,10 @@ class BaseContext(object):
         self.model.execution.put(execution)
         return execution.id
 
-    def _register_logger(self, logger_name=None, level=None):
+    def _register_logger(self, logger_name=None, level=None, task_id=None):
         self.logger = self.PrefixedLogger(logging.getLogger(logger_name or self.__class__.__name__),
-                                          self.logging_id)
+                                          self.logging_id,
+                                          task_id=task_id)
         self.logger.addHandler(aria_logger.create_console_log_handler())
         self.logger.addHandler(self._get_sqla_handler())
         self.logger.setLevel(level or logging.DEBUG)

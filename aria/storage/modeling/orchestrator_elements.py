@@ -479,6 +479,14 @@ class LogBase(ModelMixin):
     def execution(cls):
         return cls.many_to_one_relationship('execution')
 
+    @declared_attr
+    def task_fk(cls):
+        return cls.foreign_key('task', nullable=True)
+
+    @declared_attr
+    def task(cls):
+        return cls.many_to_one_relationship('task')
+
     level = Column(String)
     msg = Column(String)
     created_at = Column(DateTime, index=True)

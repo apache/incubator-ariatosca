@@ -17,6 +17,8 @@
 Workflow and operation contexts
 """
 
+import threading
+
 import aria
 from aria.utils import file
 from .common import BaseContext
@@ -44,9 +46,9 @@ class BaseOperationContext(BaseContext):
             **kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
-        self._task = None
+        self._thread_local = threading.local()
         self._execution_id = execution_id
-        self._register_logger()
+        self._register_logger(task_id=self.task.id)
 
     def __repr__(self):
         details = 'implementation={task.implementation}; ' \
@@ -64,9 +66,13 @@ class BaseOperationContext(BaseContext):
         The task in the model storage
         :return: Task model
         """
-        if not self._task:
-            self._task = self.model.task.get(self._task_id)
-        return self._task
+        # SQLAlchemy prevents from accessing an object which was created on a different thread.
+        # So we retrieve the object from the storage if the current thread isn't the same as the
+        # original thread.
+
+        if not hasattr(self._thread_local, 'task'):
+            self._thread_local.task = self.model.task.get(self._task_id)
+        return self._thread_local.task
 
     @property
     def plugin_workdir(self):

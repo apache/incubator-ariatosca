@@ -70,14 +70,13 @@ def run_script(ctx, script_path, fabric_env, process, use_sudo, hide_output, **k
                                                                  paths.remote_work_dir))
             # this file has to be present before using ctx
             fabric.api.put(_PROXY_CLIENT_PATH, paths.remote_ctx_path)
-        _patch_ctx(ctx)
         process = common.create_process_config(
             script_path=paths.remote_script_path,
             process=process,
             operation_kwargs=kwargs,
             quote_json_env_vars=True)
         fabric.api.put(paths.local_script_path, paths.remote_script_path)
-        with ctx_proxy.server.CtxProxy(ctx) as proxy:
+        with ctx_proxy.server.CtxProxy(ctx, _patch_ctx) as proxy:
             local_port = proxy.port
             with fabric.context_managers.cd(process.get('cwd', paths.remote_work_dir)):  # pylint: disable=not-context-manager
                 with tunnel.remote(ctx, local_port=local_port) as remote_port:
