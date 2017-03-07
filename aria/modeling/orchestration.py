@@ -154,7 +154,8 @@ class ServiceUpdateBase(ModelMixin):
 
     __tablename__ = 'service_update' 
 
-    _private_fields = ['execution_fk', 'service_fk']
+    _private_fields = ['execution_fk',
+                       'service_fk']
 
     created_at = Column(DateTime, nullable=False, index=True)
     service_plan = Column(Dict, nullable=False)
@@ -212,10 +213,10 @@ class ServiceUpdateStepBase(ModelMixin):
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
+
     _entity_types = namedtuple(
         'ENTITY_TYPES',
-        'NODE, RELATIONSHIP, PROPERTY, OPERATION, WORKFLOW, OUTPUT, DESCRIPTION, GROUP, '
-        'POLICY_TYPE, POLICY_TRIGGER, PLUGIN')
+        'NODE, RELATIONSHIP, PROPERTY, OPERATION, WORKFLOW, OUTPUT, DESCRIPTION, GROUP, PLUGIN')
     ENTITY_TYPES = _entity_types(
         NODE='node',
         RELATIONSHIP='relationship',
@@ -225,8 +226,6 @@ class ServiceUpdateStepBase(ModelMixin):
         OUTPUT='output',
         DESCRIPTION='description',
         GROUP='group',
-        POLICY_TYPE='policy_type',
-        POLICY_TRIGGER='policy_trigger',
         PLUGIN='plugin'
     )
 

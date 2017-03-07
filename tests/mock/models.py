@@ -63,16 +63,17 @@ def create_service(service_template):
 
 
 def create_dependency_node_template(service_template):
-    the_type = service_template.node_types.get_descendant('test_node_type')
+    node_type = service_template.node_types.get_descendant('test_node_type')
+    capability_type = service_template.capability_types.get_descendant('test_capability_type')
     
     capability_template = models.CapabilityTemplate(
         name='capability',
-        type=service_template.capability_types.get_descendant('test_capability_type')
+        type=capability_type
     )
     
     node_template = models.NodeTemplate(
         name=DEPENDENCY_NODE_TEMPLATE_NAME,
-        type=the_type,
+        type=node_type,
         capability_templates=_dictify(capability_template),
         default_instances=1,
         min_instances=1,
@@ -89,7 +90,7 @@ def create_dependent_node_template(service_template, dependency_node_template):
     operation_templates = dict((op, models.OperationTemplate(
         name=op,
         implementation='test'))
-                                for op in operations.NODE_OPERATIONS)
+                                for _, op in operations.NODE_OPERATIONS)
     interface_template = models.InterfaceTemplate(
         type=service_template.interface_types.get_descendant('test_interface_type'),
         operation_templates=operation_templates)
@@ -148,10 +149,9 @@ def create_relationship(source, target):
     )
 
 
-def create_interface_template(service_template, operation_name, operation_kwargs=None,
-                              interface_kwargs=None):
+def create_interface_template(service_template, interface_name, operation_name,
+                              operation_kwargs=None, interface_kwargs=None):
     the_type = service_template.interface_types.get_descendant('test_interface_type')
-    interface_name, operation_name = operation_name.rsplit('.', 1)
     operation_template = models.OperationTemplate(
         name=operation_name,
         **(operation_kwargs or {})
@@ -164,10 +164,13 @@ def create_interface_template(service_template, operation_name, operation_kwargs
     )
 
 
-def create_interface(service, operation_name, operation_kwargs=None, interface_kwargs=None):
+def create_interface(service, interface_name, operation_name, operation_kwargs=None,
+                     interface_kwargs=None):
     the_type = service.service_template.interface_types.get_descendant('test_interface_type')
-    interface_name, operation_name = operation_name.rsplit('.', 1)
-    operation = models.Operation(name=operation_name, **(operation_kwargs or {}))
+    operation = models.Operation(
+        name=operation_name,
+        **(operation_kwargs or {})
+    )
     return models.Interface(
         type=the_type,
         operations=_dictify(operation),

@@ -66,11 +66,11 @@ class BaseOperationContext(BaseContext):
         """
         A work directory that is unique to the plugin and the deployment id
         """
-        if not self.task.plugin_name:
+        if self.task.plugin is None:
             return None
         plugin_workdir = '{0}/plugins/{1}/{2}'.format(self._workdir,
                                                       self.service.id,
-                                                      self.task.plugin_name)
+                                                      self.task.plugin.name)
         file.makedirs(plugin_workdir)
         return plugin_workdir
 

@@ -18,28 +18,33 @@ import pytest
 from aria.orchestrator.workflows.api import task
 from aria.orchestrator.workflows.builtin.execute_operation import execute_operation
 
-from tests import mock
-from tests import storage
+from tests import mock, storage
 
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(str(tmpdir))
+    context = mock.context.simple(str(tmpdir), inmemory=False)
     yield context
     storage.release_sqlite_storage(context.model)
 
 
 def test_execute_operation(ctx):
-    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    node.interfaces = [mock.models.get_interface(mock.operations.NODE_OPERATIONS_INSTALL[0])]
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    interface_name, operation_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
+    interface = mock.models.create_interface(
+        ctx.service,
+        interface_name,
+        operation_name
+    )
+    node.interfaces[interface.name] = interface
     ctx.model.node.update(node)
-    operation_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
 
     execute_tasks = list(
         task.WorkflowTask(
             execute_operation,
             ctx=ctx,
-            operation=operation_name,
+            interface_name=interface_name,
+            operation_name=operation_name,
             operation_kwargs={},
             allow_kwargs_override=False,
             run_by_dependency_order=False,
@@ -50,8 +55,12 @@ def test_execute_operation(ctx):
     )
 
     assert len(execute_tasks) == 1
-    assert execute_tasks[0].name == '{0}.{1}'.format(operation_name, node.id)
-
+    assert execute_tasks[0].name == task.OperationTask.NAME_FORMAT.format(
+        type='node',
+        id=node.id,
+        interface=interface_name,
+        operation=operation_name
+    )
 
 
 # TODO: add more scenarios

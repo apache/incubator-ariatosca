@@ -23,10 +23,16 @@ from tests import storage
 
 
 def test_task_graph_into_execution_graph(tmpdir):
-    operation_name = 'tosca.interfaces.node.lifecycle.Standard.create'
+    interface_name = 'Standard'
+    operation_name = 'create'
     task_context = mock.context.simple(str(tmpdir))
-    node = task_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-    node.interfaces = [mock.models.get_interface(operation_name)]
+    node = task_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    interface = mock.models.create_interface(
+        node.service,
+        interface_name,
+        operation_name
+    )
+    node.interfaces[interface.name] = interface
     task_context.model.node.update(node)
 
     def sub_workflow(name, **_):
@@ -34,14 +40,17 @@ def test_task_graph_into_execution_graph(tmpdir):
 
     with context.workflow.current.push(task_context):
         test_task_graph = api.task.WorkflowTask(sub_workflow, name='test_task_graph')
-        simple_before_task = api.task.OperationTask.node(instance=node,
-                                                         name=operation_name)
-        simple_after_task = api.task.OperationTask.node(instance=node,
-                                                        name=operation_name)
+        simple_before_task = api.task.OperationTask.for_node(node=node,
+                                                             interface_name=interface_name,
+                                                             operation_name=operation_name)
+        simple_after_task = api.task.OperationTask.for_node(node=node,
+                                                            interface_name=interface_name,
+                                                            operation_name=operation_name)
 
         inner_task_graph = api.task.WorkflowTask(sub_workflow, name='test_inner_task_graph')
-        inner_task = api.task.OperationTask.node(instance=node,
-                                                 name=operation_name)
+        inner_task = api.task.OperationTask.for_node(node=node,
+                                                     interface_name=interface_name,
+                                                     operation_name=operation_name)
         inner_task_graph.add_tasks(inner_task)
 
     test_task_graph.add_tasks(simple_before_task)

@@ -45,7 +45,7 @@ def test_track_changes_of_failed_operation(context, executor):
 
 
 def _assert_tracked_changes_are_applied(context):
-    instance = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    instance = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     assert instance.runtime_properties == _TEST_RUNTIME_PROPERTIES
 
 
@@ -67,7 +67,7 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
     }
 
     expected_initial = context.model.node.get_by_name(
-        mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties
+        mock.models.DEPENDENCY_NODE_NAME).runtime_properties
 
     out = _run_workflow(context=context, executor=executor, op_func=_mock_updating_operation,
                         inputs=inputs)
@@ -87,19 +87,27 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
 def _run_workflow(context, executor, op_func, inputs=None):
     @workflow
     def mock_workflow(ctx, graph):
-        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-        node.interfaces = [mock.models.get_interface(
-            'test.op', operation_kwargs=dict(implementation=_operation_mapping(op_func)))]
-        task = api.task.OperationTask.node(instance=node,
-                                           name='test.op',
-                                           inputs=inputs or {})
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+        interface_name = 'test_interface'
+        operation_name = 'operation'
+        interface = mock.models.create_interface(
+            ctx.service,
+            interface_name,
+            operation_name,
+            operation_kwargs=dict(implementation=_operation_mapping(op_func))
+        )
+        node.interfaces[interface.name] = interface
+        task = api.task.OperationTask.for_node(node=node,
+                                               interface_name=interface_name,
+                                               operation_name=operation_name,
+                                               inputs=inputs or {})
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
     return context.model.node.get_by_name(
-        mock.models.DEPENDENCY_NODE_INSTANCE_NAME).runtime_properties.get('out')
+        mock.models.DEPENDENCY_NODE_NAME).runtime_properties.get('out')
 
 
 @operation

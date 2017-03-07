@@ -17,7 +17,7 @@ import pytest
 
 from tests import mock, storage
 
-_IMPLICIT_CTX_TEMPLATE = '{{ctx.service_instance.name}}'
+_IMPLICIT_CTX_TEMPLATE = '{{ctx.service.name}}'
 _IMPLICIT_CTX_TEMPLATE_PATH = 'implicit-ctx.template'
 _VARIABLES_TEMPLATE = '{{variable}}'
 _VARIABLES_TEMPLATE_PATH = 'variables.template'

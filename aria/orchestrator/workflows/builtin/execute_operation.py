@@ -25,7 +25,8 @@ from ... import workflow
 def execute_operation(
         ctx,
         graph,
-        operation,
+        interface_name,
+        operation_name,
         operation_kwargs,
         allow_kwargs_override,
         run_by_dependency_order,
@@ -69,7 +70,8 @@ def execute_operation(
         graph.add_tasks(
             _create_node_instance_task(
                 node=node,
-                operation=operation,
+                interface_name=interface_name,
+                operation_name=operation_name,
                 operation_kwargs=operation_kwargs,
                 allow_kwargs_override=allow_kwargs_override
             )
@@ -87,25 +89,26 @@ def execute_operation(
 
 
 def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_names=()):
+    def _is_node_template_by_id(node_template_id):
+        return not node_template_ids or node_template_id in node_template_ids
+
     def _is_node_by_id(node_id):
-        return not node_template_ids or node_id in node_template_ids
+        return not node_ids or node_id in node_ids
 
-    def _is_node_instance_by_id(node_instance_id):
-        return not node_ids or node_instance_id in node_ids
-
-    def _is_node_by_type(node_type_hierarchy):
-        return not type_names or node_type_hierarchy in type_names
+    def _is_node_by_type(node_type):
+        return not node_type.name in type_names
 
     for node in context.nodes:
-        if all((_is_node_by_id(node.node_template.id),
-                _is_node_instance_by_id(node.id),
-                _is_node_by_type(node.node_template.type_hierarchy))):
+        if all((_is_node_template_by_id(node.node_template.id),
+                _is_node_by_id(node.id),
+                _is_node_by_type(node.node_template.type))):
             yield node
 
 
 def _create_node_instance_task(
         node,
-        operation,
+        interface_name,
+        operation_name,
         operation_kwargs,
         allow_kwargs_override):
     """
@@ -122,6 +125,6 @@ def _create_node_instance_task(
 
     return OperationTask.for_node(
         node=node,
-        interface_name=None, # TODO
-        operation_name=operation,
+        interface_name=interface_name,
+        operation_name=operation_name,
         inputs=operation_kwargs)

@@ -43,7 +43,9 @@ def test_execute(executor):
     expected_value = 'value'
     successful_task = MockTask(mock_successful_task)
     failing_task = MockTask(mock_failing_task)
-    task_with_inputs = MockTask(mock_task_with_input, inputs=dict(input='value'))
+    #task_with_inputs = MockTask(mock_task_with_input, inputs=dict(input='value'))
+    task_with_inputs = MockTask(mock_task_with_input, inputs={'input': models.Parameter(
+        name='input', type_name='string', value='value')})
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -105,7 +107,8 @@ class MockTask(object):
         self.exception = None
         self.id = str(uuid.uuid4())
         name = func.__name__
-        implementation = 'tests.orchestrator.workflows.executor.test_executor.{name}'.format(
+        implementation = '{module}.{name}'.format(
+            module=__name__,
             name=name)
         self.implementation = implementation
         self.logger = logging.getLogger()
@@ -151,6 +154,7 @@ def register_signals():
     def failure_handler(task, exception, *args, **kwargs):
         task.states.append('failure')
         task.exception = exception
+
     events.start_task_signal.connect(start_handler)
     events.on_success_task_signal.connect(success_handler)
     events.on_failure_task_signal.connect(failure_handler)

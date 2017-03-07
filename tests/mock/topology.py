@@ -20,13 +20,12 @@ from . import models
 
 def create_simple_topology_single_node(model_storage, create_operation):
     service_template = models.create_service_template()
-
     service = models.create_service(service_template)
 
     node_template = models.create_dependency_node_template(service_template)
     interface_template = models.create_interface_template(
         service_template,
-        'Standard.create',
+        'Standard', 'create',
         operation_kwargs=dict(
             implementation=create_operation,
             inputs={'key': aria_models.Parameter(name='key', value='create', type_name='string'),
@@ -37,7 +36,7 @@ def create_simple_topology_single_node(model_storage, create_operation):
     node = models.create_dependency_node(node_template, service)
     interface = models.create_interface(
         service,
-        'Standard.create',
+        'Standard', 'create',
         operation_kwargs=dict(
             implementation=create_operation,
             inputs={'key': aria_models.Parameter(name='key', value='create', type_name='string'),
@@ -51,7 +50,6 @@ def create_simple_topology_single_node(model_storage, create_operation):
 
 def create_simple_topology_two_nodes(model_storage):
     service_template = models.create_service_template()
-
     service = models.create_service(service_template)
 
     # Creating a simple service with node -> node as a graph

@@ -60,15 +60,19 @@ class BaseTest(object):
             max_attempts=None,
             retry_interval=None,
             ignore_failure=None):
-        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
-        node.interfaces = [mock.models.get_interface(
-            'aria.interfaces.lifecycle.create',
+        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+        interface = mock.models.create_interface(
+            node.service,
+            'aria.interfaces.lifecycle',
+            'create',
             operation_kwargs=dict(implementation='{name}.{func.__name__}'.format(name=__name__,
                                                                                  func=func))
-        )]
+        )
+        node.interfaces[interface.name] = interface
         return api.task.OperationTask.for_node(
             node=node,
-            name='aria.interfaces.lifecycle.create',
+            interface_name='aria.interfaces.lifecycle',
+            operation_name='create',
             inputs=inputs,
             max_attempts=max_attempts,
             retry_interval=retry_interval,

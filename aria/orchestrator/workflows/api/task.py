@@ -20,6 +20,7 @@ Provides the tasks to be entered into the task graph
 from ....modeling import models
 from ....utils.collections import OrderedDict
 from ....utils.uuid import generate_uuid
+from ....utils.formatting import full_type_name
 from ... import context
 from .. import exceptions
 
@@ -60,6 +61,8 @@ class OperationTask(BaseTask):
 
     SOURCE_OPERATION = 'source'
     TARGET_OPERATION = 'target'
+    
+    NAME_FORMAT = '{type}:{id}->{interface}/{operation}'
 
     def __init__(self,
                  name,
@@ -94,8 +97,8 @@ class OperationTask(BaseTask):
             for k, v in inputs.iteritems():
                 if not isinstance(v, models.Parameter):
                     inputs[k] = models.Parameter(name=k,
-                                                 type_name='string',
-                                                 value=str(v) if v is not None else None)
+                                                 type_name=full_type_name(v),
+                                                 value=v)
 
         self.name = name
         self.actor = actor
@@ -130,7 +133,10 @@ class OperationTask(BaseTask):
 
         return cls(
             actor=node,
-            name='{0}.{1}'.format(interface_name, operation_name),
+            name=cls.NAME_FORMAT.format(type='node',
+                                        id=node.id,
+                                        interface=interface_name,
+                                        operation=operation_name),
             plugin=operation.plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
@@ -161,7 +167,10 @@ class OperationTask(BaseTask):
 
         return cls(
             actor=relationship,
-            name='{0}.{1}'.format(interface_name, operation_name),
+            name=cls.NAME_FORMAT.format(type='relationship',
+                                        id=relationship.id,
+                                        interface=interface_name,
+                                        operation=operation_name),
             plugin=operation.plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
@@ -186,7 +195,7 @@ class OperationTask(BaseTask):
 
 class WorkflowTask(BaseTask):
     """
-    Represents an workflow task in the task_graph
+    Represents a workflow task in the task graph
     """
 
     def __init__(self, workflow_func, **kwargs):

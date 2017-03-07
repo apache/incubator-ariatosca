@@ -29,25 +29,32 @@ from tests import storage
 def test_decorate_extension(context, executor):
     inputs = {'input1': 1, 'input2': 2}
 
-    def get_node_instance(ctx):
-        return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_INSTANCE_NAME)
+    def get_node(ctx):
+        return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
 
     @workflow
     def mock_workflow(ctx, graph):
-        node_instance = get_node_instance(ctx)
-        op = 'test.op'
-        node_instance.interfaces = [mock.models.get_interface(
-            op,
+        node = get_node(ctx)
+        interface_name = 'test_interface'
+        operation_name = 'operation'
+        interface = mock.models.create_interface(
+            ctx.service,
+            interface_name,
+            operation_name,
             operation_kwargs=dict(implementation='{0}.{1}'.format(__name__,
                                                                   _mock_operation.__name__))
-        )]
-        task = api.task.OperationTask.node(instance=node_instance, name=op, inputs=inputs)
+        )
+        node.interfaces[interface.name] = interface
+        task = api.task.OperationTask.for_node(node=node,
+                                               interface_name=interface_name,
+                                               operation_name=operation_name,
+                                               inputs=inputs)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
-    out = get_node_instance(context).runtime_properties['out']
+    out = get_node(context).runtime_properties['out']
     assert out['wrapper_inputs'] == inputs
     assert out['function_inputs'] == inputs
 

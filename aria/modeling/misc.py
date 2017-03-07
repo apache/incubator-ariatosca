@@ -79,7 +79,7 @@ class ParameterBase(TemplateModelMixin):
                 logging.getLogger('aria').warn('Could not pickle parameter of type "{0}": {1}'
                                                .format(self.type_name, value))
                 self._value = pickle.dumps(str(value))
- 
+
     def instantiate(self, context, container):
         from . import models
         return models.Parameter(name=self.name,

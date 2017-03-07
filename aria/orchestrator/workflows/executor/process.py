@@ -191,7 +191,7 @@ class ProcessExecutor(base.BaseExecutor):
         return {
             'task_id': task.id,
             'implementation': task.implementation,
-            'operation_inputs': task.inputs,
+            'operation_inputs': dict((k, v.value) for k, v in task.inputs.iteritems()),
             'port': self._server_port,
             'context': task.context.serialization_dict,
         }
