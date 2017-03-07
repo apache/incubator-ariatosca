@@ -47,7 +47,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)                      # pylint: disable=no-member
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ def test_relationship_model_ordering(context):
         target_node=new_node,
     ))
 
-    new_node.outbound_relationships.append(modeling.models.Relationship(
+    new_node.outbound_relationships.append(modeling.models.Relationship(                            # pylint: disable=no-member
         source_node=new_node,
         target_node=target_node,
     ))
@@ -159,12 +159,12 @@ def test_relationship_model_ordering(context):
         relationships = getattr(node, direction + '_relationships')
         assert len(relationships) == 2
 
-        reversed_relationship_instances = list(reversed(relationships))
-        assert relationships != reversed_relationship_instances
+        reversed_relationship = list(reversed(relationships))
+        assert relationships != reversed_relationship
 
-        relationships[:] = reversed_relationship_instances
+        relationships[:] = reversed_relationship
         context.model.node.update(node)
-        assert relationships == reversed_relationship_instances
+        assert relationships == reversed_relationship
 
     flip_and_assert(source_node, 'outbound')
     flip_and_assert(target_node, 'inbound')

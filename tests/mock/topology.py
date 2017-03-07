@@ -31,7 +31,7 @@ def create_simple_topology_single_node(model_storage, create_operation):
             inputs={'key': aria_models.Parameter(name='key', value='create', type_name='string'),
                     'value': aria_models.Parameter(name='value', value=True, type_name='boolean')})
     )
-    node_template.interface_templates[interface_template.name] = interface_template
+    node_template.interface_templates[interface_template.name] = interface_template                 # pylint: disable=unsubscriptable-object
 
     node = models.create_dependency_node(node_template, service)
     interface = models.create_interface(
@@ -42,7 +42,7 @@ def create_simple_topology_single_node(model_storage, create_operation):
             inputs={'key': aria_models.Parameter(name='key', value='create', type_name='string'),
                     'value': aria_models.Parameter(name='value', value=True, type_name='boolean')})
     )
-    node.interfaces[interface.name] = interface
+    node.interfaces[interface.name] = interface                                                     # pylint: disable=unsubscriptable-object
 
     model_storage.service_template.put(service_template)
     model_storage.service.put(service)
@@ -61,7 +61,7 @@ def create_simple_topology_two_nodes(model_storage):
     dependency_node = models.create_dependency_node(dependency_node_template, service)
     dependent_node = models.create_dependent_node(dependent_node_template, service)
 
-    dependent_node.outbound_relationships.append(models.create_relationship(
+    dependent_node.outbound_relationships.append(models.create_relationship(                        # pylint: disable=no-member
         source=dependent_node,
         target=dependency_node
     ))

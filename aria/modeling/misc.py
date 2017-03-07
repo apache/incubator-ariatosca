@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=no-self-argument, no-member, abstract-method
+
 import cPickle as pickle
 import logging
 
@@ -113,7 +115,7 @@ class TypeBase(InstanceModelMixin):
 
     __tablename__ = 'type'
 
-    variant = Column(Text, nullable=False) 
+    variant = Column(Text, nullable=False)
     description = Column(Text)
     _role = Column(Text, name='role')
 
@@ -135,7 +137,7 @@ class TypeBase(InstanceModelMixin):
         return cls.foreign_key('type', nullable=True)
 
     # endregion
-    
+
     @property
     def role(self):
         def get_role(the_type):

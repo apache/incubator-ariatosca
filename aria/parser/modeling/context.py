@@ -15,9 +15,7 @@
 
 import itertools
 
-from ...utils.collections import StrictDict, prune, OrderedDict
-from ...utils.formatting import as_raw
-from ...utils.console import puts
+from ...utils.collections import StrictDict, prune
 from ...utils.uuid import generate_uuid
 
 
@@ -51,7 +49,6 @@ class ModelingContext(object):
     """
 
     def __init__(self):
-        from ...modeling.models import Type
         self.template = None
         self.instance = None
         self.node_id_format = '{template}_{id}'

@@ -101,7 +101,7 @@ def test_node_operation_task_execution(ctx, executor):
     )
     operations = interface.operations
     assert len(operations) == 1
-    assert operation_context.task.implementation == operations.values()[0].implementation
+    assert operation_context.task.implementation == operations.values()[0].implementation           # pylint: disable=no-member
     assert operation_context.task.inputs['putput'].value is True
 
     # Context based attributes (sugaring)
@@ -151,7 +151,7 @@ def test_relationship_operation_task_execution(ctx, executor):
     assert operation_context.task.actor == relationship
     assert interface_name in operation_context.task.name
     operations = interface.operations
-    assert operation_context.task.implementation == operations.values()[0].implementation
+    assert operation_context.task.implementation == operations.values()[0].implementation           # pylint: disable=no-member
     assert operation_context.task.inputs['putput'].value is True
 
     # Context based attributes (sugaring)
@@ -172,7 +172,7 @@ def test_relationship_operation_task_execution(ctx, executor):
 def test_invalid_task_operation_id(ctx, executor):
     """
     Checks that the right id is used. The task created with id == 1, thus running the task on
-    node_instance with id == 2. will check that indeed the node_instance uses the correct id.
+    node with id == 2. will check that indeed the node uses the correct id.
     :param ctx:
     :param executor:
     :return:
@@ -241,8 +241,7 @@ def test_plugin_workdir(ctx, executor, tmpdir):
         graph.add_tasks(api.task.OperationTask.for_node(node=node,
                                                         interface_name=interface_name,
                                                         operation_name=operation_name,
-                                                        inputs=inputs)
-        )
+                                                        inputs=inputs))
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
     expected_file = tmpdir.join('workdir', 'plugins', str(ctx.service.id),

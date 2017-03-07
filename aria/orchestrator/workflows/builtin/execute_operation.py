@@ -51,24 +51,24 @@ def execute_operation(
     """
     subgraphs = {}
     # filtering node instances
-    filtered_nodes = list(_filter_node_instances(
+    filtered_nodes = list(_filter_nodes(
         context=ctx,
         node_template_ids=node_template_ids,
         node_ids=node_ids,
         type_names=type_names))
 
     if run_by_dependency_order:
-        filtered_node_instances_ids = set(node_instance.id
+        filtered_node_ids = set(node_instance.id
                                           for node_instance in filtered_nodes)
-        for node in ctx.node_instances:
-            if node.id not in filtered_node_instances_ids:
+        for node in ctx.nodes:
+            if node.id not in filtered_node_ids:
                 subgraphs[node.id] = ctx.task_graph(
                     name='execute_operation_stub_{0}'.format(node.id))
 
     # registering actual tasks to sequences
     for node in filtered_nodes:
         graph.add_tasks(
-            _create_node_instance_task(
+            _create_node_task(
                 node=node,
                 interface_name=interface_name,
                 operation_name=operation_name,
@@ -77,8 +77,8 @@ def execute_operation(
             )
         )
 
-    for _, node_instance_sub_workflow in subgraphs.items():
-        graph.add_tasks(node_instance_sub_workflow)
+    for _, node_sub_workflow in subgraphs.items():
+        graph.add_tasks(node_sub_workflow)
 
     # adding tasks dependencies if required
     if run_by_dependency_order:
@@ -88,7 +88,7 @@ def execute_operation(
                     source_task=subgraphs[node.id], after=[subgraphs[relationship.target_id]])
 
 
-def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_names=()):
+def _filter_nodes(context, node_template_ids=(), node_ids=(), type_names=()):
     def _is_node_template_by_id(node_template_id):
         return not node_template_ids or node_template_id in node_template_ids
 
@@ -105,7 +105,7 @@ def _filter_node_instances(context, node_template_ids=(), node_ids=(), type_name
             yield node
 
 
-def _create_node_instance_task(
+def _create_node_task(
         node,
         interface_name,
         operation_name,

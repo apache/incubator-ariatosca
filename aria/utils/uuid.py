@@ -31,10 +31,10 @@ UUID_LOWERCASE_ALPHANUMERIC = ShortUUID(alphabet='abcdefghijklmnopqrstuvwxyz0123
 def generate_uuid(length=None, variant='base57'):
     """
     A random string with varying degrees of guarantee of universal uniqueness.
-    
+
     :param variant: options are:
-                    * 'base57' (the default) uses a mix of upper and lowercase alphanumerics ensuring
-                      no visually ambiguous characters; default length 22
+                    * 'base57' (the default) uses a mix of upper and lowercase alphanumerics
+                      ensuring no visually ambiguous characters; default length 22
                     * 'alphanumeric' uses lowercase alphanumeric; default length 25
                     * 'uuid' user lowercase hexadecimal in the classic UUID format, including
                       dashes; length is always 36

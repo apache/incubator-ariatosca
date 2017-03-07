@@ -152,7 +152,7 @@ class ServiceUpdateBase(ModelMixin):
 
     steps = None
 
-    __tablename__ = 'service_update' 
+    __tablename__ = 'service_update'
 
     _private_fields = ['execution_fk',
                        'service_fk']

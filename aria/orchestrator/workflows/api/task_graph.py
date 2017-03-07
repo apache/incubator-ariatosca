@@ -17,11 +17,11 @@
 Task graph. Used by users to build workflows
 """
 
-from ....utils.uuid import generate_uuid
 from collections import Iterable
 
 from networkx import DiGraph, topological_sort
 
+from ....utils.uuid import generate_uuid
 from . import task as api_task
 
 

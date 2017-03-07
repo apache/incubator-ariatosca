@@ -37,7 +37,7 @@ from . import (
 )
 
 
-class ServiceTemplateBase(TemplateModelMixin):
+class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public-methods
     """
     A service template is a source for creating :class:`Service` instances.
 
@@ -827,7 +827,7 @@ class SubstitutionTemplateBase(TemplateModelMixin):
 class SubstitutionTemplateMappingBase(TemplateModelMixin):
     """
     Used by :class:`SubstitutionTemplate` to map a capability or a requirement to a node.
-    
+
     Only one of `capability_template` and `requirement_template` can be set.
 
     :ivar name: Exposed capability or requirement name
@@ -1120,7 +1120,7 @@ class RelationshipTemplateBase(TemplateModelMixin):
     """
     Optional addition to a :class:`RequirementTemplate` in :class:`NodeTemplate` that can be applied
     when the requirement is matched with a capability.
-    
+
     Note that a relationship template here is not equivalent to a relationship template entity in
     TOSCA. For example, a TOSCA requirement specifying a relationship type instead of a template
     would still be represented here as a relationship template.
@@ -1276,7 +1276,7 @@ class CapabilityTemplateBase(TemplateModelMixin):
     # endregion
 
     def satisfies_requirement(self,
-                              context,
+                              context, # pylint: disable=unused-argument
                               source_node_template,
                               requirement,
                               target_node_template):

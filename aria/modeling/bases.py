@@ -119,7 +119,7 @@ class ModelMixin(object):
 
         return cls._create_relationship(other_table, backref_kwargs, relationship_kwargs,
                                         backreference, key=key, foreign_key=foreign_key)
-    
+
     @classmethod
     def one_to_many_relationship(cls,
                                  child_table,

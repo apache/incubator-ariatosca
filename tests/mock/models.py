@@ -65,12 +65,12 @@ def create_service(service_template):
 def create_dependency_node_template(service_template):
     node_type = service_template.node_types.get_descendant('test_node_type')
     capability_type = service_template.capability_types.get_descendant('test_capability_type')
-    
+
     capability_template = models.CapabilityTemplate(
         name='capability',
         type=capability_type
     )
-    
+
     node_template = models.NodeTemplate(
         name=DEPENDENCY_NODE_TEMPLATE_NAME,
         type=node_type,
@@ -90,7 +90,7 @@ def create_dependent_node_template(service_template, dependency_node_template):
     operation_templates = dict((op, models.OperationTemplate(
         name=op,
         implementation='test'))
-                                for _, op in operations.NODE_OPERATIONS)
+                               for _, op in operations.NODE_OPERATIONS)
     interface_template = models.InterfaceTemplate(
         type=service_template.interface_types.get_descendant('test_interface_type'),
         operation_templates=operation_templates)

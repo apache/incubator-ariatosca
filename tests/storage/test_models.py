@@ -662,13 +662,15 @@ class TestNodeInstanceIP(object):
 @pytest.mark.skip('Should be reworked into relationship')
 class TestRelationship(object):
     def test_relationship_model_creation(self, nodes_storage):
-        relationship = mock.models.create_relationship(
-            target=nodes_storage.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-        )
-        nodes_storage.relationship.put(relationship)
         nodes = nodes_storage.node
         source_node = nodes.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         target_node = nodes.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+
+        relationship = mock.models.create_relationship(
+            source=source_node,
+            target=nodes_storage.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+        )
+        nodes_storage.relationship.put(relationship)
 
         relationship_instance = _test_model(
             is_valid=True,

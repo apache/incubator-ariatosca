@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=no-self-argument, no-member, abstract-method
+# pylint: disable=too-many-lines, no-self-argument, no-member, abstract-method
 
 from sqlalchemy import (
     Column,
@@ -286,7 +286,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
                         self._dump_graph_node(context, target_node)
 
 
-class NodeBase(InstanceModelMixin):
+class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     """
     Usually an instance of a :class:`NodeTemplate`.
 
@@ -844,7 +844,7 @@ class SubstitutionBase(InstanceModelMixin):
 class SubstitutionMappingBase(InstanceModelMixin):
     """
     Used by :class:`Substitution` to map a capability or a requirement to a node.
-    
+
     Only one of `capability_template` and `requirement_template` can be set.
 
     Usually an instance of a :class:`SubstitutionTemplate`.
@@ -1186,7 +1186,7 @@ class CapabilityBase(InstanceModelMixin):
 class InterfaceBase(InstanceModelMixin):
     """
     A typed set of :class:`Operation`.
-    
+
     Usually an instance of :class:`InterfaceTemplate`.
 
     :ivar name: Name (unique for the node, group, or relationship)
@@ -1296,7 +1296,7 @@ class InterfaceBase(InstanceModelMixin):
 class OperationBase(InstanceModelMixin):
     """
     An operation in a :class:`Interface`.
-    
+
     Might be an instance of :class:`OperationTemplate`.
 
     :ivar name: Name (unique for the interface or service)
@@ -1423,7 +1423,7 @@ class OperationBase(InstanceModelMixin):
 class ArtifactBase(InstanceModelMixin):
     """
     A file associated with a :class:`Node`.
-    
+
     Usually an instance of :class:`ArtifactTemplate`.
 
     :ivar name: Name (unique for the node)

@@ -61,7 +61,7 @@ class OperationTask(BaseTask):
 
     SOURCE_OPERATION = 'source'
     TARGET_OPERATION = 'target'
-    
+
     NAME_FORMAT = '{type}:{id}->{interface}/{operation}'
 
     def __init__(self,
