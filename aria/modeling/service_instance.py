@@ -234,17 +234,6 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         utils.validate_dict_values(context, self.outputs)
         utils.validate_dict_values(context, self.workflows)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.meta_data, report_issues)
-        utils.coerce_list_values(context, container, self.nodes, report_issues)
-        utils.coerce_list_values(context, container, self.groups, report_issues)
-        utils.coerce_list_values(context, container, self.policies, report_issues)
-        if self.substitution is not None:
-            self.substitution.coerce_values(context, container, report_issues)
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-        utils.coerce_dict_values(context, container, self.outputs, report_issues)
-        utils.coerce_dict_values(context, container, self.workflows, report_issues)
-
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
@@ -553,13 +542,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         utils.validate_dict_values(context, self.capabilities)
         utils.validate_list_values(context, self.outbound_relationships)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-        utils.coerce_dict_values(context, self, self.interfaces, report_issues)
-        utils.coerce_dict_values(context, self, self.artifacts, report_issues)
-        utils.coerce_dict_values(context, self, self.capabilities, report_issues)
-        utils.coerce_list_values(context, self, self.outbound_relationships, report_issues)
-
     def dump(self, context):
         console.puts('Node: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
@@ -656,10 +638,6 @@ class GroupBase(InstanceModelMixin):
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interfaces)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-        utils.coerce_dict_values(context, container, self.interfaces, report_issues)
-
     def dump(self, context):
         console.puts('Group: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
@@ -754,9 +732,6 @@ class PolicyBase(InstanceModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-
     def dump(self, context):
         console.puts('Policy: {0}'.format(context.style.node(self.name)))
         with context.style.indent:
@@ -830,9 +805,6 @@ class SubstitutionBase(InstanceModelMixin):
 
     def validate(self, context):
         utils.validate_dict_values(context, self.mappings)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.mappings, report_issues)
 
     def dump(self, context):
         console.puts('Substitution:')
@@ -1050,10 +1022,6 @@ class RelationshipBase(InstanceModelMixin):
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interfaces)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-        utils.coerce_dict_values(context, container, self.interfaces, report_issues)
-
     def dump(self, context):
         if self.name:
             console.puts('{0} ->'.format(context.style.node(self.name)))
@@ -1167,9 +1135,6 @@ class CapabilityBase(InstanceModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
-
     def dump(self, context):
         console.puts(context.style.node(self.name))
         with context.style.indent:
@@ -1278,10 +1243,6 @@ class InterfaceBase(InstanceModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.inputs)
         utils.validate_dict_values(context, self.operations)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-        utils.coerce_dict_values(context, container, self.operations, report_issues)
 
     def dump(self, context):
         console.puts(context.style.node(self.name))
@@ -1395,9 +1356,6 @@ class OperationBase(InstanceModelMixin):
         # TODO must be associated with interface or service
         utils.validate_dict_values(context, self.inputs)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-
     def dump(self, context):
         console.puts(context.style.node(self.name))
         if self.description:
@@ -1507,9 +1465,6 @@ class ArtifactBase(InstanceModelMixin):
 
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
 
     def dump(self, context):
         console.puts(context.style.node(self.name))

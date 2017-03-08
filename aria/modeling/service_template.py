@@ -328,17 +328,6 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
         if self.artifact_types is not None:
             self.artifact_types.validate(context)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.meta_data, report_issues)
-        utils.coerce_list_values(context, container, self.node_templates, report_issues)
-        utils.coerce_list_values(context, container, self.group_templates, report_issues)
-        utils.coerce_list_values(context, container, self.policy_templates, report_issues)
-        if self.substitution_template is not None:
-            self.substitution_template.coerce_values(context, container, report_issues)
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-        utils.coerce_dict_values(context, container, self.outputs, report_issues)
-        utils.coerce_dict_values(context, container, self.workflow_templates, report_issues)
-
     def dump(self, context):
         if self.description is not None:
             console.puts(context.style.meta(self.description))
@@ -526,13 +515,6 @@ class NodeTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(context, self.capability_templates)
         utils.validate_list_values(context, self.requirement_templates)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-        utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
-        utils.coerce_dict_values(context, self, self.artifact_templates, report_issues)
-        utils.coerce_dict_values(context, self, self.capability_templates, report_issues)
-        utils.coerce_list_values(context, self, self.requirement_templates, report_issues)
-
     def dump(self, context):
         console.puts('Node template: {0}'.format(context.style.node(self.name)))
         if self.description:
@@ -643,10 +625,6 @@ class GroupTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interface_templates)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-        utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
-
     def dump(self, context):
         console.puts('Group template: {0}'.format(context.style.node(self.name)))
         if self.description:
@@ -748,9 +726,6 @@ class PolicyTemplateBase(TemplateModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-
     def dump(self, context):
         console.puts('Policy template: {0}'.format(context.style.node(self.name)))
         if self.description:
@@ -818,9 +793,6 @@ class SubstitutionTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         utils.validate_dict_values(context, self.mappings)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.mappings, report_issues)
 
     def dump(self, context):
         console.puts('Substitution template:')
@@ -1089,10 +1061,6 @@ class RequirementTemplateBase(TemplateModelMixin):
         if self.relationship_template:
             self.relationship_template.validate(context)
 
-    def coerce_values(self, context, container, report_issues):
-        if self.relationship_template is not None:
-            self.relationship_template.coerce_values(context, container, report_issues)
-
     def dump(self, context):
         if self.name:
             console.puts(context.style.node(self.name))
@@ -1199,10 +1167,6 @@ class RelationshipTemplateBase(TemplateModelMixin):
         # TODO: either type or name must be set
         utils.validate_dict_values(context, self.properties)
         utils.validate_dict_values(context, self.interface_templates)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-        utils.coerce_dict_values(context, self, self.interface_templates, report_issues)
 
     def dump(self, context):
         if self.type is not None:
@@ -1330,9 +1294,6 @@ class CapabilityTemplateBase(TemplateModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, self, self.properties, report_issues)
-
     def dump(self, context):
         console.puts(context.style.node(self.name))
         if self.description:
@@ -1445,10 +1406,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.inputs)
         utils.validate_dict_values(context, self.operation_templates)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-        utils.coerce_dict_values(context, container, self.operation_templates, report_issues)
 
     def dump(self, context):
         console.puts(context.style.node(self.name))
@@ -1565,9 +1522,6 @@ class OperationTemplateBase(TemplateModelMixin):
     def validate(self, context):
         utils.validate_dict_values(context, self.inputs)
 
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.inputs, report_issues)
-
     def dump(self, context):
         console.puts(context.style.node(self.name))
         if self.description:
@@ -1677,9 +1631,6 @@ class ArtifactTemplateBase(TemplateModelMixin):
 
     def validate(self, context):
         utils.validate_dict_values(context, self.properties)
-
-    def coerce_values(self, context, container, report_issues):
-        utils.coerce_dict_values(context, container, self.properties, report_issues)
 
     def dump(self, context):
         console.puts(context.style.node(self.name))

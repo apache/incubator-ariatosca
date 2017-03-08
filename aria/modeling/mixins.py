@@ -388,7 +388,18 @@ class InstanceModelMixin(ModelMixin):
         pass
 
     def coerce_values(self, context, container, report_issues):
-        pass
+        if container is None:
+            return
+        for value in vars(container).values():
+            if value is not None and isinstance(value, ModelMixin):
+                if isinstance(value, dict):
+                    value = value.values()
+
+                if isinstance(value, list):
+                    for item in value:
+                        item.coerce_values(context, container, report_issues)
+                else:
+                    utils.coerce_value(context, container, value, report_issues)
 
     def dump(self, context):
         pass
