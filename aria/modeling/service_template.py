@@ -305,19 +305,9 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
         if self.artifact_types is not None:
             self.artifact_types.validate()
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.meta_data, report_issues)
-        utils.coerce_dict_values(container, self.node_templates, report_issues)
-        utils.coerce_dict_values(container, self.group_templates, report_issues)
-        utils.coerce_dict_values(container, self.policy_templates, report_issues)
-        if self.substitution_template is not None:
-            self.substitution_template.coerce_values(container, report_issues)
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.outputs, report_issues)
-        utils.coerce_dict_values(container, self.workflow_templates, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         if self.description is not None:
             console.puts(context.style.meta(self.description))
         utils.dump_dict_values(self.meta_data, 'Metadata')
@@ -515,15 +505,9 @@ class NodeTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.capability_templates)
         utils.validate_list_values(self.requirement_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
-        utils.coerce_dict_values(self, self.artifact_templates, report_issues)
-        utils.coerce_dict_values(self, self.capability_templates, report_issues)
-        utils.coerce_list_values(self, self.requirement_templates, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts('Node template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -633,12 +617,9 @@ class GroupTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interface_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts('Group template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -738,11 +719,9 @@ class PolicyTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts('Policy template: {0}'.format(context.style.node(self.name)))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -810,11 +789,9 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.mappings)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.mappings, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts('Substitution template:')
         with context.style.indent:
             console.puts('Node type: {0}'.format(context.style.type(self.node_type.name)))
@@ -1082,12 +1059,9 @@ class RequirementTemplateBase(TemplateModelMixin):
         if self.relationship_template:
             self.relationship_template.validate()
 
-    def coerce_values(self, container, report_issues):
-        if self.relationship_template is not None:
-            self.relationship_template.coerce_values(container, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         if self.name:
             console.puts(context.style.node(self.name))
         else:
@@ -1197,12 +1171,9 @@ class RelationshipTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interface_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         if self.type is not None:
             console.puts('Relationship type: {0}'.format(context.style.type(self.type.name)))
         else:
@@ -1325,11 +1296,9 @@ class CapabilityTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts(context.style.node(self.name))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -1440,12 +1409,9 @@ class InterfaceTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.inputs)
         utils.validate_dict_values(self.operation_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.operation_templates, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts(context.style.node(self.name))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -1560,11 +1526,9 @@ class OperationTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.inputs)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts(context.style.node(self.name))
         if self.description:
             console.puts(context.style.meta(self.description))
@@ -1674,11 +1638,9 @@ class ArtifactTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
-
     def dump(self):
         context = ConsumptionContext.get_thread_local()
+
         console.puts(context.style.node(self.name))
         if self.description:
             console.puts(context.style.meta(self.description))

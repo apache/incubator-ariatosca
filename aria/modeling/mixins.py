@@ -26,12 +26,12 @@ from sqlalchemy import (
     Text,
 )
 
-from .utils import classproperty
+from . import utils
 
 
 class ModelMixin(object):
 
-    @classproperty
+    @utils.classproperty
     def __modelname__(cls):                                                                         # pylint: disable=no-self-argument
         return getattr(cls, '__mapiname__', cls.__tablename__)
 
@@ -124,8 +124,20 @@ class InstanceModelMixin(ModelMixin):
     def validate(self):
         pass
 
-    def coerce_values(self, container, report_issues):
-        pass
+    @staticmethod
+    def coerce_values(container, report_issues):
+        if container is None:
+            return
+        for value in vars(container).values():
+            if value is not None and isinstance(value, ModelMixin):
+                if isinstance(value, dict):
+                    value = value.values()
+
+                if isinstance(value, list):
+                    for item in value:
+                        item.coerce_values(container, report_issues)
+                else:
+                    utils.coerce_value(container, value, report_issues)
 
     def dump(self):
         pass
