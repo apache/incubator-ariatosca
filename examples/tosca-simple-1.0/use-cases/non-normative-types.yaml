@@ -155,7 +155,7 @@ node_types:
     properties:
       # Property to supply the desired implementation in the Github repository
       github_url:
-        required: no
+        required: false
         type: string
         description: location of the application on the github.
         default: https://github.com/mmm/testnode.git

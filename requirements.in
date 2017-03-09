@@ -1,0 +1,39 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+PyYAML<3.13
+requests>=2.3.0, <2.14.0
+networkx>1.8, <1.10 # version 1.10 dropped support of python 2.6
+retrying>=1.3.0, <1.4.0
+blinker>1.3, <1.5
+jsonpickle>0.9.0, <=0.9.4
+ruamel.yaml>=0.11.12, <0.12.0  # version 0.12.0 dropped support of python 2.6
+Jinja2>=2.8, <2.9
+shortuuid>=0.5, <0.6
+CacheControl[filecache]>=0.11.0, <0.13
+clint>=0.5.0, <0.6
+SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
+wagon==0.6.0
+bottle>=0.12.0, <0.13
+Fabric>=1.13.0, <1.14
+
+# Since the tool we are using to generate our requirements.txt, `pip-tools`,
+# does not currently support conditional dependencies (;), we're adding our original
+# conditional dependencies here as comments, and manually adding them to our
+# generated requirements.txt file.
+# The relevant pip-tools issue: https://github.com/jazzband/pip-tools/issues/435
+
+# importlib ; python_version < '2.7'
+# ordereddict ; python_version < '2.7'
+# total-ordering ; python_version < '2.7'  # only one version on pypi
+# Fabric makes use of this library, but doesn't bring it :(
+# pypiwin32==219 ; sys_platform == 'win32'

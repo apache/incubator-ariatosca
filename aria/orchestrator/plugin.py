@@ -92,7 +92,7 @@ class PluginManager(object):
                 install_args='--prefix="{prefix}" --constraint="{constraint}"'.format(
                     prefix=prefix,
                     constraint=constraint.name),
-                virtualenv=os.environ.get('VIRTUAL_ENV'))
+                venv=os.environ.get('VIRTUAL_ENV'))
         finally:
             os.remove(constraint_path)
 

@@ -44,16 +44,17 @@ extras_require = {}
 # We need to parse the requirements for the conditional dependencies to work for wheels and
 # standard installation
 try:
-    with open(os.path.join(root_dir, 'requirements.txt')) as requirements:
+    with open(os.path.join(root_dir, 'requirements.in')) as requirements:
         for requirement in requirements.readlines():
-            if not requirement.strip().startswith('#'):
-                if ';' in requirement:
-                    package, condition = requirement.split(';')
-                    cond_name = ':{0}'.format(condition.strip())
-                    extras_require.setdefault(cond_name, [])
-                    extras_require[cond_name].append(package.strip())
-                else:
-                    install_requires.append(requirement.strip())
+            install_requires.append(requirement.strip())
+        # We are using the install_requires mechanism in order to specify
+        # conditional dependencies since reading them from a file in their
+        # standard ';' from does silently nothing.
+        extras_require = {":python_version<'2.7'": ['importlib',
+                                                    'ordereddict',
+                                                     'total-ordering',
+                                                     ],
+                          ":sys_platform=='win32'": 'pypiwin32'}
 except IOError:
     install_requires = []
     extras_require = {}
