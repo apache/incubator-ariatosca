@@ -59,10 +59,7 @@ class OperationTask(BaseTask):
     Represents an operation task in the task_graph
     """
 
-    SOURCE_OPERATION = 'source'
-    TARGET_OPERATION = 'target'
-
-    NAME_FORMAT = '{type}:{id}->{interface}/{operation}'
+    NAME_FORMAT = '{interface}:{operation}@{type}:{id}'
 
     def __init__(self,
                  name,
@@ -73,8 +70,7 @@ class OperationTask(BaseTask):
                  ignore_failure=None,
                  inputs=None,
                  plugin=None,
-                 runs_on=None,
-                 dry=False):
+                 runs_on=None):
         """
         Creates an operation task using the name, details, node instance and any additional kwargs.
 
@@ -84,11 +80,8 @@ class OperationTask(BaseTask):
         """
 
         assert isinstance(actor, (models.Node, models.Relationship))
+        assert (runs_on is None) or (runs_on in models.Task.RUNS_ON)
         super(OperationTask, self).__init__()
-
-        if dry:
-            from ..dry import convert_to_dry
-            plugin, implementation, inputs = convert_to_dry(plugin, implementation, inputs)
 
         # Coerce inputs
         if inputs is None:
@@ -131,13 +124,21 @@ class OperationTask(BaseTask):
                 'Could not find operation "{0}" on interface "{1}" for node "{2}"'.format(
                     operation_name, interface_name, node.name))
 
+        plugin = None
+        if operation.plugin_specification:
+            plugin = cls._find_plugin(operation.plugin_specification, kwargs)
+            if plugin is None:
+                raise exceptions.TaskException(
+                    'Could not find plugin of operation "{0}" on interface "{1}" for node "{2}"'
+                    .format(operation_name, interface_name, node.name))
+
         return cls(
             actor=node,
             name=cls.NAME_FORMAT.format(type='node',
-                                        id=node.id,
+                                        id=node.name,
                                         interface=interface_name,
                                         operation=operation_name),
-            plugin=operation.plugin,
+            plugin=plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
             runs_on=models.Task.RUNS_ON_NODE,
@@ -165,13 +166,21 @@ class OperationTask(BaseTask):
                 'Could not find operation "{0}" on interface "{1}" for relationship "{2}"'.format(
                     operation_name, interface_name, relationship.name))
 
+        plugin = None
+        if operation.plugin_specification:
+            plugin = cls._find_plugin(operation.plugin_specification, kwargs)
+            if plugin is None:
+                raise exceptions.TaskException(
+                    'Could not find plugin of operation "{0}" on interface "{1}" for relationship '
+                    '"{2}"'.format(operation_name, interface_name, relationship.name))
+
         return cls(
             actor=relationship,
             name=cls.NAME_FORMAT.format(type='relationship',
-                                        id=relationship.id,
+                                        id=relationship.name,
                                         interface=interface_name,
                                         operation=operation_name),
-            plugin=operation.plugin,
+            plugin=plugin,
             implementation=operation.implementation,
             inputs=cls._merge_inputs(operation.inputs, inputs),
             runs_on=runs_on,
@@ -184,6 +193,13 @@ class OperationTask(BaseTask):
         if interface is not None:
             return interface.operations.get(operation_name)
         return None
+
+    @classmethod
+    def _find_plugin(cls, plugin_specification, kwargs):
+        workflow_context = kwargs.get('ctx') if kwargs else None
+        if workflow_context is None:
+            workflow_context = context.workflow.current.get()
+        return plugin_specification.find_plugin(workflow_context.model.plugin.list())
 
     @classmethod
     def _merge_inputs(cls, operation_inputs, override_inputs=None):

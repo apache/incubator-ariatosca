@@ -57,7 +57,7 @@ def test_execute_operation(ctx):
     assert len(execute_tasks) == 1
     assert execute_tasks[0].name == task.OperationTask.NAME_FORMAT.format(
         type='node',
-        id=node.id,
+        id=node.name,
         interface=interface_name,
         operation=operation_name
     )

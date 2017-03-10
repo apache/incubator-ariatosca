@@ -12,35 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import platform
+
 from shutil import rmtree
 from tempfile import mkdtemp
 
 from sqlalchemy import (
     create_engine,
     orm,
-    Column,
-    Text,
-    Integer,
     pool
 )
 
-
-from aria.modeling import (
-    models,
-    types as modeling_types,
-    bases
-)
-from aria import modeling
-
-
-class MockModel(models.aria_declarative_base, bases.ModelMixin): #pylint: disable=abstract-method
-    __tablename__ = 'mock_model'
-    model_dict = Column(modeling_types.Dict)
-    model_list = Column(modeling_types.List)
-    value = Column(Integer)
-    name = Column(Text)
+from aria.modeling import models
 
 
 class TestFileSystem(object):

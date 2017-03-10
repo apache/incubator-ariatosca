@@ -15,21 +15,43 @@
 
 from threading import RLock
 
-from ..decorators import operation
-from ...utils.collections import OrderedDict
-from ...utils.console import puts, Colored
-from ...utils.formatting import safe_repr
+from ..modeling import models
+from ..orchestrator.decorators import operation
+from ..utils.collections import OrderedDict
+from ..utils.console import puts, Colored
+from ..utils.formatting import safe_repr
 
 
 _TERMINAL_LOCK = RLock()
 
 
-def convert_to_dry(plugin, implementation, inputs): # pylint: disable=unused-argument
-    dry_implementation = '{0}.{1}'.format(__name__, 'dry_operation')
-    dry_inputs = OrderedDict()
-    dry_inputs['_implementation'] = implementation
-    dry_inputs['_plugin'] = plugin.name if plugin is not None else None
-    return None, dry_implementation, dry_inputs
+def convert_to_dry(service):
+    for workflow in service.workflows:
+        convert_operation_to_dry(workflow)
+
+    for node in service.nodes:
+        for interface in node.interfaces.itervalues():
+            for oper in interface.operations.itervalues():
+                convert_operation_to_dry(oper)
+        for relationship in node.outbound_relationships:
+            for interface in relationship.interfaces.itervalues():
+                for oper in interface.operations.itervalues():
+                    convert_operation_to_dry(oper)
+
+
+def convert_operation_to_dry(oper):
+    plugin = oper.plugin_specification.name \
+        if oper.plugin_specification is not None else None
+    if oper.inputs is None:
+        oper.inputs = OrderedDict()
+    oper.inputs['_implementation'] = models.Parameter(name='_implementation',
+                                                      type_name='string',
+                                                      value=oper.implementation)
+    oper.inputs['_plugin'] = models.Parameter(name='_plugin',
+                                              type_name='string',
+                                              value=plugin)
+    oper.implementation = '{0}.{1}'.format(__name__, 'dry_operation')
+    oper.plugin_specification = None
 
 
 @operation

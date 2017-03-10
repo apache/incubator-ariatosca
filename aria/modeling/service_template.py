@@ -30,7 +30,7 @@ from sqlalchemy.ext.declarative import declared_attr
 
 from ..parser import validation
 from ..utils import collections, formatting, console
-from .bases import TemplateModelMixin
+from .mixins import TemplateModelMixin
 from . import (
     utils,
     types as modeling_types
@@ -64,10 +64,10 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     :vartype inputs: {basestring: :class:`Parameter`}
     :ivar outputs: These parameters are filled in after service installation
     :vartype outputs: {basestring: :class:`Parameter`}
-    :ivar operation_templates: Custom operations that can be performed on the service
-    :vartype operation_templates: {basestring: :class:`OperationTemplate`}
-    :ivar plugins: Plugins required by services
-    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar workflow_templates: Custom workflows that can be performed on the service
+    :vartype workflow_templates: {basestring: :class:`OperationTemplate`}
+    :ivar plugin_specifications: Plugins required by services
+    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar node_types: Base for the node type hierarchy
     :vartype node_types: :class:`Type`
     :ivar group_types: Base for the group type hierarchy
@@ -82,8 +82,8 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     :vartype interface_types: :class:`Type`
     :ivar artifact_types: Base for the artifact type hierarchy
     :vartype artifact_types: :class:`Type`
-    :ivar plugins: Plugins required to be installed
-    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar plugin_specifications: Plugins required to be installed
+    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar created_at: Creation timestamp
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
@@ -101,69 +101,73 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     @declared_attr
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SqlAlchemy!
-        return cls.many_to_many_relationship('metadata', dict_key='name')
+        return cls._create_many_to_many_relationship('metadata', dict_key='name')
 
     @declared_attr
     def node_templates(cls):
-        return cls.one_to_many_relationship('node_template')
+        return cls._create_one_to_many_relationship('node_template')
 
     @declared_attr
     def group_templates(cls):
-        return cls.one_to_many_relationship('group_template')
+        return cls._create_one_to_many_relationship('group_template')
 
     @declared_attr
     def policy_templates(cls):
-        return cls.one_to_many_relationship('policy_template')
+        return cls._create_one_to_many_relationship('policy_template')
 
     @declared_attr
     def substitution_template(cls):
-        return cls.one_to_one_relationship('substitution_template')
+        return cls._create_one_to_one_relationship('substitution_template')
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
 
     @declared_attr
     def outputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='outputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='outputs',
+                                                     dict_key='name')
 
     @declared_attr
-    def operation_templates(cls):
-        return cls.one_to_many_relationship('operation_template', dict_key='name')
+    def workflow_templates(cls):
+        return cls._create_one_to_many_relationship('operation_template', dict_key='name')
 
     @declared_attr
-    def plugins(cls):
-        return cls.one_to_many_relationship('plugin')
+    def plugin_specifications(cls):
+        return cls._create_one_to_many_relationship('plugin_specification')
 
     @declared_attr
     def node_types(cls):
-        return cls.one_to_one_relationship('type', key='node_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='node_type_fk', backreference='')
 
     @declared_attr
     def group_types(cls):
-        return cls.one_to_one_relationship('type', key='group_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='group_type_fk', backreference='')
 
     @declared_attr
     def policy_types(cls):
-        return cls.one_to_one_relationship('type', key='policy_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='policy_type_fk', backreference='')
 
     @declared_attr
     def relationship_types(cls):
-        return cls.one_to_one_relationship('type', key='relationship_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='relationship_type_fk',
+                                                   backreference='')
 
     @declared_attr
     def capability_types(cls):
-        return cls.one_to_one_relationship('type', key='capability_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='capability_type_fk',
+                                                   backreference='')
 
     @declared_attr
     def interface_types(cls):
-        return cls.one_to_one_relationship('type', key='interface_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='interface_type_fk',
+                                                   backreference='')
 
     @declared_attr
     def artifact_types(cls):
-        return cls.one_to_one_relationship('type', key='artifact_type_fk', backreference='')
+        return cls._create_one_to_one_relationship('type', key='artifact_type_fk',
+                                                   backreference='')
 
     # region orchestration
 
@@ -186,42 +190,42 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     # ServiceTemplate one-to-one to SubstitutionTemplate
     @declared_attr
     def substitution_template_fk(cls):
-        return cls.foreign_key('substitution_template', nullable=True)
+        return cls._create_foreign_key('substitution_template', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def node_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def group_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def policy_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def relationship_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def capability_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def interface_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # ServiceTemplate one-to-one to Type
     @declared_attr
     def artifact_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # endregion
 
@@ -250,7 +254,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
             ('substitution_template', formatting.as_raw(self.substitution_template)),
             ('inputs', formatting.as_raw_dict(self.inputs)),
             ('outputs', formatting.as_raw_dict(self.outputs)),
-            ('operation_templates', formatting.as_raw_list(self.operation_templates))))
+            ('workflow_templates', formatting.as_raw_list(self.workflow_templates))))
 
     @property
     def types_as_raw(self):
@@ -283,7 +287,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
 
         utils.instantiate_list(context, self, service.groups, self.group_templates)
         utils.instantiate_list(context, self, service.policies, self.policy_templates)
-        utils.instantiate_dict(context, self, service.operations, self.operation_templates)
+        utils.instantiate_dict(context, self, service.workflows, self.workflow_templates)
 
         if self.substitution_template is not None:
             service.substitution = self.substitution_template.instantiate(context, container)
@@ -308,7 +312,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
             self.substitution_template.validate(context)
         utils.validate_dict_values(context, self.inputs)
         utils.validate_dict_values(context, self.outputs)
-        utils.validate_dict_values(context, self.operation_templates)
+        utils.validate_dict_values(context, self.workflow_templates)
         if self.node_types is not None:
             self.node_types.validate(context)
         if self.group_types is not None:
@@ -333,7 +337,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
             self.substitution_template.coerce_values(context, container, report_issues)
         utils.coerce_dict_values(context, container, self.inputs, report_issues)
         utils.coerce_dict_values(context, container, self.outputs, report_issues)
-        utils.coerce_dict_values(context, container, self.operation_templates, report_issues)
+        utils.coerce_dict_values(context, container, self.workflow_templates, report_issues)
 
     def dump(self, context):
         if self.description is not None:
@@ -349,7 +353,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
             self.substitution_template.dump(context)
         utils.dump_dict_values(context, self.inputs, 'Inputs')
         utils.dump_dict_values(context, self.outputs, 'Outputs')
-        utils.dump_dict_values(context, self.operation_templates, 'Operation templates')
+        utils.dump_dict_values(context, self.workflow_templates, 'Workflow templates')
 
     def dump_types(self, context):
         if self.node_types.children:
@@ -407,8 +411,8 @@ class NodeTemplateBase(TemplateModelMixin):
     :vartype requirement_templates: [:class:`RequirementTemplate`]
     :ivar target_node_template_constraints: Constraints for filtering relationship targets
     :vartype target_node_template_constraints: [:class:`FunctionType`]
-    :ivar plugins: Plugins required to be installed on the node's host
-    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar plugin_specifications: Plugins required to be installed on the node's host
+    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
 
     :ivar service_template: Containing service template
     :vartype service_template: :class:`ServiceTemplate`
@@ -426,7 +430,7 @@ class NodeTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
     default_instances = Column(Integer, default=1)
@@ -435,32 +439,32 @@ class NodeTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interface_templates(cls):
-        return cls.one_to_many_relationship('interface_template', dict_key='name')
+        return cls._create_one_to_many_relationship('interface_template', dict_key='name')
 
     @declared_attr
     def artifact_templates(cls):
-        return cls.one_to_many_relationship('artifact_template', dict_key='name')
+        return cls._create_one_to_many_relationship('artifact_template', dict_key='name')
 
     @declared_attr
     def capability_templates(cls):
-        return cls.one_to_many_relationship('capability_template', dict_key='name')
+        return cls._create_one_to_many_relationship('capability_template', dict_key='name')
 
     @declared_attr
     def requirement_templates(cls):
-        return cls.one_to_many_relationship('requirement_template',
-                                            foreign_key='node_template_fk',
-                                            backreference='node_template')
+        return cls._create_one_to_many_relationship('requirement_template',
+                                                    foreign_key='node_template_fk',
+                                                    backreference='node_template')
 
     target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
 
     @declared_attr
-    def plugins(cls):
-        return cls.many_to_many_relationship('plugin')
+    def plugin_specifications(cls):
+        return cls._create_many_to_many_relationship('plugin_specification')
 
     # region foreign_keys
 
@@ -470,12 +474,12 @@ class NodeTemplateBase(TemplateModelMixin):
     # NodeTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # ServiceTemplate one-to-many to NodeTemplate
     @declared_attr
     def service_template_fk(cls):
-        return cls.foreign_key('service_template')
+        return cls._create_foreign_key('service_template')
 
     # endregion
 
@@ -579,22 +583,22 @@ class GroupTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def node_templates(cls):
-        return cls.many_to_many_relationship('node_template')
+        return cls._create_many_to_many_relationship('node_template')
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interface_templates(cls):
-        return cls.one_to_many_relationship('interface_template', dict_key='name')
+        return cls._create_one_to_many_relationship('interface_template', dict_key='name')
 
     # region foreign keys
 
@@ -604,12 +608,12 @@ class GroupTemplateBase(TemplateModelMixin):
     # GroupTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # ServiceTemplate one-to-many to GroupTemplate
     @declared_attr
     def service_template_fk(cls):
-        return cls.foreign_key('service_template')
+        return cls._create_foreign_key('service_template')
 
     # endregion
 
@@ -684,22 +688,22 @@ class PolicyTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def node_templates(cls):
-        return cls.many_to_many_relationship('node_template')
+        return cls._create_many_to_many_relationship('node_template')
 
     @declared_attr
     def group_templates(cls):
-        return cls.many_to_many_relationship('group_template')
+        return cls._create_many_to_many_relationship('group_template')
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     # region foreign keys
 
@@ -709,12 +713,12 @@ class PolicyTemplateBase(TemplateModelMixin):
     # PolicyTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # ServiceTemplate one-to-many to PolicyTemplate
     @declared_attr
     def service_template_fk(cls):
-        return cls.foreign_key('service_template')
+        return cls._create_foreign_key('service_template')
 
     # endregion
 
@@ -781,11 +785,12 @@ class SubstitutionTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def node_type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     @declared_attr
     def mappings(cls):
-        return cls.one_to_many_relationship('substitution_template_mapping', dict_key='name')
+        return cls._create_one_to_many_relationship('substitution_template_mapping',
+                                                    dict_key='name')
 
     # region foreign keys
 
@@ -794,7 +799,7 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     # SubstitutionTemplate many-to-one to Type
     @declared_attr
     def node_type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # endregion
 
@@ -847,15 +852,15 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
 
     @declared_attr
     def node_template(cls):
-        return cls.one_to_one_relationship('node_template')
+        return cls._create_one_to_one_relationship('node_template')
 
     @declared_attr
     def capability_template(cls):
-        return cls.one_to_one_relationship('capability_template')
+        return cls._create_one_to_one_relationship('capability_template')
 
     @declared_attr
     def requirement_template(cls):
-        return cls.one_to_one_relationship('requirement_template')
+        return cls._create_one_to_one_relationship('requirement_template')
 
     # region foreign keys
 
@@ -867,22 +872,22 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
     # SubstitutionTemplate one-to-many to SubstitutionTemplateMapping
     @declared_attr
     def substitution_template_fk(cls):
-        return cls.foreign_key('substitution_template')
+        return cls._create_foreign_key('substitution_template')
 
     # SubstitutionTemplate one-to-one to NodeTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template')
+        return cls._create_foreign_key('node_template')
 
     # SubstitutionTemplate one-to-one to CapabilityTemplate
     @declared_attr
     def capability_template_fk(cls):
-        return cls.foreign_key('capability_template', nullable=True)
+        return cls._create_foreign_key('capability_template', nullable=True)
 
     # SubstitutionTemplate one-to-one to RequirementTemplate
     @declared_attr
     def requirement_template_fk(cls):
-        return cls.foreign_key('requirement_template', nullable=True)
+        return cls._create_foreign_key('requirement_template', nullable=True)
 
     # endregion
 
@@ -965,24 +970,25 @@ class RequirementTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def target_node_type(cls):
-        return cls.many_to_one_relationship('type', key='target_node_type_fk', backreference='')
+        return cls._create_many_to_one_relationship('type', key='target_node_type_fk',
+                                                    backreference='')
 
     @declared_attr
     def target_node_template(cls):
-        return cls.one_to_one_relationship('node_template', key='target_node_template_fk',
-                                           backreference='')
+        return cls._create_one_to_one_relationship('node_template', key='target_node_template_fk',
+                                                   backreference='')
 
     @declared_attr
     def target_capability_type(cls):
-        return cls.one_to_one_relationship('type', key='target_capability_type_fk',
-                                           backreference='')
+        return cls._create_one_to_one_relationship('type', key='target_capability_type_fk',
+                                                   backreference='')
 
     target_capability_name = Column(Text)
     target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
 
     @declared_attr
     def relationship_template(cls):
-        return cls.one_to_one_relationship('relationship_template')
+        return cls._create_one_to_one_relationship('relationship_template')
 
     # region foreign keys
 
@@ -995,27 +1001,27 @@ class RequirementTemplateBase(TemplateModelMixin):
     # RequirementTemplate many-to-one to Type
     @declared_attr
     def target_node_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # RequirementTemplate one-to-one to NodeTemplate
     @declared_attr
     def target_node_template_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
+        return cls._create_foreign_key('node_template', nullable=True)
 
     # RequirementTemplate one-to-one to NodeTemplate
     @declared_attr
     def target_capability_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # NodeTemplate one-to-many to RequirementTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template')
+        return cls._create_foreign_key('node_template')
 
     # RequirementTemplate one-to-one to RelationshipTemplate
     @declared_attr
     def relationship_template_fk(cls):
-        return cls.foreign_key('relationship_template', nullable=True)
+        return cls._create_foreign_key('relationship_template', nullable=True)
 
     # endregion
 
@@ -1146,18 +1152,18 @@ class RelationshipTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interface_templates(cls):
-        return cls.one_to_many_relationship('interface_template', dict_key='name')
+        return cls._create_one_to_many_relationship('interface_template', dict_key='name')
 
     # region foreign keys
 
@@ -1166,7 +1172,7 @@ class RelationshipTemplateBase(TemplateModelMixin):
     # RelationshipTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # endregion
 
@@ -1243,7 +1249,7 @@ class CapabilityTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
     min_occurrences = Column(Integer, default=None)  # optional
@@ -1251,12 +1257,12 @@ class CapabilityTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def valid_source_node_types(cls):
-        return cls.many_to_many_relationship('type', table_prefix='valid_sources')
+        return cls._create_many_to_many_relationship('type', table_prefix='valid_sources')
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     # region foreign keys
 
@@ -1266,12 +1272,12 @@ class CapabilityTemplateBase(TemplateModelMixin):
     # CapabilityTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # NodeTemplate one-to-many to CapabilityTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template')
+        return cls._create_foreign_key('node_template')
 
     # endregion
 
@@ -1375,17 +1381,17 @@ class InterfaceTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
     @declared_attr
     def operation_templates(cls):
-        return cls.one_to_many_relationship('operation_template', dict_key='name')
+        return cls._create_one_to_many_relationship('operation_template', dict_key='name')
 
     # region foreign keys
 
@@ -1397,22 +1403,22 @@ class InterfaceTemplateBase(TemplateModelMixin):
     # InterfaceTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # NodeTemplate one-to-many to InterfaceTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
+        return cls._create_foreign_key('node_template', nullable=True)
 
     # GroupTemplate one-to-many to InterfaceTemplate
     @declared_attr
     def group_template_fk(cls):
-        return cls.foreign_key('group_template', nullable=True)
+        return cls._create_foreign_key('group_template', nullable=True)
 
     # RelationshipTemplate one-to-many to InterfaceTemplate
     @declared_attr
     def relationship_template_fk(cls):
-        return cls.foreign_key('relationship_template', nullable=True)
+        return cls._create_foreign_key('relationship_template', nullable=True)
 
     # endregion
 
@@ -1458,14 +1464,14 @@ class OperationTemplateBase(TemplateModelMixin):
     """
     An operation in a :class:`InterfaceTemplate`.
 
-    Operations are executed by an associated :class:`Plugin` via an executor.
+    Operations are executed by an associated :class:`PluginSpecification` via an executor.
 
     :ivar name: Name (unique for the interface or service template)
     :vartype name: basestring
     :ivar description: Human-readable description
     :vartype description: basestring
-    :ivar plugin: Associated plugin
-    :vartype plugin: :class:`Plugin`
+    :ivar plugin_specification: Associated plugin
+    :vartype plugin_specification: :class:`PluginSpecification`
     :ivar implementation: Implementation string (interpreted by the plugin)
     :vartype implementation: basestring
     :ivar dependencies: Dependency strings (interpreted by the plugin)
@@ -1492,16 +1498,16 @@ class OperationTemplateBase(TemplateModelMixin):
     description = Column(Text)
 
     @declared_attr
-    def plugin(cls):
-        return cls.one_to_one_relationship('plugin')
+    def plugin_specification(cls):
+        return cls._create_one_to_one_relationship('plugin_specification')
 
     implementation = Column(Text)
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
 
     executor = Column(Text)
     max_retries = Column(Integer)
@@ -1516,17 +1522,17 @@ class OperationTemplateBase(TemplateModelMixin):
     # ServiceTemplate one-to-many to OperationTemplate
     @declared_attr
     def service_template_fk(cls):
-        return cls.foreign_key('service_template', nullable=True)
+        return cls._create_foreign_key('service_template', nullable=True)
 
     # InterfaceTemplate one-to-many to OperationTemplate
     @declared_attr
     def interface_template_fk(cls):
-        return cls.foreign_key('interface_template', nullable=True)
+        return cls._create_foreign_key('interface_template', nullable=True)
 
-    # OperationTemplate one-to-one to Plugin
+    # OperationTemplate one-to-one to PluginSpecification
     @declared_attr
-    def plugin_fk(cls):
-        return cls.foreign_key('plugin', nullable=True)
+    def plugin_specification_fk(cls):
+        return cls._create_foreign_key('plugin_specification', nullable=True)
 
     # endregion
 
@@ -1548,7 +1554,7 @@ class OperationTemplateBase(TemplateModelMixin):
                                      description=utils.deepcopy_with_locators(self.description),
                                      implementation=self.implementation,
                                      dependencies=self.dependencies,
-                                     plugin=self.plugin,
+                                     plugin_specification=self.plugin_specification,
                                      executor=self.executor,
                                      max_retries=self.max_retries,
                                      retry_interval=self.retry_interval,
@@ -1614,7 +1620,7 @@ class ArtifactTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
     source_path = Column(Text)
@@ -1624,8 +1630,8 @@ class ArtifactTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     # region foreign keys
 
@@ -1635,12 +1641,12 @@ class ArtifactTemplateBase(TemplateModelMixin):
     # ArtifactTemplate many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # NodeTemplate one-to-many to ArtifactTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template')
+        return cls._create_foreign_key('node_template')
 
     # endregion
 

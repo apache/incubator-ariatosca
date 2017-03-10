@@ -50,6 +50,7 @@ from ..utils.collections import OrderedDict
 from ..orchestrator import WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
 from ..orchestrator.runner import Runner
 from ..orchestrator.workflows.builtin import BUILTIN_WORKFLOWS
+from .dry import convert_to_dry
 
 from .exceptions import (
     AriaCliFormatInputsError,
@@ -212,6 +213,7 @@ class WorkflowCommand(BaseCommand):
 
         context = self._parse(args_namespace.uri)
         workflow_fn, inputs = self._get_workflow(context, args_namespace.workflow)
+        self._dry = args_namespace.dry
         self._run(context, args_namespace.workflow, workflow_fn, inputs)
     
     def _parse(self, uri):
@@ -265,6 +267,8 @@ class WorkflowCommand(BaseCommand):
     def _run(self, context, workflow_name, workflow_fn, inputs):
         # Storage
         def _initialize_storage(model_storage):
+            if self._dry:
+                convert_to_dry(context.modeling.instance)
             context.modeling.store(model_storage)
 
         # Create runner

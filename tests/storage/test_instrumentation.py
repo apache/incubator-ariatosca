@@ -17,7 +17,7 @@ import pytest
 from sqlalchemy import Column, Text, Integer, event
 
 from aria.modeling import (
-    bases,
+    mixins,
     types as modeling_types,
     models
 )
@@ -28,7 +28,7 @@ from aria.storage import (
     instrumentation
 )
 
-from ..storage import release_sqlite_storage, init_inmemory_model_storage
+from . import release_sqlite_storage, init_inmemory_model_storage
 
 STUB = instrumentation._STUB
 Value = instrumentation._Value
@@ -337,7 +337,7 @@ def storage():
     release_sqlite_storage(result)
 
 
-class _MockModel(bases.ModelMixin):
+class _MockModel(mixins.ModelMixin):
     name = Column(Text)
     dict1 = Column(modeling_types.Dict)
     dict2 = Column(modeling_types.Dict)
@@ -356,7 +356,7 @@ class MockModel2(_MockModel, models.aria_declarative_base):
     __tablename__ = 'mock_model_2'
 
 
-class StrictMockModel(bases.ModelMixin, models.aria_declarative_base):
+class StrictMockModel(mixins.ModelMixin, models.aria_declarative_base):
     __tablename__ = 'strict_mock_model'
 
     strict_dict = Column(modeling_types.StrictDict(basestring, basestring))

@@ -44,14 +44,17 @@ def test_serialize_operation_context(context, executor, tmpdir):
 def _mock_workflow(ctx, graph):
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     plugin = mock.models.create_plugin()
+    ctx.model.plugin.put(plugin)
+    plugin_specification = mock.models.create_plugin_specification()
     interface = mock.models.create_interface(
         node.service,
         'test',
         'op',
-        operation_kwargs=dict(implementation=_operation_mapping(), plugin=plugin)
+        operation_kwargs=dict(implementation=_operation_mapping(),
+                              plugin_specification=plugin_specification)
     )
     node.interfaces[interface.name] = interface
-    node.plugins = [plugin]
+    node.plugin_specifications = [plugin_specification]
     task = api.task.OperationTask.for_node(node=node, interface_name='test', operation_name='op')
     graph.add_tasks(task)
     return graph

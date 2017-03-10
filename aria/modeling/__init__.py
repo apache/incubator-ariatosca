@@ -16,26 +16,32 @@
 from collections import namedtuple
 
 from . import (
-    bases,
+    mixins,
     types,
     models,
     service_template as _service_template_bases,
-    service as _service_bases,
-    orchestration as _orchestration_bases,
+    service_instance as _service_instance_bases,
+    service_changes as _service_changes_bases,
+    service_common as _service_common_bases,
+    orchestration as _orchestration_bases
 )
 
 
 _ModelBasesCls = namedtuple('ModelBase', 'service_template,'
-                                         'service,'
+                                         'service_instance,'
+                                         'service_changes,'
+                                         'service_common,'
                                          'orchestration')
 
 model_bases = _ModelBasesCls(service_template=_service_template_bases,
-                             service=_service_bases,
+                             service_instance=_service_instance_bases,
+                             service_changes=_service_changes_bases,
+                             service_common=_service_common_bases,
                              orchestration=_orchestration_bases)
 
 
 __all__ = (
-    'bases',
+    'mixins',
     'types',
     'models',
     'model_bases',

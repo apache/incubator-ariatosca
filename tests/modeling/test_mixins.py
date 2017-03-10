@@ -26,7 +26,6 @@ from aria import modeling
 
 from ..storage import (
     release_sqlite_storage,
-    bases,
     init_inmemory_model_storage
 )
 from . import MockModel
@@ -170,7 +169,7 @@ def test_relationship_model_ordering(context):
     flip_and_assert(target_node, 'inbound')
 
 
-class StrictClass(modeling.models.aria_declarative_base, bases.ModelMixin):
+class StrictClass(modeling.models.aria_declarative_base, modeling.mixins.ModelMixin):
     __tablename__ = 'strict_class'
 
     strict_dict = sqlalchemy.Column(modeling.types.StrictDict(basestring, basestring))

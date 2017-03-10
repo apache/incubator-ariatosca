@@ -20,7 +20,6 @@ def maintenance(ctx, graph, enabled):
             graph.add_tasks(OperationTask.for_node(node=node,
                                                    interface_name=INTERFACE_NAME,
                                                    operation_name=ENABLE_OPERATION_NAME if enabled
-                                                   else DISABLE_OPERATION_NAME,
-                                                   dry=True))
+                                                   else DISABLE_OPERATION_NAME))
         except TaskException:
             pass

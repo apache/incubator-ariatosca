@@ -19,6 +19,7 @@ from aria.orchestrator.runner import Runner
 from aria.orchestrator.workflows.builtin import BUILTIN_WORKFLOWS
 from aria.utils.imports import import_fullname
 from aria.utils.collections import OrderedDict
+from aria.cli.dry import convert_to_dry
 
 from tests.parser.service_templates import consume_node_cellar
 
@@ -36,6 +37,8 @@ def test_custom():
 
 def _workflow(workflow_name):
     context, _ = consume_node_cellar()
+
+    convert_to_dry(context.modeling.instance)
 
     # TODO: this logic will eventually stabilize and be part of the ARIA API,
     # likely somewhere in aria.orchestrator.workflows

@@ -27,7 +27,7 @@ from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                   GroupTemplate, PolicyTemplate, SubstitutionTemplate,
                                   SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
-                                  ArtifactTemplate, Metadata, Parameter, Plugin)
+                                  ArtifactTemplate, Metadata, Parameter, PluginSpecification)
 
 from ..data_types import coerce_value
 
@@ -81,12 +81,13 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
         create_parameter_models_from_values(model.outputs,
                                             topology_template._get_output_values(context))
 
-    # Plugins
+    # Plugin specifications
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
     if policies:
         for policy in policies.itervalues():
             if model.policy_types.get_descendant(policy.type).role == 'plugin':
-                model.plugins.append(create_plugin_model(context, policy))
+                model.plugin_specifications.append(
+                    create_plugin_specification_model(context, policy))
 
     # Node templates
     node_templates = context.presentation.get('service_template', 'topology_template',
@@ -349,7 +350,7 @@ def create_operation_template_model(context, service_template, operation): # pyl
 
     implementation = operation.implementation
     if (implementation is not None) and operation.implementation.primary:
-        model.plugin, model.implementation = \
+        model.plugin_specification, model.implementation = \
             parse_implementation_string(context, service_template, operation.implementation.primary)
 
         dependencies = implementation.dependencies
@@ -427,7 +428,7 @@ def create_substitution_template_model(context, service_template, substitution_m
     return model
 
 
-def create_plugin_model(context, policy):
+def create_plugin_specification_model(context, policy):
     properties = policy.properties
 
     def get(name):
@@ -436,18 +437,16 @@ def create_plugin_model(context, policy):
 
     now = datetime.now()
 
-    model = Plugin(name=policy._name,
-                   archive_name=get('archive_name') or '',
-                   distribution=get('distribution'),
-                   distribution_release=get('distribution_release'),
-                   distribution_version=get('distribution_version'),
-                   package_name=get('package_name') or '',
-                   package_source=get('package_source'),
-                   package_version=get('package_version'),
-                   supported_platform=get('supported_platform'),
-                   supported_py_versions=get('supported_py_versions'),
-                   uploaded_at=now,
-                   wheels=get('wheels') or [])
+    model = PluginSpecification(name=policy._name,
+                                archive_name=get('archive_name') or '',
+                                distribution=get('distribution'),
+                                distribution_release=get('distribution_release'),
+                                distribution_version=get('distribution_version'),
+                                package_name=get('package_name') or '',
+                                package_source=get('package_source'),
+                                package_version=get('package_version'),
+                                supported_platform=get('supported_platform'),
+                                supported_py_versions=get('supported_py_versions'))
 
     return model
 
@@ -665,15 +664,15 @@ def parse_implementation_string(context, service_template, implementation):
     plugin_name = implementation[:index].strip()
     
     if plugin_name == 'execution':
-        plugin = None
+        plugin_specification = None
     else:
-        plugin = None
-        for the_plugin in service_template.plugins:
-            if the_plugin.name == plugin_name:
-                plugin = the_plugin
+        plugin_specification = None
+        for a_plugin_specification in service_template.plugin_specifications:
+            if a_plugin_specification.name == plugin_name:
+                plugin_specification = a_plugin_specification
                 break
-        if plugin is None:
+        if plugin_specification is None:
             raise ValueError('unknown plugin: "{0}"'.format(plugin_name))
 
     implementation = implementation[index+1:].strip()
-    return plugin, implementation
+    return plugin_specification, implementation

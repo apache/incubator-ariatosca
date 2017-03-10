@@ -19,14 +19,15 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from . import (
     service_template,
-    service,
+    service_instance,
+    service_changes,
+    service_common,
     orchestration,
-    misc,
-    bases,
+    mixins,
 )
 
 
-aria_declarative_base = declarative_base(cls=bases.ModelIDMixin)
+aria_declarative_base = declarative_base(cls=mixins.ModelIDMixin)
 
 
 # region service template models
@@ -84,47 +85,83 @@ class ArtifactTemplate(aria_declarative_base, service_template.ArtifactTemplateB
 
 # region service instance models
 
-class Service(aria_declarative_base, service.ServiceBase):
+class Service(aria_declarative_base, service_instance.ServiceBase):
     pass
 
 
-class Node(aria_declarative_base, service.NodeBase):
+class Node(aria_declarative_base, service_instance.NodeBase):
     pass
 
 
-class Group(aria_declarative_base, service.GroupBase):
+class Group(aria_declarative_base, service_instance.GroupBase):
     pass
 
 
-class Policy(aria_declarative_base, service.PolicyBase):
+class Policy(aria_declarative_base, service_instance.PolicyBase):
     pass
 
 
-class Substitution(aria_declarative_base, service.SubstitutionBase):
+class Substitution(aria_declarative_base, service_instance.SubstitutionBase):
     pass
 
 
-class SubstitutionMapping(aria_declarative_base, service.SubstitutionMappingBase):
+class SubstitutionMapping(aria_declarative_base, service_instance.SubstitutionMappingBase):
     pass
 
 
-class Relationship(aria_declarative_base, service.RelationshipBase):
+class Relationship(aria_declarative_base, service_instance.RelationshipBase):
     pass
 
 
-class Capability(aria_declarative_base, service.CapabilityBase):
+class Capability(aria_declarative_base, service_instance.CapabilityBase):
     pass
 
 
-class Interface(aria_declarative_base, service.InterfaceBase):
+class Interface(aria_declarative_base, service_instance.InterfaceBase):
     pass
 
 
-class Operation(aria_declarative_base, service.OperationBase):
+class Operation(aria_declarative_base, service_instance.OperationBase):
     pass
 
 
-class Artifact(aria_declarative_base, service.ArtifactBase):
+class Artifact(aria_declarative_base, service_instance.ArtifactBase):
+    pass
+
+# endregion
+
+
+# region service changes models
+
+class ServiceUpdate(aria_declarative_base, service_changes.ServiceUpdateBase):
+    pass
+
+
+class ServiceUpdateStep(aria_declarative_base, service_changes.ServiceUpdateStepBase):
+    pass
+
+
+class ServiceModification(aria_declarative_base, service_changes.ServiceModificationBase):
+    pass
+
+# endregion
+
+
+# region common service models
+
+class Parameter(aria_declarative_base, service_common.ParameterBase):
+    pass
+
+
+class Type(aria_declarative_base, service_common.TypeBase):
+    pass
+
+
+class Metadata(aria_declarative_base, service_common.MetadataBase):
+    pass
+
+
+class PluginSpecification(aria_declarative_base, service_common.PluginSpecificationBase):
     pass
 
 # endregion
@@ -132,19 +169,7 @@ class Artifact(aria_declarative_base, service.ArtifactBase):
 
 # region orchestration models
 
-class Execution(aria_declarative_base, orchestration.Execution):
-    pass
-
-
-class ServiceUpdate(aria_declarative_base, orchestration.ServiceUpdateBase):
-    pass
-
-
-class ServiceUpdateStep(aria_declarative_base, orchestration.ServiceUpdateStepBase):
-    pass
-
-
-class ServiceModification(aria_declarative_base, orchestration.ServiceModificationBase):
+class Execution(aria_declarative_base, orchestration.ExecutionBase):
     pass
 
 
@@ -153,22 +178,6 @@ class Plugin(aria_declarative_base, orchestration.PluginBase):
 
 
 class Task(aria_declarative_base, orchestration.TaskBase):
-    pass
-
-# endregion
-
-
-# region misc models
-
-class Parameter(aria_declarative_base, misc.ParameterBase):
-    pass
-
-
-class Type(aria_declarative_base, misc.TypeBase):
-    pass
-
-
-class Metadata(aria_declarative_base, misc.MetadataBase):
     pass
 
 # endregion
@@ -202,18 +211,21 @@ models_to_register = [
     Operation,
     Artifact,
 
-    # Orchestration models
-    Execution,
+    # Service changes models
     ServiceUpdate,
     ServiceUpdateStep,
     ServiceModification,
-    Plugin,
-    Task,
 
-    # Misc models
+    # Common service models
     Parameter,
     Type,
-    Metadata
+    Metadata,
+    PluginSpecification,
+
+    # Orchestration models
+    Execution,
+    Plugin,
+    Task
 ]
 
 __all__ = (
@@ -247,16 +259,19 @@ __all__ = (
     'Operation',
     'Artifact',
 
-    # Orchestration models
-    'Execution',
+    # Service changes models
     'ServiceUpdate',
     'ServiceUpdateStep',
     'ServiceModification',
-    'Plugin',
-    'Task',
 
-    # Misc models
+    # Common service models
     'Parameter',
     'Type',
-    'Metadata'
+    'Metadata',
+    'PluginSpecification',
+
+    # Orchestration models
+    'Execution',
+    'Plugin',
+    'Task'
 )

@@ -84,7 +84,7 @@ def test_node_operation_task_execution(ctx, executor):
 
     operation_context = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
         type='node',
-        id=node.id,
+        id=node.name,
         interface=interface_name,
         operation=operation_name
     )]
@@ -95,7 +95,7 @@ def test_node_operation_task_execution(ctx, executor):
     assert operation_context.task.actor == node
     assert operation_context.task.name == api.task.OperationTask.NAME_FORMAT.format(
         type='node',
-        id=node.id,
+        id=node.name,
         interface=interface_name,
         operation=operation_name
     )
@@ -140,7 +140,7 @@ def test_relationship_operation_task_execution(ctx, executor):
 
     operation_context = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
         type='relationship',
-        id=relationship.id,
+        id=relationship.name,
         interface=interface_name,
         operation=operation_name
     )]
@@ -205,7 +205,7 @@ def test_invalid_task_operation_id(ctx, executor):
 
     op_node_id = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
         type='node',
-        id=node.id,
+        id=node.name,
         interface=interface_name,
         operation=operation_name
     )]
@@ -218,7 +218,8 @@ def test_plugin_workdir(ctx, executor, tmpdir):
     operation_name = 'create'
 
     plugin = mock.models.create_plugin()
-    plugin.name = 'mock_plugin'
+    ctx.model.plugin.put(plugin)
+    plugin_specification = mock.models.create_plugin_specification()
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         node.service,
@@ -226,10 +227,10 @@ def test_plugin_workdir(ctx, executor, tmpdir):
         operation_name,
         operation_kwargs=dict(
             implementation='{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
-            plugin=plugin)
+            plugin_specification=plugin_specification)
     )
     node.interfaces[interface.name] = interface
-    node.plugins = [plugin]
+    node.plugin_specifications = [plugin_specification]
     ctx.model.node.update(node)
 
     filename = 'test_file'

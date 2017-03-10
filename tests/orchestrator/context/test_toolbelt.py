@@ -132,7 +132,7 @@ def test_relationship_tool_belt(workflow_context, executor):
 
     assert isinstance(global_test_holder.get(api.task.OperationTask.NAME_FORMAT.format(
         type='relationship',
-        id=relationship.id,
+        id=relationship.name,
         interface=interface_name,
         operation=operation_name
     )), RelationshipToolBelt)

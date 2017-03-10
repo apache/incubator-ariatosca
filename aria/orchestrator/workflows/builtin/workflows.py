@@ -67,128 +67,108 @@ __all__ = (
 
 @workflow(suffix_template='{node.name}')
 def install_node(graph, node, **kwargs):
-    dry = kwargs.get('dry', True)
-
     sequence = []
 
     # Create
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE,
-            node,
-            dry))
+            node))
 
     # Configure
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_SOURCE,
             Task.RUNS_ON_SOURCE,
-            node,
-            dry)
+            node)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_TARGET,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE,
-            node,
-            dry))
+            node))
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_SOURCE,
             Task.RUNS_ON_SOURCE,
-            node,
-            dry)
+            node)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_TARGET,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
 
     # Start
-    sequence += _create_start_tasks(node, dry)
+    sequence += _create_start_tasks(node)
 
     graph.sequence(*sequence)
 
 
 @workflow(suffix_template='{node.name}')
 def uninstall_node(graph, node, **kwargs):
-    dry = kwargs.get('dry', True)
-
     # Stop
-    sequence = _create_stop_tasks(node, dry)
+    sequence = _create_stop_tasks(node)
 
     # Delete
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_DELETE,
-            node,
-            dry))
+            node))
 
     graph.sequence(*sequence)
 
 
 @workflow(suffix_template='{node.name}')
 def start_node(graph, node, **kwargs):
-    dry = kwargs.get('dry', True)
-    graph.sequence(*_create_start_tasks(node, dry))
+    graph.sequence(*_create_start_tasks(node))
 
 
 @workflow(suffix_template='{node.name}')
 def stop_node(graph, node, **kwargs):
-    dry = kwargs.get('dry', True)
-    graph.sequence(*_create_stop_tasks(node, dry))
+    graph.sequence(*_create_stop_tasks(node))
 
 
-def _create_start_tasks(node, dry):
+def _create_start_tasks(node):
     sequence = []
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START,
-            node,
-            dry))
+            node))
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_SOURCE,
             Task.RUNS_ON_SOURCE,
-            node,
-            dry)
+            node)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_TARGET,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
     return sequence
 
 
-def _create_stop_tasks(node, dry):
+def _create_stop_tasks(node):
     sequence = []
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_REMOVE_TARGET,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
     sequence += \
         create_relationship_tasks(
             NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
             Task.RUNS_ON_TARGET,
-            node,
-            dry)
+            node)
     sequence.append(
         create_node_task(
             NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP,
-            node,
-            dry))
+            node))
     return sequence

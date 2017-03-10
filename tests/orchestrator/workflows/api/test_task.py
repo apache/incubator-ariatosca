@@ -43,17 +43,20 @@ class TestOperationTask(object):
         operation_name = 'create'
 
         plugin = mock.models.create_plugin('package', '0.1')
-        plugin.name = 'test_plugin'
+        ctx.model.node.update(plugin)
+
+        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin=plugin, implementation='op_path'))
+            operation_kwargs=dict(plugin_specification=plugin_specification,
+                                  implementation='op_path'))
 
         node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         node.interfaces = {interface.name: interface}
-        node.plugins = [plugin]
+        node.plugin_specifications = [plugin_specification]
         ctx.model.node.update(node)
         inputs = {'test_input': True}
         max_attempts = 10
@@ -72,7 +75,7 @@ class TestOperationTask(object):
 
         assert api_task.name == api.task.OperationTask.NAME_FORMAT.format(
             type='node',
-            id=node.id,
+            id=node.name,
             interface=interface_name,
             operation=operation_name
         )
@@ -90,18 +93,21 @@ class TestOperationTask(object):
         operation_name = 'preconfigure'
 
         plugin = mock.models.create_plugin('package', '0.1')
-        plugin.name = 'test_plugin'
+        ctx.model.node.update(plugin)
+
+        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin=plugin, implementation='op_path')
+            operation_kwargs=dict(plugin_specification=plugin_specification,
+                                  implementation='op_path')
         )
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        relationship.source_node.plugins = [plugin]
+        relationship.source_node.plugin_specifications = [plugin_specification]
         inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
@@ -117,7 +123,7 @@ class TestOperationTask(object):
 
         assert api_task.name == api.task.OperationTask.NAME_FORMAT.format(
             type='relationship',
-            id=relationship.id,
+            id=relationship.name,
             interface=interface_name,
             operation=operation_name
         )
@@ -134,18 +140,21 @@ class TestOperationTask(object):
         operation_name = 'preconfigure'
 
         plugin = mock.models.create_plugin('package', '0.1')
-        plugin.name = 'test_plugin'
+        ctx.model.node.update(plugin)
+
+        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin=plugin, implementation='op_path')
+            operation_kwargs=dict(plugin_specification=plugin_specification,
+                                  implementation='op_path')
         )
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        relationship.target_node.plugins = [plugin]
+        relationship.target_node.plugin_specifications = [plugin_specification]
         inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
@@ -162,7 +171,7 @@ class TestOperationTask(object):
 
         assert api_task.name == api.task.OperationTask.NAME_FORMAT.format(
             type='relationship',
-            id=relationship.id,
+            id=relationship.name,
             interface=interface_name,
             operation=operation_name
         )

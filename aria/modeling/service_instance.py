@@ -24,7 +24,7 @@ from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
-from .bases import InstanceModelMixin
+from .mixins import InstanceModelMixin
 from ..parser import validation
 from ..utils import collections, formatting, console
 
@@ -61,10 +61,10 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype inputs: {basestring: :class:`Parameter`}
     :ivar outputs: These parameters are filled in after service installation
     :vartype outputs: {basestring: :class:`Parameter`}
-    :ivar operations: Custom operations that can be performed on the service
-    :vartype operations: {basestring: :class:`Operation`}
-    :ivar plugins: Plugins required to be installed
-    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar workflows: Custom workflows that can be performed on the service
+    :vartype workflows: {basestring: :class:`Operation`}
+    :ivar plugin_specifications: Plugins required to be installed
+    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar created_at: Creation timestamp
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
@@ -87,48 +87,48 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
 
     @declared_attr
     def service_template(cls):
-        return cls.many_to_one_relationship('service_template')
+        return cls._create_many_to_one_relationship('service_template')
 
     description = Column(Text)
 
     @declared_attr
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SqlAlchemy!
-        return cls.many_to_many_relationship('metadata', dict_key='name')
+        return cls._create_many_to_many_relationship('metadata', dict_key='name')
 
     @declared_attr
     def nodes(cls):
-        return cls.one_to_many_relationship('node')
+        return cls._create_one_to_many_relationship('node')
 
     @declared_attr
     def groups(cls):
-        return cls.one_to_many_relationship('group')
+        return cls._create_one_to_many_relationship('group')
 
     @declared_attr
     def policies(cls):
-        return cls.one_to_many_relationship('policy')
+        return cls._create_one_to_many_relationship('policy')
 
     @declared_attr
     def substitution(cls):
-        return cls.one_to_one_relationship('substitution')
+        return cls._create_one_to_one_relationship('substitution')
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
 
     @declared_attr
     def outputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='outputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='outputs',
+                                                     dict_key='name')
 
     @declared_attr
-    def operations(cls):
-        return cls.one_to_many_relationship('operation', dict_key='name')
+    def workflows(cls):
+        return cls._create_one_to_many_relationship('operation', dict_key='name')
 
     @declared_attr
-    def plugins(cls):
-        return cls.many_to_many_relationship('plugin')
+    def plugin_specifications(cls):
+        return cls._create_many_to_many_relationship('plugin_specification')
 
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
@@ -148,12 +148,12 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     # Service one-to-one to Substitution
     @declared_attr
     def substitution_fk(cls):
-        return cls.foreign_key('substitution', nullable=True)
+        return cls._create_foreign_key('substitution', nullable=True)
 
     # Service many-to-one to ServiceTemplate
     @declared_attr
     def service_template_fk(cls):
-        return cls.foreign_key('service_template', nullable=True)
+        return cls._create_foreign_key('service_template', nullable=True)
 
     # endregion
 
@@ -221,7 +221,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             ('substitution', formatting.as_raw(self.substitution)),
             ('inputs', formatting.as_raw_dict(self.inputs)),
             ('outputs', formatting.as_raw_dict(self.outputs)),
-            ('operations', formatting.as_raw_list(self.operations))))
+            ('workflows', formatting.as_raw_list(self.workflows))))
 
     def validate(self, context):
         utils.validate_dict_values(context, self.meta_data)
@@ -232,7 +232,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             self.substitution.validate(context)
         utils.validate_dict_values(context, self.inputs)
         utils.validate_dict_values(context, self.outputs)
-        utils.validate_dict_values(context, self.operations)
+        utils.validate_dict_values(context, self.workflows)
 
     def coerce_values(self, context, container, report_issues):
         utils.coerce_dict_values(context, container, self.meta_data, report_issues)
@@ -243,7 +243,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             self.substitution.coerce_values(context, container, report_issues)
         utils.coerce_dict_values(context, container, self.inputs, report_issues)
         utils.coerce_dict_values(context, container, self.outputs, report_issues)
-        utils.coerce_dict_values(context, container, self.operations, report_issues)
+        utils.coerce_dict_values(context, container, self.workflows, report_issues)
 
     def dump(self, context):
         if self.description is not None:
@@ -259,7 +259,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             self.substitution.dump(context)
         utils.dump_dict_values(context, self.inputs, 'Inputs')
         utils.dump_dict_values(context, self.outputs, 'Outputs')
-        utils.dump_dict_values(context, self.operations, 'Operations')
+        utils.dump_dict_values(context, self.workflows, 'Workflows')
 
     def dump_graph(self, context):
         for node in self.nodes.itervalues():
@@ -312,8 +312,8 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype outbound_relationships: [:class:`Relationship`]
     :ivar inbound_relationships: Relationships from other nodes
     :vartype inbound_relationships: [:class:`Relationship`]
-    :ivar plugins: Plugins required to be installed on the node's host
-    :vartype plugins: {basestring: :class:`Plugin`}
+    :ivar plugin_specifications: Plugins required to be installed on the node's host
+    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar host: Host node (can be self)
     :vartype host: :class:`Node`
 
@@ -342,50 +342,50 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
 
     @declared_attr
     def node_template(cls):
-        return cls.many_to_one_relationship('node_template')
+        return cls._create_many_to_one_relationship('node_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interfaces(cls):
-        return cls.one_to_many_relationship('interface', dict_key='name')
+        return cls._create_one_to_many_relationship('interface', dict_key='name')
 
     @declared_attr
     def artifacts(cls):
-        return cls.one_to_many_relationship('artifact', dict_key='name')
+        return cls._create_one_to_many_relationship('artifact', dict_key='name')
 
     @declared_attr
     def capabilities(cls):
-        return cls.one_to_many_relationship('capability', dict_key='name')
+        return cls._create_one_to_many_relationship('capability', dict_key='name')
 
     @declared_attr
     def outbound_relationships(cls):
-        return cls.one_to_many_relationship('relationship',
-                                            foreign_key='source_node_fk',
-                                            backreference='source_node')
+        return cls._create_one_to_many_relationship('relationship',
+                                                    foreign_key='source_node_fk',
+                                                    backreference='source_node')
 
     @declared_attr
     def inbound_relationships(cls):
-        return cls.one_to_many_relationship('relationship',
-                                            foreign_key='target_node_fk',
-                                            backreference='target_node')
+        return cls._create_one_to_many_relationship('relationship',
+                                                    foreign_key='target_node_fk',
+                                                    backreference='target_node')
 
     @declared_attr
-    def plugins(cls):
-        return cls.many_to_many_relationship('plugin')
+    def plugin_specifications(cls):
+        return cls._create_many_to_many_relationship('plugin_specification')
 
     @declared_attr
     def host(cls):
-        return cls.relationship_to_self('host_fk')
+        return cls._create_relationship_to_self('host_fk')
 
     # region orchestration
 
@@ -424,22 +424,22 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     # Node many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Node one-to-one to Node
     @declared_attr
     def host_fk(cls):
-        return cls.foreign_key('node', nullable=True)
+        return cls._create_foreign_key('node', nullable=True)
 
     # Service one-to-many to Node
     @declared_attr
     def service_fk(cls):
-        return cls.foreign_key('service')
+        return cls._create_foreign_key('service')
 
     # Node many-to-one to NodeTemplate
     @declared_attr
     def node_template_fk(cls):
-        return cls.foreign_key('node_template', nullable=True)
+        return cls._create_foreign_key('node_template', nullable=True)
 
     # endregion
 
@@ -601,26 +601,26 @@ class GroupBase(InstanceModelMixin):
 
     @declared_attr
     def group_template(cls):
-        return cls.many_to_one_relationship('group_template')
+        return cls._create_many_to_one_relationship('group_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def nodes(cls):
-        return cls.many_to_many_relationship('node')
+        return cls._create_many_to_many_relationship('node')
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interfaces(cls):
-        return cls.one_to_many_relationship('interface', dict_key='name')
+        return cls._create_one_to_many_relationship('interface', dict_key='name')
 
     # region foreign_keys
 
@@ -631,17 +631,17 @@ class GroupBase(InstanceModelMixin):
     # Group many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Service one-to-many to Group
     @declared_attr
     def service_fk(cls):
-        return cls.foreign_key('service')
+        return cls._create_foreign_key('service')
 
     # Group many-to-one to GroupTemplate
     @declared_attr
     def group_template_fk(cls):
-        return cls.foreign_key('group_template', nullable=True)
+        return cls._create_foreign_key('group_template', nullable=True)
 
     # endregion
 
@@ -700,26 +700,26 @@ class PolicyBase(InstanceModelMixin):
 
     @declared_attr
     def policy_template(cls):
-        return cls.many_to_one_relationship('policy_template')
+        return cls._create_many_to_one_relationship('policy_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def nodes(cls):
-        return cls.many_to_many_relationship('node')
+        return cls._create_many_to_many_relationship('node')
 
     @declared_attr
     def groups(cls):
-        return cls.many_to_many_relationship('group')
+        return cls._create_many_to_many_relationship('group')
 
     # region foreign_keys
 
@@ -730,17 +730,17 @@ class PolicyBase(InstanceModelMixin):
     # Policy many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Service one-to-many to Policy
     @declared_attr
     def service_fk(cls):
-        return cls.foreign_key('service')
+        return cls._create_foreign_key('service')
 
     # Policy many-to-one to PolicyTemplate
     @declared_attr
     def policy_template_fk(cls):
-        return cls.foreign_key('policy_template', nullable=True)
+        return cls._create_foreign_key('policy_template', nullable=True)
 
     # endregion
 
@@ -795,15 +795,15 @@ class SubstitutionBase(InstanceModelMixin):
 
     @declared_attr
     def substitution_template(cls):
-        return cls.many_to_one_relationship('substitution_template')
+        return cls._create_many_to_one_relationship('substitution_template')
 
     @declared_attr
     def node_type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     @declared_attr
     def mappings(cls):
-        return cls.one_to_many_relationship('substitution_mapping', dict_key='name')
+        return cls._create_one_to_many_relationship('substitution_mapping', dict_key='name')
 
     # region foreign_keys
 
@@ -813,12 +813,12 @@ class SubstitutionBase(InstanceModelMixin):
     # Substitution many-to-one to Type
     @declared_attr
     def node_type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Substitution many-to-one to SubstitutionTemplate
     @declared_attr
     def substitution_template_fk(cls):
-        return cls.foreign_key('substitution_template', nullable=True)
+        return cls._create_foreign_key('substitution_template', nullable=True)
 
     # endregion
 
@@ -866,15 +866,15 @@ class SubstitutionMappingBase(InstanceModelMixin):
 
     @declared_attr
     def node(cls):
-        return cls.one_to_one_relationship('node')
+        return cls._create_one_to_one_relationship('node')
 
     @declared_attr
     def capability(cls):
-        return cls.one_to_one_relationship('capability')
+        return cls._create_one_to_one_relationship('capability')
 
     @declared_attr
     def requirement_template(cls):
-        return cls.one_to_one_relationship('requirement_template')
+        return cls._create_one_to_one_relationship('requirement_template')
 
     # region foreign keys
 
@@ -886,22 +886,22 @@ class SubstitutionMappingBase(InstanceModelMixin):
     # Substitution one-to-many to SubstitutionMapping
     @declared_attr
     def substitution_fk(cls):
-        return cls.foreign_key('substitution')
+        return cls._create_foreign_key('substitution')
 
     # Substitution one-to-one to NodeTemplate
     @declared_attr
     def node_fk(cls):
-        return cls.foreign_key('node')
+        return cls._create_foreign_key('node')
 
     # Substitution one-to-one to Capability
     @declared_attr
     def capability_fk(cls):
-        return cls.foreign_key('capability', nullable=True)
+        return cls._create_foreign_key('capability', nullable=True)
 
     # Substitution one-to-one to RequirementTemplate
     @declared_attr
     def requirement_template_fk(cls):
-        return cls.foreign_key('requirement_template', nullable=True)
+        return cls._create_foreign_key('requirement_template', nullable=True)
 
     # endregion
 
@@ -965,28 +965,28 @@ class RelationshipBase(InstanceModelMixin):
 
     @declared_attr
     def relationship_template(cls):
-        return cls.many_to_one_relationship('relationship_template')
+        return cls._create_many_to_one_relationship('relationship_template')
 
     @declared_attr
     def requirement_template(cls):
-        return cls.many_to_one_relationship('requirement_template')
+        return cls._create_many_to_one_relationship('requirement_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     @declared_attr
     def target_capability(cls):
-        return cls.one_to_one_relationship('capability')
+        return cls._create_one_to_one_relationship('capability')
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     @declared_attr
     def interfaces(cls):
-        return cls.one_to_many_relationship('interface', dict_key='name')
+        return cls._create_one_to_many_relationship('interface', dict_key='name')
 
     # region orchestration
 
@@ -1007,32 +1007,32 @@ class RelationshipBase(InstanceModelMixin):
     # Relationship many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # Node one-to-many to Relationship
     @declared_attr
     def source_node_fk(cls):
-        return cls.foreign_key('node')
+        return cls._create_foreign_key('node')
 
     # Node one-to-many to Relationship
     @declared_attr
     def target_node_fk(cls):
-        return cls.foreign_key('node')
+        return cls._create_foreign_key('node')
 
     # Relationship one-to-one to Capability
     @declared_attr
     def target_capability_fk(cls):
-        return cls.foreign_key('capability', nullable=True)
+        return cls._create_foreign_key('capability', nullable=True)
 
     # Relationship many-to-one to RequirementTemplate
     @declared_attr
     def requirement_template_fk(cls):
-        return cls.foreign_key('requirement_template', nullable=True)
+        return cls._create_foreign_key('requirement_template', nullable=True)
 
     # Relationship many-to-one to RelationshipTemplate
     @declared_attr
     def relationship_template_fk(cls):
-        return cls.foreign_key('relationship_template', nullable=True)
+        return cls._create_foreign_key('relationship_template', nullable=True)
 
     # endregion
 
@@ -1106,11 +1106,11 @@ class CapabilityBase(InstanceModelMixin):
 
     @declared_attr
     def capability_template(cls):
-        return cls.many_to_one_relationship('capability_template')
+        return cls._create_many_to_one_relationship('capability_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     min_occurrences = Column(Integer, default=None)
     max_occurrences = Column(Integer, default=None)
@@ -1118,8 +1118,8 @@ class CapabilityBase(InstanceModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     # region foreign_keys
 
@@ -1130,17 +1130,17 @@ class CapabilityBase(InstanceModelMixin):
     # Capability many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Node one-to-many to Capability
     @declared_attr
     def node_fk(cls):
-        return cls.foreign_key('node')
+        return cls._create_foreign_key('node')
 
     # Capability many-to-one to CapabilityTemplate
     @declared_attr
     def capability_template_fk(cls):
-        return cls.foreign_key('capability_template', nullable=True)
+        return cls._create_foreign_key('capability_template', nullable=True)
 
     # endregion
 
@@ -1214,22 +1214,22 @@ class InterfaceBase(InstanceModelMixin):
 
     @declared_attr
     def interface_template(cls):
-        return cls.many_to_one_relationship('interface_template')
+        return cls._create_many_to_one_relationship('interface_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
 
     @declared_attr
     def operations(cls):
-        return cls.one_to_many_relationship('operation', dict_key='name')
+        return cls._create_one_to_many_relationship('operation', dict_key='name')
 
     # region foreign_keys
 
@@ -1242,27 +1242,27 @@ class InterfaceBase(InstanceModelMixin):
     # Interface many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Node one-to-many to Interface
     @declared_attr
     def node_fk(cls):
-        return cls.foreign_key('node', nullable=True)
+        return cls._create_foreign_key('node', nullable=True)
 
     # Group one-to-many to Interface
     @declared_attr
     def group_fk(cls):
-        return cls.foreign_key('group', nullable=True)
+        return cls._create_foreign_key('group', nullable=True)
 
     # Relationship one-to-many to Interface
     @declared_attr
     def relationship_fk(cls):
-        return cls.foreign_key('relationship', nullable=True)
+        return cls._create_foreign_key('relationship', nullable=True)
 
     # Interface many-to-one to InterfaceTemplate
     @declared_attr
     def interface_template_fk(cls):
-        return cls.foreign_key('interface_template', nullable=True)
+        return cls._create_foreign_key('interface_template', nullable=True)
 
     # endregion
 
@@ -1305,8 +1305,8 @@ class OperationBase(InstanceModelMixin):
     :vartype operation_template: :class:`OperationTemplate`
     :ivar description: Human-readable description
     :vartype description: string
-    :ivar plugin: Associated plugin
-    :vartype plugin: :class:`Plugin`
+    :ivar plugin_specification: Associated plugin
+    :vartype plugin_specification: :class:`PluginSpecification`
     :ivar implementation: Implementation string (interpreted by the plugin)
     :vartype implementation: basestring
     :ivar dependencies: Dependency strings (interpreted by the plugin)
@@ -1330,21 +1330,21 @@ class OperationBase(InstanceModelMixin):
 
     @declared_attr
     def operation_template(cls):
-        return cls.many_to_one_relationship('operation_template')
+        return cls._create_many_to_one_relationship('operation_template')
 
     description = Column(Text)
 
     @declared_attr
-    def plugin(cls):
-        return cls.one_to_one_relationship('plugin')
+    def plugin_specification(cls):
+        return cls._create_one_to_one_relationship('plugin_specification')
 
     implementation = Column(Text)
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
 
     @declared_attr
     def inputs(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='inputs',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='inputs',
+                                                     dict_key='name')
 
     executor = Column(Text)
     max_retries = Column(Integer)
@@ -1360,22 +1360,22 @@ class OperationBase(InstanceModelMixin):
     # Service one-to-many to Operation
     @declared_attr
     def service_fk(cls):
-        return cls.foreign_key('service', nullable=True)
+        return cls._create_foreign_key('service', nullable=True)
 
     # Interface one-to-many to Operation
     @declared_attr
     def interface_fk(cls):
-        return cls.foreign_key('interface', nullable=True)
+        return cls._create_foreign_key('interface', nullable=True)
 
-    # Operation one-to-one to Plugin
+    # Operation one-to-one to PluginSpecification
     @declared_attr
-    def plugin_fk(cls):
-        return cls.foreign_key('plugin', nullable=True)
+    def plugin_specification_fk(cls):
+        return cls._create_foreign_key('plugin_specification', nullable=True)
 
     # Operation many-to-one to OperationTemplate
     @declared_attr
     def operation_template_fk(cls):
-        return cls.foreign_key('operation_template', nullable=True)
+        return cls._create_foreign_key('operation_template', nullable=True)
 
     # endregion
 
@@ -1453,11 +1453,11 @@ class ArtifactBase(InstanceModelMixin):
 
     @declared_attr
     def artifact_template(cls):
-        return cls.many_to_one_relationship('artifact_template')
+        return cls._create_many_to_one_relationship('artifact_template')
 
     @declared_attr
     def type(cls):
-        return cls.many_to_one_relationship('type')
+        return cls._create_many_to_one_relationship('type')
 
     description = Column(Text)
     source_path = Column(Text)
@@ -1467,8 +1467,8 @@ class ArtifactBase(InstanceModelMixin):
 
     @declared_attr
     def properties(cls):
-        return cls.many_to_many_relationship('parameter', table_prefix='properties',
-                                             dict_key='name')
+        return cls._create_many_to_many_relationship('parameter', table_prefix='properties',
+                                                     dict_key='name')
 
     # region foreign_keys
 
@@ -1479,17 +1479,17 @@ class ArtifactBase(InstanceModelMixin):
     # Artifact many-to-one to Type
     @declared_attr
     def type_fk(cls):
-        return cls.foreign_key('type')
+        return cls._create_foreign_key('type')
 
     # Node one-to-many to Artifact
     @declared_attr
     def node_fk(cls):
-        return cls.foreign_key('node')
+        return cls._create_foreign_key('node')
 
     # Artifact many-to-one to ArtifactTemplate
     @declared_attr
     def artifact_template_fk(cls):
-        return cls.foreign_key('artifact_template', nullable=True)
+        return cls._create_foreign_key('artifact_template', nullable=True)
 
     # endregion
 

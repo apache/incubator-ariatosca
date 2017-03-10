@@ -137,6 +137,11 @@ def add_workflow_parser(workflow):
         '-w', '--workflow',
         default='install',
         help='The workflow name')
+    workflow.add_flag_argument(
+        'dry',
+        default=True,
+        help_true='dry run',
+        help_false='wet run')
 
 
 @sub_parser_decorator(

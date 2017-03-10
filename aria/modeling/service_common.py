@@ -21,13 +21,14 @@ import logging
 from sqlalchemy import (
     Column,
     Text,
-    Binary
+    Binary,
 )
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..storage import exceptions
 from ..utils import collections, formatting, console
-from .bases import InstanceModelMixin, TemplateModelMixin
+from .mixins import InstanceModelMixin, TemplateModelMixin
+from .types import List
 from . import utils
 
 
@@ -35,7 +36,7 @@ class ParameterBase(TemplateModelMixin):
     """
     Represents a typed value.
 
-    This class is used by both service template and service instance elements.
+    This model is used by both service template and service instance elements.
 
     :ivar name: Name
     :ivar type_name: Type name
@@ -121,11 +122,11 @@ class TypeBase(InstanceModelMixin):
 
     @declared_attr
     def parent(cls):
-        return cls.relationship_to_self('parent_type_fk')
+        return cls._create_relationship_to_self('parent_type_fk')
 
     @declared_attr
     def children(cls):
-        return cls.one_to_many_relationship_to_self('parent_type_fk')
+        return cls._create_one_to_many_relationship_to_self('parent_type_fk')
 
     # region foreign keys
 
@@ -134,7 +135,7 @@ class TypeBase(InstanceModelMixin):
     # Type one-to-many to Type
     @declared_attr
     def parent_type_fk(cls):
-        return cls.foreign_key('type', nullable=True)
+        return cls._create_foreign_key('type', nullable=True)
 
     # endregion
 
@@ -207,7 +208,7 @@ class MetadataBase(TemplateModelMixin):
     """
     Custom values associated with the service.
 
-    This class is used by both service template and service instance elements.
+    This model is used by both service template and service instance elements.
 
     :ivar name: Name
     :ivar value: Value
@@ -232,3 +233,38 @@ class MetadataBase(TemplateModelMixin):
         console.puts('{0}: {1}'.format(
             context.style.property(self.name),
             context.style.literal(self.value)))
+
+
+class PluginSpecificationBase(InstanceModelMixin):
+    """
+    Plugin specification model representation.
+    """
+
+    __tablename__ = 'plugin_specification'
+
+    archive_name = Column(Text, nullable=False, index=True)
+    distribution = Column(Text)
+    distribution_release = Column(Text)
+    distribution_version = Column(Text)
+    package_name = Column(Text, nullable=False, index=True)
+    package_source = Column(Text)
+    package_version = Column(Text)
+    supported_platform = Column(Text)
+    supported_py_versions = Column(List)
+
+    # region foreign keys
+
+    __private_fields__ = ['service_template_fk']
+
+    @declared_attr
+    def service_template_fk(cls):
+        return cls._create_foreign_key('service_template', nullable=True)
+
+    # endregion
+
+    def find_plugin(self, plugins):
+        # TODO: this should check versions/distribution and other specification
+        for plugin in plugins:
+            if plugin.name == self.name:
+                return plugin
+        return None

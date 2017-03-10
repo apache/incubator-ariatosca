@@ -58,8 +58,7 @@ def execute_operation(
         type_names=type_names))
 
     if run_by_dependency_order:
-        filtered_node_ids = set(node_instance.id
-                                          for node_instance in filtered_nodes)
+        filtered_node_ids = set(node_instance.id for node_instance in filtered_nodes)
         for node in ctx.nodes:
             if node.id not in filtered_node_ids:
                 subgraphs[node.id] = ctx.task_graph(

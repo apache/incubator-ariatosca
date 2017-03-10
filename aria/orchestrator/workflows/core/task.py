@@ -113,15 +113,15 @@ class OperationTask(BaseTask):
         base_task_model = model_storage.task.model_cls
         if isinstance(api_task.actor, models.Node):
             context_cls = operation_context.NodeOperationContext
-            task_model_cls = base_task_model.as_node_task
+            create_task_model = base_task_model.for_node
         elif isinstance(api_task.actor, models.Relationship):
             context_cls = operation_context.RelationshipOperationContext
-            task_model_cls = base_task_model.as_relationship_task
+            create_task_model = base_task_model.for_relationship
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
                                .format(actor=api_task.actor))
 
-        operation_task = task_model_cls(
+        task_model = create_task_model(
             name=api_task.name,
             implementation=api_task.implementation,
             instance=api_task.actor,
@@ -131,20 +131,19 @@ class OperationTask(BaseTask):
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
             plugin=plugin,
-            plugin_name=plugin.name if plugin is not None else 'execution',
             execution=self._workflow_context.execution,
             runs_on=api_task.runs_on
         )
-        self._workflow_context.model.task.put(operation_task)
+        self._workflow_context.model.task.put(task_model)
 
         self._ctx = context_cls(name=api_task.name,
                                 model_storage=self._workflow_context.model,
                                 resource_storage=self._workflow_context.resource,
                                 service_id=self._workflow_context._service_id,
-                                task_id=operation_task.id,
+                                task_id=task_model.id,
                                 actor_id=api_task.actor.id,
                                 workdir=self._workflow_context._workdir)
-        self._task_id = operation_task.id
+        self._task_id = task_model.id
         self._update_fields = None
 
     @contextmanager

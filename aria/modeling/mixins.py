@@ -53,8 +53,49 @@ class ModelMixin(object):
     def name_column_name(cls):
         raise NotImplementedError
 
+    def to_dict(self, fields=None, suppress_error=False):
+        """
+        Return a dict representation of the model
+
+        :param suppress_error: If set to True, sets `None` to attributes that
+                               it's unable to retrieve (e.g., if a relationship wasn't established
+                               yet, and so it's impossible to access a property through it)
+        """
+
+        res = dict()
+        fields = fields or self.fields()
+        for field in fields:
+            try:
+                field_value = getattr(self, field)
+            except AttributeError:
+                if suppress_error:
+                    field_value = None
+                else:
+                    raise
+            if isinstance(field_value, list):
+                field_value = list(field_value)
+            elif isinstance(field_value, dict):
+                field_value = dict(field_value)
+            elif isinstance(field_value, ModelMixin):
+                field_value = field_value.to_dict()
+            res[field] = field_value
+
+        return res
+
     @classmethod
-    def foreign_key(cls, parent_table, nullable=False):
+    def fields(cls):
+        """
+        Return the list of field names for this table
+
+        Mostly for backwards compatibility in the code (that uses `fields`)
+        """
+
+        fields = set(cls._iter_association_proxies())
+        fields.update(cls.__table__.columns.keys())
+        return fields - set(getattr(cls, '__private_fields__', []))
+
+    @classmethod
+    def _create_foreign_key(cls, parent_table, nullable=False):
         """
         Return a ForeignKey object.
 
@@ -67,9 +108,9 @@ class ModelMixin(object):
                       nullable=nullable)
 
     @classmethod
-    def relationship_to_self(cls,
-                             column_name,
-                             relationship_kwargs=None):
+    def _create_relationship_to_self(cls,
+                                     column_name,
+                                     relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
         remote_side = '{cls}.{remote_column}'.format(
@@ -92,10 +133,10 @@ class ModelMixin(object):
         )
 
     @classmethod
-    def one_to_many_relationship_to_self(cls,
-                                         key,
-                                         dict_key=None,
-                                         relationship_kwargs=None):
+    def _create_one_to_many_relationship_to_self(cls,
+                                                 key,
+                                                 dict_key=None,
+                                                 relationship_kwargs=None):
         relationship_kwargs = relationship_kwargs or {}
 
         relationship_kwargs.setdefault('remote_side', '{cls}.{remote_column}'.format(
@@ -107,13 +148,13 @@ class ModelMixin(object):
                                         backreference='', dict_key=dict_key)
 
     @classmethod
-    def one_to_one_relationship(cls,
-                                other_table,
-                                key=None,
-                                foreign_key=None,
-                                backreference=None,
-                                backref_kwargs=None,
-                                relationship_kwargs=None):
+    def _create_one_to_one_relationship(cls,
+                                        other_table,
+                                        key=None,
+                                        foreign_key=None,
+                                        backreference=None,
+                                        backref_kwargs=None,
+                                        relationship_kwargs=None):
         backref_kwargs = backref_kwargs or {}
         backref_kwargs.setdefault('uselist', False)
 
@@ -121,14 +162,14 @@ class ModelMixin(object):
                                         backreference, key=key, foreign_key=foreign_key)
 
     @classmethod
-    def one_to_many_relationship(cls,
-                                 child_table,
-                                 key=None,
-                                 foreign_key=None,
-                                 dict_key=None,
-                                 backreference=None,
-                                 backref_kwargs=None,
-                                 relationship_kwargs=None):
+    def _create_one_to_many_relationship(cls,
+                                         child_table,
+                                         key=None,
+                                         foreign_key=None,
+                                         dict_key=None,
+                                         backreference=None,
+                                         backref_kwargs=None,
+                                         relationship_kwargs=None):
         backref_kwargs = backref_kwargs or {}
         backref_kwargs.setdefault('uselist', False)
 
@@ -137,13 +178,13 @@ class ModelMixin(object):
                                         dict_key=dict_key)
 
     @classmethod
-    def many_to_one_relationship(cls,
-                                 parent_table,
-                                 key=None,
-                                 foreign_key=None,
-                                 backreference=None,
-                                 backref_kwargs=None,
-                                 relationship_kwargs=None):
+    def _create_many_to_one_relationship(cls,
+                                         parent_table,
+                                         key=None,
+                                         foreign_key=None,
+                                         backreference=None,
+                                         backref_kwargs=None,
+                                         relationship_kwargs=None):
         """
         Return a one-to-many SQL relationship object
         Meant to be used from inside the *child* object
@@ -167,14 +208,14 @@ class ModelMixin(object):
                                         backreference, key=key, foreign_key=foreign_key)
 
     @classmethod
-    def many_to_many_relationship(cls,
-                                  other_table,
-                                  table_prefix=None,
-                                  key=None,
-                                  dict_key=None,
-                                  backreference=None,
-                                  backref_kwargs=None,
-                                  relationship_kwargs=None):
+    def _create_many_to_many_relationship(cls,
+                                          other_table,
+                                          table_prefix=None,
+                                          key=None,
+                                          dict_key=None,
+                                          backreference=None,
+                                          backref_kwargs=None,
+                                          relationship_kwargs=None):
         """
         Return a many-to-many SQL relationship object
 
@@ -219,35 +260,6 @@ class ModelMixin(object):
 
         return cls._create_relationship(other_table, backref_kwargs, relationship_kwargs,
                                         backreference, key=key, dict_key=dict_key)
-
-    def to_dict(self, fields=None, suppress_error=False):
-        """
-        Return a dict representation of the model
-
-        :param suppress_error: If set to True, sets `None` to attributes that
-                               it's unable to retrieve (e.g., if a relationship wasn't established
-                               yet, and so it's impossible to access a property through it)
-        """
-
-        res = dict()
-        fields = fields or self.fields()
-        for field in fields:
-            try:
-                field_value = getattr(self, field)
-            except AttributeError:
-                if suppress_error:
-                    field_value = None
-                else:
-                    raise
-            if isinstance(field_value, list):
-                field_value = list(field_value)
-            elif isinstance(field_value, dict):
-                field_value = dict(field_value)
-            elif isinstance(field_value, ModelMixin):
-                field_value = field_value.to_dict()
-            res[field] = field_value
-
-        return res
 
     @classmethod
     def _create_relationship(cls, table, backref_kwargs, relationship_kwargs, backreference,
@@ -320,22 +332,10 @@ class ModelMixin(object):
         )
 
     @classmethod
-    def _association_proxies(cls):
+    def _iter_association_proxies(cls):
         for col, value in vars(cls).items():
             if isinstance(value, associationproxy.AssociationProxy):
                 yield col
-
-    @classmethod
-    def fields(cls):
-        """
-        Return the list of field names for this table
-
-        Mostly for backwards compatibility in the code (that uses `fields`)
-        """
-
-        fields = set(cls._association_proxies())
-        fields.update(cls.__table__.columns.keys())
-        return fields - set(getattr(cls, '__private_fields__', []))
 
     @classmethod
     def _get_cls_by_tablename(cls, tablename):
