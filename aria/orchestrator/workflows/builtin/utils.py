@@ -12,12 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from ..api.task import OperationTask
 from .. import exceptions
 
 
-def create_node_task(interface_name, operation_name, node):
+def create_node_task(node, interface_name, operation_name):
     """
     Returns a new operation task if the operation exists in the node, otherwise returns None.
     """
@@ -31,24 +30,59 @@ def create_node_task(interface_name, operation_name, node):
         return None
 
 
-def create_relationship_tasks(interface_name, operation_name, runs_on, node):
+def create_relationships_tasks(
+        node, interface_name, source_operation_name=None, target_operation_name=None):
     """
-    Returns a list of operation tasks for each outbound relationship of the node if the operation
-    exists there.
+    Creates a relationship task (source and target) for all of a node_instance relationships.
+    :param basestring source_operation_name: the relationship operation name.
+    :param basestring interface_name: the name of the interface.
+    :param source_operation_name:
+    :param target_operation_name:
+    :param NodeInstance node: the source_node
+    :return:
     """
-
-    sequence = []
+    sub_tasks = []
     for relationship in node.outbound_relationships:
         try:
-            sequence.append(
-                OperationTask.for_relationship(relationship=relationship,
-                                               interface_name=interface_name,
-                                               operation_name=operation_name,
-                                               runs_on=runs_on))
+            relationship_operations = relationship_tasks(
+                relationship,
+                interface_name,
+                source_operation_name=source_operation_name,
+                target_operation_name=target_operation_name)
+            sub_tasks.append(relationship_operations)
         except exceptions.OperationNotFoundException:
             # We will skip relationships which do not have the operation
             pass
-    return sequence
+    return sub_tasks
+
+
+def relationship_tasks(
+        relationship, interface_name, source_operation_name=None, target_operation_name=None):
+    """
+    Creates a relationship task source and target.
+    :param Relationship relationship: the relationship instance itself
+    :param source_operation_name:
+    :param target_operation_name:
+
+    :return:
+    """
+    operations = []
+    if source_operation_name:
+        operations.append(
+            OperationTask.for_relationship(relationship=relationship,
+                                           interface_name=interface_name,
+                                           operation_name=source_operation_name,
+                                           runs_on='source')
+        )
+    if target_operation_name:
+        operations.append(
+            OperationTask.for_relationship(relationship=relationship,
+                                           interface_name=interface_name,
+                                           operation_name=target_operation_name,
+                                           runs_on='target')
+        )
+
+    return operations
 
 
 def create_node_task_dependencies(graph, tasks_and_nodes, reverse=False):

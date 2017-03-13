@@ -20,7 +20,6 @@ Path: aria.events.storage_event_handler
 Implementation of storage handlers for workflow and operation events.
 """
 
-import re
 from datetime import (
     datetime,
     timedelta,
@@ -126,11 +125,9 @@ def _workflow_cancelling(workflow_context, *args, **kwargs):
 
 
 def _update_node_state_if_necessary(task, is_transitional=False):
-    match = re.search(r'^(?:tosca.interfaces.node.lifecycle.Standard|Standard):(\S+)@node',
-                      task.name)
-    if match:
+    if task.interface_name in ['tosca.interfaces.node.lifecycle.Standard', 'Standard']:
         node = task.runs_on
-        state = node.determine_state(op_name=match.group(1), is_transitional=is_transitional)
+        state = node.determine_state(op_name=task.operation_name, is_transitional=is_transitional)
         if state:
             node.state = state
             task.context.model.node.update(node)

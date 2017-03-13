@@ -140,6 +140,8 @@ class MockTask(object):
         self.plugin_fk = plugin.id
         self.plugin = plugin
         self.ignore_failure = False
+        self.interface_name = 'interface_name'
+        self.operation_name = 'operation_name'
 
         for state in aria_models.Task.STATES:
             setattr(self, state.upper(), state)

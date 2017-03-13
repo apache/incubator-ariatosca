@@ -25,7 +25,8 @@ from . import assert_node_install_operations
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(str(tmpdir))
+    context = mock.context.simple(str(tmpdir),
+                                  topology=mock.topology.create_simple_topology_three_nodes)
     yield context
     storage.release_sqlite_storage(context.model)
 
@@ -34,10 +35,12 @@ def test_install(ctx):
 
     install_tasks = list(task.WorkflowTask(install, ctx=ctx).topological_order(True))
 
-    assert len(install_tasks) == 2
-    dependency_node_subgraph, dependent_node_subgraph = install_tasks
+    assert len(install_tasks) == 3
+    dependency_node_subgraph1, dependency_node_subgraph2, dependent_node_subgraph = install_tasks
     dependent_node_tasks = list(dependent_node_subgraph.topological_order(reverse=True))
-    dependency_node_tasks = list(dependency_node_subgraph.topological_order(reverse=True))
+    dependency_node1_tasks = list(dependency_node_subgraph1.topological_order(reverse=True))
+    dependency_node2_tasks = list(dependency_node_subgraph2.topological_order(reverse=True))
 
-    assert_node_install_operations(dependency_node_tasks)
-    assert_node_install_operations(dependent_node_tasks, with_relationships=True)
+    assert_node_install_operations(dependency_node1_tasks)
+    assert_node_install_operations(dependency_node2_tasks)
+    assert_node_install_operations(dependent_node_tasks, relationships=2)

@@ -26,7 +26,8 @@ from . import assert_node_uninstall_operations
 
 @pytest.fixture
 def ctx(tmpdir):
-    context = mock.context.simple(str(tmpdir))
+    context = mock.context.simple(str(tmpdir),
+                                  topology=mock.topology.create_simple_topology_three_nodes)
     yield context
     storage.release_sqlite_storage(context.model)
 
@@ -35,10 +36,12 @@ def test_uninstall(ctx):
 
     uninstall_tasks = list(task.WorkflowTask(uninstall, ctx=ctx).topological_order(True))
 
-    assert len(uninstall_tasks) == 2
-    dependent_node_subgraph, dependency_node_subgraph = uninstall_tasks
+    assert len(uninstall_tasks) == 3
+    dependent_node_subgraph, dependency_node_subgraph1, dependency_node_subgraph2 = uninstall_tasks
     dependent_node_tasks = list(dependent_node_subgraph.topological_order(reverse=True))
-    dependency_node_tasks = list(dependency_node_subgraph.topological_order(reverse=True))
+    dependency_node1_tasks = list(dependency_node_subgraph1.topological_order(reverse=True))
+    dependency_node2_tasks = list(dependency_node_subgraph2.topological_order(reverse=True))
 
-    assert_node_uninstall_operations(operations=dependency_node_tasks)
-    assert_node_uninstall_operations(operations=dependent_node_tasks, with_relationships=True)
+    assert_node_uninstall_operations(operations=dependency_node1_tasks)
+    assert_node_uninstall_operations(operations=dependency_node2_tasks)
+    assert_node_uninstall_operations(operations=dependent_node_tasks, relationships=2)

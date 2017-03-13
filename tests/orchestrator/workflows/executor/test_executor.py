@@ -118,6 +118,8 @@ class MockTask(object):
         self.max_attempts = 1
         self.plugin_fk = None
         self.ignore_failure = False
+        self.interface_name = 'interface_name'
+        self.operation_name = 'operation_name'
 
         for state in models.Task.STATES:
             setattr(self, state.upper(), state)

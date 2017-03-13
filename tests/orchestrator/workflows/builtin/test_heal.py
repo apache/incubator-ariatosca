@@ -20,8 +20,7 @@ from aria.orchestrator.workflows.builtin.heal import heal
 
 from tests import mock, storage
 
-from . import (assert_node_install_operations,
-               assert_node_uninstall_operations)
+from . import (assert_node_install_operations, assert_node_uninstall_operations)
 
 
 @pytest.fixture
@@ -57,8 +56,8 @@ def test_heal_dependent_node(ctx):
         list(dependent_node_subgraph_install.topological_order(reverse=True))
     assert isinstance(dependency_node_subgraph_install, task.StubTask)
 
-    assert_node_uninstall_operations(dependent_node_uninstall_tasks, with_relationships=True)
-    assert_node_install_operations(dependent_node_install_tasks, with_relationships=True)
+    assert_node_uninstall_operations(dependent_node_uninstall_tasks, relationships=1)
+    assert_node_install_operations(dependent_node_install_tasks, relationships=1)
 
 
 @pytest.mark.skip(reason='heal is not implemented for now')

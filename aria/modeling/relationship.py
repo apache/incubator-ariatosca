@@ -308,7 +308,7 @@ def many_to_many(model_class,
     if prefix is not None:
         secondary_table = '{0}_{1}'.format(prefix, secondary_table)
         if other_property is None:
-            other_property = '{0}_{1}'.format(prefix, this_table)
+            other_property = '{0}_{1}'.format(prefix, formatting.pluralize(this_table))
 
     backref_kwargs = backref_kwargs or {}
     backref_kwargs.setdefault('uselist', True)

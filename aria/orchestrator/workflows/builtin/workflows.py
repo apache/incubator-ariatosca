@@ -18,19 +18,21 @@ TSOCA normative lifecycle workflows.
 """
 
 from ... import workflow
-from ....modeling.models import Task
-from .utils import (create_node_task, create_relationship_tasks)
+from .utils import (
+    create_node_task,
+    create_relationships_tasks
+)
 
 
 NORMATIVE_STANDARD_INTERFACE = 'Standard' # 'tosca.interfaces.node.lifecycle.Standard'
 NORMATIVE_CONFIGURE_INTERFACE = 'Configure' # 'tosca.interfaces.relationship.Configure'
 
 NORMATIVE_CREATE = 'create'
+NORMATIVE_CONFIGURE = 'configure'
 NORMATIVE_START = 'start'
 NORMATIVE_STOP = 'stop'
 NORMATIVE_DELETE = 'delete'
 
-NORMATIVE_CONFIGURE = 'configure'
 NORMATIVE_PRE_CONFIGURE_SOURCE = 'pre_configure_source'
 NORMATIVE_PRE_CONFIGURE_TARGET = 'pre_configure_target'
 NORMATIVE_POST_CONFIGURE_SOURCE = 'post_configure_source'
@@ -39,6 +41,7 @@ NORMATIVE_POST_CONFIGURE_TARGET = 'post_configure_target'
 NORMATIVE_ADD_SOURCE = 'add_source'
 NORMATIVE_ADD_TARGET = 'add_target'
 NORMATIVE_REMOVE_TARGET = 'remove_target'
+NORMATIVE_REMOVE_SOURCE = 'remove_source'
 NORMATIVE_TARGET_CHANGED = 'target_changed'
 
 
@@ -56,6 +59,7 @@ __all__ = (
     'NORMATIVE_POST_CONFIGURE_TARGET',
     'NORMATIVE_ADD_SOURCE',
     'NORMATIVE_ADD_TARGET',
+    'NORMATIVE_REMOVE_SOURCE',
     'NORMATIVE_REMOVE_TARGET',
     'NORMATIVE_TARGET_CHANGED',
     'install_node',
@@ -67,40 +71,20 @@ __all__ = (
 
 @workflow(suffix_template='{node.name}')
 def install_node(graph, node, **kwargs):
-    sequence = []
-
     # Create
-    sequence.append(
-        create_node_task(
-            NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE,
-            node))
+    sequence = [create_node_task(node,
+                                 NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE)]
 
     # Configure
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_SOURCE,
-            Task.RUNS_ON_SOURCE,
-            node)
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_PRE_CONFIGURE_TARGET,
-            Task.RUNS_ON_TARGET,
-            node)
-    sequence.append(
-        create_node_task(
-            NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE,
-            node))
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_SOURCE,
-            Task.RUNS_ON_SOURCE,
-            node)
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_POST_CONFIGURE_TARGET,
-            Task.RUNS_ON_TARGET,
-            node)
-
+    sequence += create_relationships_tasks(node,
+                                           NORMATIVE_CONFIGURE_INTERFACE,
+                                           NORMATIVE_PRE_CONFIGURE_SOURCE,
+                                           NORMATIVE_PRE_CONFIGURE_TARGET)
+    sequence.append(create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE))
+    sequence += create_relationships_tasks(node,
+                                           NORMATIVE_CONFIGURE_INTERFACE,
+                                           NORMATIVE_POST_CONFIGURE_SOURCE,
+                                           NORMATIVE_POST_CONFIGURE_TARGET)
     # Start
     sequence += _create_start_tasks(node)
 
@@ -113,10 +97,9 @@ def uninstall_node(graph, node, **kwargs):
     sequence = _create_stop_tasks(node)
 
     # Delete
-    sequence.append(
-        create_node_task(
-            NORMATIVE_STANDARD_INTERFACE, NORMATIVE_DELETE,
-            node))
+    sequence.append(create_node_task(node,
+                                     NORMATIVE_STANDARD_INTERFACE,
+                                     NORMATIVE_DELETE))
 
     graph.sequence(*sequence)
 
@@ -132,43 +115,16 @@ def stop_node(graph, node, **kwargs):
 
 
 def _create_start_tasks(node):
-    sequence = []
-    sequence.append(
-        create_node_task(
-            NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START,
-            node))
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_SOURCE,
-            Task.RUNS_ON_SOURCE,
-            node)
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_ADD_TARGET,
-            Task.RUNS_ON_TARGET,
-            node)
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
-            Task.RUNS_ON_TARGET,
-            node)
+    sequence = [create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START)]
+    sequence += create_relationships_tasks(node,
+                                           NORMATIVE_CONFIGURE_INTERFACE,
+                                           NORMATIVE_ADD_SOURCE, NORMATIVE_ADD_TARGET)
     return sequence
 
 
 def _create_stop_tasks(node):
-    sequence = []
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_REMOVE_TARGET,
-            Task.RUNS_ON_TARGET,
-            node)
-    sequence += \
-        create_relationship_tasks(
-            NORMATIVE_CONFIGURE_INTERFACE, NORMATIVE_TARGET_CHANGED,
-            Task.RUNS_ON_TARGET,
-            node)
-    sequence.append(
-        create_node_task(
-            NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP,
-            node))
+    sequence = [create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP)]
+    sequence += create_relationships_tasks(node,
+                                           NORMATIVE_CONFIGURE_INTERFACE,
+                                           NORMATIVE_REMOVE_SOURCE, NORMATIVE_REMOVE_TARGET)
     return sequence

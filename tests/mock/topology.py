@@ -22,7 +22,8 @@ def create_simple_topology_single_node(model_storage, create_operation):
     service_template = models.create_service_template()
     service = models.create_service(service_template)
 
-    node_template = models.create_dependency_node_template(service_template)
+    node_template = models.create_dependency_node_template(
+        models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
     interface_template = models.create_interface_template(
         service_template,
         'Standard', 'create',
@@ -33,7 +34,7 @@ def create_simple_topology_single_node(model_storage, create_operation):
     )
     node_template.interface_templates[interface_template.name] = interface_template                 # pylint: disable=unsubscriptable-object
 
-    node = models.create_dependency_node(node_template, service)
+    node = models.create_node(models.DEPENDENCY_NODE_NAME, node_template, service)
     interface = models.create_interface(
         service,
         'Standard', 'create',
@@ -54,12 +55,15 @@ def create_simple_topology_two_nodes(model_storage):
 
     # Creating a simple service with node -> node as a graph
 
-    dependency_node_template = models.create_dependency_node_template(service_template)
-    dependent_node_template = models.create_dependent_node_template(service_template,
-                                                                    dependency_node_template)
+    dependency_node_template = models.create_dependency_node_template(
+        models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
+    dependent_node_template = models.create_dependent_node_template(
+        models.DEPENDENT_NODE_TEMPLATE_NAME, service_template, dependency_node_template)
 
-    dependency_node = models.create_dependency_node(dependency_node_template, service)
-    dependent_node = models.create_dependent_node(dependent_node_template, service)
+    dependency_node = models.create_node(
+        models.DEPENDENCY_NODE_NAME, dependency_node_template, service)
+    dependent_node = models.create_node(
+        models.DEPENDENT_NODE_NAME, dependent_node_template, service)
 
     dependent_node.outbound_relationships.append(models.create_relationship(                        # pylint: disable=no-member
         source=dependent_node,
@@ -70,3 +74,26 @@ def create_simple_topology_two_nodes(model_storage):
     model_storage.service.put(service)
 
     return service.id
+
+
+def create_simple_topology_three_nodes(model_storage):
+    #################################################################################
+    # Creating a simple deployment with the following topology:
+    #               node1    <----|
+    #                             | <- node0
+    #               node2    <----|
+    # meaning node0 has two relationships: node1 and node2 (one each).
+
+    service_id = create_simple_topology_two_nodes(model_storage)
+    service = model_storage.service.get(service_id)
+    third_node_template = models.create_dependency_node_template(
+        'another_dependency_node_template', service.service_template)
+    third_node = models.create_node(
+        'another_dependency_node', third_node_template, service)
+    new_relationship = models.create_relationship(
+        source=model_storage.node.get_by_name(models.DEPENDENT_NODE_NAME),
+        target=third_node,
+    )
+    model_storage.relationship.put(new_relationship)
+
+    return service_id

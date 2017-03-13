@@ -16,7 +16,26 @@
 from datetime import datetime
 
 from aria.modeling import models
-from . import operations
+from aria.orchestrator import decorators
+from aria.orchestrator.workflows.builtin.workflows import (
+    NORMATIVE_STANDARD_INTERFACE,
+    NORMATIVE_CREATE,
+    NORMATIVE_START,
+    NORMATIVE_STOP,
+    NORMATIVE_DELETE,
+    NORMATIVE_CONFIGURE,
+
+    NORMATIVE_CONFIGURE_INTERFACE,
+    NORMATIVE_PRE_CONFIGURE_SOURCE,
+    NORMATIVE_PRE_CONFIGURE_TARGET,
+    NORMATIVE_POST_CONFIGURE_SOURCE,
+    NORMATIVE_POST_CONFIGURE_TARGET,
+
+    NORMATIVE_ADD_SOURCE,
+    NORMATIVE_ADD_TARGET,
+    NORMATIVE_REMOVE_TARGET,
+    NORMATIVE_REMOVE_SOURCE
+)
 
 SERVICE_NAME = 'test_service_name'
 SERVICE_TEMPLATE_NAME = 'test_service_template_name'
@@ -62,7 +81,7 @@ def create_service(service_template):
     )
 
 
-def create_dependency_node_template(service_template):
+def create_dependency_node_template(name, service_template):
     node_type = service_template.node_types.get_descendant('test_node_type')
     capability_type = service_template.capability_types.get_descendant('test_capability_type')
 
@@ -72,7 +91,7 @@ def create_dependency_node_template(service_template):
     )
 
     node_template = models.NodeTemplate(
-        name=DEPENDENCY_NODE_TEMPLATE_NAME,
+        name=name,
         type=node_type,
         capability_templates=_dictify(capability_template),
         default_instances=1,
@@ -84,16 +103,8 @@ def create_dependency_node_template(service_template):
     return node_template
 
 
-def create_dependent_node_template(service_template, dependency_node_template):
+def create_dependent_node_template(name, service_template, dependency_node_template):
     the_type = service_template.node_types.get_descendant('test_node_type')
-
-    operation_templates = dict((op, models.OperationTemplate(
-        name=op,
-        implementation='test'))
-                               for _, op in operations.NODE_OPERATIONS)
-    interface_template = models.InterfaceTemplate(
-        type=service_template.interface_types.get_descendant('test_interface_type'),
-        operation_templates=operation_templates)
 
     requirement_template = models.RequirementTemplate(
         name='requirement',
@@ -101,12 +112,12 @@ def create_dependent_node_template(service_template, dependency_node_template):
     )
 
     node_template = models.NodeTemplate(
-        name=DEPENDENT_NODE_TEMPLATE_NAME,
+        name=name,
         type=the_type,
         default_instances=1,
         min_instances=1,
         max_instances=1,
-        interface_templates=_dictify(interface_template),
+        interface_templates=_dictify(get_standard_interface_template(service_template)),
         requirement_templates=[requirement_template],
         service_template=service_template
     )
@@ -114,31 +125,17 @@ def create_dependent_node_template(service_template, dependency_node_template):
     return node_template
 
 
-def create_dependency_node(dependency_node_template, service):
+def create_node(name, dependency_node_template, service):
     node = models.Node(
-        name=DEPENDENCY_NODE_NAME,
+        name=name,
         type=dependency_node_template.type,
         runtime_properties={'ip': '1.1.1.1'},
         version=None,
         node_template=dependency_node_template,
         state=models.Node.INITIAL,
         scaling_groups=[],
-        service=service
-    )
-    service.nodes[node.name] = node
-    return node
-
-
-def create_dependent_node(dependent_node_template, service):
-    node = models.Node(
-        name=DEPENDENT_NODE_NAME,
-        type=dependent_node_template.type,
-        runtime_properties={},
-        version=None,
-        node_template=dependent_node_template,
-        state=models.Node.INITIAL,
-        scaling_groups=[],
-        service=service
+        service=service,
+        interfaces=get_standard_interface(service),
     )
     service.nodes[node.name] = node
     return node
@@ -147,7 +144,8 @@ def create_dependent_node(dependent_node_template, service):
 def create_relationship(source, target):
     return models.Relationship(
         source_node=source,
-        target_node=target
+        target_node=target,
+        interfaces=get_configure_interfaces(service=source.service),
     )
 
 
@@ -217,3 +215,62 @@ def create_plugin_specification(name='test_plugin', version='0.1'):
 
 def _dictify(item):
     return dict(((item.name, item),))
+
+
+def get_standard_interface_template(service_template):
+    the_type = service_template.interface_types.get_descendant('test_interface_type')
+
+    op_templates = dict(
+        (op_name, models.OperationTemplate(
+            name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
+        for op_name in [NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
+                        NORMATIVE_STOP, NORMATIVE_DELETE]
+    )
+    return models.InterfaceTemplate(name=NORMATIVE_STANDARD_INTERFACE,
+                                    operation_templates=op_templates,
+                                    type=the_type)
+
+
+def get_standard_interface(service):
+    the_type = service.service_template.interface_types.get_descendant('test_interface_type')
+
+    ops = dict(
+        (op_name, models.Operation(
+            name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
+        for op_name in [NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
+                        NORMATIVE_STOP, NORMATIVE_DELETE]
+    )
+    return {
+        NORMATIVE_STANDARD_INTERFACE:
+            models.Interface(name=NORMATIVE_STANDARD_INTERFACE, operations=ops, type=the_type)
+    }
+
+
+def get_configure_interfaces(service):
+    the_type = service.service_template.interface_types.get_descendant('test_interface_type')
+
+    operations = dict(
+        (op_name, models.Operation(
+            name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
+        for op_name in [NORMATIVE_PRE_CONFIGURE_SOURCE,
+                        NORMATIVE_POST_CONFIGURE_SOURCE,
+                        NORMATIVE_ADD_SOURCE,
+                        NORMATIVE_REMOVE_SOURCE,
+
+                        NORMATIVE_PRE_CONFIGURE_TARGET,
+                        NORMATIVE_POST_CONFIGURE_TARGET,
+                        NORMATIVE_ADD_TARGET,
+                        NORMATIVE_REMOVE_TARGET
+                       ]
+    )
+    interface = {
+        NORMATIVE_CONFIGURE_INTERFACE: models.Interface(
+            name=NORMATIVE_CONFIGURE_INTERFACE, operations=operations, type=the_type)
+    }
+
+    return interface
+
+
+@decorators.operation
+def mock_operation(*args, **kwargs):
+    pass

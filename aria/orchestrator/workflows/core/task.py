@@ -106,6 +106,8 @@ class OperationTask(BaseTask):
     def __init__(self, api_task, *args, **kwargs):
         super(OperationTask, self).__init__(id=api_task.id, **kwargs)
         self._workflow_context = api_task._workflow_context
+        self.interface_name = api_task.interface_name
+        self.operation_name = api_task.operation_name
         model_storage = api_task._workflow_context.model
         plugin = api_task.plugin
 

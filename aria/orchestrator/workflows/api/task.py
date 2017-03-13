@@ -90,6 +90,8 @@ class OperationTask(BaseTask):
         self.ignore_failure = (self.workflow_context._task_ignore_failure
                                if ignore_failure is None else ignore_failure)
         self.runs_on = runs_on
+        self.interface_name = interface_name
+        self.operation_name = operation_name
 
         # Wrap inputs
         inputs = copy.deepcopy(inputs) if inputs else {}
@@ -101,11 +103,11 @@ class OperationTask(BaseTask):
         # model, because they are different from the operation inputs. If we do this, then the two
         # kinds of inputs should *not* be merged here.
 
-        operation = self._get_operation(interface_name, operation_name)
+        operation = self._get_operation()
         if operation is None:
             raise exceptions.OperationNotFoundException(
                 'Could not find operation "{0}" on interface "{1}" for {2} "{3}"'
-                .format(operation_name, interface_name, actor_type, actor.name))
+                .format(self.operation_name, self.interface_name, actor_type, actor.name))
 
         self.plugin = None
         if operation.plugin_specification:
@@ -113,15 +115,26 @@ class OperationTask(BaseTask):
             if self.plugin is None:
                 raise exceptions.PluginNotFoundException(
                     'Could not find plugin of operation "{0}" on interface "{1}" for {2} "{3}"'
-                    .format(operation_name, interface_name, actor_type, actor.name))
+                    .format(self.operation_name, self.interface_name, actor_type, actor.name))
 
         self.implementation = operation.implementation
         self.inputs = OperationTask._merge_inputs(operation.inputs, inputs)
 
         self.name = OperationTask.NAME_FORMAT.format(type=actor_type,
                                                      name=actor.name,
-                                                     interface=interface_name,
-                                                     operation=operation_name)
+                                                     interface=self.interface_name,
+                                                     operation=self.operation_name)
+
+    def __repr__(self):
+        return self.name
+
+    def _get_operation(self):
+        interface = self.actor.interfaces.get(self.interface_name)
+        if interface:
+            return interface.operations.get(self.operation_name)
+        return None
+
+
 
     @classmethod
     def for_node(cls,
@@ -197,12 +210,6 @@ class OperationTask(BaseTask):
             retry_interval=retry_interval,
             ignore_failure=ignore_failure,
             inputs=inputs)
-
-    def _get_operation(self, interface_name, operation_name):
-        interface = self.actor.interfaces.get(interface_name)
-        if interface is not None:
-            return interface.operations.get(operation_name)
-        return None
 
     @staticmethod
     def _find_plugin(plugin_specification):

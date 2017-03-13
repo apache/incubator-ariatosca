@@ -89,21 +89,27 @@ def _service_update_storage():
 def _node_template_storage():
     storage = _service_storage()
     service_template = storage.service_template.list()[0]
-    dependency_node_template = mock.models.create_dependency_node_template(service_template)
-    mock.models.create_dependent_node_template(service_template, dependency_node_template)
+    dependency_node_template = mock.models.create_dependency_node_template(
+        mock.models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
+    mock.models.create_dependent_node_template(
+        mock.models.DEPENDENCY_NODE_NAME, service_template, dependency_node_template)
     storage.service_template.update(service_template)
     return storage
 
 
-def _node_storage():
+def _nodes_storage():
     storage = _node_template_storage()
     service = storage.service.get_by_name(mock.models.SERVICE_NAME)
     dependency_node_template = storage.node_template.get_by_name(
         mock.models.DEPENDENCY_NODE_TEMPLATE_NAME)
-    dependent_node_template = storage.node_template.get_by_name(
-        mock.models.DEPENDENT_NODE_TEMPLATE_NAME)
-    mock.models.create_dependency_node(dependency_node_template, service)
-    mock.models.create_dependent_node(dependent_node_template, service)
+    mock.models.create_node(mock.models.DEPENDENCY_NODE_NAME, dependency_node_template, service)
+
+    dependent_node_template = \
+        mock.models.create_dependent_node_template(mock.models.DEPENDENT_NODE_TEMPLATE_NAME,
+                                                   service.service_template,
+                                                   dependency_node_template)
+
+    mock.models.create_node(mock.models.DEPENDENT_NODE_NAME, dependent_node_template, service)
     storage.service.update(service)
     return storage
 
@@ -148,8 +154,8 @@ def node_template_storage():
 
 
 @pytest.fixture
-def node_storage():
-    with sql_storage(_node_storage) as storage:
+def nodes_storage():
+    with sql_storage(_nodes_storage) as storage:
         yield storage
 
 
@@ -671,13 +677,13 @@ class TestRelationship(object):
             (True, 0, None),
         ]
     )
-    def test_relationship_model_creation(self, node_storage, is_valid, source_position,
+    def test_relationship_model_creation(self, nodes_storage, is_valid, source_position,
                                          target_position):
-        nodes = node_storage.node
+        nodes = nodes_storage.node
         source_node = nodes.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         target_node = nodes.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
         _test_model(is_valid=is_valid,
-                    storage=node_storage,
+                    storage=nodes_storage,
                     model_cls=Relationship,
                     model_kwargs=dict(
                         source_node=source_node,
