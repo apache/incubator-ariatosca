@@ -20,7 +20,7 @@ Path: aria.events.storage_event_handler
 Implementation of storage handlers for workflow and operation events.
 """
 
-
+import re
 from datetime import (
     datetime,
     timedelta,
@@ -28,6 +28,7 @@ from datetime import (
 
 from ... import events
 from ... import exceptions
+
 
 @events.sent_task_signal.connect
 def _task_sent(task, *args, **kwargs):
@@ -40,6 +41,8 @@ def _task_started(task, *args, **kwargs):
     with task._update():
         task.started_at = datetime.utcnow()
         task.status = task.STARTED
+
+        _update_node_state_if_necessary(task, is_transitional=True)
 
 
 @events.on_failure_task_signal.connect
@@ -72,6 +75,8 @@ def _task_succeeded(task, *args, **kwargs):
     with task._update():
         task.ended_at = datetime.utcnow()
         task.status = task.SUCCESS
+
+        _update_node_state_if_necessary(task)
 
 
 @events.start_workflow_signal.connect
@@ -118,3 +123,14 @@ def _workflow_cancelling(workflow_context, *args, **kwargs):
         return _workflow_cancelled(workflow_context=workflow_context)
     execution.status = execution.CANCELLING
     workflow_context.execution = execution
+
+
+def _update_node_state_if_necessary(task, is_transitional=False):
+    match = re.search(r'^(?:tosca.interfaces.node.lifecycle.Standard|Standard):(\S+)@node',
+                      task.name)
+    if match:
+        node = task.runs_on
+        state = node.determine_state(op_name=match.group(1), is_transitional=is_transitional)
+        if state:
+            node.state = state
+            task.context.model.node.update(node)

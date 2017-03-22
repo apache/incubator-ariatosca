@@ -18,7 +18,8 @@
 from sqlalchemy import (
     Column,
     Text,
-    Integer
+    Integer,
+    Enum,
 )
 from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -322,8 +323,8 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype runtime_properties: {}
     :ivar scaling_groups: ??
     :vartype scaling_groups: []
-    :ivar state: ??
-    :vartype state: basestring
+    :ivar state: The state of the node, according to to the TOSCA-defined node states
+    :vartype state: string
     :ivar version: Used by `aria.storage.instrumentation`
     :vartype version: int
 
@@ -346,6 +347,49 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
                           'service_fk',
                           'node_template_fk',
                           'service_name']
+
+    INITIAL = 'initial'
+    CREATING = 'creating'
+    CREATED = 'created'
+    CONFIGURING = 'configuring'
+    CONFIGURED = 'configured'
+    STARTING = 'starting'
+    STARTED = 'started'
+    STOPPING = 'stopping'
+    DELETING = 'deleting'
+    # 'deleted' isn't actually part of the tosca spec, since according the description of the
+    # 'deleting' state: "Node is transitioning from its current state to one where it is deleted and
+    #  its state is no longer tracked by the instance model."
+    # However, we prefer to be able to retrieve information about deleted nodes, so we chose to add
+    # this 'deleted' state to enable us to do so.
+    DELETED = 'deleted'
+    ERROR = 'error'
+
+    STATES = [INITIAL, CREATING, CREATED, CONFIGURING, CONFIGURED, STARTING, STARTED, STOPPING,
+              DELETING, DELETED, ERROR]
+
+    _op_to_state = {'create': {'transitional': CREATING, 'finished': CREATED},
+                    'configure': {'transitional': CONFIGURING, 'finished': CONFIGURED},
+                    'start': {'transitional': STARTING, 'finished': STARTED},
+                    'stop': {'transitional': STOPPING, 'finished': CONFIGURED},
+                    'delete': {'transitional': DELETING, 'finished': DELETED}}
+
+    @classmethod
+    def determine_state(cls, op_name, is_transitional):
+        """ :returns the state the node should be in as a result of running the
+            operation on this node.
+
+            e.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
+            the resulting state should either 'creating' (if the task just started) or 'created'
+            (if the task ended).
+
+            If the operation is not a standard tosca lifecycle operation, then we return None"""
+
+        state_type = 'transitional' if is_transitional else 'finished'
+        try:
+            return cls._op_to_state[op_name][state_type]
+        except KeyError:
+            return None
 
     @declared_attr
     def node_template(cls):
@@ -391,7 +435,7 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
 
     runtime_properties = Column(modeling_types.Dict)
     scaling_groups = Column(modeling_types.List)
-    state = Column(Text, nullable=False)
+    state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
     version = Column(Integer, default=1)
 
     __mapper_args__ = {'version_id_col': version} # Enable SQLAlchemy automatic version counting

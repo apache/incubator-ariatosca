@@ -554,11 +554,11 @@ class TestNode(object):
             (False, 'name', {}, [], m_cls, 1),
             (False, m_cls, {}, [], 'state', m_cls),
 
-            (True, 'name', {}, [], 'state', 1),
-            (True, None, {}, [], 'state', 1),
-            (True, 'name', None, [], 'state', 1),
-            (True, 'name', {}, None, 'state', 1),
-            (True, 'name', {}, [], 'state', None),
+            (True, 'name', {}, [], 'initial', 1),
+            (True, None, {}, [], 'initial', 1),
+            (True, 'name', None, [], 'initial', 1),
+            (True, 'name', {}, None, 'initial', 1),
+            (True, 'name', {}, [], 'initial', None),
         ]
     )
     def test_node_model_creation(self, node_template_storage, is_valid, name, runtime_properties,
@@ -645,7 +645,7 @@ class TestNodeIP(object):
             node_template=node,
             type=storage.type.list()[0],
             runtime_properties={},
-            state='',
+            state='initial',
             service=storage.service.list()[0]
         )
         if ip:

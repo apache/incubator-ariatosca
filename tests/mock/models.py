@@ -121,7 +121,7 @@ def create_dependency_node(dependency_node_template, service):
         runtime_properties={'ip': '1.1.1.1'},
         version=None,
         node_template=dependency_node_template,
-        state='',
+        state=models.Node.INITIAL,
         scaling_groups=[],
         service=service
     )
@@ -136,7 +136,7 @@ def create_dependent_node(dependent_node_template, service):
         runtime_properties={},
         version=None,
         node_template=dependent_node_template,
-        state='',
+        state=models.Node.INITIAL,
         scaling_groups=[],
         service=service
     )

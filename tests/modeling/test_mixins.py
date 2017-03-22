@@ -127,7 +127,7 @@ def test_relationship_model_ordering(context):
         service=service,
         version=None,
         node_template=new_node_template,
-        state='',
+        state=modeling.models.Node.INITIAL,
         scaling_groups=[]
     )
 

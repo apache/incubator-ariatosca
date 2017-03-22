@@ -497,7 +497,7 @@ class NodeTemplateBase(TemplateModelMixin):
         node = models.Node(name=name,
                            type=self.type,
                            description=deepcopy_with_locators(self.description),
-                           state='',
+                           state=models.Node.INITIAL,
                            node_template=self)
         utils.instantiate_dict(node, node.properties, self.properties)
         utils.instantiate_dict(node, node.interfaces, self.interface_templates)
