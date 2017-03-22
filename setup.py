@@ -105,7 +105,8 @@ setup(
     package_data={
         'aria_extension_tosca': [
             'profiles/tosca-simple-1.0/**',
-            'profiles/tosca-simple-nfv-1.0/**'
+            'profiles/tosca-simple-nfv-1.0/**',
+            'profiles/aria-1.0/**'
         ]
     },
     zip_safe=False,

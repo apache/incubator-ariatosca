@@ -513,22 +513,19 @@ class TestServiceModification(object):
 
 class TestNodeTemplate(object):
     @pytest.mark.parametrize(
-        'is_valid, name, default_instances, max_instances, min_instances, plugin_specifications, '
-        'properties',
+        'is_valid, name, default_instances, max_instances, min_instances, properties',
         [
-            (False, m_cls, 1, 1, 1, {}, {}),
-            (False, 'name', m_cls, 1, 1, {}, {}),
-            (False, 'name', 1, m_cls, 1, {}, {}),
-            (False, 'name', 1, 1, m_cls, {}, {}),
-            (False, 'name', 1, 1, 1, m_cls, {}),
-            (False, 'name', 1, 1, 1, None, {}),
+            (False, m_cls, 1, 1, 1, {}),
+            (False, 'name', m_cls, 1, 1, {}),
+            (False, 'name', 1, m_cls, 1, {}),
+            (False, 'name', 1, 1, m_cls, {}),
+            (False, 'name', 1, 1, 1, m_cls),
 
-            (True, 'name', 1, 1, 1, {}, {}),
+            (True, 'name', 1, 1, 1, {}),
         ]
     )
     def test_node_template_model_creation(self, service_storage, is_valid, name, default_instances,
-                                          max_instances, min_instances, plugin_specifications,
-                                          properties):
+                                          max_instances, min_instances, properties):
         node_template = _test_model(
             is_valid=is_valid,
             storage=service_storage,
@@ -539,7 +536,6 @@ class TestNodeTemplate(object):
                 default_instances=default_instances,
                 max_instances=max_instances,
                 min_instances=min_instances,
-                plugin_specifications=plugin_specifications,
                 properties=properties,
                 service_template=service_storage.service_template.list()[0]
             ))
@@ -852,4 +848,3 @@ class TestType(object):
 
         assert super_type.hierarchy == [super_type, additional_type]
         assert sub_type.hierarchy == [sub_type, super_type, additional_type]
-

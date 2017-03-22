@@ -54,7 +54,6 @@ def _mock_workflow(ctx, graph):
                               plugin_specification=plugin_specification)
     )
     node.interfaces[interface.name] = interface
-    node.plugin_specifications[plugin_specification.name] = plugin_specification
     task = api.task.OperationTask.for_node(node=node, interface_name='test', operation_name='op')
     graph.add_tasks(task)
     return graph

@@ -191,14 +191,14 @@ def create_execution(service):
     )
 
 
-def create_plugin(package_name='package', package_version='0.1'):
+def create_plugin(name='test_plugin', package_version='0.1'):
     return models.Plugin(
-        name='test_plugin',
+        name=name,
         archive_name='archive_name',
         distribution='distribution',
         distribution_release='dist_release',
         distribution_version='dist_version',
-        package_name=package_name,
+        package_name='package',
         package_source='source',
         package_version=package_version,
         supported_platform='any',
@@ -208,18 +208,10 @@ def create_plugin(package_name='package', package_version='0.1'):
     )
 
 
-def create_plugin_specification(package_name='package', package_version='0.1'):
+def create_plugin_specification(name='test_plugin', version='0.1'):
     return models.PluginSpecification(
-        name='test_plugin',
-        archive_name='archive_name',
-        distribution='distribution',
-        distribution_release='dist_release',
-        distribution_version='dist_version',
-        package_name=package_name,
-        package_source='source',
-        package_version=package_version,
-        supported_platform='any',
-        supported_py_versions=['python27']
+        name=name,
+        version=version
     )
 
 

@@ -83,19 +83,12 @@ class TestOperationTask(object):
         return api_task, core_task
 
     def test_node_operation_task_creation(self, ctx):
-        storage_plugin = mock.models.create_plugin(
-            package_name='p1', package_version='0.1')
-        storage_plugin_specification = mock.models.create_plugin_specification(
-            package_name='p1', package_version='0.1')
-        storage_plugin_specification_other = mock.models.create_plugin(
-            package_name='p0', package_version='0.0')
+        storage_plugin = mock.models.create_plugin('p1', '0.1')
+        storage_plugin_other = mock.models.create_plugin('p0', '0.0')
         ctx.model.plugin.put(storage_plugin)
-        ctx.model.plugin_specification.put(storage_plugin_specification_other)
-        ctx.model.plugin_specification.put(storage_plugin_specification)
+        ctx.model.plugin.put(storage_plugin_other)
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-        node_template = node.node_template
-        node_template.plugin_specifications[storage_plugin_specification.name] = \
-            storage_plugin_specification
+        storage_plugin_specification = mock.models.create_plugin_specification('p1', '0.1')
         interface = mock.models.create_interface(
             node.service,
             NODE_INTERFACE_NAME,
@@ -103,7 +96,6 @@ class TestOperationTask(object):
             operation_kwargs=dict(plugin_specification=storage_plugin_specification)
         )
         node.interfaces[interface.name] = interface
-        ctx.model.node_template.update(node_template)
         ctx.model.node.update(node)
         api_task, core_task = self._create_node_operation_task(ctx, node)
         storage_task = ctx.model.task.get_by_name(core_task.name)

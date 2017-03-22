@@ -206,7 +206,7 @@ class WorkflowCommand(BaseCommand):
     :code:`workflow` command.
     """
 
-    WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('function', 'implementation', 'dependencies')
+    WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('implementation', 'dependencies')
     
     def __call__(self, args_namespace, unknown_args):
         super(WorkflowCommand, self).__call__(args_namespace, unknown_args)
@@ -241,12 +241,9 @@ class WorkflowCommand(BaseCommand):
             if workflow.type.role != 'workflow':
                 raise AttributeError('policy is not a workflow: "{0}"'.format(workflow_name))
 
-            try:
-                sys.path.append(workflow.properties['implementation'].value)
-            except KeyError:
-                pass
+            sys.path.append(os.path.dirname(str(context.presentation.location)))
     
-            workflow_fn = import_fullname(workflow.properties['function'].value)
+            workflow_fn = import_fullname(workflow.properties['implementation'].value)
     
             for k in workflow.properties:
                 if k in WORKFLOW_DECORATOR_RESERVED_ARGUMENTS:

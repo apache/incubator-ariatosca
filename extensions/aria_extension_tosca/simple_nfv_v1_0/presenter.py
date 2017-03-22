@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import FrozenList, EMPTY_READ_ONLY_LIST
+from aria.utils.collections import FrozenList
 from aria.utils.caching import cachedmethod
 
 from ..simple_v1_0 import ToscaSimplePresenter1_0
@@ -37,10 +37,7 @@ class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0): # pylint: disable=inv
 
     @cachedmethod
     def _get_import_locations(self, context):
-        import_locations = []
+        import_locations = super(ToscaSimpleNfvPresenter1_0, self)._get_import_locations(context)
         if context.presentation.import_profile:
-            import_locations += (self.SIMPLE_PROFILE_LOCATION, self.SIMPLE_PROFILE_FOR_NFV_LOCATION)
-        imports = self._get('service_template', 'imports')
-        if imports:
-            import_locations += [i.file for i in imports]
-        return FrozenList(import_locations) if import_locations else EMPTY_READ_ONLY_LIST
+            return FrozenList([self.SIMPLE_PROFILE_FOR_NFV_LOCATION] + import_locations)
+        return import_locations

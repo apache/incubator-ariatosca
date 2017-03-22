@@ -39,9 +39,12 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..orchestrator.exceptions import (TaskAbortException, TaskRetryException)
-from .types import (List, Dict)
+from .types import Dict
 from .mixins import ModelMixin
-from . import relationship
+from . import (
+    relationship,
+    types as modeling_types
+)
 
 
 class ExecutionBase(ModelMixin):
@@ -140,7 +143,44 @@ class ExecutionBase(ModelMixin):
 
 class PluginBase(ModelMixin):
     """
-    Plugin model representation.
+    An installed plugin.
+
+    Plugins are usually packaged as `wagons <https://github.com/cloudify-cosmo/wagon>`__, which
+    are archives of one or more `wheels <https://packaging.python.org/distributing/#wheels>`__.
+    Most of these fields are indeed extracted from the installed wagon's metadata.
+
+    :ivar archive_name: Filename (not the full path) of the wagon's archive, often with a ".wgn"
+                        extension
+    :vartype archive_name: basestring
+    :ivar distribution: The name of the operating system on which the wagon was installed (e.g.
+                        "ubuntu")
+    :vartype distribution: basestring
+    :ivar distribution_release: The release of the operating system on which the wagon was installed
+                                (e.g. "trusty")
+    :vartype distribution_release: basestring
+    :ivar distribution_version: The version of the operating system on which the wagon was installed
+                                (e.g. "14.04")
+    :vartype distribution_version: basestring
+    :ivar package_name: The primary Python package name used when the wagon was installed, which is
+                        one of the wheels in the wagon (e.g. "cloudify-script-plugin")
+    :vartype package_name: basestring
+    :ivar package_source: The full install string for the primary Python package name used when the
+                          wagon was installed (e.g. "cloudify-script-plugin==1.2")
+    :vartype package_source: basestring
+    :ivar package_version: The version for the primary Python package name used when the wagon was
+                           installed (e.g. "1.2")
+    :vartype package_version: basestring
+    :ivar supported_platform: If the wheels are *all* pure Python then this would be "any",
+                              otherwise it would be the installed platform name (e.g.
+                              "linux_x86_64")
+    :vartype supported_platform: basestring
+    :ivar supported_py_versions: The Python versions supported by all the wheels (e.g. ["py26",
+                                 "py27"])
+    :vartype supported_py_versions: [basestring]
+    :ivar wheels: The filenames of the wheels archived in the wagon, often with a ".whl" extension
+    :vartype wheels: [basestring]
+    :ivar uploaded_at: Timestamp for when the wagon was installed
+    :vartype uploaded_at: basestring
     """
 
     __tablename__ = 'plugin'
@@ -153,9 +193,9 @@ class PluginBase(ModelMixin):
     package_source = Column(Text)
     package_version = Column(Text)
     supported_platform = Column(Text)
-    supported_py_versions = Column(List)
+    supported_py_versions = Column(modeling_types.StrictList(basestring))
+    wheels = Column(modeling_types.StrictList(basestring), nullable=False)
     uploaded_at = Column(DateTime, nullable=False, index=True)
-    wheels = Column(List, nullable=False)
 
 
 class TaskBase(ModelMixin):

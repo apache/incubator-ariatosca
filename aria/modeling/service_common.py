@@ -25,7 +25,6 @@ from sqlalchemy.ext.declarative import declared_attr
 from ..parser.consumption import ConsumptionContext
 from ..utils import collections, formatting, console
 from .mixins import InstanceModelMixin, TemplateModelMixin
-from .types import List
 from . import (
     relationship,
     utils
@@ -39,9 +38,12 @@ class ParameterBase(TemplateModelMixin):
     This model is used by both service template and service instance elements.
 
     :ivar name: Name
+    :vartype name: basestring
     :ivar type_name: Type name
+    :vartype type_name: basestring
     :ivar value: Value
     :ivar description: Description
+    :vartype description: basestring
     """
 
     __tablename__ = 'parameter'
@@ -218,7 +220,9 @@ class MetadataBase(TemplateModelMixin):
     This model is used by both service template and service instance elements.
 
     :ivar name: Name
+    :vartype name: basestring
     :ivar value: Value
+    :vartype value: basestring
     """
 
     __tablename__ = 'metadata'
@@ -246,24 +250,21 @@ class MetadataBase(TemplateModelMixin):
             context.style.literal(self.value)))
 
 
-class PluginSpecificationBase(InstanceModelMixin):
+class PluginSpecificationBase(TemplateModelMixin):
     """
-    Plugin specification model representation.
+    Plugin specification.
+
+    :ivar name: Required plugin name
+    :vartype name: basestring
+    :ivar version: Minimum plugin version
+    :vartype version: basestring
     """
 
     __tablename__ = 'plugin_specification'
 
     __private_fields__ = ['service_template_fk']
 
-    archive_name = Column(Text, nullable=False, index=True)
-    distribution = Column(Text)
-    distribution_release = Column(Text)
-    distribution_version = Column(Text)
-    package_name = Column(Text, nullable=False, index=True)
-    package_source = Column(Text)
-    package_version = Column(Text)
-    supported_platform = Column(Text)
-    supported_py_versions = Column(List)
+    version = Column(Text, nullable=True)
 
     # region foreign keys
 
@@ -274,12 +275,28 @@ class PluginSpecificationBase(InstanceModelMixin):
 
     # endregion
 
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('version', self.version)))
+
     def coerce_values(self, container, report_issues):
         pass
 
+    def instantiate(self, container):
+        from . import models
+        return models.PluginSpecification(name=self.name,
+                                          version=self.version)
+
     def find_plugin(self, plugins):
-        # TODO: this should check versions/distribution and other specification
+        matching_plugins = []
         for plugin in plugins:
-            if plugin.name == self.name:
-                return plugin
+            # TODO: we need to use a version comparator
+            if (plugin.name == self.name) and \
+                ((self.version is None) or (plugin.package_version >= self.version)):
+                matching_plugins.append(plugin)
+        if matching_plugins:
+            # Return highest version of plugin
+            return sorted(matching_plugins, key=lambda plugin: plugin.package_version)[-1]
         return None

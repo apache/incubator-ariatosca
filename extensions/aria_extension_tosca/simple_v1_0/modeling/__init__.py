@@ -441,15 +441,7 @@ def create_plugin_specification_model(context, policy):
         return prop.value if prop is not None else None
 
     model = PluginSpecification(name=policy._name,
-                                archive_name=get('archive_name') or '',
-                                distribution=get('distribution'),
-                                distribution_release=get('distribution_release'),
-                                distribution_version=get('distribution_version'),
-                                package_name=get('package_name') or '',
-                                package_source=get('package_source'),
-                                package_version=get('package_version'),
-                                supported_platform=get('supported_platform'),
-                                supported_py_versions=get('supported_py_versions'))
+                                version=get('version'))
 
     return model
 

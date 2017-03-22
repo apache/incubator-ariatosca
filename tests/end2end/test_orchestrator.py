@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import sys
+import os
 
 from aria.orchestrator.runner import Runner
 from aria.orchestrator.workflows.builtin import BUILTIN_WORKFLOWS
@@ -24,7 +25,7 @@ from aria.cli.dry import convert_to_dry
 from tests.parser.service_templates import consume_node_cellar
 
 
-WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('function', 'implementation', 'dependencies')
+WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('implementation', 'dependencies')
 
 
 def test_install():
@@ -47,8 +48,8 @@ def _workflow(workflow_name):
         inputs = {}
     else:
         workflow = context.modeling.instance.policies[workflow_name]
-        sys.path.append(workflow.properties['implementation'].value)
-        workflow_fn = import_fullname(workflow.properties['function'].value)
+        sys.path.append(os.path.dirname(str(context.presentation.location)))
+        workflow_fn = import_fullname(workflow.properties['implementation'].value)
         inputs = OrderedDict([
             (k, v.value) for k, v in workflow.properties.iteritems()
             if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES

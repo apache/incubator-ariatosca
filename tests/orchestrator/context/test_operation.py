@@ -241,7 +241,6 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
             plugin_specification=plugin_specification)
     )
     node.interfaces[interface.name] = interface
-    node.plugin_specifications[plugin_specification.name] = plugin_specification
     ctx.model.node.update(node)
 
     filename = 'test_file'

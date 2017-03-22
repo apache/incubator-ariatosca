@@ -35,6 +35,8 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name
     DSL_VERSIONS = ('tosca_simple_yaml_1_0',)
     ALLOWED_IMPORTED_DSL_VERSIONS = ('tosca_simple_yaml_1_0',)
     SIMPLE_PROFILE_LOCATION = 'tosca-simple-1.0/tosca-simple-1.0.yaml'
+    SPECIAL_IMPORTS = {
+        'aria-1.0': 'aria-1.0/aria-1.0.yaml'}
 
     @property
     @cachedmethod
@@ -71,7 +73,7 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name
             import_locations.append(self.SIMPLE_PROFILE_LOCATION)
         imports = self._get('service_template', 'imports')
         if imports:
-            import_locations += [i.file for i in imports]
+            import_locations += [self.SPECIAL_IMPORTS.get(i.file, i.file) for i in imports]
         return FrozenList(import_locations) if import_locations else EMPTY_READ_ONLY_LIST
 
     @cachedmethod

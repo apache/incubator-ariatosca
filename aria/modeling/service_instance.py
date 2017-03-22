@@ -64,7 +64,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype outputs: {basestring: :class:`Parameter`}
     :ivar workflows: Custom workflows that can be performed on the service
     :vartype workflows: {basestring: :class:`Operation`}
-    :ivar plugin_specifications: Plugins required to be installed
+    :ivar plugin_specifications: Plugins used by the service
     :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar created_at: Creation timestamp
     :vartype created_at: :class:`datetime.datetime`
@@ -131,7 +131,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
 
     @declared_attr
     def plugin_specifications(cls):
-        return relationship.many_to_many(cls, 'plugin_specification')
+        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
 
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
@@ -315,8 +315,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype outbound_relationships: [:class:`Relationship`]
     :ivar inbound_relationships: Relationships from other nodes
     :vartype inbound_relationships: [:class:`Relationship`]
-    :ivar plugin_specifications: Plugins required to be installed on the node's host
-    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar host: Host node (can be self)
     :vartype host: :class:`Node`
 
@@ -384,10 +382,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     def inbound_relationships(cls):
         return relationship.one_to_many(cls, 'relationship', child_fk='target_node_fk',
                                         child_property='target_node')
-
-    @declared_attr
-    def plugin_specifications(cls):
-        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
 
     @declared_attr
     def host(cls):

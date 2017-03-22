@@ -70,7 +70,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     :vartype outputs: {basestring: :class:`Parameter`}
     :ivar workflow_templates: Custom workflows that can be performed on the service
     :vartype workflow_templates: {basestring: :class:`OperationTemplate`}
-    :ivar plugin_specifications: Plugins required by services
+    :ivar plugin_specifications: Plugins used by the service
     :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar node_types: Base for the node type hierarchy
     :vartype node_types: :class:`Type`
@@ -86,8 +86,6 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
     :vartype interface_types: :class:`Type`
     :ivar artifact_types: Base for the artifact type hierarchy
     :vartype artifact_types: :class:`Type`
-    :ivar plugin_specifications: Plugins required to be installed
-    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
     :ivar created_at: Creation timestamp
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
@@ -274,6 +272,7 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
         utils.instantiate_dict(self, service.groups, self.group_templates)
         utils.instantiate_dict(self, service.policies, self.policy_templates)
         utils.instantiate_dict(self, service.workflows, self.workflow_templates)
+        utils.instantiate_dict(self, service.plugin_specifications, self.plugin_specifications)
 
         if self.substitution_template is not None:
             service.substitution = self.substitution_template.instantiate(container)
@@ -395,8 +394,6 @@ class NodeTemplateBase(TemplateModelMixin):
     :vartype requirement_templates: [:class:`RequirementTemplate`]
     :ivar target_node_template_constraints: Constraints for filtering relationship targets
     :vartype target_node_template_constraints: [:class:`FunctionType`]
-    :ivar plugin_specifications: Plugins required to be installed on the node's host
-    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
 
     :ivar service_template: Containing service template
     :vartype service_template: :class:`ServiceTemplate`
@@ -447,10 +444,6 @@ class NodeTemplateBase(TemplateModelMixin):
                                         child_property='node_template')
 
     target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
-
-    @declared_attr
-    def plugin_specifications(cls):
-        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
 
     # region foreign_keys
 

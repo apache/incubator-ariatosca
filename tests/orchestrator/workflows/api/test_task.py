@@ -42,10 +42,10 @@ class TestOperationTask(object):
         interface_name = 'test_interface'
         operation_name = 'create'
 
-        plugin = mock.models.create_plugin('package', '0.1')
+        plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
+        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
@@ -56,7 +56,6 @@ class TestOperationTask(object):
 
         node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         node.interfaces[interface_name] = interface
-        node.plugin_specifications[plugin_specification.name] = plugin_specification
         ctx.model.node.update(node)
         inputs = {'test_input': True}
         max_attempts = 10
@@ -92,10 +91,10 @@ class TestOperationTask(object):
         interface_name = 'test_interface'
         operation_name = 'preconfigure'
 
-        plugin = mock.models.create_plugin('package', '0.1')
-        ctx.model.node.update(plugin)
+        plugin = mock.models.create_plugin('test_plugin', '0.1')
+        ctx.model.plugin.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
+        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
@@ -107,8 +106,6 @@ class TestOperationTask(object):
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        relationship.source_node.plugin_specifications[plugin_specification.name] = \
-            plugin_specification
         inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
@@ -140,10 +137,10 @@ class TestOperationTask(object):
         interface_name = 'test_interface'
         operation_name = 'preconfigure'
 
-        plugin = mock.models.create_plugin('package', '0.1')
+        plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
+        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
 
         interface = mock.models.create_interface(
             ctx.service,
@@ -155,8 +152,6 @@ class TestOperationTask(object):
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        relationship.target_node.plugin_specifications[plugin_specification.name] = \
-            plugin_specification
         inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
