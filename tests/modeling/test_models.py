@@ -36,7 +36,8 @@ from aria.modeling.models import (
     Relationship,
     NodeTemplate,
     Node,
-    Parameter
+    Parameter,
+    Type
 )
 
 from tests import mock
@@ -835,3 +836,20 @@ class TestTask(object):
             create_task(max_attempts=0)
         with pytest.raises(ValueError):
             create_task(max_attempts=-2)
+
+
+class TestType(object):
+    def test_type_hierarchy(self):
+        super_type = Type(variant='variant', name='super')
+        sub_type = Type(variant='variant', parent=super_type, name='sub')
+        additional_type = Type(variant='variant', name='non_related')
+
+        assert super_type.hierarchy == [super_type]
+        assert sub_type.hierarchy == [sub_type, super_type]
+        assert additional_type.hierarchy == [additional_type]
+
+        super_type.parent = additional_type
+
+        assert super_type.hierarchy == [super_type, additional_type]
+        assert sub_type.hierarchy == [sub_type, super_type, additional_type]
+

@@ -363,13 +363,11 @@ def _assert_loggins(ctx, inputs):
     assert all(l.execution == execution for l in logs)
     assert all(l in logs and l.task == task for l in task.logs)
 
-    op_start_log = [l for l in logs if
-                    inputs['op_start'].value in l.msg and l.level.lower() == 'info']
+    op_start_log = [l for l in logs if inputs['op_start'] in l.msg and l.level.lower() == 'info']
     assert len(op_start_log) == 1
     op_start_log = op_start_log[0]
 
-    op_end_log = [l for l in logs
-                  if inputs['op_end'].value in l.msg and l.level.lower() == 'debug']
+    op_end_log = [l for l in logs if inputs['op_end'] in l.msg and l.level.lower() == 'debug']
     assert len(op_end_log) == 1
     op_end_log = op_end_log[0]
 

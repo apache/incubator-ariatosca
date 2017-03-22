@@ -202,6 +202,14 @@ class TypeBase(InstanceModelMixin):
             types.append(raw_child)
             child._append_raw_children(types)
 
+    @property
+    def hierarchy(self):
+        """
+        Return the type hierarchy.
+        :return:
+        """
+        return [self] + (self.parent.hierarchy if self.parent else [])
+
 
 class MetadataBase(TemplateModelMixin):
     """

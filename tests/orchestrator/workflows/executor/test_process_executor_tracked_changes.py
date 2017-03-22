@@ -73,9 +73,9 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
                         inputs=inputs)
 
     expected_after_update = expected_initial.copy()
-    expected_after_update.update(inputs['committed'].value) # pylint: disable=no-member
+    expected_after_update.update(inputs['committed']) # pylint: disable=no-member
     expected_after_change = expected_after_update.copy()
-    expected_after_change.update(inputs['changed_but_refreshed'].value) # pylint: disable=no-member
+    expected_after_change.update(inputs['changed_but_refreshed']) # pylint: disable=no-member
     expected_after_refresh = expected_after_update
 
     assert out['initial'] == expected_initial

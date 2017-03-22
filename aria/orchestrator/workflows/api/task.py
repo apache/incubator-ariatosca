@@ -16,6 +16,7 @@
 """
 Provides the tasks to be entered into the task graph
 """
+import copy
 
 from ....modeling import models
 from ....utils.collections import OrderedDict
@@ -91,10 +92,10 @@ class OperationTask(BaseTask):
         self.runs_on = runs_on
 
         # Wrap inputs
-        if inputs:
-            for k, v in inputs.iteritems():
-                if not isinstance(v, models.Parameter):
-                    inputs[k] = models.Parameter.wrap(k, v)
+        inputs = copy.deepcopy(inputs) if inputs else {}
+        for k, v in inputs.iteritems():
+            if not isinstance(v, models.Parameter):
+                inputs[k] = models.Parameter.wrap(k, v)
 
         # TODO: Suggestion: these extra inputs could be stored as a separate entry in the task
         # model, because they are different from the operation inputs. If we do this, then the two

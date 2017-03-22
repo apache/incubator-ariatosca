@@ -55,8 +55,8 @@ def test_decorate_extension(context, executor):
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
     out = get_node(context).runtime_properties['out']
-    assert out['wrapper_inputs'] == dict((k, v.value) for k, v in inputs.iteritems())
-    assert out['function_inputs'] == dict((k, v.value) for k, v in inputs.iteritems())
+    assert out['wrapper_inputs'] == inputs
+    assert out['function_inputs'] == inputs
 
 
 @extension.process_executor
