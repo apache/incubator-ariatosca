@@ -24,6 +24,7 @@ from sqlalchemy import (
     Column,
     Text,
     Integer,
+    Boolean,
     DateTime
 )
 from sqlalchemy.ext.declarative import declared_attr
@@ -291,6 +292,16 @@ class ServiceTemplateBase(TemplateModelMixin):
 
         context.modeling.instance = service
 
+        for plugin_specification in self.plugin_specifications.itervalues():
+            if plugin_specification.enabled:
+                if plugin_specification.resolve():
+                    plugin = plugin_specification.plugin
+                    service.plugins[plugin.name] = plugin
+                else:
+                    context = ConsumptionContext.get_thread_local()
+                    context.validation.report('specified plugin not found: {0}'.format(
+                        plugin_specification.name), level=validation.Issue.EXTERNAL)
+
         utils.instantiate_dict(self, service.meta_data, self.meta_data)
 
         for node_template in self.node_templates.itervalues():
@@ -301,7 +312,6 @@ class ServiceTemplateBase(TemplateModelMixin):
         utils.instantiate_dict(self, service.groups, self.group_templates)
         utils.instantiate_dict(self, service.policies, self.policy_templates)
         utils.instantiate_dict(self, service.workflows, self.workflow_templates)
-        utils.instantiate_dict(self, service.plugin_specifications, self.plugin_specifications)
 
         if self.substitution_template is not None:
             service.substitution = self.substitution_template.instantiate(container)
@@ -1740,8 +1750,14 @@ class OperationTemplateBase(TemplateModelMixin):
     :vartype description: basestring
     :ivar plugin_specification: Associated plugin
     :vartype plugin_specification: :class:`PluginSpecification`
-    :ivar implementation: Implementation string (interpreted by the plugin)
+    :ivar relationship_edge: When true specified that the operation is on the relationship's
+                             target edge instead of its source (only used by relationship
+                             operations)
+    :vartype relationship_edge: bool
+    :ivar implementation: Implementation (interpreted by the plugin)
     :vartype implementation: basestring
+    :ivar configuration: Configuration (interpreted by the plugin)
+    :vartype configuration: {basestring, object}
     :ivar dependencies: Dependency strings (interpreted by the plugin)
     :vartype dependencies: [basestring]
     :ivar inputs: Parameters that can be used by this operation
@@ -1765,8 +1781,6 @@ class OperationTemplateBase(TemplateModelMixin):
     __private_fields__ = ['service_template_fk',
                           'interface_template_fk',
                           'plugin_fk']
-
-    description = Column(Text)
 
     # region foreign keys
 
@@ -1828,7 +1842,10 @@ class OperationTemplateBase(TemplateModelMixin):
 
     # endregion
 
+    description = Column(Text)
+    relationship_edge = Column(Boolean)
     implementation = Column(Text)
+    configuration = Column(modeling_types.StrictDict(key_cls=basestring))
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
     executor = Column(Text)
     max_retries = Column(Integer)
@@ -1848,11 +1865,23 @@ class OperationTemplateBase(TemplateModelMixin):
 
     def instantiate(self, container):
         from . import models
+        if self.plugin_specification and self.plugin_specification.enabled:
+            plugin = self.plugin_specification.plugin
+            implementation = self.implementation if plugin is not None else None
+            # "plugin" would be none if a match was not found. In that case, a validation error
+            # should already have been reported in ServiceTemplateBase.instantiate, so we will
+            # continue silently here
+        else:
+            # If the plugin is disabled, the operation should be disabled, too
+            plugin = None
+            implementation = None
         operation = models.Operation(name=self.name,
                                      description=deepcopy_with_locators(self.description),
-                                     implementation=self.implementation,
+                                     relationship_edge=self.relationship_edge,
+                                     plugin=plugin,
+                                     implementation=implementation,
+                                     configuration=self.configuration,
                                      dependencies=self.dependencies,
-                                     plugin_specification=self.plugin_specification,
                                      executor=self.executor,
                                      max_retries=self.max_retries,
                                      retry_interval=self.retry_interval,
@@ -1872,9 +1901,17 @@ class OperationTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
+            if self.plugin_specification is not None:
+                console.puts('Plugin specification: {0}'.format(
+                    context.style.literal(self.plugin_specification.name)))
             if self.implementation is not None:
                 console.puts('Implementation: {0}'.format(
                     context.style.literal(self.implementation)))
+            if self.configuration:
+                with context.style.indent:
+                    for k, v in self.configuration.iteritems():
+                        console.puts('{0}: {1}'.format(context.style.property(k),
+                                                       context.style.literal(v)))
             if self.dependencies:
                 console.puts('Dependencies: {0}'.format(
                     ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
@@ -2023,3 +2060,87 @@ class ArtifactTemplateBase(TemplateModelMixin):
                 console.puts('Repository credential: {0}'.format(
                     context.style.literal(self.repository_credential)))
             utils.dump_dict_values(self.properties, 'Properties')
+
+
+class PluginSpecificationBase(TemplateModelMixin):
+    """
+    Plugin specification.
+
+    :ivar name: Required plugin name
+    :vartype name: basestring
+    :ivar version: Minimum plugin version
+    :vartype version: basestring
+    :ivar enabled: Whether the plugin is enabled
+    :vartype enabled: bool
+    :ivar plugin: The matching plugin (or None if not matched)
+    :vartype plugin: :class:`Plugin`
+    """
+
+    __tablename__ = 'plugin_specification'
+
+    __private_fields__ = ['service_template_fk',
+                          'plugin_fk']
+
+    version = Column(Text)
+    enabled = Column(Boolean, nullable=False, default=True)
+
+    # region foreign keys
+
+    @declared_attr
+    def service_template_fk(cls):
+        """For ServiceTemplate one-to-many to PluginSpecification"""
+        return relationship.foreign_key('service_template', nullable=True)
+
+    @declared_attr
+    def plugin_fk(cls):
+        """For PluginSpecification many-to-one to Plugin"""
+        return relationship.foreign_key('plugin', nullable=True)
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service_template(cls):
+        return relationship.many_to_one(cls, 'service_template')
+
+    @declared_attr
+    def plugin(cls): # pylint: disable=method-hidden
+        return relationship.many_to_one(cls, 'plugin', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    @property
+    def as_raw(self):
+        return collections.OrderedDict((
+            ('name', self.name),
+            ('version', self.version),
+            ('enabled', self.enabled)))
+
+    def coerce_values(self, container, report_issues):
+        pass
+
+    def resolve(self):
+        # TODO: we are planning a separate "instantiation" module where this will be called or
+        # moved to. There, we will probably have a context with a storage manager. Until then,
+        # this is the only potentially available context, which of course will only be available
+        # if we're in a workflow.
+        from ..orchestrator import context
+        try:
+            workflow_context = context.workflow.current.get()
+            plugins = workflow_context.model.plugin.list()
+        except context.exceptions.ContextException:
+            plugins = None
+
+        matching_plugins = []
+        if plugins:
+            for plugin in plugins:
+                # TODO: we need to use a version comparator
+                if (plugin.name == self.name) and \
+                    ((self.version is None) or (plugin.package_version >= self.version)):
+                    matching_plugins.append(plugin)
+        self.plugin = None
+        if matching_plugins:
+            # Return highest version of plugin
+            self.plugin = sorted(matching_plugins, key=lambda plugin: plugin.package_version)[-1]
+        return self.plugin is not None

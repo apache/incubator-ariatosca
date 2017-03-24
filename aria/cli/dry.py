@@ -43,14 +43,19 @@ def convert_to_dry(service):
                 for oper in interface.operations.itervalues():
                     convert_operation_to_dry(oper)
 
+    for group in service.groups.itervalues():
+        for interface in group.interfaces.itervalues():
+            for oper in interface.operations.itervalues():
+                convert_operation_to_dry(oper)
+
 
 def convert_operation_to_dry(oper):
     """
     Converts a single :class:`Operation` to run dryly.
     """
 
-    plugin = oper.plugin_specification.name \
-        if oper.plugin_specification is not None else None
+    plugin = oper.plugin.name \
+        if oper.plugin is not None else None
     if oper.inputs is None:
         oper.inputs = OrderedDict()
     oper.inputs['_implementation'] = models.Parameter(name='_implementation',

@@ -20,12 +20,14 @@ from sqlalchemy import (
     Text,
     Integer,
     Enum,
+    Boolean
 )
 from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from .mixins import InstanceModelMixin
+from ..orchestrator import execution_plugin
 from ..parser import validation
 from ..parser.consumption import ConsumptionContext
 from ..utils import collections, formatting, console
@@ -65,8 +67,8 @@ class ServiceBase(InstanceModelMixin):
     :vartype outputs: {basestring: :class:`Parameter`}
     :ivar workflows: Custom workflows that can be performed on the service
     :vartype workflows: {basestring: :class:`Operation`}
-    :ivar plugin_specifications: Plugins used by the service
-    :vartype plugin_specifications: {basestring: :class:`PluginSpecification`}
+    :ivar plugins: Plugins used by the service
+    :vartype plugins: {basestring: :class:`Plugin`}
     :ivar created_at: Creation timestamp
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
@@ -176,13 +178,12 @@ class ServiceBase(InstanceModelMixin):
         return relationship.many_to_many(cls, 'parameter', prefix='outputs', dict_key='name')
 
     @declared_attr
-    def plugin_specifications(cls):
-        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
+    def plugins(cls):
+        return relationship.many_to_many(cls, 'plugin', dict_key='name')
 
     # endregion
 
     description = Column(Text)
-
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
 
@@ -207,6 +208,18 @@ class ServiceBase(InstanceModelMixin):
                 satisfied = False
         return satisfied
 
+    def find_hosts(self):
+        for node in self.nodes.itervalues():
+            node.find_host()
+
+    def configure_operations(self):
+        for node in self.nodes.itervalues():
+            node.configure_operations()
+        for group in self.groups.itervalues():
+            group.configure_operations()
+        for operation in self.workflows.itervalues():
+            operation.configure()
+
     def is_node_a_target(self, target_node):
         for node in self.nodes.itervalues():
             if self._is_node_a_target(node, target_node):
@@ -215,11 +228,11 @@ class ServiceBase(InstanceModelMixin):
 
     def _is_node_a_target(self, source_node, target_node):
         if source_node.outbound_relationships:
-            for the_relationship in source_node.outbound_relationships:
-                if the_relationship.target_node.name == target_node.name:
+            for relationship_model in source_node.outbound_relationships:
+                if relationship_model.target_node.name == target_node.name:
                     return True
                 else:
-                    node = the_relationship.target_node
+                    node = relationship_model.target_node
                     if node is not None:
                         if self._is_node_a_target(node, target_node):
                             return True
@@ -282,38 +295,25 @@ class ServiceBase(InstanceModelMixin):
             if not self.is_node_a_target(node):
                 self._dump_graph_node(node)
 
-    def _dump_graph_node(self, node):
+    def _dump_graph_node(self, node, capability=None):
         context = ConsumptionContext.get_thread_local()
         console.puts(context.style.node(node.name))
+        if capability is not None:
+            console.puts('{0} ({1})'.format(context.style.property(capability.name),
+                                            context.style.type(capability.type.name)))
         if node.outbound_relationships:
             with context.style.indent:
-                for the_relationship in node.outbound_relationships:
-                    relationship_name = context.style.property(the_relationship.name)
-                    if the_relationship.type is not None:
-                        relationship_type = context.style.type(the_relationship.type.name)
+                for relationship_model in node.outbound_relationships:
+                    relationship_name = context.style.property(relationship_model.name)
+                    if relationship_model.type is not None:
+                        console.puts('-> {0} ({1})'.format(relationship_name,
+                                                           context.style.type(
+                                                               relationship_model.type.name)))
                     else:
-                        relationship_type = None
-                    if the_relationship.target_capability is not None:
-                        capability_name = \
-                            context.style.node(the_relationship.target_capability.name)
-                    else:
-                        capability_name = None
-                    if capability_name is not None:
-                        if relationship_type is not None:
-                            console.puts('-> {0} ({1}) {2}'.format(relationship_name,
-                                                                   relationship_type,
-                                                                   capability_name))
-                        else:
-                            console.puts('-> {0} {1}'.format(relationship_name, capability_name))
-                    else:
-                        if relationship_type is not None:
-                            console.puts('-> {0} ({1})'.format(relationship_name,
-                                                               relationship_type))
-                        else:
-                            console.puts('-> {0}'.format(relationship_name))
-                    target_node = the_relationship.target_node
+                        console.puts('-> {0}'.format(relationship_name))
                     with console.indent(3):
-                        self._dump_graph_node(target_node)
+                        self._dump_graph_node(relationship_model.target_node,
+                                              relationship_model.target_capability)
 
 
 class NodeBase(InstanceModelMixin):
@@ -360,8 +360,10 @@ class NodeBase(InstanceModelMixin):
     :vartype policies: [:class:`Policy`]
     :ivar substitution_mapping: Our contribution to service substitution
     :vartype substitution_mapping: :class:`SubstitutionMapping`
-    :ivar tasks: Tasks on this node
+    :ivar tasks: Tasks for this node
     :vartype tasks: [:class:`Task`]
+    :ivar hosted_tasks: Tasks on this node
+    :vartype hosted_tasks: [:class:`Task`]
     """
 
     __tablename__ = 'node'
@@ -417,7 +419,7 @@ class NodeBase(InstanceModelMixin):
 
     @property
     def is_available(self):
-        return self.state not in [self.INITIAL, self.DELETED, self.ERROR]
+        return self.state not in (self.INITIAL, self.DELETED, self.ERROR)
 
     # region foreign_keys
 
@@ -455,7 +457,7 @@ class NodeBase(InstanceModelMixin):
     # region one_to_one relationships
 
     @declared_attr
-    def host(cls):
+    def host(cls): # pylint: disable=method-hidden
         return relationship.one_to_one_self(cls, 'host_fk')
 
     # endregion
@@ -522,17 +524,9 @@ class NodeBase(InstanceModelMixin):
     __mapper_args__ = {'version_id_col': version} # Enable SQLAlchemy automatic version counting
 
     @property
-    def ip(self):
-        # TODO: totally broken
-        if not self.host_fk:
-            return None
-        host_node = self.host
-        if 'ip' in host_node.runtime_properties:  # pylint: disable=no-member
-            return host_node.runtime_properties['ip']  # pylint: disable=no-member
-        host_node = host_node.node_template  # pylint: disable=no-member
-        host_ip_property = host_node.properties.get('ip')
-        if host_ip_property:
-            return host_ip_property.value
+    def host_address(self):
+        if self.host and self.host.runtime_properties:
+            return self.host.runtime_properties.get('ip')
         return None
 
     def satisfy_requirements(self):
@@ -567,9 +561,10 @@ class NodeBase(InstanceModelMixin):
             if target_node_capability is not None:
                 # Relate to the first target node that has capacity
                 for node in target_nodes:
-                    target_capability = node.capabilities.get(target_node_capability.name)
-                    if target_capability.relate():
+                    a_target_capability = node.capabilities.get(target_node_capability.name)
+                    if a_target_capability.relate():
                         target_node = node
+                        target_capability = a_target_capability
                         break
             else:
                 # Use first target node
@@ -577,14 +572,15 @@ class NodeBase(InstanceModelMixin):
 
             if target_node is not None:
                 if requirement_template.relationship_template is not None:
-                    the_relationship = \
+                    relationship_model = \
                         requirement_template.relationship_template.instantiate(self)
                 else:
-                    the_relationship = models.Relationship(target_capability=target_capability)
-                the_relationship.name = requirement_template.name
-                the_relationship.requirement_template = requirement_template
-                the_relationship.target_node = target_node
-                self.outbound_relationships.append(the_relationship)
+                    relationship_model = models.Relationship()
+                relationship_model.name = requirement_template.name
+                relationship_model.requirement_template = requirement_template
+                relationship_model.target_node = target_node
+                relationship_model.target_capability = target_capability
+                self.outbound_relationships.append(relationship_model)
                 return True
             else:
                 context.validation.report('requirement "{0}" of node "{1}" targets node '
@@ -618,6 +614,32 @@ class NodeBase(InstanceModelMixin):
                                           level=validation.Issue.BETWEEN_INSTANCES)
                 satisfied = False
         return satisfied
+
+    def find_host(self):
+        def _find_host(node):
+            if node.type.role == 'host':
+                return node
+            for the_relationship in node.outbound_relationships:
+                if (the_relationship.target_capability is not None) and \
+                    the_relationship.target_capability.type.role == 'host':
+                    host = _find_host(the_relationship.target_node)
+                    if host is not None:
+                        return host
+            for the_relationship in node.inbound_relationships:
+                if (the_relationship.target_capability is not None) and \
+                    the_relationship.target_capability.type.role == 'feature':
+                    host = _find_host(the_relationship.source_node)
+                    if host is not None:
+                        return host
+            return None
+
+        self.host = _find_host(self)
+
+    def configure_operations(self):
+        for interface in self.interfaces.itervalues():
+            interface.configure_operations()
+        for the_relationship in self.outbound_relationships:
+            the_relationship.configure_operations()
 
     @property
     def as_raw(self):
@@ -760,6 +782,10 @@ class GroupBase(InstanceModelMixin):
     # endregion
 
     description = Column(Text)
+
+    def configure_operations(self):
+        for interface in self.interfaces.itervalues():
+            interface.configure_operations()
 
     @property
     def as_raw(self):
@@ -1146,7 +1172,7 @@ class RelationshipBase(InstanceModelMixin):
     :vartype source_node: :class:`Node`
     :ivar target_node: Target node
     :vartype target_node: :class:`Node`
-    :ivar tasks: Tasks on this node
+    :ivar tasks: Tasks for this relationship
     :vartype tasks: [:class:`Task`]
     """
 
@@ -1265,6 +1291,10 @@ class RelationshipBase(InstanceModelMixin):
 
     source_position = Column(Integer) # ???
     target_position = Column(Integer) # ???
+
+    def configure_operations(self):
+        for interface in self.interfaces.itervalues():
+            interface.configure_operations()
 
     @property
     def as_raw(self):
@@ -1552,6 +1582,10 @@ class InterfaceBase(InstanceModelMixin):
 
     description = Column(Text)
 
+    def configure_operations(self):
+        for operation in self.operations.itervalues():
+            operation.configure()
+
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1592,10 +1626,16 @@ class OperationBase(InstanceModelMixin):
     :vartype operation_template: :class:`OperationTemplate`
     :ivar description: Human-readable description
     :vartype description: string
-    :ivar plugin_specification: Associated plugin
-    :vartype plugin_specification: :class:`PluginSpecification`
-    :ivar implementation: Implementation string (interpreted by the plugin)
+    :ivar plugin: Associated plugin
+    :vartype plugin: :class:`Plugin`
+    :ivar relationship_edge: When true specified that the operation is on the relationship's
+                             target edge instead of its source (only used by relationship
+                             operations)
+    :vartype relationship_edge: bool
+    :ivar implementation: Implementation (interpreted by the plugin)
     :vartype implementation: basestring
+    :ivar configuration: Configuration (interpreted by the plugin)
+    :vartype configuration: {basestring, object}
     :ivar dependencies: Dependency strings (interpreted by the plugin)
     :vartype dependencies: [basestring]
     :ivar inputs: Parameters that can be used by this operation
@@ -1632,9 +1672,9 @@ class OperationBase(InstanceModelMixin):
         return relationship.foreign_key('interface', nullable=True)
 
     @declared_attr
-    def plugin_specification_fk(cls):
-        """For Operation one-to-one to PluginSpecification"""
-        return relationship.foreign_key('plugin_specification', nullable=True)
+    def plugin_fk(cls):
+        """For Operation one-to-one to Plugin"""
+        return relationship.foreign_key('plugin', nullable=True)
 
     @declared_attr
     def operation_template_fk(cls):
@@ -1650,9 +1690,8 @@ class OperationBase(InstanceModelMixin):
     # region one_to_one relationships
 
     @declared_attr
-    def plugin_specification(cls):
-        return relationship.one_to_one(
-            cls, 'plugin_specification', back_populates=relationship.NO_BACK_POP)
+    def plugin(cls):
+        return relationship.one_to_one(cls, 'plugin', back_populates=relationship.NO_BACK_POP)
 
     # endregion
 
@@ -1685,11 +1724,31 @@ class OperationBase(InstanceModelMixin):
     # endregion
 
     description = Column(Text)
+    relationship_edge = Column(Boolean)
     implementation = Column(Text)
+    configuration = Column(modeling_types.StrictDict(key_cls=basestring))
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
     executor = Column(Text)
     max_retries = Column(Integer)
     retry_interval = Column(Integer)
+
+    def configure(self):
+        from . import models
+        # Note: for workflows (operations attached directly to the service) "interface" will be None
+        if (self.implementation is None) or (self.interface is None):
+            return
+
+        if self.plugin is None:
+            arguments = execution_plugin.instantiation.configure_operation(self)
+        else:
+            # In the future plugins may be able to add their own "configure_operation" hook that
+            # can validate the configuration and otherwise return specially derived arguments
+            arguments = self.configuration
+
+        # Note: the arguments will *override* operation inputs of the same name
+        if arguments:
+            for k, v in arguments.iteritems():
+                self.inputs[k] = models.Parameter.wrap(k, v)
 
     @property
     def as_raw(self):
@@ -1716,9 +1775,17 @@ class OperationBase(InstanceModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
+            if self.plugin is not None:
+                console.puts('Plugin: {0}'.format(
+                    context.style.literal(self.plugin.name)))
             if self.implementation is not None:
                 console.puts('Implementation: {0}'.format(
                     context.style.literal(self.implementation)))
+            if self.configuration:
+                with context.style.indent:
+                    for k, v in self.configuration.iteritems():
+                        console.puts('{0}: {1}'.format(context.style.property(k),
+                                                       context.style.literal(v)))
             if self.dependencies:
                 console.puts(
                     'Dependencies: {0}'.format(

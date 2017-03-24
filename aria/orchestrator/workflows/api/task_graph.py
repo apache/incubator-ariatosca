@@ -37,7 +37,7 @@ def _filter_out_empty_tasks(func=None):
         return lambda f: _filter_out_empty_tasks(func=f)
 
     def _wrapper(task, *tasks, **kwargs):
-        return func(*(t for t in [task] + list(tasks) if t), **kwargs)
+        return func(*(t for t in (task,) + tuple(tasks) if t), **kwargs)
     return _wrapper
 
 

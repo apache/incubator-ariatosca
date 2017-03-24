@@ -4,3 +4,5 @@ node_types:
 
   tosca.nodes.SoftwareComponent.Elasticsearch:
     derived_from: tosca.nodes.SoftwareComponent
+    capabilities:
+      app: tosca.capabilities.Endpoint

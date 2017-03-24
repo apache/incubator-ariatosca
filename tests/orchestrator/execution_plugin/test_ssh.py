@@ -292,12 +292,13 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
         assert self.mock.settings_merged['timeout'] == timeout
 
     def test_implicit_host_string(self, mocker):
-        expected_ip = '1.1.1.1'
-        mocker.patch.object(self._Ctx.task.runs_on, 'ip', expected_ip)
+        expected_host_address = '1.1.1.1'
+        mocker.patch.object(self._Ctx.task.actor, 'host')
+        mocker.patch.object(self._Ctx.task.actor.host, 'host_address', expected_host_address)
         fabric_env = self.default_fabric_env.copy()
         del fabric_env['host_string']
         self._run(fabric_env=fabric_env)
-        assert self.mock.settings_merged['host_string'] == expected_ip
+        assert self.mock.settings_merged['host_string'] == expected_host_address
 
     def test_explicit_host_string(self):
         fabric_env = self.default_fabric_env.copy()
@@ -409,13 +410,15 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
             raise RuntimeError
 
     class _Ctx(object):
-        class Stub(object):
+        class Task(object):
             @staticmethod
             def abort(message=None):
                 models.Task.abort(message)
-            ip = None
-        task = Stub
-        task.runs_on = Stub
+            actor = None
+        class Actor(object):
+            host = None
+        task = Task
+        task.actor = Actor
         logger = logging.getLogger()
 
     @staticmethod

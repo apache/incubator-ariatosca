@@ -70,13 +70,19 @@ class TaskException(exceptions.AriaError):
     """
 
 
-class OperationNotFoundException(TaskException):
+class TaskCreationException(TaskException):
+    """
+    Could not create the task.
+    """
+
+
+class OperationNotFoundException(TaskCreationException):
     """
     Could not find an operation on the node or relationship.
     """
 
 
-class PluginNotFoundException(TaskException):
+class PluginNotFoundException(TaskCreationException):
     """
     Could not find a plugin matching the plugin specification.
     """

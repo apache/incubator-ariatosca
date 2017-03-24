@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from contextlib import contextmanager
+from . import instantiation
+
 
 # Populated during execution of python scripts
 ctx = None

@@ -101,7 +101,8 @@ class ParameterBase(TemplateModelMixin):
 
         from . import models
         return models.Parameter(name=name,
-                                type_name=formatting.full_type_name(value),
+                                type_name=formatting.full_type_name(value)
+                                if value is not None else None,
                                 value=value,
                                 description=description)
 
@@ -248,59 +249,3 @@ class MetadataBase(TemplateModelMixin):
         console.puts('{0}: {1}'.format(
             context.style.property(self.name),
             context.style.literal(self.value)))
-
-
-class PluginSpecificationBase(TemplateModelMixin):
-    """
-    Plugin specification.
-
-    :ivar name: Required plugin name
-    :vartype name: basestring
-    :ivar version: Minimum plugin version
-    :vartype version: basestring
-    """
-
-    __tablename__ = 'plugin_specification'
-
-    __private_fields__ = ['service_template_fk']
-
-    version = Column(Text, nullable=True)
-
-    # region foreign keys
-
-    @declared_attr
-    def service_template_fk(cls):
-        """For ServiceTemplate one-to-many to PluginSpecification"""
-        return relationship.foreign_key('service_template', nullable=True)
-
-    # endregion
-
-    @declared_attr
-    def service_template(cls):
-        return relationship.many_to_one(cls, 'service_template')
-
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('version', self.version)))
-
-    def coerce_values(self, container, report_issues):
-        pass
-
-    def instantiate(self, container):
-        from . import models
-        return models.PluginSpecification(name=self.name,
-                                          version=self.version)
-
-    def find_plugin(self, plugins):
-        matching_plugins = []
-        for plugin in plugins:
-            # TODO: we need to use a version comparator
-            if (plugin.name == self.name) and \
-                ((self.version is None) or (plugin.package_version >= self.version)):
-                matching_plugins.append(plugin)
-        if matching_plugins:
-            # Return highest version of plugin
-            return sorted(matching_plugins, key=lambda plugin: plugin.package_version)[-1]
-        return None

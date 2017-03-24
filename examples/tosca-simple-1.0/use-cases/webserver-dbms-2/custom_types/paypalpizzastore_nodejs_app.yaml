@@ -9,7 +9,7 @@ node_types:
         type: string
     requirements:
       - database_connection:
-          capability: tosca.capabilities.Container
+          capability: tosca.capabilities.Node
 
   tosca.nodes.WebServer.Nodejs:
     derived_from: tosca.nodes.WebServer

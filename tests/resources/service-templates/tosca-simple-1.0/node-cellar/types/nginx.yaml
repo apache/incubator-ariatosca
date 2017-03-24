@@ -15,12 +15,15 @@
 
 node_types:
 
+  nginx.Nginx:
+    description: >-
+      Nginx instance.
+    derived_from: tosca.nodes.SoftwareComponent
+    requirements:
+      - feature:
+          capability: tosca.capabilities.Node
+
   nginx.LoadBalancer:
     description: >-
-      Nginx as a loadbalancer.
+      Nginx loadbalancer feature.
     derived_from: tosca.nodes.LoadBalancer
-    requirements:
-      - host:
-          capability: tosca.capabilities.Container
-          node: tosca.nodes.Compute
-          relationship: tosca.relationships.HostedOn

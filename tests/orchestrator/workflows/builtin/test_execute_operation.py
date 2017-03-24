@@ -34,7 +34,8 @@ def test_execute_operation(ctx):
     interface = mock.models.create_interface(
         ctx.service,
         interface_name,
-        operation_name
+        operation_name,
+        operation_kwargs={'implementation': 'test'}
     )
     node.interfaces[interface.name] = interface
     ctx.model.node.update(node)

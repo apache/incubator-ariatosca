@@ -23,6 +23,8 @@ import re
 from types import FunctionType
 from datetime import datetime
 
+from aria.parser.validation import Issue
+from aria.utils.collections import StrictDict
 from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                   GroupTemplate, PolicyTemplate, SubstitutionTemplate,
@@ -30,6 +32,11 @@ from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   ArtifactTemplate, Metadata, Parameter, PluginSpecification)
 
 from ..data_types import coerce_value
+
+
+# These match the first un-escaped ">"
+# See: http://stackoverflow.com/a/11819111/849021
+IMPLEMENTATION_PREFIX_REGEX = re.compile(r'(?<!\\)(?:\\\\)*>')
 
 
 def create_service_template_model(context): # pylint: disable=too-many-locals,too-many-branches
@@ -352,20 +359,35 @@ def create_interface_template_model(context, service_template, interface):
     return model if model.operation_templates else None
 
 
-def create_operation_template_model(context, service_template, operation): # pylint: disable=unused-argument
+def create_operation_template_model(context, service_template, operation):
     model = OperationTemplate(name=operation._name)
 
     if operation.description:
         model.description = operation.description.value
 
     implementation = operation.implementation
-    if (implementation is not None) and operation.implementation.primary:
-        model.plugin_specification, model.implementation = \
-            parse_implementation_string(context, service_template, operation.implementation.primary)
-
+    if implementation is not None: 
+        primary = implementation.primary
+        parse_implementation_string(context, service_template, operation, model, primary)
+        relationship_edge = operation._get_extensions(context).get('relationship_edge')
+        if relationship_edge is not None:
+            if relationship_edge == 'source':
+                model.relationship_edge = False
+            elif relationship_edge == 'target':
+                model.relationship_edge = True
+            
         dependencies = implementation.dependencies
-        if dependencies is not None:
-            model.dependencies = dependencies
+        if dependencies:
+            for dependency in dependencies:
+                key, value = split_prefix(dependency)
+                if key is not None:
+                    if model.configuration is None:
+                        model.configuration = {}
+                    set_nested(model.configuration, key.split('.'), value)
+                else:
+                    if model.dependencies is None:
+                        model.dependencies = []
+                    model.dependencies.append(dependency)
 
     inputs = operation.inputs
     if inputs:
@@ -441,12 +463,13 @@ def create_substitution_template_model(context, service_template, substitution_m
 def create_plugin_specification_model(context, policy):
     properties = policy.properties
 
-    def get(name):
+    def get(name, default=None):
         prop = properties.get(name)
-        return prop.value if prop is not None else None
+        return prop.value if prop is not None else default
 
     model = PluginSpecification(name=policy._name,
-                                version=get('version'))
+                                version=get('version'),
+                                enabled=get('enabled', True))
 
     return model
 
@@ -461,8 +484,7 @@ def create_workflow_operation_template_model(context, service_template, policy):
     properties = policy._get_property_values(context)
     for prop_name, prop in properties.iteritems():
         if prop_name == 'implementation':
-            model.plugin_specification, model.implementation = \
-                parse_implementation_string(context, service_template, prop.value)
+            parse_implementation_string(context, service_template, policy, model, prop.value)
         elif prop_name == 'dependencies':
             model.dependencies = prop.value
         else:
@@ -677,21 +699,47 @@ def create_constraint_clause_lambda(context, node_filter, constraint_clause, pro
     return None
 
 
-def parse_implementation_string(context, service_template, implementation):
-    if not implementation:
-        return None, ''
+def split_prefix(string):
+    """
+    Splits the prefix on the first unescaped ">".
+    """
 
-    index = implementation.find('>')
-    if index == -1:
-        return None, implementation
-    plugin_name = implementation[:index].strip()
-    
-    if plugin_name == 'execution':
-        plugin_specification = None
+    split = IMPLEMENTATION_PREFIX_REGEX.split(string, 2)
+    if len(split) < 2:
+        return None, string
+    return split[0].strip(), split[1].lstrip()
+
+
+def set_nested(the_dict, keys, value):
+    """
+    If the ``keys`` list has just one item, puts the value in the the dict. If there are more items,
+    puts the value in a sub-dict, creating sub-dicts as necessary for each key.
+
+    For example, if ``the_dict`` is an empty dict, keys is ``['first', 'second', 'third']`` and
+    value is ``'value'``, then the_dict will be: ``{'first':{'second':{'third':'value'}}}``.
+
+    :param the_dict: Dict to change
+    :type the_dict: {}
+    :param keys: Keys
+    :type keys: [basestring]
+    :param value: Value
+    """
+    key = keys.pop(0)
+    if len(keys) == 0:
+        the_dict[key] = value
     else:
-        plugin_specification = service_template.plugin_specifications.get(plugin_name)
-        if plugin_specification is None:
-            raise ValueError('unknown plugin: "{0}"'.format(plugin_name))
+        if key not in the_dict:
+            the_dict[key] = StrictDict(key_class=basestring)
+        set_nested(the_dict[key], keys, value)
 
-    implementation = implementation[index+1:].strip()
-    return plugin_specification, implementation
+
+def parse_implementation_string(context, service_template, presentation, model, implementation):
+    plugin_name, model.implementation = split_prefix(implementation)
+    if plugin_name is not None:
+        model.plugin_specification = service_template.plugin_specifications.get(plugin_name)
+        if model.plugin_specification is None:
+            context.validation.report(
+                'no policy for plugin "{0}" specified in operation implementation: {1}'
+                .format(plugin_name, implementation),
+                locator=presentation._get_child_locator('properties', 'implementation'),
+                level=Issue.BETWEEN_TYPES)

@@ -17,6 +17,8 @@ policy_types:
 
   aria.Plugin:
     _extensions:
+      shorthand_name: Plugin
+      type_qualified_name: aria:Plugin
       role: plugin
     description: >-
       Policy used to specify plugins used by services. For an operation to be able to use a plugin
@@ -29,9 +31,17 @@ policy_types:
           Minimum plugin version.
         type: version
         required: false
+      enabled:
+        description: >-
+          If the policy is to disable the plugin then it will be ignored and all operations and
+          workflows depending on it will also be disabled.
+        type: boolean
+        default: true
 
   aria.Workflow:
     _extensions:
+      shorthand_name: Workflow
+      type_qualified_name: aria:Workflow
       role: workflow
     description: >-
       Policy used to specify custom workflows. A workflow is usually a workload of interconnected

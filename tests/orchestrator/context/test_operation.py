@@ -230,7 +230,6 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
 
     plugin = mock.models.create_plugin()
     ctx.model.plugin.put(plugin)
-    plugin_specification = mock.models.create_plugin_specification()
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         node.service,
@@ -238,7 +237,7 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
         operation_name,
         operation_kwargs=dict(
             implementation='{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
-            plugin_specification=plugin_specification)
+            plugin=plugin)
     )
     node.interfaces[interface.name] = interface
     ctx.model.node.update(node)

@@ -45,13 +45,12 @@ def _mock_workflow(ctx, graph):
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     plugin = mock.models.create_plugin()
     ctx.model.plugin.put(plugin)
-    plugin_specification = mock.models.create_plugin_specification()
     interface = mock.models.create_interface(
         node.service,
         'test',
         'op',
         operation_kwargs=dict(implementation=_operation_mapping(),
-                              plugin_specification=plugin_specification)
+                              plugin=plugin)
     )
     node.interfaces[interface.name] = interface
     task = api.task.OperationTask.for_node(node=node, interface_name='test', operation_name='op')

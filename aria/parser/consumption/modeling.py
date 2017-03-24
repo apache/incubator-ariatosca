@@ -103,7 +103,7 @@ class InstantiateServiceInstance(Consumer):
     def consume(self):
         if self.context.modeling.template is None:
             self.context.validation.report('InstantiateServiceInstance consumer: missing service '
-                                           'model')
+                                           'template')
             return
 
         self.context.modeling.template.instantiate(None)
@@ -145,6 +145,24 @@ class ValidateCapabilities(Consumer):
         self.context.modeling.instance.validate_capabilities()
 
 
+class FindHosts(Consumer):
+    """
+    Find hosts for all nodes in the service instance.
+    """
+
+    def consume(self):
+        self.context.modeling.instance.find_hosts()
+
+
+class ConfigureOperations(Consumer):
+    """
+    Configures all operations in the service instance.
+    """
+
+    def consume(self):
+        self.context.modeling.instance.configure_operations()
+
+
 class ServiceInstance(ConsumerChain):
     """
     Generates the service instance by instantiating the service template.
@@ -158,6 +176,8 @@ class ServiceInstance(ConsumerChain):
                                                         SatisfyRequirements,
                                                         CoerceServiceInstanceValues,
                                                         ValidateCapabilities,
+                                                        FindHosts,
+                                                        ConfigureOperations,
                                                         CoerceServiceInstanceValues))
 
     def dump(self):

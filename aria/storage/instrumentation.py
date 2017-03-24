@@ -110,9 +110,9 @@ class _Instrumentation(object):
                         current = copy.deepcopy(attribute_type(initial))
                     tracked_attributes[attribute_name] = _Value(initial, current)
                 target.__dict__[attribute_name] = tracked_attributes[attribute_name].current
-        for listener_args in [(instrumented_class, 'load', listener),
+        for listener_args in ((instrumented_class, 'load', listener),
                               (instrumented_class, 'refresh', listener),
-                              (instrumented_class, 'refresh_flush', listener)]:
+                              (instrumented_class, 'refresh_flush', listener)):
             sqlalchemy.event.listen(*listener_args)
             self.listeners.append(listener_args)
 

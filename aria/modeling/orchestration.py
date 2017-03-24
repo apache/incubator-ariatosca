@@ -67,13 +67,13 @@ class ExecutionBase(ModelMixin):
     CANCELLING = 'cancelling'
     FORCE_CANCELLING = 'force_cancelling'
 
-    STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING, FORCE_CANCELLING]
-    END_STATES = [TERMINATED, FAILED, CANCELLED]
+    STATES = (TERMINATED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING, FORCE_CANCELLING)
+    END_STATES = (TERMINATED, FAILED, CANCELLED)
 
     VALID_TRANSITIONS = {
-        PENDING: [STARTED, CANCELLED],
-        STARTED: END_STATES + [CANCELLING],
-        CANCELLING: END_STATES + [FORCE_CANCELLING]
+        PENDING: (STARTED, CANCELLED),
+        STARTED: END_STATES + (CANCELLING,),
+        CANCELLING: END_STATES + (FORCE_CANCELLING,)
     }
 
     @orm.validates('status')
@@ -219,7 +219,44 @@ class PluginBase(ModelMixin):
 
 class TaskBase(ModelMixin):
     """
-    A Model which represents an task
+    Represents the smallest unit of stateful execution in ARIA. The task state includes inputs,
+    outputs, as well as an atomic status, ensuring that the task can only be running once at any
+    given time.
+
+    Tasks may be "one shot" or may be configured to run repeatedly in the case of failure.
+
+    Tasks are often based on :class:`Operation`, and thus act on either a :class:`Node` or a
+    :class:`Relationship`, however this is not required.
+
+    :ivar node: The node actor (optional)
+    :vartype node: :class:`Node`
+    :ivar relationship: The relationship actor (optional)
+    :vartype relationship: :class:`Relationship`
+    :ivar plugin: The implementing plugin (set to None for default execution plugin)
+    :vartype plugin: :class:`Plugin`
+    :ivar inputs: Parameters that can be used by this task
+    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar implementation: Python path to an ``@operation`` function
+    :vartype implementation: basestring
+    :ivar max_attempts: Maximum number of retries allowed in case of failure
+    :vartype max_attempts: int
+    :ivar retry_interval: Interval between retries (in seconds)
+    :vartype retry_interval: int
+    :ivar ignore_failure: Set to True to ignore failures
+    :vartype ignore_failure: bool
+    :ivar due_at: Timestamp to start the task
+    :vartype due_at: datetime
+    :ivar execution: Assigned execution
+    :vartype execution: :class:`Execution`
+    :ivar status: Current atomic status ('pending', 'retrying', 'sent', 'started', 'success',
+                  'failed')
+    :vartype status: basestring
+    :ivar started_at: Timestamp for when task started
+    :vartype started_at: datetime
+    :ivar ended_at: Timestamp for when task ended
+    :vartype ended_at: datetime
+    :ivar retry_count: How many retries occurred
+    :vartype retry_count: int
     """
 
     __tablename__ = 'task'
@@ -227,7 +264,7 @@ class TaskBase(ModelMixin):
     __private_fields__ = ['node_fk',
                           'relationship_fk',
                           'plugin_fk',
-                          'execution_fk',
+                          'execution_fk'
                           'node_name',
                           'relationship_name',
                           'execution_name']
@@ -246,11 +283,6 @@ class TaskBase(ModelMixin):
         SUCCESS,
         FAILED,
     )
-
-    RUNS_ON_SOURCE = 'source'
-    RUNS_ON_TARGET = 'target'
-    RUNS_ON_NODE = 'node'
-    RUNS_ON = (RUNS_ON_NODE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
 
     INFINITE_RETRIES = -1
 
@@ -278,37 +310,25 @@ class TaskBase(ModelMixin):
     def inputs(cls):
         return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
-    status = Column(Enum(*STATES, name='status'), default=PENDING)
-
-    due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
-    started_at = Column(DateTime, default=None)
-    ended_at = Column(DateTime, default=None)
+    implementation = Column(String)
     max_attempts = Column(Integer, default=1)
-    retry_count = Column(Integer, default=0)
     retry_interval = Column(Float, default=0)
     ignore_failure = Column(Boolean, default=False)
 
-    # Operation specific fields
-    implementation = Column(String)
-    _runs_on = Column(Enum(*RUNS_ON, name='runs_on'), name='runs_on')
+    # State
+    status = Column(Enum(*STATES, name='status'), default=PENDING)
+    due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
+    started_at = Column(DateTime, default=None)
+    ended_at = Column(DateTime, default=None)
+    retry_count = Column(Integer, default=0)
 
     @property
     def has_ended(self):
-        return self.status in [self.SUCCESS, self.FAILED]
+        return self.status in (self.SUCCESS, self.FAILED)
 
     @property
     def is_waiting(self):
-        return self.status in [self.PENDING, self.RETRYING]
-
-    @property
-    def runs_on(self):
-        if self._runs_on == self.RUNS_ON_NODE:
-            return self.node
-        elif self._runs_on == self.RUNS_ON_SOURCE:
-            return self.relationship.source_node  # pylint: disable=no-member
-        elif self._runs_on == self.RUNS_ON_TARGET:
-            return self.relationship.target_node  # pylint: disable=no-member
-        return None
+        return self.status in (self.PENDING, self.RETRYING)
 
     @property
     def actor(self):
@@ -366,12 +386,12 @@ class TaskBase(ModelMixin):
     # endregion
 
     @classmethod
-    def for_node(cls, instance, runs_on, **kwargs):
-        return cls(node=instance, _runs_on=runs_on, **kwargs)
+    def for_node(cls, actor, **kwargs):
+        return cls(node=actor, **kwargs)
 
     @classmethod
-    def for_relationship(cls, instance, runs_on, **kwargs):
-        return cls(relationship=instance, _runs_on=runs_on, **kwargs)
+    def for_relationship(cls, actor, **kwargs):
+        return cls(relationship=actor, **kwargs)
 
     @staticmethod
     def abort(message=None):

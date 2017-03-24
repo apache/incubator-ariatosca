@@ -84,6 +84,25 @@ class OperationAssignment(ExtensiblePresentation):
         :rtype: dict of str, :class:`PropertyAssignment`
         """
 
+    @cachedmethod
+    def _get_extensions(self, context):
+        def update_inherited_extensions(extensions, interface_type):
+            parent = interface_type._get_parent(context)
+            if parent is not None:
+                update_inherited_extensions(extensions, parent)
+            operation_definition = interface_type.operations.get(self._name)
+            if operation_definition is not None:
+                if operation_definition._extensions:
+                    extensions.update(operation_definition._extensions)
+    
+        extensions = {}
+        update_inherited_extensions(extensions, self._container._get_type(context))
+        if self._container._extensions:
+            extensions.update(self._container._extensions)
+        if self._extensions:
+            extensions.update(self._extensions)
+        return extensions
+
 @allow_unknown_fields
 @has_fields
 @dsl_specification('3.5.14-2', 'tosca-simple-1.0')
@@ -247,15 +266,18 @@ class RequirementAssignment(ExtensiblePresentation):
 
     @cachedmethod
     def _get_node(self, context):
-        node_name = self.node
-        if node_name is not None:
-            node = context.presentation.get_from_dict('service_template', 'topology_template',
-                                                      'node_templates', node_name)
-            if node is not None:
-                return node, 'node_template'
-            node = context.presentation.get_from_dict('service_template', 'node_types', node_name)
-            if node is not None:
-                return node, 'node_type'
+        node = self.node
+
+        if node is not None:
+            node_template = context.presentation.get_from_dict('service_template',
+                                                               'topology_template',
+                                                               'node_templates', node)
+            if node_template is not None:
+                return node_template, 'node_template'
+            node_type = get_type_by_full_or_shorthand_name(context, node, 'node_types')
+            if node_type is not None:
+                return node_type, 'node_type'
+
         return None, None
 
     @cachedmethod
@@ -268,11 +290,10 @@ class RequirementAssignment(ExtensiblePresentation):
                 capabilities = node._get_capabilities(context)
                 if capability in capabilities:
                     return capabilities[capability], 'capability_assignment'
-            else:
-                capability_types = context.presentation.get_from_dict('service_template',
-                                                                      'capability_types')
-                if (capability_types is not None) and (capability in capability_types):
-                    return capability_types[capability], 'capability_type'
+            capability_type = get_type_by_full_or_shorthand_name(context, capability,
+                                                                 'capability_types')
+            if capability_type is not None:
+                return capability_type, 'capability_type'
 
         return None, None
 

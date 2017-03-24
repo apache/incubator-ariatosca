@@ -71,11 +71,11 @@ class StubTask(BaseTask):
 
     @property
     def has_ended(self):
-        return self.status in [models.Task.SUCCESS, models.Task.FAILED]
+        return self.status in (models.Task.SUCCESS, models.Task.FAILED)
 
     @property
     def is_waiting(self):
-        return self.status in [models.Task.PENDING, models.Task.RETRYING]
+        return self.status in (models.Task.PENDING, models.Task.RETRYING)
 
 
 class StartWorkflowTask(StubTask):
@@ -133,15 +133,14 @@ class OperationTask(BaseTask):
         task_model = create_task_model(
             name=api_task.name,
             implementation=api_task.implementation,
-            instance=api_task.actor,
+            actor=api_task.actor,
             inputs=api_task.inputs,
             status=base_task_model.PENDING,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
             plugin=plugin,
-            execution=self._workflow_context.execution,
-            runs_on=api_task.runs_on
+            execution=self._workflow_context.execution
         )
         self._workflow_context.model.task.put(task_model)
 

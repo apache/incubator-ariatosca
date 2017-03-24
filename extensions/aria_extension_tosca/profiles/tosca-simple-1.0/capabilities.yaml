@@ -32,6 +32,7 @@ capability_types:
       specification: tosca-simple-1.0
       specification_section: 5.4.2
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_NODE'
+      role: feature
     description: >-
       The Node capability indicates the base capabilities of a TOSCA Node Type.
     derived_from: tosca.capabilities.Root
@@ -43,6 +44,7 @@ capability_types:
       specification: tosca-simple-1.0
       specification_section: 5.4.3
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_CONTAINER'
+      role: host
     description: >-
       The Container capability, when included on a Node Type or Template definition, indicates that the node can act as a container
       for (or a host for) one or more other declared Node Types.

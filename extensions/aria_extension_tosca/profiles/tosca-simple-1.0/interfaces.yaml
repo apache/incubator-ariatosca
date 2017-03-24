@@ -63,24 +63,40 @@ interface_types:
     pre_configure_source:
       description: >-
         Operation to pre-configure the source endpoint.
+      _extensions:
+        relationship_edge: source
     pre_configure_target:
       description: >-
         Operation to pre-configure the target endpoint.
+      _extensions:
+        relationship_edge: target
     post_configure_source:
       description: >-
         Operation to post-configure the source endpoint.
+      _extensions:
+        relationship_edge: source
     post_configure_target:
       description: >-
         Operation to post-configure the target endpoint.
+      _extensions:
+        relationship_edge: target
     add_target:
       description: >-
         Operation to notify the source node of a target node being added via a relationship.
+      _extensions:
+        relationship_edge: source
     add_source:
       description: >-
         Operation to notify the target node of a source node which is now available via a relationship.
+      _extensions:
+        relationship_edge: target
     target_changed:
       description: >-
         Operation to notify source some property or attribute of the target changed
+      _extensions:
+        relationship_edge: source
     remove_target:
       description: >-
         Operation to remove a target node.
+      _extensions:
+        relationship_edge: source

@@ -48,6 +48,7 @@ __all__ = (
     'InterfaceTemplate',
     'OperationTemplate',
     'ArtifactTemplate',
+    'PluginSpecification',
 
     # Service instance models
     'Service',
@@ -71,7 +72,6 @@ __all__ = (
     'Parameter',
     'Type',
     'Metadata',
-    'PluginSpecification',
 
     # Orchestration models
     'Execution',
@@ -129,6 +129,9 @@ class OperationTemplate(aria_declarative_base, service_template.OperationTemplat
 
 
 class ArtifactTemplate(aria_declarative_base, service_template.ArtifactTemplateBase):
+    pass
+
+class PluginSpecification(aria_declarative_base, service_template.PluginSpecificationBase):
     pass
 
 # endregion
@@ -211,10 +214,6 @@ class Type(aria_declarative_base, service_common.TypeBase):
 class Metadata(aria_declarative_base, service_common.MetadataBase):
     pass
 
-
-class PluginSpecification(aria_declarative_base, service_common.PluginSpecificationBase):
-    pass
-
 # endregion
 
 
@@ -253,6 +252,7 @@ models_to_register = [
     InterfaceTemplate,
     OperationTemplate,
     ArtifactTemplate,
+    PluginSpecification,
 
     # Service instance models
     Service,
@@ -276,7 +276,6 @@ models_to_register = [
     Parameter,
     Type,
     Metadata,
-    PluginSpecification,
 
     # Orchestration models
     Execution,

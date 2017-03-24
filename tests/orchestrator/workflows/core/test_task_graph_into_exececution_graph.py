@@ -30,7 +30,8 @@ def test_task_graph_into_execution_graph(tmpdir):
     interface = mock.models.create_interface(
         node.service,
         interface_name,
-        operation_name
+        operation_name,
+        operation_kwargs={'implementation': 'test'}
     )
     node.interfaces[interface.name] = interface
     task_context.model.node.update(node)

@@ -177,7 +177,7 @@ class ProcessExecutor(base.BaseExecutor):
                 pythonpath_dirs = [os.path.join(
                     plugin_prefix, 'lib{0}'.format(b),
                     'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1]),
-                    'site-packages') for b in ['', '64']]
+                    'site-packages') for b in ('', '64')]
 
         # Add used supplied directories to injected PYTHONPATH
         pythonpath_dirs.extend(self._python_path)

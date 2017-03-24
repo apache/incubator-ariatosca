@@ -34,7 +34,7 @@ def download_script(ctx, script_path):
     file_descriptor, dest_script_path = tempfile.mkstemp(suffix='-{0}'.format(suffix))
     os.close(file_descriptor)
     try:
-        if schema in ['http', 'https']:
+        if schema in ('http', 'https'):
             response = requests.get(script_path)
             if response.status_code == 404:
                 ctx.task.abort('Failed to download script: {0} (status code: {1})'

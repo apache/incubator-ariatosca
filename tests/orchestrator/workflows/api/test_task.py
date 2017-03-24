@@ -18,7 +18,6 @@ import pytest
 
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
-from aria.modeling import models
 
 from tests import mock, storage
 
@@ -45,13 +44,11 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
-
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin_specification=plugin_specification,
+            operation_kwargs=dict(plugin=plugin,
                                   implementation='op_path'))
 
         node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
@@ -85,7 +82,6 @@ class TestOperationTask(object):
         assert api_task.max_attempts == max_attempts
         assert api_task.ignore_failure == ignore_failure
         assert api_task.plugin.name == 'test_plugin'
-        assert api_task.runs_on == models.Task.RUNS_ON_NODE
 
     def test_source_relationship_operation_task_creation(self, ctx):
         interface_name = 'test_interface'
@@ -94,13 +90,11 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.plugin.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
-
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin_specification=plugin_specification,
+            operation_kwargs=dict(plugin=plugin,
                                   implementation='op_path')
         )
 
@@ -131,7 +125,6 @@ class TestOperationTask(object):
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
         assert api_task.plugin.name == 'test_plugin'
-        assert api_task.runs_on == models.Task.RUNS_ON_SOURCE
 
     def test_target_relationship_operation_task_creation(self, ctx):
         interface_name = 'test_interface'
@@ -140,13 +133,11 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('test_plugin', '0.1')
-
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin_specification=plugin_specification,
+            operation_kwargs=dict(plugin=plugin,
                                   implementation='op_path')
         )
 
@@ -163,8 +154,7 @@ class TestOperationTask(object):
                 operation_name=operation_name,
                 inputs=inputs,
                 max_attempts=max_attempts,
-                retry_interval=retry_interval,
-                runs_on=models.Task.RUNS_ON_TARGET)
+                retry_interval=retry_interval)
 
         assert api_task.name == api.task.OperationTask.NAME_FORMAT.format(
             type='relationship',
@@ -178,7 +168,6 @@ class TestOperationTask(object):
         assert api_task.retry_interval == retry_interval
         assert api_task.max_attempts == max_attempts
         assert api_task.plugin.name == 'test_plugin'
-        assert api_task.runs_on == models.Task.RUNS_ON_TARGET
 
     def test_operation_task_default_values(self, ctx):
         interface_name = 'test_interface'
@@ -187,15 +176,13 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('package', '0.1')
         ctx.model.node.update(plugin)
 
-        plugin_specification = mock.models.create_plugin_specification('package', '0.1')
-
         dependency_node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
 
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(plugin_specification=plugin_specification,
+            operation_kwargs=dict(plugin=plugin,
                                   implementation='op_path'))
         dependency_node.interfaces[interface_name] = interface
 
@@ -210,7 +197,6 @@ class TestOperationTask(object):
         assert task.max_attempts == ctx._task_max_attempts
         assert task.ignore_failure == ctx._task_ignore_failure
         assert task.plugin is plugin
-        assert task.runs_on == models.Task.RUNS_ON_NODE
 
 
 class TestWorkflowTask(object):

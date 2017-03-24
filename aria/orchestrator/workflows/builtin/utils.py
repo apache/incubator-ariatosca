@@ -71,15 +71,13 @@ def relationship_tasks(
         operations.append(
             OperationTask.for_relationship(relationship=relationship,
                                            interface_name=interface_name,
-                                           operation_name=source_operation_name,
-                                           runs_on='source')
+                                           operation_name=source_operation_name)
         )
     if target_operation_name:
         operations.append(
             OperationTask.for_relationship(relationship=relationship,
                                            interface_name=interface_name,
-                                           operation_name=target_operation_name,
-                                           runs_on='target')
+                                           operation_name=target_operation_name)
         )
 
     return operations

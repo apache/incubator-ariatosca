@@ -19,7 +19,6 @@ from datetime import (
 
 import pytest
 
-from aria.modeling import models
 from aria.orchestrator.context import workflow as workflow_context
 from aria.orchestrator.workflows import (
     api,
@@ -43,7 +42,8 @@ def ctx(tmpdir):
     interface = mock.models.create_interface(
         relationship.source_node.service,
         RELATIONSHIP_INTERFACE_NAME,
-        RELATIONSHIP_OPERATION_NAME
+        RELATIONSHIP_OPERATION_NAME,
+        operation_kwargs={'implementation': 'test'}
     )
     relationship.interfaces[interface.name] = interface
     context.model.relationship.update(relationship)
@@ -52,7 +52,8 @@ def ctx(tmpdir):
     interface = mock.models.create_interface(
         node.service,
         NODE_INTERFACE_NAME,
-        NODE_OPERATION_NAME
+        NODE_OPERATION_NAME,
+        operation_kwargs={'implementation': 'test'}
     )
     node.interfaces[interface.name] = interface
     context.model.node.update(node)
@@ -72,13 +73,12 @@ class TestOperationTask(object):
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
-    def _create_relationship_operation_task(self, ctx, relationship, runs_on):
+    def _create_relationship_operation_task(self, ctx, relationship):
         with workflow_context.current.push(ctx):
             api_task = api.task.OperationTask.for_relationship(
                 relationship=relationship,
                 interface_name=RELATIONSHIP_INTERFACE_NAME,
-                operation_name=RELATIONSHIP_OPERATION_NAME,
-                runs_on=runs_on)
+                operation_name=RELATIONSHIP_OPERATION_NAME)
             core_task = core.task.OperationTask(api_task=api_task)
         return api_task, core_task
 
@@ -88,12 +88,11 @@ class TestOperationTask(object):
         ctx.model.plugin.put(storage_plugin)
         ctx.model.plugin.put(storage_plugin_other)
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-        storage_plugin_specification = mock.models.create_plugin_specification('p1', '0.1')
         interface = mock.models.create_interface(
             node.service,
             NODE_INTERFACE_NAME,
             NODE_OPERATION_NAME,
-            operation_kwargs=dict(plugin_specification=storage_plugin_specification)
+            operation_kwargs=dict(plugin=storage_plugin, implementation='test')
         )
         node.interfaces[interface.name] = interface
         ctx.model.node.update(node)
@@ -101,7 +100,7 @@ class TestOperationTask(object):
         storage_task = ctx.model.task.get_by_name(core_task.name)
         assert storage_task.plugin is storage_plugin
         assert storage_task.execution_name == ctx.execution.name
-        assert storage_task.runs_on == core_task.context.node
+        assert storage_task.actor == core_task.context.node
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
         assert core_task.implementation == api_task.implementation
@@ -109,18 +108,12 @@ class TestOperationTask(object):
         assert core_task.inputs == api_task.inputs == storage_task.inputs
         assert core_task.plugin == storage_plugin
 
-    def test_source_relationship_operation_task_creation(self, ctx):
+    def test_relationship_operation_task_creation(self, ctx):
         relationship = ctx.model.relationship.list()[0]
         ctx.model.relationship.update(relationship)
         _, core_task = self._create_relationship_operation_task(
-            ctx, relationship, models.Task.RUNS_ON_SOURCE)
-        assert core_task.model_task.runs_on == relationship.source_node
-
-    def test_target_relationship_operation_task_creation(self, ctx):
-        relationship = ctx.model.relationship.list()[0]
-        _, core_task = self._create_relationship_operation_task(
-            ctx, relationship, models.Task.RUNS_ON_TARGET)
-        assert core_task.model_task.runs_on == relationship.target_node
+            ctx, relationship)
+        assert core_task.model_task.actor == relationship
 
     def test_operation_task_edit_locked_attribute(self, ctx):
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)

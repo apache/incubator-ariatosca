@@ -154,14 +154,33 @@ topology_template:
                 - scalable:
                     properties:
                       - max_instances: { greater_or_equal: 8 }
-    
+            relationship:
+              interfaces:
+                Configure:
+                  target_changed:
+                    implementation:
+                      primary: changed.sh
+                      dependencies:
+                        #- { concat: [ process.args.1 >, mongodb ] }
+                        - process.args.1 > mongodb
+                        - process.args.2 > host
+                        - ssh.user > admin
+                        - ssh.password > 1234
+                        - ssh.use_sudo > true
+
+    nginx:
+      type: nginx.Nginx
+      requirements:
+        - host: loadbalancer_host
+        - feature: loadbalancer
+
+    # Features
+
     loadbalancer:
       type: nginx.LoadBalancer
       properties:
-        algorithm: round-robin      
-      requirements:
-        - host: loadbalancer_host
-    
+        algorithm: round-robin   
+
     # Hosts
 
     loadbalancer_host:
@@ -177,7 +196,11 @@ topology_template:
         Standard:
           inputs:
             openstack_credential: { get_input: openstack_credential }
-          configure: juju > charm.loadbalancer
+          configure:
+            implementation:
+              primary: juju > run_charm
+              dependencies:
+                - charm > loadbalancer
 
     application_host:
       copy: loadbalancer_host
@@ -253,6 +276,7 @@ topology_template:
       type: aria.Plugin
       properties:
         version: 1.0
+        enabled: false
 
     maintenance_on:
       type: MaintenanceWorkflow

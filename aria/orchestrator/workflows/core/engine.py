@@ -82,8 +82,8 @@ class Engine(logger.LoggerMixin):
         events.on_cancelling_workflow_signal.send(self._workflow_context)
 
     def _is_cancel(self):
-        return self._workflow_context.execution.status in [models.Execution.CANCELLING,
-                                                           models.Execution.CANCELLED]
+        return self._workflow_context.execution.status in (models.Execution.CANCELLING,
+                                                           models.Execution.CANCELLED)
 
     def _executable_tasks(self):
         now = datetime.utcnow()

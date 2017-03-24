@@ -125,8 +125,12 @@ def _workflow_cancelling(workflow_context, *args, **kwargs):
 
 
 def _update_node_state_if_necessary(task, is_transitional=False):
-    if task.interface_name in ['tosca.interfaces.node.lifecycle.Standard', 'Standard']:
-        node = task.runs_on
+    # TODO: this is not the right way to check! the interface name is arbitrary
+    # and also will *never* be the type name
+    model_task = task.model_task
+    node = model_task.node if model_task is not None else None
+    if (node is not None) and \
+        (task.interface_name in ('Standard', 'tosca.interfaces.node.lifecycle.Standard')):
         state = node.determine_state(op_name=task.operation_name, is_transitional=is_transitional)
         if state:
             node.state = state

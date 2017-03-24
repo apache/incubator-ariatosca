@@ -143,9 +143,9 @@ def _fabric_env(ctx, fabric_env, warn_only):
     env = constants.FABRIC_ENV_DEFAULTS.copy()
     env.update(fabric_env or {})
     env.setdefault('warn_only', warn_only)
-    if 'host_string' not in env:
-        env['host_string'] = ctx.task.runs_on.ip
     # validations
+    if (not env.get('host_string')) and (ctx.task) and (ctx.task.actor) and (ctx.task.actor.host):
+        env['host_string'] = ctx.task.actor.host.host_address
     if not env.get('host_string'):
         ctx.task.abort('`host_string` not supplied and ip cannot be deduced automatically')
     if not (env.get('password') or env.get('key_filename') or env.get('key')):

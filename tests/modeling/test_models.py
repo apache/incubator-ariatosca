@@ -585,48 +585,49 @@ class TestNode(object):
                    node_template_storage.service.list()[0]
 
 
-class TestNodeIP(object):
+class TestNodeHostAddress(object):
 
-    ip = '1.1.1.1'
+    host_address = '1.1.1.1'
 
-    def test_ip_on_none_hosted_node(self, service_storage):
-        node_template = self._node_template(service_storage, ip='not considered')
+    def test_host_address_on_none_hosted_node(self, service_storage):
+        node_template = self._node_template(service_storage, host_address='not considered')
         node = self._node(service_storage,
                           node_template,
                           is_host=False,
-                          ip='not considered')
-        assert node.ip is None
+                          host_address='not considered')
+        assert node.host_address is None
 
-    def test_property_ip_on_host_node(self, service_storage):
-        node_template = self._node_template(service_storage, ip=self.ip)
-        node = self._node(service_storage, node_template, is_host=True, ip=None)
-        assert node.ip == self.ip
+    def test_property_host_address_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, host_address=self.host_address)
+        node = self._node(service_storage, node_template, is_host=True, host_address=None)
+        assert node.host_address == self.host_address
 
-    def test_runtime_property_ip_on_host_node(self, service_storage):
-        node_template = self._node_template(service_storage, ip='not considered')
-        node = self._node(service_storage, node_template, is_host=True, ip=self.ip)
-        assert node.ip == self.ip
+    def test_runtime_property_host_address_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, host_address='not considered')
+        node = self._node(service_storage, node_template, is_host=True,
+                          host_address=self.host_address)
+        assert node.host_address == self.host_address
 
-    def test_no_ip_configured_on_host_node(self, service_storage):
-        node_template = self._node_template(service_storage, ip=None)
-        node = self._node(service_storage, node_template, is_host=True, ip=None)
-        assert node.ip is None
+    def test_no_host_address_configured_on_host_node(self, service_storage):
+        node_template = self._node_template(service_storage, host_address=None)
+        node = self._node(service_storage, node_template, is_host=True, host_address=None)
+        assert node.host_address is None
 
     def test_runtime_property_on_hosted_node(self, service_storage):
-        host_node_template = self._node_template(service_storage, ip=None)
+        host_node_template = self._node_template(service_storage, host_address=None)
         host_node = self._node(service_storage,
                                host_node_template,
                                is_host=True,
-                               ip=self.ip)
-        node_template = self._node_template(service_storage, ip=None)
+                               host_address=self.host_address)
+        node_template = self._node_template(service_storage, host_address=None)
         node = self._node(service_storage,
                           node_template,
                           is_host=False,
-                          ip=None,
+                          host_address=None,
                           host_fk=host_node.id)
-        assert node.ip == self.ip
+        assert node.host_address == self.host_address
 
-    def _node_template(self, storage, ip):
+    def _node_template(self, storage, host_address):
         kwargs = dict(
             name='node_template',
             type=storage.type.list()[0],
@@ -635,23 +636,27 @@ class TestNodeIP(object):
             min_instances=1,
             service_template=storage.service_template.list()[0]
         )
-        if ip:
-            kwargs['properties'] = {'ip': Parameter.wrap('ip', ip)}
+        if host_address:
+            kwargs['properties'] = {'host_address': Parameter.wrap('host_address', host_address)}
         node = NodeTemplate(**kwargs)
         storage.node_template.put(node)
         return node
 
-    def _node(self, storage, node, is_host, ip, host_fk=None):
+    def _node(self, storage, node_template, is_host, host_address, host_fk=None):
         kwargs = dict(
             name='node',
-            node_template=node,
+            node_template=node_template,
             type=storage.type.list()[0],
             runtime_properties={},
             state='initial',
             service=storage.service.list()[0]
         )
-        if ip:
-            kwargs['runtime_properties']['ip'] = ip
+        if is_host and (host_address is None):
+            host_address = node_template.properties.get('host_address')
+            if host_address is not None:
+                host_address = host_address.value
+        if host_address:
+            kwargs['runtime_properties']['ip'] = host_address
         if is_host:
             kwargs['host_fk'] = 1
         elif host_fk:

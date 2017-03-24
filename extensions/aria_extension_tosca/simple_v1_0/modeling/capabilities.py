@@ -78,6 +78,11 @@ def get_inherited_capability_definitions(context, presentation, for_presentation
                 #capability_definitions[capability_name] = capability_definition
             else:
                 capability_definition = our_capability_definition._clone(for_presentation)
+                if isinstance(capability_definition._raw, basestring):
+                    # Make sure we have a dict
+                    the_type = capability_definition._raw
+                    capability_definition._raw = OrderedDict()
+                    capability_definition._raw['type'] = the_type
                 capability_definitions[capability_name] = capability_definition
 
             merge_capability_definition_from_type(context, presentation, capability_definition)

@@ -8,3 +8,5 @@ node_types:
       - search_endpoint:
           capability: tosca.capabilities.Endpoint
           relationship: tosca.relationships.ConnectsTo
+    capabilities:
+      app: tosca.capabilities.Endpoint

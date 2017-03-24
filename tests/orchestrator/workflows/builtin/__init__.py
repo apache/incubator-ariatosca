@@ -31,16 +31,13 @@ def _assert_relationships(operations, expected_op_full_name, relationships=0):
         # suffix once
         operation = next(operations)
         relationship_id_1 = operation.actor.id
-        edge1 = operation.runs_on
         _assert_cfg_interface_op(operation, expected_op_name)
 
         operation = next(operations)
         relationship_id_2 = operation.actor.id
-        edge2 = operation.runs_on
         _assert_cfg_interface_op(operation, expected_op_name)
 
         assert relationship_id_1 == relationship_id_2
-        assert edge1 != edge2
 
 
 def assert_node_install_operations(operations, relationships=0):

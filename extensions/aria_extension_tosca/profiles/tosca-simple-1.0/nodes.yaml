@@ -60,6 +60,7 @@ node_types:
       specification: tosca-simple-1.0
       specification_section: 5.8.2
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_NODES_COMPUTE'
+      role: host
     description: >-
       The TOSCA Compute node represents one or more real or virtual processors of software applications or services along with
       other essential local resources. Collectively, the resources the compute node represents can logically be viewed as a (real
