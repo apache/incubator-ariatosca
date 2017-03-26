@@ -275,6 +275,10 @@ class PluginSpecificationBase(TemplateModelMixin):
 
     # endregion
 
+    @declared_attr
+    def service_template(cls):
+        return relationship.many_to_one(cls, 'service_template')
+
     @property
     def as_raw(self):
         return collections.OrderedDict((

@@ -353,10 +353,10 @@ def _assert_loggins(ctx, inputs):
     tasks = ctx.model.task.list()
     assert len(tasks) == 1
     task = tasks[0]
-    assert task.logs.count() == 4
+    assert len(task.logs) == 4
 
     logs = ctx.model.log.list()
-    assert len(logs) == execution.logs.count() == 6
+    assert len(logs) == len(execution.logs) == 6
     assert set(logs) == set(execution.logs)
 
     assert all(l.execution == execution for l in logs)

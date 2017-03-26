@@ -33,7 +33,6 @@ imports:
   - types/mongodb.yaml
   - types/nginx.yaml
   - aria-1.0
-
 dsl_definitions:
 
   default_openstack_credential: &DEFAULT_OPENSTACK_CREDENTIAL

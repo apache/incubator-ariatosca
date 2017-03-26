@@ -42,9 +42,6 @@ class ServiceUpdateBase(ModelMixin):
     """
     Deployment update model representation.
     """
-
-    steps = None
-
     __tablename__ = 'service_update'
 
     __private_fields__ = ['service_fk',
@@ -59,14 +56,6 @@ class ServiceUpdateBase(ModelMixin):
     service_update_node_templates = Column(List)
     modified_entity_ids = Column(Dict)
     state = Column(Text)
-
-    @declared_attr
-    def execution(cls):
-        return relationship.many_to_one(cls, 'execution')
-
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service', parent_property='updates')
 
     # region foreign keys
 
@@ -91,6 +80,34 @@ class ServiceUpdateBase(ModelMixin):
     def service_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service', cls.name_column_name())
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def steps(cls):
+        return relationship.one_to_many(cls, 'service_update_step')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def execution(cls):
+        return relationship.one_to_one(cls, 'execution', back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service', back_populates='updates')
+
+    # endregion
+
+    # region many_to_many relationships
 
     # endregion
 
@@ -133,10 +150,6 @@ class ServiceUpdateStepBase(ModelMixin):
     entity_id = Column(Text, nullable=False)
     entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
 
-    @declared_attr
-    def service_update(cls):
-        return relationship.many_to_one(cls, 'service_update', parent_property='steps')
-
     # region foreign keys
 
     @declared_attr
@@ -151,6 +164,26 @@ class ServiceUpdateStepBase(ModelMixin):
     def service_update_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service_update', cls.name_column_name())
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service_update(cls):
+        return relationship.many_to_one(cls, 'service_update', back_populates='steps')
+
+    # endregion
+
+    # region many_to_many relationships
 
     # endregion
 
@@ -206,10 +239,6 @@ class ServiceModificationBase(ModelMixin):
     nodes = Column(Dict)
     status = Column(Enum(*STATES, name='service_modification_status'))
 
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service', parent_property='modifications')
-
     # region foreign keys
 
     @declared_attr
@@ -224,5 +253,24 @@ class ServiceModificationBase(ModelMixin):
     def service_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service', cls.name_column_name())
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service', back_populates='modifications')
+
+    # endregion
+
+    # region many_to_many relationships
 
     # endregion

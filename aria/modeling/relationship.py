@@ -26,9 +26,10 @@ from sqlalchemy import (
 
 from ..utils import formatting
 
+NO_BACK_POP = 'NO_BACK_POP'
 
-def foreign_key(other_table,
-                nullable=False):
+
+def foreign_key(other_table, nullable=False):
     """
     Declare a foreign key property, which will also create a foreign key column in the table with
     the name of the property. By convention the property name should end in "_fk".
@@ -54,9 +55,7 @@ def foreign_key(other_table,
                   nullable=nullable)
 
 
-def one_to_one_self(model_class,
-                    fk,
-                    relationship_kwargs=None):
+def one_to_one_self(model_class, fk):
     """
     Declare a one-to-one relationship property. The property value would be an instance of the same
     model.
@@ -69,11 +68,7 @@ def one_to_one_self(model_class,
     :type model_class: type
     :param fk: Foreign key name
     :type fk: basestring
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
     """
-
-    relationship_kwargs = relationship_kwargs or {}
 
     remote_side = '{model_class}.{remote_column}'.format(
         model_class=model_class.__name__,
@@ -85,20 +80,18 @@ def one_to_one_self(model_class,
         model_class=model_class.__name__,
         column=fk
     )
-
-    return relationship(
-        _get_class_for_table(model_class, model_class.__tablename__).__name__,
-        primaryjoin=primaryjoin,
-        remote_side=remote_side,
-        post_update=True,
-        **relationship_kwargs
+    return _relationship(
+        model_class,
+        model_class.__tablename__,
+        relationship_kwargs={
+            'primaryjoin': primaryjoin,
+            'remote_side': remote_side,
+            'post_update': True
+        }
     )
 
 
-def one_to_many_self(model_class,
-                     fk,
-                     dict_key=None,
-                     relationship_kwargs=None):
+def one_to_many_self(model_class, fk, dict_key=None):
     """
     Declare a one-to-many relationship property. The property value would be a list or dict of
     instances of the same model.
@@ -114,28 +107,24 @@ def one_to_many_self(model_class,
     :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
                      be a list
     :type dict_key: basestring
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
     """
-
-    relationship_kwargs = relationship_kwargs or {}
-
-    relationship_kwargs.setdefault('remote_side', '{model_class}.{remote_column}'.format(
-        model_class=model_class.__name__,
-        remote_column=fk
-    ))
-
-    return _relationship(model_class, model_class.__tablename__, None, relationship_kwargs,
-                         other_property=False, dict_key=dict_key)
+    return _relationship(
+        model_class,
+        model_class.__tablename__,
+        relationship_kwargs={
+            'remote_side': '{model_class}.{remote_column}'.format(
+                model_class=model_class.__name__, remote_column=fk)
+        },
+        back_populates=False,
+        dict_key=dict_key
+    )
 
 
 def one_to_one(model_class,
                other_table,
                fk=None,
                other_fk=None,
-               other_property=None,
-               relationship_kwargs=None,
-               backref_kwargs=None):
+               back_populates=None):
     """
     Declare a one-to-one relationship property. The property value would be an instance of the other
     table's model.
@@ -154,26 +143,25 @@ def one_to_one(model_class,
     :type fk: basestring
     :param other_fk: Foreign key name at the other table (no need specify if there's no ambiguity)
     :type other_fk: basestring
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
-    :param backref_kwargs: Extra kwargs for SQLAlchemy ``backref``
-    :type backref_kwargs: {}
+    :param back_populates: Override name of matching many-to-many property at other table; set to
+                       false to disable
+    :type back_populates: basestring|bool
     """
+    if back_populates is None:
+        back_populates = model_class.__tablename__
 
-    backref_kwargs = backref_kwargs or {}
-    backref_kwargs.setdefault('uselist', False)
-
-    return _relationship(model_class, other_table, backref_kwargs, relationship_kwargs,
-                         other_property, fk=fk, other_fk=other_fk)
+    return _relationship(model_class,
+                         other_table,
+                         fk=fk,
+                         back_populates=back_populates,
+                         other_fk=other_fk)
 
 
 def one_to_many(model_class,
                 child_table,
                 child_fk=None,
                 dict_key=None,
-                child_property=None,
-                relationship_kwargs=None,
-                backref_kwargs=None):
+                back_populates=None):
     """
     Declare a one-to-many relationship property. The property value would be a list or dict of
     instances of the child table's model.
@@ -194,29 +182,25 @@ def one_to_many(model_class,
     :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
                      be a list
     :type dict_key: basestring
-    :param child_property: Override name of matching many-to-one property at child table; set to
+    :param back_populates: Override name of matching many-to-one property at child table; set to
                            false to disable
-    :type child_property: basestring|bool
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
-    :param backref_kwargs: Extra kwargs for SQLAlchemy ``backref``
-    :type backref_kwargs: {}
+    :type back_populates: basestring|bool
     """
-
-    backref_kwargs = backref_kwargs or {}
-    backref_kwargs.setdefault('uselist', False)
-
-    return _relationship(model_class, child_table, backref_kwargs, relationship_kwargs,
-                         child_property, other_fk=child_fk, dict_key=dict_key)
+    if back_populates is None:
+        back_populates = model_class.__tablename__
+    return _relationship(
+        model_class,
+        child_table,
+        back_populates=back_populates,
+        other_fk=child_fk,
+        dict_key=dict_key)
 
 
 def many_to_one(model_class,
                 parent_table,
                 fk=None,
                 parent_fk=None,
-                parent_property=None,
-                relationship_kwargs=None,
-                backref_kwargs=None):
+                back_populates=None):
     """
     Declare a many-to-one relationship property. The property value would be an instance of the
     parent table's model.
@@ -236,34 +220,25 @@ def many_to_one(model_class,
     :type parent_table: basestring
     :param fk: Foreign key name at our table (no need specify if there's no ambiguity)
     :type fk: basestring
-    :param parent_property: Override name of matching one-to-many property at parent table; set to
+    :param back_populates: Override name of matching one-to-many property at parent table; set to
                             false to disable
-    :type parent_property: basestring|bool
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
-    :param backref_kwargs: Extra kwargs for SQLAlchemy ``backref``
-    :type backref_kwargs: {}
+    :type back_populates: basestring|bool
     """
+    if back_populates is None:
+        back_populates = formatting.pluralize(model_class.__tablename__)
 
-    if parent_property is None:
-        parent_property = formatting.pluralize(model_class.__tablename__)
-
-    backref_kwargs = backref_kwargs or {}
-    backref_kwargs.setdefault('uselist', True)
-    backref_kwargs.setdefault('lazy', 'dynamic')
-    backref_kwargs.setdefault('cascade', 'all') # delete children when parent is deleted
-
-    return _relationship(model_class, parent_table, backref_kwargs, relationship_kwargs,
-                         parent_property, fk=fk, other_fk=parent_fk)
+    return _relationship(model_class,
+                         parent_table,
+                         back_populates=back_populates,
+                         fk=fk,
+                         other_fk=parent_fk)
 
 
 def many_to_many(model_class,
                  other_table,
                  prefix=None,
                  dict_key=None,
-                 other_property=None,
-                 relationship_kwargs=None,
-                 backref_kwargs=None):
+                 other_property=None):
     """
     Declare a many-to-many relationship property. The property value would be a list or dict of
     instances of the other table's model.
@@ -280,8 +255,8 @@ def many_to_many(model_class,
 
     :param model_class: The class in which this relationship will be declared
     :type model_class: type
-    :param parent_table: Parent table name
-    :type parent_table: basestring
+    :param other_table: Parent table name
+    :type other_table: basestring
     :param prefix: Optional prefix for extra table name as well as for ``other_property``
     :type prefix: basestring
     :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
@@ -290,10 +265,6 @@ def many_to_many(model_class,
     :param other_property: Override name of matching many-to-many property at other table; set to
                            false to disable
     :type other_property: basestring|bool
-    :param relationship_kwargs: Extra kwargs for SQLAlchemy ``relationship``
-    :type relationship_kwargs: {}
-    :param backref_kwargs: Extra kwargs for SQLAlchemy ``backref``
-    :type backref_kwargs: {}
     """
 
     this_table = model_class.__tablename__
@@ -303,69 +274,68 @@ def many_to_many(model_class,
     other_column_name = '{0}_id'.format(other_table)
     other_foreign_key = '{0}.id'.format(other_table)
 
-    secondary_table = '{0}_{1}'.format(this_table, other_table)
+    secondary_table_name = '{0}_{1}'.format(this_table, other_table)
 
     if prefix is not None:
-        secondary_table = '{0}_{1}'.format(prefix, secondary_table)
+        secondary_table_name = '{0}_{1}'.format(prefix, secondary_table_name)
         if other_property is None:
             other_property = '{0}_{1}'.format(prefix, formatting.pluralize(this_table))
 
-    backref_kwargs = backref_kwargs or {}
-    backref_kwargs.setdefault('uselist', True)
-
-    relationship_kwargs = relationship_kwargs or {}
-    relationship_kwargs.setdefault('secondary', _get_secondary_table(
+    secondary_table = _get_secondary_table(
         model_class.metadata,
-        secondary_table,
+        secondary_table_name,
         this_column_name,
         other_column_name,
         this_foreign_key,
         other_foreign_key
-    ))
+    )
 
-    return _relationship(model_class, other_table, backref_kwargs, relationship_kwargs,
-                         other_property, dict_key=dict_key)
+    return _relationship(
+        model_class,
+        other_table,
+        relationship_kwargs={'secondary': secondary_table},
+        backref_kwargs={'name': other_property, 'uselist': True} if other_property else None,
+        dict_key=dict_key
+    )
 
 
-def _relationship(model_class, other_table, backref_kwargs, relationship_kwargs, other_property,
-                  fk=None, other_fk=None, dict_key=None):
+def _relationship(model_class,
+                  other_table_name,
+                  back_populates=None,
+                  backref_kwargs=None,
+                  relationship_kwargs=None,
+                  fk=None,
+                  other_fk=None,
+                  dict_key=None):
     relationship_kwargs = relationship_kwargs or {}
 
     if fk:
-        relationship_kwargs.setdefault('foreign_keys',
-                                       lambda: getattr(
-                                           _get_class_for_table(
-                                               model_class,
-                                               model_class.__tablename__),
-                                           fk))
+        relationship_kwargs.setdefault(
+            'foreign_keys',
+            lambda: getattr(_get_class_for_table(model_class, model_class.__tablename__), fk)
+        )
 
     elif other_fk:
-        relationship_kwargs.setdefault('foreign_keys',
-                                       lambda: getattr(
-                                           _get_class_for_table(
-                                               model_class,
-                                               other_table),
-                                           other_fk))
+        relationship_kwargs.setdefault(
+            'foreign_keys',
+            lambda: getattr(_get_class_for_table(model_class, other_table_name), other_fk)
+        )
 
     if dict_key:
         relationship_kwargs.setdefault('collection_class',
                                        attribute_mapped_collection(dict_key))
 
-    if other_property is False:
-        # No backref
-        return relationship(
-            lambda: _get_class_for_table(model_class, other_table),
-            **relationship_kwargs
-        )
+    if backref_kwargs:
+        assert back_populates is None
+        return relationship(lambda: _get_class_for_table(model_class, other_table_name),
+                            backref=backref(**backref_kwargs),
+                            **relationship_kwargs
+                           )
     else:
-        if other_property is None:
-            other_property = model_class.__tablename__
-        backref_kwargs = backref_kwargs or {}
-        return relationship(
-            lambda: _get_class_for_table(model_class, other_table),
-            backref=backref(other_property, **backref_kwargs),
-            **relationship_kwargs
-        )
+        if back_populates is not NO_BACK_POP:
+            relationship_kwargs['back_populates'] = back_populates
+        return relationship(lambda: _get_class_for_table(model_class, other_table_name),
+                            **relationship_kwargs)
 
 
 def _get_class_for_table(model_class, tablename):

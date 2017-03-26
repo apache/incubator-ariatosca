@@ -36,7 +36,7 @@ from . import (
 )
 
 
-class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
+class ServiceBase(InstanceModelMixin):
     """
     A service is usually an instance of a :class:`ServiceTemplate`.
 
@@ -71,12 +71,10 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
     :vartype updated_at: :class:`datetime.datetime`
-
     :ivar permalink: ??
     :vartype permalink: basestring
     :ivar scaling_groups: ??
     :vartype scaling_groups: {}
-
     :ivar modifications: Modifications of this service
     :vartype modifications: [:class:`ServiceModification`]
     :ivar updates: Updates of this service
@@ -90,59 +88,6 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     __private_fields__ = ['substitution_fk',
                           'service_template_fk',
                           'service_template_name']
-
-    @declared_attr
-    def service_template(cls):
-        return relationship.many_to_one(cls, 'service_template')
-
-    description = Column(Text)
-
-    @declared_attr
-    def meta_data(cls):
-        # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
-        return relationship.many_to_many(cls, 'metadata', dict_key='name')
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.one_to_many(cls, 'node', dict_key='name')
-
-    @declared_attr
-    def groups(cls):
-        return relationship.one_to_many(cls, 'group', dict_key='name')
-
-    @declared_attr
-    def policies(cls):
-        return relationship.one_to_many(cls, 'policy', dict_key='name')
-
-    @declared_attr
-    def substitution(cls):
-        return relationship.one_to_one(cls, 'substitution')
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def outputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='outputs', dict_key='name')
-
-    @declared_attr
-    def workflows(cls):
-        return relationship.one_to_many(cls, 'operation', dict_key='name')
-
-    @declared_attr
-    def plugin_specifications(cls):
-        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
-
-    created_at = Column(DateTime, nullable=False, index=True)
-    updated_at = Column(DateTime)
-
-    # region orchestration
-
-    permalink = Column(Text)
-    scaling_groups = Column(modeling_types.Dict)
-
-    # endregion
 
     # region foreign keys
 
@@ -164,6 +109,89 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     def service_template_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service_template', 'name')
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def substitution(cls):
+        return relationship.one_to_one(cls, 'substitution', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+    @declared_attr
+    def updates(cls):
+        return relationship.one_to_many(cls, 'service_update')
+
+    @declared_attr
+    def modifications(cls):
+        return relationship.one_to_many(cls, 'service_modification')
+
+    @declared_attr
+    def executions(cls):
+        return relationship.one_to_many(cls, 'execution')
+
+    @declared_attr
+    def operations(cls):
+        return relationship.one_to_many(cls, 'operation')
+
+    @declared_attr
+    def nodes(cls):
+        return relationship.one_to_many(cls, 'node', dict_key='name')
+
+    @declared_attr
+    def groups(cls):
+        return relationship.one_to_many(cls, 'group', dict_key='name')
+
+    @declared_attr
+    def policies(cls):
+        return relationship.one_to_many(cls, 'policy', dict_key='name')
+
+    @declared_attr
+    def workflows(cls):
+        return relationship.one_to_many(cls, 'operation', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service_template(cls):
+        return relationship.many_to_one(cls, 'service_template')
+
+    # endregion
+
+    # region many_to_many relationships
+    @declared_attr
+    def meta_data(cls):
+        # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
+        return relationship.many_to_many(cls, 'metadata', dict_key='name')
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
+
+    @declared_attr
+    def outputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='outputs', dict_key='name')
+
+    @declared_attr
+    def plugin_specifications(cls):
+        return relationship.many_to_many(cls, 'plugin_specification', dict_key='name')
+
+    # endregion
+
+    description = Column(Text)
+
+    created_at = Column(DateTime, nullable=False, index=True)
+    updated_at = Column(DateTime)
+
+    # region orchestration
+
+    permalink = Column(Text)
+    scaling_groups = Column(modeling_types.Dict)
 
     # endregion
 
@@ -290,7 +318,7 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
                         self._dump_graph_node(target_node)
 
 
-class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
+class NodeBase(InstanceModelMixin):
     """
     Usually an instance of a :class:`NodeTemplate`.
 
@@ -318,7 +346,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype inbound_relationships: [:class:`Relationship`]
     :ivar host: Host node (can be self)
     :vartype host: :class:`Node`
-
     :ivar runtime_properties: TODO: should be replaced with attributes
     :vartype runtime_properties: {}
     :ivar scaling_groups: ??
@@ -327,7 +354,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     :vartype state: string
     :ivar version: Used by `aria.storage.instrumentation`
     :vartype version: int
-
     :ivar service: Containing service
     :vartype service: :class:`Service`
     :ivar groups: We are a member of these groups
@@ -391,71 +417,6 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         except KeyError:
             return None
 
-    @declared_attr
-    def node_template(cls):
-        return relationship.many_to_one(cls, 'node_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    description = Column(Text)
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
-
-    @declared_attr
-    def artifacts(cls):
-        return relationship.one_to_many(cls, 'artifact', dict_key='name')
-
-    @declared_attr
-    def capabilities(cls):
-        return relationship.one_to_many(cls, 'capability', dict_key='name')
-
-    @declared_attr
-    def outbound_relationships(cls):
-        return relationship.one_to_many(cls, 'relationship', child_fk='source_node_fk',
-                                        child_property='source_node')
-
-    @declared_attr
-    def inbound_relationships(cls):
-        return relationship.one_to_many(cls, 'relationship', child_fk='target_node_fk',
-                                        child_property='target_node')
-
-    @declared_attr
-    def host(cls):
-        return relationship.one_to_one_self(cls, 'host_fk')
-
-    # region orchestration
-
-    runtime_properties = Column(modeling_types.Dict)
-    scaling_groups = Column(modeling_types.List)
-    state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
-    version = Column(Integer, default=1)
-
-    __mapper_args__ = {'version_id_col': version} # Enable SQLAlchemy automatic version counting
-
-    @property
-    def ip(self):
-        # TODO: totally broken
-        if not self.host_fk:
-            return None
-        host_node = self.host
-        if 'ip' in host_node.runtime_properties:  # pylint: disable=no-member
-            return host_node.runtime_properties['ip']  # pylint: disable=no-member
-        host_node = host_node.node_template  # pylint: disable=no-member
-        host_ip_property = host_node.properties.get('ip')
-        if host_ip_property:
-            return host_ip_property.value
-        return None
-
-    # endregion
-
     # region foreign_keys
 
     @declared_attr
@@ -476,7 +437,7 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     @declared_attr
     def node_template_fk(cls):
         """For Node many-to-one to NodeTemplate"""
-        return relationship.foreign_key('node_template', nullable=True)
+        return relationship.foreign_key('node_template')
 
     # endregion
 
@@ -488,6 +449,89 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         return association_proxy('service', 'name')
 
     # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def host(cls):
+        return relationship.one_to_one_self(cls, 'host_fk')
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def tasks(cls):
+        return relationship.one_to_many(cls, 'task')
+
+    @declared_attr
+    def interfaces(cls):
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    @declared_attr
+    def artifacts(cls):
+        return relationship.one_to_many(cls, 'artifact', dict_key='name')
+
+    @declared_attr
+    def capabilities(cls):
+        return relationship.one_to_many(cls, 'capability', dict_key='name')
+
+    @declared_attr
+    def outbound_relationships(cls):
+        return relationship.one_to_many(
+            cls, 'relationship', child_fk='source_node_fk', back_populates='source_node')
+
+    @declared_attr
+    def inbound_relationships(cls):
+        return relationship.one_to_many(
+            cls, 'relationship', child_fk='target_node_fk', back_populates='target_node')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def node_template(cls):
+        return relationship.many_to_one(cls, 'node_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+
+    # endregion
+
+    description = Column(Text)
+    runtime_properties = Column(modeling_types.Dict)
+    scaling_groups = Column(modeling_types.List)
+    state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
+    version = Column(Integer, default=1)
+
+    __mapper_args__ = {'version_id_col': version} # Enable SQLAlchemy automatic version counting
+
+    @property
+    def ip(self):
+        # TODO: totally broken
+        if not self.host_fk:
+            return None
+        host_node = self.host
+        if 'ip' in host_node.runtime_properties:  # pylint: disable=no-member
+            return host_node.runtime_properties['ip']  # pylint: disable=no-member
+        host_node = host_node.node_template  # pylint: disable=no-member
+        host_ip_property = host_node.properties.get('ip')
+        if host_ip_property:
+            return host_ip_property.value
+        return None
 
     def satisfy_requirements(self):
         node_template = self.node_template
@@ -513,7 +557,7 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
         from . import models
         context = ConsumptionContext.get_thread_local()
         # Find target nodes
-        target_nodes = target_node_template.nodes.all()
+        target_nodes = target_node_template.nodes
         if target_nodes:
             target_node = None
             target_capability = None
@@ -621,6 +665,7 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
             utils.dump_dict_values(self.capabilities, 'Capabilities')
             utils.dump_list_values(self.outbound_relationships, 'Relationships')
 
+
 class GroupBase(InstanceModelMixin):
     """
     Usually an instance of a :class:`GroupTemplate`.
@@ -639,7 +684,6 @@ class GroupBase(InstanceModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interface`}
-
     :ivar service: Containing service
     :vartype service: :class:`Service`
     :ivar policies: Policies enacted on this group
@@ -648,31 +692,7 @@ class GroupBase(InstanceModelMixin):
 
     __tablename__ = 'group'
 
-    __private_fields__ = ['type_fk',
-                          'service_fk',
-                          'group_template_fk']
-
-    @declared_attr
-    def group_template(cls):
-        return relationship.many_to_one(cls, 'group_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    description = Column(Text)
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.many_to_many(cls, 'node')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
+    __private_fields__ = ['type_fk', 'service_fk', 'group_template_fk']
 
     # region foreign_keys
 
@@ -692,6 +712,52 @@ class GroupBase(InstanceModelMixin):
         return relationship.foreign_key('group_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def interfaces(cls):
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def group_template(cls):
+        return relationship.many_to_one(cls, 'group_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def nodes(cls):
+        return relationship.many_to_many(cls, 'node')
+
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+
+    # endregion
+
+    description = Column(Text)
 
     @property
     def as_raw(self):
@@ -740,38 +806,13 @@ class PolicyBase(InstanceModelMixin):
     :vartype groups: [:class:`Group`]
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
-
     :ivar service: Containing service
     :vartype service: :class:`Service`
     """
 
     __tablename__ = 'policy'
 
-    __private_fields__ = ['type_fk',
-                          'service_fk',
-                          'policy_template_fk']
-
-    @declared_attr
-    def policy_template(cls):
-        return relationship.many_to_one(cls, 'policy_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    description = Column(Text)
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.many_to_many(cls, 'node')
-
-    @declared_attr
-    def groups(cls):
-        return relationship.many_to_many(cls, 'group')
+    __private_fields__ = ['type_fk', 'service_fk', 'policy_template_fk']
 
     # region foreign_keys
 
@@ -791,6 +832,52 @@ class PolicyBase(InstanceModelMixin):
         return relationship.foreign_key('policy_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def policy_template(cls):
+        return relationship.many_to_one(cls, 'policy_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+
+    @declared_attr
+    def nodes(cls):
+        return relationship.many_to_many(cls, 'node')
+
+    @declared_attr
+    def groups(cls):
+        return relationship.many_to_many(cls, 'group')
+
+    # endregion
+
+    description = Column(Text)
 
     @property
     def as_raw(self):
@@ -835,7 +922,6 @@ class SubstitutionBase(InstanceModelMixin):
     :vartype node_type: :class:`Type`
     :ivar mappings: Requirement and capability mappings
     :vartype mappings: {basestring: :class:`SubstitutionTemplate`}
-
     :ivar service: Containing service
     :vartype service: :class:`Service`
     """
@@ -844,18 +930,6 @@ class SubstitutionBase(InstanceModelMixin):
 
     __private_fields__ = ['node_type_fk',
                           'substitution_template_fk']
-
-    @declared_attr
-    def substitution_template(cls):
-        return relationship.many_to_one(cls, 'substitution_template')
-
-    @declared_attr
-    def node_type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    @declared_attr
-    def mappings(cls):
-        return relationship.one_to_many(cls, 'substitution_mapping', dict_key='name')
 
     # region foreign_keys
 
@@ -868,6 +942,42 @@ class SubstitutionBase(InstanceModelMixin):
     def substitution_template_fk(cls):
         """For Substitution many-to-one to SubstitutionTemplate"""
         return relationship.foreign_key('substitution_template', nullable=True)
+
+    # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def mappings(cls):
+        return relationship.one_to_many(cls, 'substitution_mapping', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        return relationship.one_to_one(cls, 'service', back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def substitution_template(cls):
+        return relationship.many_to_one(cls, 'substitution_template')
+
+    @declared_attr
+    def node_type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
 
     # endregion
 
@@ -907,7 +1017,6 @@ class SubstitutionMappingBase(InstanceModelMixin):
     :vartype capability: :class:`Capability`
     :ivar requirement_template: Requirement template in the node template
     :vartype requirement_template: :class:`RequirementTemplate`
-
     :ivar substitution: Containing substitution
     :vartype substitution: :class:`Substitution`
     """
@@ -918,18 +1027,6 @@ class SubstitutionMappingBase(InstanceModelMixin):
                           'node_fk',
                           'capability_fk',
                           'requirement_template_fk']
-
-    @declared_attr
-    def node(cls):
-        return relationship.one_to_one(cls, 'node')
-
-    @declared_attr
-    def capability(cls):
-        return relationship.one_to_one(cls, 'capability')
-
-    @declared_attr
-    def requirement_template(cls):
-        return relationship.one_to_one(cls, 'requirement_template')
 
     # region foreign keys
 
@@ -952,6 +1049,43 @@ class SubstitutionMappingBase(InstanceModelMixin):
     def requirement_template_fk(cls):
         """For Substitution one-to-one to RequirementTemplate"""
         return relationship.foreign_key('requirement_template', nullable=True)
+
+    # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def substitution(cls):
+        return relationship.many_to_one(cls, 'substitution', back_populates='mappings')
+
+    @declared_attr
+    def node(cls):
+        return relationship.one_to_one(cls, 'node', back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def capability(cls):
+        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def requirement_template(cls):
+        return relationship.one_to_one(
+            cls, 'requirement_template', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    # endregion
+
+    # region many_to_many relationships
 
     # endregion
 
@@ -1002,12 +1136,10 @@ class RelationshipBase(InstanceModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interfaces`}
-
     :ivar source_position: ??
     :vartype source_position: int
     :ivar target_position: ??
     :vartype target_position: int
-
     :ivar source_node: Source node
     :vartype source_node: :class:`Node`
     :ivar target_node: Target node
@@ -1026,37 +1158,6 @@ class RelationshipBase(InstanceModelMixin):
                           'relationship_template_fk',
                           'source_node_name',
                           'target_node_name']
-
-    @declared_attr
-    def relationship_template(cls):
-        return relationship.many_to_one(cls, 'relationship_template')
-
-    @declared_attr
-    def requirement_template(cls):
-        return relationship.many_to_one(cls, 'requirement_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    @declared_attr
-    def target_capability(cls):
-        return relationship.one_to_one(cls, 'capability')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
-
-    # region orchestration
-
-    source_position = Column(Integer) # ???
-    target_position = Column(Integer) # ???
-
-    # endregion
 
     # region foreign keys
 
@@ -1105,6 +1206,63 @@ class RelationshipBase(InstanceModelMixin):
         return association_proxy('target_node', 'name')
 
     # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def target_capability(cls):
+        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def tasks(cls):
+        return relationship.one_to_many(cls, 'task')
+
+    @declared_attr
+    def interfaces(cls):
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def source_node(cls):
+        return relationship.many_to_one(
+            cls, 'node', fk='source_node_fk', back_populates='outbound_relationships')
+
+    @declared_attr
+    def target_node(cls):
+        return relationship.many_to_one(
+            cls, 'node', fk='target_node_fk', back_populates='inbound_relationships')
+
+    @declared_attr
+    def relationship_template(cls):
+        return relationship.many_to_one(cls, 'relationship_template')
+
+    @declared_attr
+    def requirement_template(cls):
+        return relationship.many_to_one(cls, 'requirement_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+
+    # endregion
+
+    source_position = Column(Integer) # ???
+    target_position = Column(Integer) # ???
 
     @property
     def as_raw(self):
@@ -1166,7 +1324,6 @@ class CapabilityBase(InstanceModelMixin):
     :vartype occurrences: int
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
-
     :ivar node: Containing node
     :vartype node: :class:`Node`
     :ivar relationship: Available when we are the target of a relationship
@@ -1180,22 +1337,6 @@ class CapabilityBase(InstanceModelMixin):
     __private_fields__ = ['capability_fk',
                           'node_fk',
                           'capability_template_fk']
-
-    @declared_attr
-    def capability_template(cls):
-        return relationship.many_to_one(cls, 'capability_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    min_occurrences = Column(Integer, default=None)
-    max_occurrences = Column(Integer, default=None)
-    occurrences = Column(Integer, default=0)
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # region foreign_keys
 
@@ -1215,6 +1356,46 @@ class CapabilityBase(InstanceModelMixin):
         return relationship.foreign_key('capability_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node(cls):
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def capability_template(cls):
+        return relationship.many_to_one(cls, 'capability_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+
+    # endregion
+
+    min_occurrences = Column(Integer, default=None)
+    max_occurrences = Column(Integer, default=None)
+    occurrences = Column(Integer, default=0)
 
     @property
     def has_enough_relationships(self):
@@ -1274,7 +1455,6 @@ class InterfaceBase(InstanceModelMixin):
     :vartype inputs: {basestring: :class:`Parameter`}
     :ivar operations: Operations
     :vartype operations: {basestring: :class:`Operation`}
-
     :ivar node: Containing node
     :vartype node: :class:`Node`
     :ivar group: Containing group
@@ -1290,24 +1470,6 @@ class InterfaceBase(InstanceModelMixin):
                           'group_fk',
                           'relationship_fk',
                           'interface_template_fk']
-
-    @declared_attr
-    def interface_template(cls):
-        return relationship.many_to_one(cls, 'interface_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    description = Column(Text)
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def operations(cls):
-        return relationship.one_to_many(cls, 'operation', dict_key='name')
 
     # region foreign_keys
 
@@ -1337,6 +1499,56 @@ class InterfaceBase(InstanceModelMixin):
         return relationship.foreign_key('interface_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def operations(cls):
+        return relationship.one_to_many(cls, 'operation', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node(cls):
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def relationship(cls):
+        return relationship.many_to_one(cls, 'relationship')
+
+    @declared_attr
+    def group(cls):
+        return relationship.many_to_one(cls, 'group')
+
+    @declared_attr
+    def interface_template(cls):
+        return relationship.many_to_one(cls, 'interface_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
+
+    # endregion
+
+    description = Column(Text)
 
     @property
     def as_raw(self):
@@ -1392,7 +1604,6 @@ class OperationBase(InstanceModelMixin):
     :vartype max_retries: int
     :ivar retry_interval: Interval between retries (in seconds)
     :vartype retry_interval: int
-
     :ivar interface: Containing interface
     :vartype interface: :class:`Interface`
     :ivar service: Containing service
@@ -1405,27 +1616,6 @@ class OperationBase(InstanceModelMixin):
                           'interface_fk',
                           'plugin_fk',
                           'operation_template_fk']
-
-    @declared_attr
-    def operation_template(cls):
-        return relationship.many_to_one(cls, 'operation_template')
-
-    description = Column(Text)
-
-    @declared_attr
-    def plugin_specification(cls):
-        return relationship.one_to_one(cls, 'plugin_specification')
-
-    implementation = Column(Text)
-    dependencies = Column(modeling_types.StrictList(item_cls=basestring))
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    executor = Column(Text)
-    max_retries = Column(Integer)
-    retry_interval = Column(Integer)
 
     # region foreign_keys
 
@@ -1450,6 +1640,56 @@ class OperationBase(InstanceModelMixin):
         return relationship.foreign_key('operation_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def plugin_specification(cls):
+        return relationship.one_to_one(
+            cls, 'plugin_specification', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def interface(cls):
+        return relationship.many_to_one(cls, 'interface')
+
+    @declared_attr
+    def operation_template(cls):
+        return relationship.many_to_one(cls, 'operation_template')
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
+
+    # endregion
+
+    description = Column(Text)
+    implementation = Column(Text)
+    dependencies = Column(modeling_types.StrictList(item_cls=basestring))
+    executor = Column(Text)
+    max_retries = Column(Integer)
+    retry_interval = Column(Integer)
+
+
 
     @property
     def as_raw(self):
@@ -1517,7 +1757,6 @@ class ArtifactBase(InstanceModelMixin):
     :vartype repository_credential: {basestring: basestring}
     :ivar properties: Associated parameters
     :vartype properties: {basestring: :class:`Parameter`}
-
     :ivar node: Containing node
     :vartype node: :class:`Node`
     """
@@ -1527,24 +1766,6 @@ class ArtifactBase(InstanceModelMixin):
     __private_fields__ = ['type_fk',
                           'node_fk',
                           'artifact_template_fk']
-
-    @declared_attr
-    def artifact_template(cls):
-        return relationship.many_to_one(cls, 'artifact_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type')
-
-    description = Column(Text)
-    source_path = Column(Text)
-    target_path = Column(Text)
-    repository_url = Column(Text)
-    repository_credential = Column(modeling_types.StrictDict(basestring, basestring))
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # region foreign_keys
 
@@ -1564,6 +1785,44 @@ class ArtifactBase(InstanceModelMixin):
         return relationship.foreign_key('artifact_template', nullable=True)
 
     # endregion
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+    @declared_attr
+    def node(cls):
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def artifact_template(cls):
+        return relationship.many_to_one(cls, 'artifact_template')
+
+    @declared_attr
+    def type(cls):
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+    # endregion
+
+    # region many_to_many relationships
+    @declared_attr
+    def properties(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
+    # endregion
+
+    description = Column(Text)
+    source_path = Column(Text)
+    target_path = Column(Text)
+    repository_url = Column(Text)
+    repository_credential = Column(modeling_types.StrictDict(basestring, basestring))
 
     @property
     def as_raw(self):

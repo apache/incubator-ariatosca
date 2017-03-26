@@ -103,8 +103,16 @@ class ExecutionBase(ModelMixin):
     workflow_name = Column(Text)
 
     @declared_attr
+    def logs(cls):
+        return relationship.one_to_many(cls, 'log')
+
+    @declared_attr
     def service(cls):
         return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def tasks(cls):
+        return relationship.one_to_many(cls, 'task')
 
     # region foreign keys
 
@@ -185,6 +193,10 @@ class PluginBase(ModelMixin):
 
     __tablename__ = 'plugin'
 
+    @declared_attr
+    def tasks(cls):
+        return relationship.one_to_many(cls, 'task')
+
     archive_name = Column(Text, nullable=False, index=True)
     distribution = Column(Text)
     distribution_release = Column(Text)
@@ -237,6 +249,10 @@ class TaskBase(ModelMixin):
     RUNS_ON = (RUNS_ON_NODE, RUNS_ON_SOURCE, RUNS_ON_TARGET)
 
     INFINITE_RETRIES = -1
+
+    @declared_attr
+    def logs(cls):
+        return relationship.one_to_many(cls, 'log')
 
     @declared_attr
     def node(cls):
