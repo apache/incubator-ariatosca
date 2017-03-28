@@ -39,8 +39,8 @@ from aria.orchestrator.workflows.builtin.workflows import (
 
 SERVICE_NAME = 'test_service_name'
 SERVICE_TEMPLATE_NAME = 'test_service_template_name'
+NODE_TEMPLATE_NAME = 'test_node_template'
 WORKFLOW_NAME = 'test_workflow_name'
-EXECUTION_NAME = 'test_execution_name'
 TASK_RETRY_INTERVAL = 1
 TASK_MAX_ATTEMPTS = 1
 
@@ -81,6 +81,33 @@ def create_service(service_template, name=SERVICE_NAME):
     )
 
 
+def create_node_template(service_template,
+                         name=NODE_TEMPLATE_NAME,
+                         type=models.Type(variant='node', name='test_node_type'),
+                         capability_templates=None,
+                         requirement_templates=None,
+                         interface_templates=None,
+                         default_instances=1,
+                         min_instances=1,
+                         max_instances=1):
+    capability_templates = capability_templates or {}
+    requirement_templates = requirement_templates or []
+    interface_templates = interface_templates or {}
+    node_template = models.NodeTemplate(
+        name=name,
+        type=type,
+        capability_templates=capability_templates,
+        requirement_templates=requirement_templates,
+        interface_templates=interface_templates,
+        default_instances=default_instances,
+        min_instances=min_instances,
+        max_instances=max_instances,
+        service_template=service_template)
+
+    service_template.node_templates[node_template.name] = node_template
+    return node_template
+
+
 def create_dependency_node_template(service_template, name=DEPENDENCY_NODE_TEMPLATE_NAME):
     node_type = service_template.node_types.get_descendant('test_node_type')
     capability_type = service_template.capability_types.get_descendant('test_capability_type')
@@ -89,18 +116,12 @@ def create_dependency_node_template(service_template, name=DEPENDENCY_NODE_TEMPL
         name='capability',
         type=capability_type
     )
-
-    node_template = models.NodeTemplate(
+    return create_node_template(
+        service_template=service_template,
         name=name,
         type=node_type,
-        capability_templates=_dictify(capability_template),
-        default_instances=1,
-        min_instances=1,
-        max_instances=1,
-        service_template=service_template
+        capability_templates=_dictify(capability_template)
     )
-    service_template.node_templates[node_template.name] = node_template
-    return node_template
 
 
 def create_dependent_node_template(
@@ -111,29 +132,26 @@ def create_dependent_node_template(
         name='requirement',
         target_node_template=dependency_node_template
     )
-
-    node_template = models.NodeTemplate(
+    return create_node_template(
+        service_template=service_template,
         name=name,
         type=the_type,
-        default_instances=1,
-        min_instances=1,
-        max_instances=1,
         interface_templates=_dictify(get_standard_interface_template(service_template)),
         requirement_templates=[requirement_template],
-        service_template=service_template
     )
-    service_template.node_templates[node_template.name] = node_template
-    return node_template
 
 
-def create_node(name, dependency_node_template, service):
+def create_node(name, dependency_node_template, service, state=models.Node.INITIAL,
+                runtime_properties=None):
+    runtime_properties = runtime_properties or {}
+    # tmp_runtime_properties = {'ip': '1.1.1.1'}
     node = models.Node(
         name=name,
         type=dependency_node_template.type,
-        runtime_properties={'ip': '1.1.1.1'},
+        runtime_properties=runtime_properties,
         version=None,
         node_template=dependency_node_template,
-        state=models.Node.INITIAL,
+        state=state,
         scaling_groups=[],
         service=service,
         interfaces=get_standard_interface(service),
@@ -168,6 +186,12 @@ def create_interface_template(service_template, interface_name, operation_name,
 def create_interface(service, interface_name, operation_name, operation_kwargs=None,
                      interface_kwargs=None):
     the_type = service.service_template.interface_types.get_descendant('test_interface_type')
+
+    if operation_kwargs and operation_kwargs.get('inputs'):
+        operation_kwargs['inputs'] = dict(
+            (input_name, models.Parameter.wrap(input_name, input_value))
+            for input_name, input_value in operation_kwargs['inputs'].iteritems())
+
     operation = models.Operation(
         name=operation_name,
         **(operation_kwargs or {})
@@ -180,13 +204,14 @@ def create_interface(service, interface_name, operation_name, operation_kwargs=N
     )
 
 
-def create_execution(service):
+def create_execution(service, status=models.Execution.PENDING):
     return models.Execution(
         service=service,
-        status=models.Execution.STARTED,
+        status=status,
         workflow_name=WORKFLOW_NAME,
+        created_at=datetime.utcnow(),
         started_at=datetime.utcnow(),
-        parameters=None
+        inputs={}
     )
 
 
@@ -212,6 +237,11 @@ def create_plugin_specification(name='test_plugin', version='0.1'):
         name=name,
         version=version
     )
+
+
+def create_parameter(name, value):
+    p = models.Parameter()
+    return p.wrap(name, value)
 
 
 def _dictify(item):

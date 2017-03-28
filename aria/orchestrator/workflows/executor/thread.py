@@ -21,7 +21,9 @@ import Queue
 import threading
 
 from aria.utils import imports
+
 from .base import BaseExecutor
+from ....modeling.models import Parameter
 
 
 class ThreadExecutor(BaseExecutor):
@@ -58,7 +60,7 @@ class ThreadExecutor(BaseExecutor):
                 self._task_started(task)
                 try:
                     task_func = imports.load_attribute(task.implementation)
-                    inputs = dict((k, v.value) for k, v in task.inputs.iteritems())
+                    inputs = Parameter.unwrap_dict(task.inputs)
                     task_func(ctx=task.context, **inputs)
                     self._task_succeeded(task)
                 except BaseException as e:

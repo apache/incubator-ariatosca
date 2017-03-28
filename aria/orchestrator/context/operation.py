@@ -36,7 +36,6 @@ class BaseOperationContext(BaseContext):
                  service_id,
                  task_id,
                  actor_id,
-                 execution_id,
                  **kwargs):
         super(BaseOperationContext, self).__init__(
             name=name,
@@ -47,7 +46,6 @@ class BaseOperationContext(BaseContext):
         self._task_id = task_id
         self._actor_id = actor_id
         self._thread_local = threading.local()
-        self._execution_id = execution_id
         self._register_logger(task_id=self.task.id)
 
     def __repr__(self):

@@ -15,6 +15,7 @@
 
 import errno
 import os
+import shutil
 
 
 def makedirs(path):
@@ -26,3 +27,15 @@ def makedirs(path):
     except IOError as e:
         if e.errno != errno.EEXIST:
             raise
+
+def remove_if_exists(path):
+
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+
+    except OSError as e:
+        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
+            raise  # re-raise exception if a different error occurred

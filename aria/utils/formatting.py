@@ -83,6 +83,34 @@ def full_type_name(value):
     return name if module == '__builtin__' else '%s.%s' % (module, name)
 
 
+def decode_list(data):
+    decoded_list = []
+    for item in data:
+        if isinstance(item, unicode):
+            item = item.encode('utf-8')
+        elif isinstance(item, list):
+            item = decode_list(item)
+        elif isinstance(item, dict):
+            item = decode_dict(item)
+        decoded_list.append(item)
+    return decoded_list
+
+
+def decode_dict(data):
+    decoded_dict = {}
+    for key, value in data.iteritems():
+        if isinstance(key, unicode):
+            key = key.encode('utf-8')
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+        elif isinstance(value, list):
+            value = decode_list(value)
+        elif isinstance(value, dict):
+            value = decode_dict(value)
+        decoded_dict[key] = value
+    return decoded_dict
+
+
 def safe_str(value):
     """
     Like :code:`str` coercion, but makes sure that Unicode strings are properly

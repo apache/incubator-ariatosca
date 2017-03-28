@@ -19,7 +19,6 @@ Workflow and operation contexts
 
 import threading
 from contextlib import contextmanager
-from datetime import datetime
 
 from .exceptions import ContextException
 from .common import BaseContext
@@ -35,35 +34,20 @@ class WorkflowContext(BaseContext):
                  task_max_attempts=1,
                  task_retry_interval=0,
                  task_ignore_failure=False,
-                 execution_id=None,
                  *args, **kwargs):
         super(WorkflowContext, self).__init__(*args, **kwargs)
         self._workflow_name = workflow_name
-        self.parameters = parameters or {}
+        self._parameters = parameters or {}
         self._task_max_attempts = task_max_attempts
         self._task_retry_interval = task_retry_interval
         self._task_ignore_failure = task_ignore_failure
-        # TODO: execution creation should happen somewhere else
-        # should be moved there, when such logical place exists
-        self._execution_id = execution_id or self._create_execution()
         self._register_logger()
 
     def __repr__(self):
         return (
             '{name}(deployment_id={self._service_id}, '
-            'workflow_name={self._workflow_name}'.format(
+            'workflow_name={self._workflow_name}, execution_id={self._execution_id})'.format(
                 name=self.__class__.__name__, self=self))
-
-    def _create_execution(self):
-        now = datetime.utcnow()
-        execution = self.model.execution.model_cls(
-            service=self.service,
-            workflow_name=self._workflow_name,
-            created_at=now,
-            parameters=self.parameters,
-        )
-        self.model.execution.put(execution)
-        return execution.id
 
     @property
     def logging_id(self):

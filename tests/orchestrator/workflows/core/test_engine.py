@@ -61,12 +61,18 @@ class BaseTest(object):
             retry_interval=None,
             ignore_failure=None):
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+
+        operation_kwargs = dict(implementation='{name}.{func.__name__}'.format(
+            name=__name__, func=func))
+        if inputs:
+            # the operation has to declare the inputs before those may be passed
+            operation_kwargs['inputs'] = inputs
+
         interface = mock.models.create_interface(
             node.service,
             'aria.interfaces.lifecycle',
             'create',
-            operation_kwargs=dict(implementation='{name}.{func.__name__}'.format(name=__name__,
-                                                                                 func=func))
+            operation_kwargs=operation_kwargs
         )
         node.interfaces[interface.name] = interface
         return api.task.OperationTask.for_node(

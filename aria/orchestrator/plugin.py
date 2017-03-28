@@ -46,8 +46,7 @@ class PluginManager(object):
             archive_name=metadata['archive_name'],
             supported_platform=metadata['supported_platform'],
             supported_py_versions=metadata['supported_python_versions'],
-            # Remove suffix colon after upgrading wagon to > 0.5.0
-            distribution=os_props.get('distribution:') or os_props.get('distribution'),
+            distribution=os_props.get('distribution'),
             distribution_release=os_props['distribution_version'],
             distribution_version=os_props['distribution_release'],
             package_name=metadata['package_name'],

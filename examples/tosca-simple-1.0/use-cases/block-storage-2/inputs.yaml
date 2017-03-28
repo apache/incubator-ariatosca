@@ -1,0 +1,3 @@
+storage_snapshot_id: "snapshot-id"
+storage_location: /mnt
+cpus: 4

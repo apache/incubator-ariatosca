@@ -14,12 +14,13 @@
 # limitations under the License.
 
 import os
+import logging
 import pprint
 import tempfile
 import zipfile
 
 import requests
-from ruamel import yaml # @UnresolvedImport
+from ruamel import yaml
 
 
 META_FILE = 'TOSCA-Metadata/TOSCA.meta'
@@ -135,7 +136,7 @@ class _CSARReader(object):
         self.logger.debug('Attempting to parse CSAR metadata YAML')
         with open(csar_metafile) as f:
             self.metadata.update(yaml.load(f))
-        self.logger.debug('CSAR metadata:\n{0}'.format(pprint.pformat(self.metadata)))
+        self.logger.debug('CSAR metadata:{0}{1}'.format(os.linesep, pprint.pformat(self.metadata)))
 
     def _validate(self):
         def validate_key(key, expected=None):
@@ -167,5 +168,11 @@ class _CSARReader(object):
                     f.write(chunk)
 
 
-def read(source, destination, logger):
+def read(source, destination=None, logger=None):
+    destination = destination or tempfile.mkdtemp()
+    logger = logger or logging.getLogger('dummy')
     return _CSARReader(source=source, destination=destination, logger=logger)
+
+
+def is_csar_archive(source):
+    return source.endswith('.csar')

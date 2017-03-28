@@ -15,6 +15,7 @@
 
 from __future__ import absolute_import  # so we can import standard 'threading'
 
+import sys
 import itertools
 import multiprocessing
 from threading import (Thread, Lock)
@@ -255,3 +256,26 @@ class LockedList(list):
 
     def __exit__(self, the_type, value, traceback):
         return self.lock.__exit__(the_type, value, traceback)
+
+
+class ExceptionThread(Thread):
+    """
+    A thread from which top level exceptions can be retrieved or reraised
+    """
+    def __init__(self, *args, **kwargs):
+        Thread.__init__(self, *args, **kwargs)
+        self.exception = None
+
+    def run(self):
+        try:
+            super(ExceptionThread, self).run()
+        except BaseException:
+            self.exception = sys.exc_info()
+
+    def is_error(self):
+        return self.exception is not None
+
+    def raise_error_if_exists(self):
+        if self.is_error():
+            type_, value, trace = self.exception
+            raise type_, value, trace

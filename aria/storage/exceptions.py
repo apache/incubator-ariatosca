@@ -23,3 +23,7 @@ class StorageError(exceptions.AriaError):
     General storage exception
     """
     pass
+
+
+class NotFoundError(StorageError):
+    pass

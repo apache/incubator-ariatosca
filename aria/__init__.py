@@ -84,6 +84,6 @@ def application_resource_storage(api, api_kwargs=None, initiator=None, initiator
 
     return storage.ResourceStorage(api_cls=api,
                                    api_kwargs=api_kwargs,
-                                   items=['blueprint', 'deployment', 'plugin'],
+                                   items=['service_template', 'service', 'plugin'],
                                    initiator=initiator,
                                    initiator_kwargs=initiator_kwargs)

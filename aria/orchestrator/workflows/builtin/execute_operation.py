@@ -17,7 +17,7 @@
 Builtin execute_operation workflow
 """
 
-from ..api.task import OperationTask
+from . import utils
 from ... import workflow
 
 
@@ -28,7 +28,6 @@ def execute_operation(
         interface_name,
         operation_name,
         operation_kwargs,
-        allow_kwargs_override,
         run_by_dependency_order,
         type_names,
         node_template_ids,
@@ -41,7 +40,6 @@ def execute_operation(
     :param TaskGraph graph: the graph which will describe the workflow.
     :param basestring operation: the operation name to execute
     :param dict operation_kwargs:
-    :param bool allow_kwargs_override:
     :param bool run_by_dependency_order:
     :param type_names:
     :param node_template_ids:
@@ -71,8 +69,7 @@ def execute_operation(
                 node=node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                operation_kwargs=operation_kwargs,
-                allow_kwargs_override=allow_kwargs_override
+                operation_kwargs=operation_kwargs
             )
         )
 
@@ -108,21 +105,16 @@ def _create_node_task(
         node,
         interface_name,
         operation_name,
-        operation_kwargs,
-        allow_kwargs_override):
+        operation_kwargs):
     """
     A workflow which executes a single operation
     :param node: the node instance to install
     :param basestring operation: the operation name
     :param dict operation_kwargs:
-    :param bool allow_kwargs_override:
     :return:
     """
 
-    if allow_kwargs_override is not None:
-        operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
-
-    return OperationTask.for_node(
+    return utils.create_node_task(
         node=node,
         interface_name=interface_name,
         operation_name=operation_name,

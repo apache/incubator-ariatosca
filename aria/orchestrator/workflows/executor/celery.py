@@ -22,6 +22,8 @@ import Queue
 
 from aria.orchestrator.workflows.executor import BaseExecutor
 
+from ....modeling.models import Parameter
+
 
 class CeleryExecutor(BaseExecutor):
     """
@@ -44,7 +46,7 @@ class CeleryExecutor(BaseExecutor):
 
     def execute(self, task):
         self._tasks[task.id] = task
-        inputs = dict((k, v.value) for k, v in task.inputs.iteritems())
+        inputs = Parameter.unwrap_dict(task.inputs.iteritems())
         inputs['ctx'] = task.context
         self._results[task.id] = self._app.send_task(
             task.operation_mapping,

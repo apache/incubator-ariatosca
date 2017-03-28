@@ -4,28 +4,30 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
-
-# ----------------------------------------------------------------------------------
 # Since the tool we are using to generate our requirements.txt, `pip-tools`,
 # does not currently support conditional dependencies (;), we're adding our original
-# conditional dependencies here manually.
+# conditional dependencies here as comments, and manually adding them to our
+# generated requirements.txt file.
 # The relevant pip-tools issue: https://github.com/jazzband/pip-tools/issues/435
 
-importlib==1.0.4 ; python_version < '2.7'
-ordereddict==1.1 ; python_version < '2.7'
-total-ordering==0.1.0 ; python_version < '2.7'
+importlib ; python_version < '2.7'
+ordereddict ; python_version < '2.7'
+total-ordering ; python_version < '2.7'  # only one version on pypi
 # Fabric makes use of this library, but doesn't bring it :(
 pypiwin32==219 ; sys_platform == 'win32'
 # ----------------------------------------------------------------------------------
 
-appdirs==1.4.3            # via setuptools
 args==0.1.0               # via clint
 asn1crypto==0.22.0        # via cryptography
+backports.shutil_get_terminal_size==1.0.0
 blinker==1.4
 bottle==0.12.13
 cachecontrol[filecache]==0.12.1
 cffi==1.10.0              # via cryptography
+click==4.1
+click_didyoumean==0.0.3
 clint==0.5.1
+colorama==0.3.4
 cryptography==1.8.1       # via paramiko
 decorator==4.0.11         # via networkx
 enum34==1.1.6             # via cryptography
@@ -35,11 +37,13 @@ ipaddress==1.0.18         # via cryptography
 jinja2==2.8.1
 jsonpickle==0.9.4
 lockfile==0.12.2          # via cachecontrol
+logutils==0.3.4.1
 markupsafe==1.0           # via jinja2
 msgpack-python==0.4.8     # via cachecontrol
 networkx==1.9.1
-packaging==16.8           # via cryptography, setuptools
+packaging==16.8           # via cryptography
 paramiko==2.1.2           # via fabric
+prettytable==0.7.2
 pyasn1==0.2.3             # via paramiko
 pycparser==2.17           # via cffi
 pyparsing==2.2.0          # via packaging
@@ -49,7 +53,7 @@ retrying==1.3.3
 ruamel.ordereddict==0.4.9  # via ruamel.yaml
 ruamel.yaml==0.11.15
 shortuuid==0.5.0
-six==1.10.0               # via cryptography, packaging, retrying, setuptools
+six==1.10.0               # via cryptography, packaging, retrying
 sqlalchemy==1.1.6
 wagon==0.6.0
 wheel==0.29.0             # via wagon

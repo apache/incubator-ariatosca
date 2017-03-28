@@ -16,6 +16,8 @@
 """
 Workflow related Exception classes
 """
+import os
+
 from .. import exceptions
 
 
@@ -52,10 +54,10 @@ class ProcessException(ExecutorException):
         Describes the error in detail
         """
         return (
-            'Command "{error.command}" executed with an error.\n'
-            'code: {error.return_code}\n'
-            'error: {error.stderr}\n'
-            'output: {error.stdout}'.format(error=self))
+            'Command "{error.command}" executed with an error.{0}'
+            'code: {error.return_code}{0}'
+            'error: {error.stderr}{0}'
+            'output: {error.stdout}'.format(os.linesep, error=self))
 
 
 class AriaEngineError(exceptions.AriaError):

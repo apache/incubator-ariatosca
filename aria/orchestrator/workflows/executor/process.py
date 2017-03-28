@@ -48,6 +48,7 @@ from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.storage import instrumentation
 from aria.modeling import types as modeling_types
+from aria.modeling.models import Parameter
 
 _IS_WIN = os.name == 'nt'
 
@@ -148,7 +149,7 @@ class ProcessExecutor(base.BaseExecutor):
         return {
             'task_id': task.id,
             'implementation': task.implementation,
-            'operation_inputs': dict((k, v.value) for k, v in task.inputs.iteritems()),
+            'operation_inputs': Parameter.unwrap_dict(task.inputs),
             'port': self._server_port,
             'context': task.context.serialization_dict,
         }

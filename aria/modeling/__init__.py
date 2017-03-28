@@ -19,6 +19,7 @@ from . import (
     mixins,
     types,
     models,
+    utils,
     service_template as _service_template_bases,
     service_instance as _service_instance_bases,
     service_changes as _service_changes_bases,
@@ -45,4 +46,5 @@ __all__ = (
     'types',
     'models',
     'model_bases',
+    'utils'
 )

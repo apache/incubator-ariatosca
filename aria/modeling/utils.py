@@ -13,12 +13,100 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from json import JSONEncoder
+from StringIO import StringIO
+
+from . import exceptions
 from ..parser.consumption import ConsumptionContext
 from ..parser.exceptions import InvalidValueError
 from ..parser.presentation import Value
 from ..utils.collections import OrderedDict
 from ..utils.console import puts
-from .exceptions import CannotEvaluateFunctionException
+from ..utils.type import validate_value_type
+
+
+class ModelJSONEncoder(JSONEncoder):
+    def default(self, o):  # pylint: disable=method-hidden
+        from .mixins import ModelMixin
+        if isinstance(o, ModelMixin):
+            if hasattr(o, 'value'):
+                dict_to_return = o.to_dict(fields=('value',))
+                return dict_to_return['value']
+            else:
+                return o.to_dict()
+        else:
+            return JSONEncoder.default(self, o)
+
+
+def create_inputs(inputs, template_inputs):
+    """
+    :param inputs: key-value dict
+    :param template_inputs: parameter name to parameter object dict
+    :return: dict of parameter name to Parameter models
+    """
+    merged_inputs = _merge_and_validate_inputs(inputs, template_inputs)
+
+    from . import models
+    input_models = []
+    for input_name, input_val in merged_inputs.iteritems():
+        parameter = models.Parameter(
+            name=input_name,
+            type_name=template_inputs[input_name].type_name,
+            description=template_inputs[input_name].description,
+            value=input_val)
+        input_models.append(parameter)
+
+    return dict((inp.name, inp) for inp in input_models)
+
+
+def _merge_and_validate_inputs(inputs, template_inputs):
+    """
+    :param inputs: key-value dict
+    :param template_inputs: parameter name to parameter object dict
+    :return:
+    """
+    merged_inputs = inputs.copy()
+
+    missing_inputs = []
+    wrong_type_inputs = {}
+    for input_name, input_template in template_inputs.iteritems():
+        if input_name not in inputs:
+            if input_template.value is not None:
+                merged_inputs[input_name] = input_template.value  # apply default value
+            else:
+                missing_inputs.append(input_name)
+        else:
+            # Validate input type
+            try:
+                validate_value_type(inputs[input_name], input_template.type_name)
+            except ValueError:
+                wrong_type_inputs[input_name] = input_template.type_name
+            except RuntimeError:
+                # TODO: This error shouldn't be raised (or caught), but right now we lack support
+                # for custom data_types, which will raise this error. Skipping their validation.
+                pass
+
+    if missing_inputs:
+        raise exceptions.MissingRequiredInputsException(
+            'Required inputs {0} have not been specified - expected inputs: {1}'
+            .format(missing_inputs, template_inputs.keys()))
+
+    if wrong_type_inputs:
+        error_message = StringIO()
+        for param_name, param_type in wrong_type_inputs.iteritems():
+            error_message.write('Input "{0}" must be of type {1}{2}'
+                                .format(param_name, param_type, os.linesep))
+        raise exceptions.InputsOfWrongTypeException(error_message.getvalue())
+
+    undeclared_inputs = [input_name for input_name in inputs.keys()
+                         if input_name not in template_inputs]
+    if undeclared_inputs:
+        raise exceptions.UndeclaredInputsException(
+            'Undeclared inputs have been specified: {0}; Expected inputs: {1}'
+            .format(undeclared_inputs, template_inputs.keys()))
+
+    return merged_inputs
 
 
 def coerce_value(container, value, report_issues=False):
@@ -35,7 +123,7 @@ def coerce_value(container, value, report_issues=False):
         try:
             value = value._evaluate(context, container)
             value = coerce_value(container, value, report_issues)
-        except CannotEvaluateFunctionException:
+        except exceptions.CannotEvaluateFunctionException:
             pass
         except InvalidValueError as e:
             if report_issues:

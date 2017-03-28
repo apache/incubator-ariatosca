@@ -44,17 +44,19 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
+        inputs = {'test_input': True}
+
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
             operation_kwargs=dict(plugin=plugin,
-                                  implementation='op_path'))
+                                  implementation='op_path',
+                                  inputs=inputs),)
 
         node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
         node.interfaces[interface_name] = interface
         ctx.model.node.update(node)
-        inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
         ignore_failure = True
@@ -90,17 +92,19 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.plugin.update(plugin)
 
+        inputs = {'test_input': True}
+
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
             operation_kwargs=dict(plugin=plugin,
-                                  implementation='op_path')
+                                  implementation='op_path',
+                                  inputs=inputs)
         )
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
 
@@ -133,17 +137,19 @@ class TestOperationTask(object):
         plugin = mock.models.create_plugin('test_plugin', '0.1')
         ctx.model.node.update(plugin)
 
+        inputs = {'test_input': True}
+
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
             operation_kwargs=dict(plugin=plugin,
-                                  implementation='op_path')
+                                  implementation='op_path',
+                                  inputs=inputs)
         )
 
         relationship = ctx.model.relationship.list()[0]
         relationship.interfaces[interface.name] = interface
-        inputs = {'test_input': True}
         max_attempts = 10
         retry_interval = 10
 

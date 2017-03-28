@@ -59,7 +59,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         result = query.first()
 
         if not result:
-            raise exceptions.StorageError(
+            raise exceptions.NotFoundError(
                 'Requested `{0}` with ID `{1}` was not found'
                 .format(self.model_cls.__name__, entry_id)
             )
@@ -69,13 +69,13 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         assert hasattr(self.model_cls, 'name')
         result = self.list(include=include, filters={'name': entry_name})
         if not result:
-            raise exceptions.StorageError(
-                'Requested {0} with NAME `{1}` was not found'
+            raise exceptions.NotFoundError(
+                'Requested {0} with name `{1}` was not found'
                 .format(self.model_cls.__name__, entry_name)
             )
         elif len(result) > 1:
             raise exceptions.StorageError(
-                'Requested {0} with NAME `{1}` returned more than 1 value'
+                'Requested {0} with name `{1}` returned more than 1 value'
                 .format(self.model_cls.__name__, entry_name)
             )
         else:

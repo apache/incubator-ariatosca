@@ -24,6 +24,7 @@ import StringIO
 import wsgiref.simple_server
 
 import bottle
+from aria import modeling
 
 from .. import exceptions
 
@@ -111,7 +112,7 @@ class CtxProxy(object):
             result = json.dumps({
                 'type': result_type,
                 'payload': payload
-            })
+            }, cls=modeling.utils.ModelJSONEncoder)
         except Exception as e:
             traceback_out = StringIO.StringIO()
             traceback.print_exc(file=traceback_out)

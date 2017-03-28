@@ -61,7 +61,7 @@ except IOError:
     extras_require = {}
 
 
-console_scripts = ['aria = aria.cli.cli:main']
+console_scripts = ['aria = aria.cli.main:main']
 
 
 def _generate_user_options(command):

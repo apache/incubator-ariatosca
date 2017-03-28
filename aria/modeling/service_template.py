@@ -280,7 +280,7 @@ class ServiceTemplateBase(TemplateModelMixin):
             ('interface_types', formatting.as_raw(self.interface_types)),
             ('artifact_types', formatting.as_raw(self.artifact_types))))
 
-    def instantiate(self, container):
+    def instantiate(self, container, inputs=None):  # pylint: disable=arguments-differ
         from . import models
         context = ConsumptionContext.get_thread_local()
         now = datetime.now()
@@ -288,9 +288,10 @@ class ServiceTemplateBase(TemplateModelMixin):
                                  updated_at=now,
                                  description=deepcopy_with_locators(self.description),
                                  service_template=self)
-        #service.name = '{0}_{1}'.format(self.name, service.id)
-
         context.modeling.instance = service
+
+        service.inputs = utils.create_inputs(inputs or {}, self.inputs)
+        # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 
         for plugin_specification in self.plugin_specifications.itervalues():
             if plugin_specification.enabled:
@@ -316,14 +317,7 @@ class ServiceTemplateBase(TemplateModelMixin):
         if self.substitution_template is not None:
             service.substitution = self.substitution_template.instantiate(container)
 
-        utils.instantiate_dict(self, service.inputs, self.inputs)
         utils.instantiate_dict(self, service.outputs, self.outputs)
-
-        for name, the_input in context.modeling.inputs.iteritems():
-            if name not in service.inputs:
-                context.validation.report('input "{0}" is not supported'.format(name))
-            else:
-                service.inputs[name].value = the_input
 
         return service
 
@@ -448,8 +442,7 @@ class NodeTemplateBase(TemplateModelMixin):
     __tablename__ = 'node_template'
 
     __private_fields__ = ['type_fk',
-                          'service_template_fk',
-                          'service_template_name']
+                          'service_template_fk']
 
     # region foreign_keys
 
@@ -471,6 +464,11 @@ class NodeTemplateBase(TemplateModelMixin):
     def service_template_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service_template', 'name')
+
+    @declared_attr
+    def type_name(cls):
+        """Required for use by SQLAlchemy queries"""
+        return association_proxy('type', 'name')
 
     # endregion
 
@@ -558,6 +556,7 @@ class NodeTemplateBase(TemplateModelMixin):
                            type=self.type,
                            description=deepcopy_with_locators(self.description),
                            state=models.Node.INITIAL,
+                           runtime_properties={},
                            node_template=self)
         utils.instantiate_dict(node, node.properties, self.properties)
         utils.instantiate_dict(node, node.interfaces, self.interface_templates)

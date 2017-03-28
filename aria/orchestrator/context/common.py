@@ -19,7 +19,6 @@ A common context for both workflow and operation
 
 import logging
 from contextlib import contextmanager
-from datetime import datetime
 from functools import partial
 
 import jinja2
@@ -55,6 +54,7 @@ class BaseContext(object):
             self,
             name,
             service_id,
+            execution_id,
             model_storage,
             resource_storage,
             workdir=None,
@@ -65,27 +65,17 @@ class BaseContext(object):
         self._model = model_storage
         self._resource = resource_storage
         self._service_id = service_id
+        self._execution_id = execution_id
         self._workdir = workdir
         self.logger = None
 
-    def _create_execution(self):
-        now = datetime.utcnow()
-        execution = self.model.execution.model_cls(
-            service_instance=self.service_instance,
-            workflow_name=self._workflow_name,
-            created_at=now,
-            parameters=self.parameters,
-        )
-        self.model.execution.put(execution)
-        return execution.id
-
-    def _register_logger(self, logger_name=None, level=None, task_id=None):
-        self.logger = self.PrefixedLogger(logging.getLogger(logger_name or self.__class__.__name__),
-                                          self.logging_id,
-                                          task_id=task_id)
-        self.logger.addHandler(aria_logger.create_console_log_handler())
-        self.logger.addHandler(self._get_sqla_handler())
+    def _register_logger(self, level=None, task_id=None):
+        self.logger = self.PrefixedLogger(
+            logging.getLogger(aria_logger.TASK_LOGGER_NAME), self.logging_id, task_id=task_id)
         self.logger.setLevel(level or logging.DEBUG)
+        if not self.logger.handlers:
+            self.logger.addHandler(aria_logger.create_console_log_handler())
+            self.logger.addHandler(self._get_sqla_handler())
 
     def _get_sqla_handler(self):
         api_kwargs = {}
@@ -168,13 +158,13 @@ class BaseContext(object):
         Download a blueprint resource from the resource storage
         """
         try:
-            self.resource.deployment.download(entry_id=str(self.service.id),
-                                              destination=destination,
-                                              path=path)
+            self.resource.service.download(entry_id=str(self.service.id),
+                                           destination=destination,
+                                           path=path)
         except exceptions.StorageError:
-            self.resource.blueprint.download(entry_id=str(self.service_template.id),
-                                             destination=destination,
-                                             path=path)
+            self.resource.service_template.download(entry_id=str(self.service_template.id),
+                                                    destination=destination,
+                                                    path=path)
 
     def download_resource_and_render(self, destination, path=None, variables=None):
         """
@@ -193,9 +183,10 @@ class BaseContext(object):
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.read(entry_id=str(self.service.id), path=path)
+            return self.resource.service.read(entry_id=str(self.service.id), path=path)
         except exceptions.StorageError:
-            return self.resource.deployment.read(entry_id=str(self.service_template.id), path=path)
+            return self.resource.service_template.read(entry_id=str(self.service_template.id),
+                                                       path=path)
 
     def get_resource_and_render(self, path=None, variables=None):
         """

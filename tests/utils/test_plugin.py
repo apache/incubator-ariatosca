@@ -17,13 +17,14 @@ import os
 
 import pytest
 
-from aria import application_model_storage
 from aria.orchestrator import exceptions
-from aria.orchestrator import plugin
 from aria.utils.plugin import create as create_plugin
-from aria.storage import sql_mapi
 
-from .. import storage
+from ..fixtures import (  # pylint: disable=unused-import
+    plugins_dir,
+    plugin_manager,
+    inmemory_model as model
+)
 
 
 PACKAGE_NAME = 'mock-plugin'
@@ -45,26 +46,6 @@ class TestPluginManager(object):
         plugin_manager.install(mock_plugin)
         with pytest.raises(exceptions.PluginAlreadyExistsError):
             plugin_manager.install(mock_plugin)
-
-
-@pytest.fixture
-def model():
-    model = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
-                                      initiator=storage.init_inmemory_model_storage)
-    yield model
-    storage.release_sqlite_storage(model)
-
-
-@pytest.fixture
-def plugins_dir(tmpdir):
-    result = tmpdir.join('plugins')
-    result.mkdir()
-    return str(result)
-
-
-@pytest.fixture
-def plugin_manager(model, plugins_dir):
-    return plugin.PluginManager(model=model, plugins_dir=plugins_dir)
 
 
 @pytest.fixture
