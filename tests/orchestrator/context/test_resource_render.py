@@ -64,9 +64,9 @@ def resources(tmpdir, ctx):
     implicit_ctx_template_path.write(_IMPLICIT_CTX_TEMPLATE)
     variables_template_path = tmpdir.join(_VARIABLES_TEMPLATE_PATH)
     variables_template_path.write(_VARIABLES_TEMPLATE)
-    ctx.resource.deployment.upload(entry_id='1',
-                                   source=str(implicit_ctx_template_path),
-                                   path=_IMPLICIT_CTX_TEMPLATE_PATH)
-    ctx.resource.deployment.upload(entry_id='1',
-                                   source=str(variables_template_path),
-                                   path=_VARIABLES_TEMPLATE_PATH)
+    ctx.resource.service.upload(entry_id='1',
+                                source=str(implicit_ctx_template_path),
+                                path=_IMPLICIT_CTX_TEMPLATE_PATH)
+    ctx.resource.service.upload(entry_id='1',
+                                source=str(variables_template_path),
+                                path=_VARIABLES_TEMPLATE_PATH)

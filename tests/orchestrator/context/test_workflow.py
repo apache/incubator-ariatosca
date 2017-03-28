@@ -35,7 +35,7 @@ class TestWorkflowContext(object):
         assert execution.service_template == storage.service_template.get_by_name(
             models.SERVICE_TEMPLATE_NAME)
         assert execution.status == storage.execution.model_cls.PENDING
-        assert execution.parameters == {}
+        assert execution.inputs == {}
         assert execution.created_at <= datetime.utcnow()
 
     def test_subsequent_workflow_context_creation_do_not_fail(self, storage):
@@ -49,11 +49,13 @@ class TestWorkflowContext(object):
         :param storage:
         :return WorkflowContext:
         """
+        service = storage.service.get_by_name(models.SERVICE_NAME)
         return context.workflow.WorkflowContext(
             name='simple_context',
             model_storage=storage,
             resource_storage=None,
-            service_id=storage.service.get_by_name(models.SERVICE_NAME).id,
+            service_id=service,
+            execution_id=storage.execution.list(filters=dict(service=service))[0].id,
             workflow_name=models.WORKFLOW_NAME,
             task_max_attempts=models.TASK_MAX_ATTEMPTS,
             task_retry_interval=models.TASK_RETRY_INTERVAL
@@ -66,6 +68,8 @@ def storage():
         sql_mapi.SQLAlchemyModelAPI, initiator=test_storage.init_inmemory_model_storage)
     workflow_storage.service_template.put(models.create_service_template())
     service_template = workflow_storage.service_template.get_by_name(models.SERVICE_TEMPLATE_NAME)
-    workflow_storage.service.put(models.create_service(service_template))
+    service = models.create_service(service_template)
+    workflow_storage.service.put(service)
+    workflow_storage.execution.put(models.create_execution(service))
     yield workflow_storage
     test_storage.release_sqlite_storage(workflow_storage)

@@ -87,6 +87,9 @@ class ParameterBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
 
+    def unwrap(self):
+        return self.name, self.value
+
     @classmethod
     def wrap(cls, name, value, description=None):
         """
@@ -98,13 +101,11 @@ class ParameterBase(TemplateModelMixin):
         :param description: Description (optional)
         :type description: basestring
         """
-
-        from . import models
-        return models.Parameter(name=name,
-                                type_name=formatting.full_type_name(value)
-                                if value is not None else None,
-                                value=value,
-                                description=description)
+        return cls(name=name,
+                   type_name=formatting.full_type_name(value)
+                   if value is not None else None,
+                   value=value,
+                   description=description)
 
 
 class TypeBase(InstanceModelMixin):

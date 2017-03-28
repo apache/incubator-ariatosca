@@ -69,16 +69,17 @@ def test_node_operation_task_execution(ctx, thread_executor):
     interface_name = 'Standard'
     operation_name = 'create'
 
+    inputs = {'putput': True}
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         node.service,
         interface_name,
         operation_name,
-        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__))
+        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__),
+                              inputs=inputs)
     )
     node.interfaces[interface.name] = interface
     ctx.model.node.update(node)
-    inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
@@ -124,17 +125,18 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
     interface_name = 'Configure'
     operation_name = 'post_configure'
 
+    inputs = {'putput': True}
     relationship = ctx.model.relationship.list()[0]
     interface = mock.models.create_interface(
         relationship.source_node.service,
         interface_name,
         operation_name,
-        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__)),
+        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__),
+                              inputs=inputs),
     )
 
     relationship.interfaces[interface.name] = interface
     ctx.model.relationship.update(relationship)
-    inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
@@ -231,20 +233,20 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
     plugin = mock.models.create_plugin()
     ctx.model.plugin.put(plugin)
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    filename = 'test_file'
+    content = 'file content'
+    inputs = {'filename': filename, 'content': content}
     interface = mock.models.create_interface(
         node.service,
         interface_name,
         operation_name,
         operation_kwargs=dict(
             implementation='{0}.{1}'.format(__name__, _test_plugin_workdir.__name__),
-            plugin=plugin)
+            plugin=plugin,
+            inputs=inputs)
     )
     node.interfaces[interface.name] = interface
     ctx.model.node.update(node)
-
-    filename = 'test_file'
-    content = 'file content'
-    inputs = {'filename': filename, 'content': content}
 
     @workflow
     def basic_workflow(graph, **_):
@@ -277,20 +279,21 @@ def test_node_operation_logging(ctx, executor):
     interface_name, operation_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
 
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    interface = mock.models.create_interface(
-        node.service,
-        interface_name,
-        operation_name,
-        operation_kwargs=dict(
-            implementation=op_path(logged_operation, module_path=__name__))
-    )
-    node.interfaces[interface.name] = interface
-    ctx.model.node.update(node)
 
     inputs = {
         'op_start': 'op_start',
         'op_end': 'op_end',
     }
+    interface = mock.models.create_interface(
+        node.service,
+        interface_name,
+        operation_name,
+        operation_kwargs=dict(
+            implementation=op_path(logged_operation, module_path=__name__),
+            inputs=inputs)
+    )
+    node.interfaces[interface.name] = interface
+    ctx.model.node.update(node)
 
     @workflow
     def basic_workflow(graph, **_):
@@ -311,19 +314,19 @@ def test_relationship_operation_logging(ctx, executor):
     interface_name, operation_name = mock.operations.RELATIONSHIP_OPERATIONS_INSTALL[0]
 
     relationship = ctx.model.relationship.list()[0]
-    interface = mock.models.create_interface(
-        relationship.source_node.service,
-        interface_name,
-        operation_name,
-        operation_kwargs=dict(implementation=op_path(logged_operation, module_path=__name__))
-    )
-    relationship.interfaces[interface.name] = interface
-    ctx.model.relationship.update(relationship)
-
     inputs = {
         'op_start': 'op_start',
         'op_end': 'op_end',
     }
+    interface = mock.models.create_interface(
+        relationship.source_node.service,
+        interface_name,
+        operation_name,
+        operation_kwargs=dict(implementation=op_path(logged_operation, module_path=__name__),
+                              inputs=inputs)
+    )
+    relationship.interfaces[interface.name] = interface
+    ctx.model.relationship.update(relationship)
 
     @workflow
     def basic_workflow(graph, **_):

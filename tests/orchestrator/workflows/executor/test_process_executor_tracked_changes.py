@@ -90,17 +90,19 @@ def _run_workflow(context, executor, op_func, inputs=None):
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
         interface_name = 'test_interface'
         operation_name = 'operation'
+        wf_inputs = inputs or {}
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(implementation=_operation_mapping(op_func))
+            operation_kwargs=dict(implementation=_operation_mapping(op_func),
+                                  inputs=wf_inputs)
         )
         node.interfaces[interface.name] = interface
         task = api.task.OperationTask.for_node(node=node,
                                                interface_name=interface_name,
                                                operation_name=operation_name,
-                                               inputs=inputs or {})
+                                               inputs=wf_inputs)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter

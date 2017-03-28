@@ -17,10 +17,21 @@
 from .exceptions import ConsumerException
 from .context import ConsumptionContext
 from .style import Style
-from .consumer import Consumer, ConsumerChain
+from .consumer import (
+    Consumer,
+    ConsumerChain
+)
 from .presentation import Read
 from .validation import Validate
-from .modeling import ServiceTemplate, Types, ServiceInstance
+from .modeling import (
+    ServiceTemplate,
+    Types,
+    ServiceInstance,
+    FindHosts,
+    ConfigureOperations,
+    SatisfyRequirements,
+    ValidateCapabilities
+)
 from .inputs import Inputs
 
 __all__ = (
@@ -34,4 +45,7 @@ __all__ = (
     'ServiceTemplate',
     'Types',
     'ServiceInstance',
-    'Inputs')
+    'Inputs',
+    'SatisfyRequirements',
+    'ValidateCapabilities'
+)

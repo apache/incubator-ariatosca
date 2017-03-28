@@ -39,7 +39,6 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..orchestrator.exceptions import (TaskAbortException, TaskRetryException)
-from .types import Dict
 from .mixins import ModelMixin
 from . import (
     relationship,
@@ -55,9 +54,7 @@ class ExecutionBase(ModelMixin):
     __tablename__ = 'execution'
 
     __private_fields__ = ['service_fk',
-                          'service_name',
-                          'service_template',
-                          'service_template_name']
+                          'service_template']
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -97,17 +94,14 @@ class ExecutionBase(ModelMixin):
     ended_at = Column(DateTime, nullable=True, index=True)
     error = Column(Text, nullable=True)
     is_system_workflow = Column(Boolean, nullable=False, default=False)
-    parameters = Column(Dict)
     status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
     workflow_name = Column(Text)
 
-    @property
     def has_ended(self):
         return self.status in self.END_STATES
 
-    @property
     def is_active(self):
-        return not self.has_ended
+        return not self.has_ended() and self.status != self.PENDING
 
     @declared_attr
     def logs(cls):
@@ -120,6 +114,10 @@ class ExecutionBase(ModelMixin):
     @declared_attr
     def tasks(cls):
         return relationship.one_to_many(cls, 'task')
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
     # region foreign keys
 
@@ -264,10 +262,7 @@ class TaskBase(ModelMixin):
     __private_fields__ = ['node_fk',
                           'relationship_fk',
                           'plugin_fk',
-                          'execution_fk'
-                          'node_name',
-                          'relationship_name',
-                          'execution_name']
+                          'execution_fk']
 
     PENDING = 'pending'
     RETRYING = 'retrying'
@@ -322,11 +317,9 @@ class TaskBase(ModelMixin):
     ended_at = Column(DateTime, default=None)
     retry_count = Column(Integer, default=0)
 
-    @property
     def has_ended(self):
         return self.status in (self.SUCCESS, self.FAILED)
 
-    @property
     def is_waiting(self):
         return self.status in (self.PENDING, self.RETRYING)
 

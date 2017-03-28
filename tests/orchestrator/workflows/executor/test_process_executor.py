@@ -21,19 +21,18 @@ from contextlib import contextmanager
 
 import pytest
 
-from aria import application_model_storage
 from aria.modeling import models as aria_models
-from aria.storage import sql_mapi
-from aria.orchestrator import (
-    events,
-    plugin
-)
+from aria.orchestrator import events
 from aria.utils.plugin import create as create_plugin
 from aria.orchestrator.workflows.executor import process
 
-
 import tests.storage
 import tests.resources
+from tests.fixtures import (  # pylint: disable=unused-import
+    plugins_dir,
+    plugin_manager,
+    fs_model as model
+)
 
 
 class TestProcessExecutor(object):
@@ -72,27 +71,6 @@ class TestProcessExecutor(object):
         with pytest.raises(RuntimeError) as exc_info:
             executor.execute(task=None)
         assert 'closed' in exc_info.value.message
-
-
-@pytest.fixture
-def model(tmpdir):
-    result = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
-                                       initiator_kwargs=dict(base_dir=str(tmpdir)),
-                                       initiator=sql_mapi.init_storage)
-    yield result
-    tests.storage.release_sqlite_storage(result)
-
-
-@pytest.fixture
-def plugins_dir(tmpdir):
-    result = tmpdir.join('plugins')
-    result.mkdir()
-    return str(result)
-
-
-@pytest.fixture
-def plugin_manager(model, plugins_dir):
-    return plugin.PluginManager(model=model, plugins_dir=plugins_dir)
 
 
 @pytest.fixture

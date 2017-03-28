@@ -88,12 +88,12 @@ class Engine(logger.LoggerMixin):
     def _executable_tasks(self):
         now = datetime.utcnow()
         return (task for task in self._tasks_iter()
-                if task.is_waiting and
+                if task.is_waiting() and
                 task.due_at <= now and
                 not self._task_has_dependencies(task))
 
     def _ended_tasks(self):
-        return (task for task in self._tasks_iter() if task.has_ended)
+        return (task for task in self._tasks_iter() if task.has_ended())
 
     def _task_has_dependencies(self, task):
         return len(self._execution_graph.pred.get(task.id, {})) > 0
@@ -105,7 +105,7 @@ class Engine(logger.LoggerMixin):
         for _, data in self._execution_graph.nodes_iter(data=True):
             task = data['task']
             if isinstance(task, engine_task.OperationTask):
-                if not task.model_task.has_ended:
+                if not task.model_task.has_ended():
                     self._workflow_context.model.task.refresh(task.model_task)
             yield task
 

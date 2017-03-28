@@ -39,12 +39,17 @@ def simple(tmpdir, inmemory=False, context_kwargs=None, topology=None):
         api_kwargs=dict(directory=os.path.join(tmpdir, 'resources'))
     )
 
+    service_id = topology(model_storage)
+    execution = models.create_execution(model_storage.service.get(service_id))
+    model_storage.execution.put(execution)
+
     final_kwargs = dict(
         name='simple_context',
         model_storage=model_storage,
         resource_storage=resource_storage,
-        service_id=topology(model_storage),
+        service_id=service_id,
         workflow_name=models.WORKFLOW_NAME,
+        execution_id=execution.id,
         task_max_attempts=models.TASK_MAX_ATTEMPTS,
         task_retry_interval=models.TASK_RETRY_INTERVAL
     )

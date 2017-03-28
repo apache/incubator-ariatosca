@@ -10,6 +10,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# In order to create the requirements.txt file, execute
+# pip-compile --output-file requirements.txt requirements.in (pip-tools package is needed).
+
 PyYAML<3.13
 requests>=2.3.0, <2.14.0
 networkx>=1.9, <1.10 # version 1.10 dropped support of python 2.6
@@ -25,6 +28,12 @@ SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
 wagon==0.6.0
 bottle>=0.12.0, <0.13
 Fabric>=1.13.0, <1.14
+click>=4.1, < 5.0
+colorama>=0.3.3, < 0.3.5
+PrettyTable>=0.7,<0.8
+click_didyoumean==0.0.3
+backports.shutil_get_terminal_size==1.0.0
+logutils==0.3.4.1
 
 # Since the tool we are using to generate our requirements.txt, `pip-tools`,
 # does not currently support conditional dependencies (;), we're adding our original

@@ -15,6 +15,7 @@
 
 import sys
 import linecache
+import StringIO
 import traceback as tb
 
 import jsonpickle
@@ -87,6 +88,16 @@ def _print_stack(frame):
                                      name=Colored.cyan(name)))
             with indent(2):
                 puts(line)
+
+
+def get_exception_as_string(exc_type, exc_val, traceback):
+    s_traceback = StringIO.StringIO()
+    tb.print_exception(
+        etype=exc_type,
+        value=exc_val,
+        tb=traceback,
+        file=s_traceback)
+    return s_traceback.getvalue()
 
 
 class _WrappedException(Exception):

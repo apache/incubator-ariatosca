@@ -25,6 +25,13 @@ class OrchestratorError(AriaError):
     pass
 
 
+class InvalidPluginError(AriaError):
+    """
+    Raised when an invalid plugin is validated unsuccessfully
+    """
+    pass
+
+
 class PluginAlreadyExistsError(AriaError):
     """
     Raised when a plugin with the same package name and package version already exists
@@ -44,5 +51,26 @@ class TaskRetryException(RuntimeError):
 class TaskAbortException(RuntimeError):
     """
     Used internally when ctx.task.abort is called
+    """
+    pass
+
+
+class UndeclaredWorkflowError(AriaError):
+    """
+    Raised when attempting to execute an undeclared workflow
+    """
+    pass
+
+
+class ActiveExecutionsError(AriaError):
+    """
+    Raised when attempting to execute a workflow on a service which already has an active execution
+    """
+    pass
+
+
+class WorkflowImplementationNotFoundError(AriaError):
+    """
+    Raised when attempting to import a workflow's code but the implementation is not found
     """
     pass

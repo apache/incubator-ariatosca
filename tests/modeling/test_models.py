@@ -100,12 +100,13 @@ def _nodes_storage():
     service = storage.service.get_by_name(mock.models.SERVICE_NAME)
     dependency_node_template = storage.node_template.get_by_name(
         mock.models.DEPENDENCY_NODE_TEMPLATE_NAME)
-    mock.models.create_node(mock.models.DEPENDENCY_NODE_NAME, dependency_node_template, service)
+    mock.models.create_node(dependency_node_template, service,
+                            name=mock.models.DEPENDENCY_NODE_NAME)
 
     dependent_node_template = mock.models.create_dependent_node_template(service.service_template,
                                                                          dependency_node_template)
 
-    mock.models.create_node(mock.models.DEPENDENT_NODE_NAME, dependent_node_template, service)
+    mock.models.create_node(dependent_node_template, service, name=mock.models.DEPENDENT_NODE_NAME)
     storage.service.update(service)
     return storage
 
@@ -180,7 +181,7 @@ class TestServiceTemplate(object):
     @pytest.mark.parametrize(
         'is_valid, description, created_at, updated_at, main_file_name',
         [
-            (False, {}, now, now, '/path'),
+            (False, [], now, now, '/path'),
             (False, 'description', 'error', now, '/path'),
             (False, 'description', now, 'error', '/path'),
             (False, 'description', now, now, {}),
@@ -253,7 +254,7 @@ class TestService(object):
 class TestExecution(object):
 
     @pytest.mark.parametrize(
-        'is_valid, created_at, started_at, ended_at, error, is_system_workflow, parameters, '
+        'is_valid, created_at, started_at, ended_at, error, is_system_workflow, inputs, '
         'status, workflow_name',
         [
             (False, m_cls, now, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
@@ -268,11 +269,11 @@ class TestExecution(object):
             (True, now, None, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
             (True, now, now, None, 'error', False, {}, Execution.STARTED, 'wf_name'),
             (True, now, now, now, None, False, {}, Execution.STARTED, 'wf_name'),
-            (True, now, now, now, 'error', False, None, Execution.STARTED, 'wf_name'),
+            (True, now, now, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
         ]
     )
     def test_execution_model_creation(self, service_storage, is_valid, created_at, started_at,
-                                      ended_at, error, is_system_workflow, parameters, status,
+                                      ended_at, error, is_system_workflow, inputs, status,
                                       workflow_name):
         execution = _test_model(
             is_valid=is_valid,
@@ -285,7 +286,7 @@ class TestExecution(object):
                 ended_at=ended_at,
                 error=error,
                 is_system_workflow=is_system_workflow,
-                parameters=parameters,
+                inputs=inputs,
                 status=status,
                 workflow_name=workflow_name,
             ))
@@ -299,7 +300,7 @@ class TestExecution(object):
                 id='e_id',
                 workflow_name='w_name',
                 status=status,
-                parameters={},
+                inputs={},
                 created_at=now,
             )
             return execution

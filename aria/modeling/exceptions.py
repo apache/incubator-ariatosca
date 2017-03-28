@@ -22,6 +22,13 @@ class ModelingException(AriaException):
     """
 
 
+class InputsException(ModelingException):
+    """
+    ARIA inputs exception.
+    """
+    pass
+
+
 class ValueFormatException(ModelingException):
     """
     ARIA modeling exception: the value is in the wrong format.
@@ -31,4 +38,22 @@ class ValueFormatException(ModelingException):
 class CannotEvaluateFunctionException(ModelingException):
     """
     ARIA modeling exception: cannot evaluate the function at this time.
+    """
+
+
+class MissingRequiredInputsException(InputsException):
+    """
+    ARIA modeling exception: Required inputs have been omitted.
+    """
+
+
+class InputsOfWrongTypeException(InputsException):
+    """
+    ARIA modeling exception: Inputs of the wrong types have been provided.
+    """
+
+
+class UndeclaredInputsException(InputsException):
+    """
+    ARIA modeling exception: Undeclared inputs have been provided.
     """

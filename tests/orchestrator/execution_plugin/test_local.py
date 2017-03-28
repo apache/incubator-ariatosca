@@ -460,14 +460,15 @@ if __name__ == '__main__':
              env_var='value',
              inputs=None):
         local_script_path = script_path
-        script_path = os.path.basename(local_script_path) if local_script_path else None
+        script_path = os.path.basename(local_script_path) if local_script_path else ''
+        inputs = inputs or {}
+        process = process or {}
         if script_path:
-            workflow_context.resource.deployment.upload(
+            workflow_context.resource.service.upload(
                 entry_id=str(workflow_context.service.id),
                 source=local_script_path,
                 path=script_path)
 
-        inputs = inputs or {}
         inputs.update({
             'script_path': script_path,
             'process': process,
@@ -481,9 +482,11 @@ if __name__ == '__main__':
                 node.service,
                 'test',
                 'op',
-                operation_kwargs=dict(implementation='{0}.{1}'.format(
-                    operations.__name__,
-                    operations.run_script_locally.__name__))
+                operation_kwargs=dict(
+                    implementation='{0}.{1}'.format(
+                        operations.__name__,
+                        operations.run_script_locally.__name__),
+                    inputs=inputs)
             )
             node.interfaces[interface.name] = interface
             graph.add_tasks(api.task.OperationTask.for_node(

@@ -59,7 +59,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         result = query.first()
 
         if not result:
-            raise exceptions.StorageError(
+            raise exceptions.NotFoundError(
                 'Requested `{0}` with ID `{1}` was not found'
                 .format(self.model_cls.__name__, entry_id)
             )
@@ -69,13 +69,13 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         assert hasattr(self.model_cls, 'name')
         result = self.list(include=include, filters={'name': entry_name})
         if not result:
-            raise exceptions.StorageError(
-                'Requested {0} with NAME `{1}` was not found'
+            raise exceptions.NotFoundError(
+                'Requested {0} with name `{1}` was not found'
                 .format(self.model_cls.__name__, entry_name)
             )
         elif len(result) > 1:
             raise exceptions.StorageError(
-                'Requested {0} with NAME `{1}` returned more than 1 value'
+                'Requested {0} with name `{1}` returned more than 1 value'
                 .format(self.model_cls.__name__, entry_name)
             )
         else:
@@ -92,10 +92,8 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         results, total, size, offset = self._paginate(query, pagination)
 
         return ListResult(
-            items=results,
-            metadata=dict(total=total,
-                          size=size,
-                          offset=offset)
+            dict(total=total, size=size, offset=offset),
+            results
         )
 
     def iter(self,
@@ -406,19 +404,11 @@ def init_storage(base_dir, filename='db.sqlite'):
     return dict(engine=engine, session=session)
 
 
-class ListResult(object):
+class ListResult(list):
     """
     a ListResult contains results about the requested items.
     """
-    def __init__(self, items, metadata):
-        self.items = items
+    def __init__(self, metadata, *args, **qwargs):
+        super(ListResult, self).__init__(*args, **qwargs)
         self.metadata = metadata
-
-    def __len__(self):
-        return len(self.items)
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __getitem__(self, item):
-        return self.items[item]
+        self.items = self

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import copy
 import json
 
@@ -189,9 +190,9 @@ def apply_tracked_changes(tracked_changes, model):
             if not value:
                 del successfully_updated_changes[key]
         model.logger.error(
-            'Registering all the changes to the storage has failed. \n'
-            'The successful updates were: \n '
-            '{0}'.format(json.dumps(successfully_updated_changes, indent=4)))
+            'Registering all the changes to the storage has failed. {0}'
+            'The successful updates were: {0} '
+            '{1}'.format(os.linesep, json.dumps(successfully_updated_changes, indent=4)))
 
         raise
 

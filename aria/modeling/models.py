@@ -16,6 +16,10 @@
 # pylint: disable=abstract-method
 
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import (
+    Column,
+    Text
+)
 
 from . import (
     service_template,
@@ -25,7 +29,6 @@ from . import (
     orchestration,
     mixins,
 )
-
 
 aria_declarative_base = declarative_base(cls=mixins.ModelIDMixin)
 
@@ -84,7 +87,7 @@ __all__ = (
 # region service template models
 
 class ServiceTemplate(aria_declarative_base, service_template.ServiceTemplateBase):
-    pass
+    name = Column(Text, index=True, unique=True)
 
 
 class NodeTemplate(aria_declarative_base, service_template.NodeTemplateBase):
@@ -140,7 +143,7 @@ class PluginSpecification(aria_declarative_base, service_template.PluginSpecific
 # region service instance models
 
 class Service(aria_declarative_base, service_instance.ServiceBase):
-    pass
+    name = Column(Text, index=True, unique=True)
 
 
 class Node(aria_declarative_base, service_instance.NodeBase):

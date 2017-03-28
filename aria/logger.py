@@ -19,7 +19,19 @@ Logging related mixins and functions
 
 import logging
 from logging import handlers as logging_handlers
+# NullHandler doesn't exist in < 27. this workaround is from
+# http://docs.python.org/release/2.6/library/logging.html#configuring-logging-for-a-library
+try:
+    from logging import NullHandler                                                                 # pylint: disable=unused-import
+except ImportError:
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
 from datetime import datetime
+
+
+TASK_LOGGER_NAME = 'aria.executions.task'
+
 
 _base_logger = logging.getLogger('aria')
 

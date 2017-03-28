@@ -217,29 +217,41 @@ class TestWithActualSSHServer(object):
         @workflow
         def mock_workflow(ctx, graph):
             node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+            inputs = {
+                'script_path': script_path,
+                'fabric_env': _FABRIC_ENV,
+                'process': process,
+                'use_sudo': use_sudo,
+                'custom_env_var': custom_input,
+                'test_operation': '',
+            }
+            if hide_output:
+                inputs['hide_output'] = hide_output
+            if commands:
+                inputs['commands'] = commands
             interface = mock.models.create_interface(
                 node.service,
                 'test',
                 'op',
-                operation_kwargs=dict(implementation='{0}.{1}'.format(
-                    operations.__name__,
-                    operation.__name__))
+                operation_kwargs=dict(
+                    implementation='{0}.{1}'.format(
+                        operations.__name__,
+                        operation.__name__),
+                    inputs=inputs)
             )
             node.interfaces[interface.name] = interface
-            graph.sequence(*[api.task.OperationTask.for_node(
-                node=node,
-                interface_name='test',
-                operation_name='op',
-                inputs={
-                    'script_path': script_path,
-                    'fabric_env': _FABRIC_ENV,
-                    'process': process,
-                    'use_sudo': use_sudo,
-                    'hide_output': hide_output,
-                    'custom_env_var': custom_input,
-                    'test_operation': test_operation,
-                    'commands': commands
-                }) for test_operation in test_operations])
+
+            ops = []
+            for test_operation in test_operations:
+                op_inputs = inputs.copy()
+                op_inputs['test_operation'] = test_operation
+                ops.append(api.task.OperationTask.for_node(
+                    node=node,
+                    interface_name='test',
+                    operation_name='op',
+                    inputs=op_inputs))
+
+            graph.sequence(*ops)
             return graph
         tasks_graph = mock_workflow(ctx=self._workflow_context)  # pylint: disable=no-value-for-parameter
         eng = engine.Engine(
@@ -258,7 +270,7 @@ class TestWithActualSSHServer(object):
         return collected[signal][0]['kwargs']['exception']
 
     def _upload(self, source, path):
-        self._workflow_context.resource.deployment.upload(
+        self._workflow_context.resource.service.upload(
             entry_id=str(self._workflow_context.service.id),
             source=source,
             path=path)

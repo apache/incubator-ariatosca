@@ -17,6 +17,7 @@ import os
 import tempfile
 import subprocess
 import sys
+import zipfile
 from datetime import datetime
 
 import wagon
@@ -43,11 +44,11 @@ class PluginManager(object):
         os_props = metadata['build_server_os_properties']
 
         plugin = cls(
+            name=metadata['package_name'],
             archive_name=metadata['archive_name'],
             supported_platform=metadata['supported_platform'],
             supported_py_versions=metadata['supported_python_versions'],
-            # Remove suffix colon after upgrading wagon to > 0.5.0
-            distribution=os_props.get('distribution:') or os_props.get('distribution'),
+            distribution=os_props.get('distribution'),
             distribution_release=os_props['distribution_version'],
             distribution_version=os_props['distribution_release'],
             package_name=metadata['package_name'],
@@ -69,6 +70,28 @@ class PluginManager(object):
         return os.path.join(
             self._plugins_dir,
             '{0}-{1}'.format(plugin.package_name, plugin.package_version))
+
+    @staticmethod
+    def validate_plugin(source):
+        """
+        validate a plugin archive.
+        A valid plugin is a wagon (http://github.com/cloudify-cosmo/wagon)
+        in the zip format (suffix may also be .wgn).
+        """
+        if not zipfile.is_zipfile(source):
+            raise exceptions.InvalidPluginError(
+                'Archive {0} is of an unsupported type. Only '
+                'zip/wgn is allowed'.format(source))
+        with zipfile.ZipFile(source, 'r') as zip_file:
+            infos = zip_file.infolist()
+            try:
+                package_name = infos[0].filename[:infos[0].filename.index('/')]
+                package_json_path = "{0}/{1}".format(package_name, 'package.json')
+                zip_file.getinfo(package_json_path)
+            except (KeyError, ValueError, IndexError):
+                raise exceptions.InvalidPluginError(
+                    'Failed to validate plugin {0} '
+                    '(package.json was not found in archive)'.format(source))
 
     def _install_wagon(self, source, prefix):
         pip_freeze_output = self._pip_freeze()

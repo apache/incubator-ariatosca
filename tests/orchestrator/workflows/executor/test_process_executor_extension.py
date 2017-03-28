@@ -42,7 +42,8 @@ def test_decorate_extension(context, executor):
             interface_name,
             operation_name,
             operation_kwargs=dict(implementation='{0}.{1}'.format(__name__,
-                                                                  _mock_operation.__name__))
+                                                                  _mock_operation.__name__),
+                                  inputs=inputs)
         )
         node.interfaces[interface.name] = interface
         task = api.task.OperationTask.for_node(node=node,

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from aria.utils.caching import cachedmethod
 
 from .utils import (get_example_uri, get_test_uri, create_context, create_consumer)
@@ -23,7 +25,9 @@ def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
     uri = get_example_uri('tosca-simple-1.0', 'use-cases', use_case_name,
                           '{0}.yaml'.format(use_case_name))
     context = create_context(uri)
-    #context.args.append('--inputs=' + get_example_uri('node-cellar', 'inputs.yaml'))
+    inputs_file = get_example_uri('tosca-simple-1.0', 'use-cases', use_case_name, 'inputs.yaml')
+    if os.path.isfile(inputs_file):
+        context.args.append('--inputs={0}'.format(inputs_file))
     consumer, dumper = create_consumer(context, consumer_class_name)
     consumer.consume()
     context.validation.dump_issues()

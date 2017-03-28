@@ -76,15 +76,16 @@ def test_host_ip(workflow_context, executor):
     interface_name = 'Standard'
     operation_name = 'create'
     _, dependency_node, _, _, _ = _get_elements(workflow_context)
+    inputs = {'putput': True}
     interface = mock.models.create_interface(
         dependency_node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__))
+        operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__),
+                              inputs=inputs)
     )
     dependency_node.interfaces[interface.name] = interface
     workflow_context.model.node.update(dependency_node)
-    inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):
@@ -106,16 +107,16 @@ def test_relationship_tool_belt(workflow_context, executor):
     interface_name = 'Configure'
     operation_name = 'post_configure'
     _, _, _, _, relationship = _get_elements(workflow_context)
+    inputs = {'putput': True}
     interface = mock.models.create_interface(
         relationship.source_node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(relationship_operation, module_path=__name__))
+        operation_kwargs=dict(implementation=op_path(relationship_operation, module_path=__name__),
+                              inputs=inputs)
     )
     relationship.interfaces[interface.name] = interface
     workflow_context.model.relationship.update(relationship)
-
-    inputs = {'putput': True}
 
     @workflow
     def basic_workflow(graph, **_):

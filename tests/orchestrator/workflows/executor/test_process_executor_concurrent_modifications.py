@@ -90,7 +90,8 @@ def _test(context, executor, lock_files, func, expected_failure):
         node.service,
         interface_name,
         operation_name,
-        operation_kwargs=dict(implementation='{0}.{1}'.format(__name__, func.__name__))
+        operation_kwargs=dict(implementation='{0}.{1}'.format(__name__, func.__name__),
+                              inputs=inputs)
     )
     node.interfaces[interface.name] = interface
     context.model.node.update(node)
