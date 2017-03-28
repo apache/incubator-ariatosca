@@ -69,6 +69,14 @@ class StubTask(BaseTask):
         self.status = models.Task.PENDING
         self.due_at = datetime.utcnow()
 
+    @property
+    def has_ended(self):
+        return self.status in [models.Task.SUCCESS, models.Task.FAILED]
+
+    @property
+    def is_waiting(self):
+        return self.status in [models.Task.PENDING, models.Task.RETRYING]
+
 
 class StartWorkflowTask(StubTask):
     """
