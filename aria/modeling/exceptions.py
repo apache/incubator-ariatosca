@@ -32,3 +32,21 @@ class CannotEvaluateFunctionException(ModelingException):
     """
     ARIA modeling exception: cannot evaluate the function at this time.
     """
+
+
+class MissingRequiredInputsException(ModelingException):
+    """
+    ARIA modeling exception: Required inputs have been omitted
+    """
+
+
+class InputOfWrongTypeException(ModelingException):
+    """
+    ARIA modeling exception: Inputs of the wrong types have been provided
+    """
+
+
+class UndeclaredInputsException(ModelingException):
+    """
+    ARIA modeling exception: Undeclared inputs have been provided
+    """

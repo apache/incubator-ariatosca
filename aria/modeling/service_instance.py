@@ -88,8 +88,8 @@ class ServiceBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     __tablename__ = 'service'
 
     __private_fields__ = ['substitution_fk',
-                          'service_template_fk',
-                          'service_template_name']
+                          'service_template_fk']
+
 
     @declared_attr
     def service_template(cls):
@@ -345,8 +345,7 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     __private_fields__ = ['type_fk',
                           'host_fk',
                           'service_fk',
-                          'node_template_fk',
-                          'service_name']
+                          'node_template_fk']
 
     INITIAL = 'initial'
     CREATING = 'creating'
@@ -486,6 +485,11 @@ class NodeBase(InstanceModelMixin): # pylint: disable=too-many-public-methods
     def service_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service', 'name')
+
+    @declared_attr
+    def node_template_name(cls):
+        """Required for use by SQLAlchemy queries"""
+        return association_proxy('node_template', 'name')
 
     # endregion
 
@@ -1023,9 +1027,7 @@ class RelationshipBase(InstanceModelMixin):
                           'target_node_fk',
                           'target_capability_fk',
                           'requirement_template_fk',
-                          'relationship_template_fk',
-                          'source_node_name',
-                          'target_node_name']
+                          'relationship_template_fk']
 
     @declared_attr
     def relationship_template(cls):

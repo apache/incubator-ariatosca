@@ -60,7 +60,7 @@ except IOError:
     extras_require = {}
 
 
-console_scripts = ['aria = aria.cli.cli:main']
+console_scripts = ['aria = aria.cli.main:main']
 
 
 class InstallCommand(install):

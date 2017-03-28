@@ -13,29 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import errno
-import os
-import shutil
 
-
-def makedirs(path):
-    """An extension of os.makedirs that doesn't fail if the directory already exists"""
-    if os.path.isdir(path):
-        return
+def convert_value_to_type(str_value, type_name):
     try:
-        os.makedirs(path)
-    except IOError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-def remove_if_exists(path):
-
-    try:
-        if os.path.isfile(path):
-            os.remove(path)
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-
-    except OSError as e:
-        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
-            raise  # re-raise exception if a different error occurred
+        if type_name.lower() in ['str', 'unicode']:
+            return str_value.decode('utf-8')
+        elif type_name.lower() == 'int':
+            return int(str_value)
+        elif type_name.lower() == 'bool':
+            return bool(str_value)
+        elif type_name.lower() == 'float':
+            return float(str_value)
+        else:
+            raise ValueError('No supported type_name was provided')
+    except ValueError:
+        raise ValueError('Trying to convert {0} to {1} failed'.format(str_value,
+                                                                      type_name))

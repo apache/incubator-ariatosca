@@ -25,6 +25,11 @@ SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
 wagon==0.6.0
 bottle>=0.12.0, <0.13
 Fabric>=1.13.0, <1.14
+click==4.0
+colorama==0.3.3
+PrettyTable>=0.7,<0.8
+click_didyoumean==0.0.3
+backports.shutil_get_terminal_size==1.0.0
 
 # Since the tool we are using to generate our requirements.txt, `pip-tools`,
 # does not currently support conditional dependencies (;), we're adding our original

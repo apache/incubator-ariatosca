@@ -48,9 +48,7 @@ class ServiceUpdateBase(ModelMixin):
     __tablename__ = 'service_update'
 
     __private_fields__ = ['service_fk',
-                          'execution_fk',
-                          'execution_name',
-                          'service_name']
+                          'execution_fk']
 
     created_at = Column(DateTime, nullable=False, index=True)
     service_plan = Column(Dict, nullable=False)
@@ -108,8 +106,7 @@ class ServiceUpdateStepBase(ModelMixin):
 
     __tablename__ = 'service_update_step'
 
-    __private_fields__ = ['service_update_fk',
-                          'service_update_name']
+    __private_fields__ = ['service_update_fk']
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
@@ -189,8 +186,7 @@ class ServiceModificationBase(ModelMixin):
 
     __tablename__ = 'service_modification'
 
-    __private_fields__ = ['service_fk',
-                          'service_name']
+    __private_fields__ = ['service_fk']
 
     STARTED = 'started'
     FINISHED = 'finished'

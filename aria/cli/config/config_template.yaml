@@ -1,0 +1,12 @@
+colors: {{ enable_colors }}
+
+logging:
+
+  # path to a file where cli logs will be saved.
+  filename: {{ log_path }}
+
+  # configuring level per logger
+  loggers:
+
+    # main logger of the cli. provides basic descriptions for executed operations.
+    aria.cli.main: info

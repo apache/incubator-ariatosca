@@ -274,8 +274,8 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
         utils.instantiate_dict(self, service.workflows, self.workflow_templates)
         utils.instantiate_dict(self, service.plugin_specifications, self.plugin_specifications)
 
-        if self.substitution_template is not None:
-            service.substitution = self.substitution_template.instantiate(container)
+        # if self.substitution_template is not None:
+        #     service.substitution = self.substitution_template.instantiate(container)
 
         utils.instantiate_dict(self, service.inputs, self.inputs)
         utils.instantiate_dict(self, service.outputs, self.outputs)
@@ -410,8 +410,7 @@ class NodeTemplateBase(TemplateModelMixin):
     __tablename__ = 'node_template'
 
     __private_fields__ = ['type_fk',
-                          'service_template_fk',
-                          'service_template_name']
+                          'service_template_fk']
 
     @declared_attr
     def type(cls):
@@ -465,6 +464,11 @@ class NodeTemplateBase(TemplateModelMixin):
     def service_template_name(cls):
         """Required for use by SQLAlchemy queries"""
         return association_proxy('service_template', 'name')
+
+    @declared_attr
+    def type_name(cls):
+        """Required for use by SQLAlchemy queries"""
+        return association_proxy('type', 'name')
 
     # endregion
 

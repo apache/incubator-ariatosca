@@ -13,12 +13,81 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from StringIO import StringIO
+
+from . import exceptions
 from ..parser.consumption import ConsumptionContext
 from ..parser.exceptions import InvalidValueError
 from ..parser.presentation import Value
 from ..utils.collections import OrderedDict
 from ..utils.console import puts
-from .exceptions import CannotEvaluateFunctionException
+from ..utils.conversion import convert_value_to_type
+
+
+def create_inputs(inputs, template_inputs):
+    """
+    :param inputs: key-value dict
+    :param template_inputs: parameter name to parameter object dict
+    :return: created input models
+    """
+    _merge_and_validate_inputs(inputs, template_inputs)
+
+    from . import models
+    input_models = []
+    for input_name, input_val in inputs.iteritems():
+        parameter = models.Parameter(
+            name=input_name,
+            type=template_inputs[input_name].type,
+            description=template_inputs[input_name].description,
+            str_value=str(input_val))
+        input_models.append(parameter)
+
+    return input_models
+
+
+def _merge_and_validate_inputs(inputs, template_inputs):
+    """
+    :param inputs: key-value dict
+    :param template_inputs: parameter name to parameter object dict
+    :return:
+    """
+    merged_inputs = inputs.copy()
+
+    missing_inputs = []
+    wrong_type_inputs = {}
+    for input_name, input_template in template_inputs.iteritems():
+        if input_name not in inputs:
+            if input_template.value is not None:
+                merged_inputs[input_name] = input_template.value  # apply default value
+            else:
+                missing_inputs.append(input_name)
+        else:
+            # Validate type of inputs
+            try:
+                convert_value_to_type(str(inputs[input_name]), input_template.type)
+            except ValueError:
+                wrong_type_inputs[input_name] = input_template.type
+
+    if missing_inputs:
+        raise exceptions.MissingRequiredInputsException(
+            'Required inputs {0} have not been specified - expected inputs: {1}'
+            .format(missing_inputs, template_inputs.keys()))
+
+    if wrong_type_inputs:
+        error_message = StringIO()
+        for param_name, param_type in wrong_type_inputs.iteritems():
+            error_message.write('Input "{0}" must be of type {1}\n'.
+                                format(param_name, param_type))
+        raise exceptions.InputOfWrongTypeException(error_message.getvalue())
+
+    unknown_inputs = [input_name for input_name in inputs.keys()
+                      if input_name not in template_inputs]
+    if unknown_inputs:
+        raise exceptions.UndeclaredInputsException(
+            'Undeclared inputs have been specified: {0}; Expected inputs: {1}'
+            .format(unknown_inputs, template_inputs.keys()))
+
+    return merged_inputs
 
 
 def coerce_value(container, value, report_issues=False):
@@ -35,7 +104,7 @@ def coerce_value(container, value, report_issues=False):
         try:
             value = value._evaluate(context, container)
             value = coerce_value(container, value, report_issues)
-        except CannotEvaluateFunctionException:
+        except exceptions.CannotEvaluateFunctionException:
             pass
         except InvalidValueError as e:
             if report_issues:

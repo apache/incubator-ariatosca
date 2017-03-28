@@ -55,9 +55,7 @@ class ExecutionBase(ModelMixin):
     __tablename__ = 'execution'
 
     __private_fields__ = ['service_fk',
-                          'service_name',
-                          'service_template',
-                          'service_template_name']
+                          'service_template']
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -208,10 +206,7 @@ class TaskBase(ModelMixin):
     __private_fields__ = ['node_fk',
                           'relationship_fk',
                           'plugin_fk',
-                          'execution_fk',
-                          'node_name',
-                          'relationship_name',
-                          'execution_name']
+                          'execution_fk']
 
     PENDING = 'pending'
     RETRYING = 'retrying'

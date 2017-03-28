@@ -13,29 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import errno
-import os
-import shutil
+
+import pytest
+
+from aria.utils.threading import ExcThread
 
 
-def makedirs(path):
-    """An extension of os.makedirs that doesn't fail if the directory already exists"""
-    if os.path.isdir(path):
-        return
-    try:
-        os.makedirs(path)
-    except IOError as e:
-        if e.errno != errno.EEXIST:
-            raise
+class TestPluginManager(object):
 
-def remove_if_exists(path):
+    def test_exception_raised_from_thread(self):
 
-    try:
-        if os.path.isfile(path):
-            os.remove(path)
-        if os.path.isdir(path):
-            shutil.rmtree(path)
+        def error_raising_func():
+            raise ValueError('This is an error')
 
-    except OSError as e:
-        if e.errno != errno.ENOENT:  # errno.ENOENT = no such file or directory
-            raise  # re-raise exception if a different error occurred
+        thread = ExcThread(target=error_raising_func)
+        thread.start()
+        thread.join()
+
+        assert thread.is_error()
+        with pytest.raises(ValueError):
+            thread.raise_error_if_exists()

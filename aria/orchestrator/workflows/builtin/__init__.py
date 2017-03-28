@@ -24,6 +24,7 @@ from .stop import stop
 
 
 BUILTIN_WORKFLOWS = ('install', 'uninstall', 'start', 'stop')
+BUILTIN_WORKFLOWS_PATH_PREFIX = 'aria.orchestrator.workflows.builtin'
 
 
 __all__ = [
