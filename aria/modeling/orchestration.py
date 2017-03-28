@@ -69,7 +69,6 @@ class ExecutionBase(ModelMixin):
 
     STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING, FORCE_CANCELLING]
     END_STATES = [TERMINATED, FAILED, CANCELLED]
-    ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
 
     VALID_TRANSITIONS = {
         PENDING: [STARTED, CANCELLED],
@@ -101,6 +100,12 @@ class ExecutionBase(ModelMixin):
     parameters = Column(Dict)
     status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
     workflow_name = Column(Text)
+
+    def is_ended(self):
+        return self.status in self.END_STATES
+
+    def is_active(self):
+        return not self.is_ended()
 
     @declared_attr
     def logs(cls):
