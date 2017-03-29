@@ -201,4 +201,7 @@ def print_service_template_inputs(model_storage, service_template_name, logger):
     service_template = model_storage.service_template.get_by_name(service_template_name)
 
     logger.info('Service template inputs:')
-    logger.info(utils.get_parameter_templates_as_string(service_template.inputs))
+    if service_template.inputs:
+        logger.info(utils.get_parameter_templates_as_string(service_template.inputs))
+    else:
+        logger.info('\tNo inputs')

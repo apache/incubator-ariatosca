@@ -19,6 +19,7 @@ Creates ARIA service template models based on the TOSCA presentation.
 Relies on many helper methods in the presentation classes. 
 """
 
+import os
 import re
 from types import FunctionType
 from datetime import datetime
@@ -34,7 +35,7 @@ from ..data_types import coerce_value
 
 def create_service_template_model(context): # pylint: disable=too-many-locals,too-many-branches
     model = ServiceTemplate(created_at=datetime.now(),
-                            main_file_name=str(context.presentation.location))
+                            main_file_name=os.path.basename(str(context.presentation.location)))
 
     model.description = context.presentation.get('service_template', 'description', 'value')
 

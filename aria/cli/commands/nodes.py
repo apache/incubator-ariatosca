@@ -44,16 +44,19 @@ def show(node_id, model_storage, logger):
     """
     logger.info('Showing node {0}'.format(node_id))
     try:
-        node = model_storage.node.get(node_id).to_dict()
+        node = model_storage.node.get(node_id)
     except StorageError:
         raise AriaCliError('Node {0} not found'.format(node_id))
 
-    print_data(NODE_COLUMNS, node, 'Node:', 50)
+    print_data(NODE_COLUMNS, node.to_dict(), 'Node:', 50)
 
     # print node attributes
     logger.info('Node attributes:')
-    for prop_name, prop_value in node.runtime_properties.iteritems():
-        logger.info('\t{0}: {1}'.format(prop_name, prop_value))
+    if node.runtime_properties:
+        for prop_name, prop_value in node.runtime_properties.iteritems():
+            logger.info('\t{0}: {1}'.format(prop_name, prop_value))
+    else:
+        logger.info('\tNo attributes')
     logger.info('')
 
 

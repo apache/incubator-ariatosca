@@ -56,7 +56,10 @@ def show(node_template_id, model_storage, logger):
 
     # print node template properties
     logger.info('Node template properties:')
-    logger.info(utils.get_parameter_templates_as_string(node_template.properties))
+    if node_template.properties:
+        logger.info(utils.get_parameter_templates_as_string(node_template.properties))
+    else:
+        logger.info('\tNo properties')
 
     # print node IDs
     nodes = node_template.nodes.all()
