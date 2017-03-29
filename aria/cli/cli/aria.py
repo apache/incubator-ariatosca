@@ -130,20 +130,19 @@ def set_cli_except_hook(global_verbosity_level):
             logger.info('  - {0}'.format(solution))
 
     def new_excepthook(tpe, value, tb):
-        with open(env.logging.log_file, 'a') as log_file:
-            #TODO is this printed both via here and via logger??
-            traceback.print_exception(
-                etype=tpe,
-                value=value,
-                tb=tb,
-                file=log_file)
-
-        if global_verbosity_level or True:
+        if global_verbosity_level:
             # log error including traceback
             logger.error(get_exception_as_string(tpe, value, tb))
         else:
-            # log only the error message
-            logger.error(value)
+            # write the full error to the log file
+            with open(env.logging.log_file, 'a') as log_file:
+                traceback.print_exception(
+                    etype=tpe,
+                    value=value,
+                    tb=tb,
+                    file=log_file)
+            # print only the error message
+            print value
 
         if hasattr(value, 'possible_solutions'):
             recommend(getattr(value, 'possible_solutions'))
