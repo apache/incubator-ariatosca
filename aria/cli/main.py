@@ -32,9 +32,9 @@ from .. import install_aria_extensions
 
 
 @aria.group(name='aria')
-@aria.options.verbose(expose_value=True)
+@aria.options.verbose()
 @aria.options.version
-def _aria(verbose):
+def _aria():
     """ARIA's Command Line Interface
 
     To activate bash-completion. Run: `eval "$(_ARIA_COMPLETE=source aria)"`
@@ -42,7 +42,7 @@ def _aria(verbose):
     ARIA's working directory resides by default in ~/.aria. To change it, set
     the environment variable `ARIA_WORKDIR` to something else (e.g. /tmp/).
     """
-    aria.set_cli_except_hook(verbose)
+    aria.set_cli_except_hook()
 
 
 def _register_commands():

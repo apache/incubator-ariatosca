@@ -72,10 +72,13 @@ class Logging(object):
     def verbosity_level(self):
         return self._verbosity_level
 
+    def is_high_verbose_level(self):
+        return self.verbosity_level == HIGH_VERBOSE
+
     @verbosity_level.setter
     def verbosity_level(self, level):
         self._verbosity_level = level
-        if self._verbosity_level >= HIGH_VERBOSE:
+        if self.is_high_verbose_level():
             for logger_name in self._all_loggers:
                 logging.getLogger(logger_name).setLevel(logging.DEBUG)
 

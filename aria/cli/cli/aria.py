@@ -122,7 +122,7 @@ def set_verbosity_level(ctx, param, value):
     env.logging.verbosity_level = value
 
 
-def set_cli_except_hook(global_verbosity_level):
+def set_cli_except_hook():
 
     def recommend(possible_solutions):
         logger.info('Possible solutions:')
@@ -130,7 +130,7 @@ def set_cli_except_hook(global_verbosity_level):
             logger.info('  - {0}'.format(solution))
 
     def new_excepthook(tpe, value, tb):
-        if global_verbosity_level:
+        if env.logging.is_high_verbose_level():
             # log error including traceback
             logger.error(get_exception_as_string(tpe, value, tb))
         else:
