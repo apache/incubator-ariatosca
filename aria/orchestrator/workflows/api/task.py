@@ -63,7 +63,6 @@ class OperationTask(BaseTask):
 
     def __init__(self,
                  actor,
-                 actor_type,
                  interface_name,
                  operation_name,
                  runs_on=None,
@@ -76,6 +75,7 @@ class OperationTask(BaseTask):
         :meth:`for_relationship`.
         """
 
+        actor_type = type(actor).__name__.lower()
         assert isinstance(actor, (models.Node, models.Relationship))
         assert actor_type in ('node', 'relationship')
         assert interface_name and operation_name
@@ -103,12 +103,7 @@ class OperationTask(BaseTask):
         # model, because they are different from the operation inputs. If we do this, then the two
         # kinds of inputs should *not* be merged here.
 
-        operation = self._get_operation()
-        if operation is None:
-            raise exceptions.OperationNotFoundException(
-                'Could not find operation "{0}" on interface "{1}" for {2} "{3}"'
-                .format(self.operation_name, self.interface_name, actor_type, actor.name))
-
+        operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = None
         if operation.plugin_specification:
             self.plugin = OperationTask._find_plugin(operation.plugin_specification)
@@ -127,14 +122,6 @@ class OperationTask(BaseTask):
 
     def __repr__(self):
         return self.name
-
-    def _get_operation(self):
-        interface = self.actor.interfaces.get(self.interface_name)
-        if interface:
-            return interface.operations.get(self.operation_name)
-        return None
-
-
 
     @classmethod
     def for_node(cls,
@@ -163,7 +150,6 @@ class OperationTask(BaseTask):
         assert isinstance(node, models.Node)
         return cls(
             actor=node,
-            actor_type='node',
             interface_name=interface_name,
             operation_name=operation_name,
             max_attempts=max_attempts,
@@ -202,7 +188,6 @@ class OperationTask(BaseTask):
         assert runs_on in models.Task.RUNS_ON
         return cls(
             actor=relationship,
-            actor_type='relationship',
             interface_name=interface_name,
             operation_name=operation_name,
             runs_on=runs_on,

@@ -17,6 +17,7 @@
 Builtin execute_operation workflow
 """
 
+from . import utils
 from ..api.task import OperationTask
 from ... import workflow
 
@@ -122,7 +123,7 @@ def _create_node_task(
     if allow_kwargs_override is not None:
         operation_kwargs['allow_kwargs_override'] = allow_kwargs_override
 
-    return OperationTask.for_node(
+    return utils.create_node_task(
         node=node,
         interface_name=interface_name,
         operation_name=operation_name,

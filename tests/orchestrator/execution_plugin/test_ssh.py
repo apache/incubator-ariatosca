@@ -258,7 +258,7 @@ class TestWithActualSSHServer(object):
         return collected[signal][0]['kwargs']['exception']
 
     def _upload(self, source, path):
-        self._workflow_context.resource.deployment.upload(
+        self._workflow_context.resource.service.upload(
             entry_id=str(self._workflow_context.service.id),
             source=source,
             path=path)

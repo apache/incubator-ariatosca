@@ -168,13 +168,13 @@ class BaseContext(object):
         Download a blueprint resource from the resource storage
         """
         try:
-            self.resource.deployment.download(entry_id=str(self.service.id),
-                                              destination=destination,
-                                              path=path)
+            self.resource.service.download(entry_id=str(self.service.id),
+                                           destination=destination,
+                                           path=path)
         except exceptions.StorageError:
-            self.resource.blueprint.download(entry_id=str(self.service_template.id),
-                                             destination=destination,
-                                             path=path)
+            self.resource.service_template.download(entry_id=str(self.service_template.id),
+                                                    destination=destination,
+                                                    path=path)
 
     def download_resource_and_render(self, destination, path=None, variables=None):
         """
@@ -193,9 +193,9 @@ class BaseContext(object):
         Read a deployment resource as string from the resource storage
         """
         try:
-            return self.resource.deployment.read(entry_id=str(self.service.id), path=path)
+            return self.resource.service.read(entry_id=str(self.service.id), path=path)
         except exceptions.StorageError:
-            return self.resource.deployment.read(entry_id=str(self.service_template.id), path=path)
+            return self.resource.service.read(entry_id=str(self.service_template.id), path=path)
 
     def get_resource_and_render(self, path=None, variables=None):
         """

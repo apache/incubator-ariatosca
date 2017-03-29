@@ -34,7 +34,7 @@ def test_serialize_operation_context(context, executor, tmpdir):
     test_file = tmpdir.join(TEST_FILE_NAME)
     test_file.write(TEST_FILE_CONTENT)
     resource = context.resource
-    resource.blueprint.upload(TEST_FILE_ENTRY_ID, str(test_file))
+    resource.service_template.upload(TEST_FILE_ENTRY_ID, str(test_file))
     graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
@@ -73,7 +73,7 @@ def _mock_operation(ctx):
     # a correct ctx.deployment.name tells us we kept the correct deployment_id
     assert ctx.service.name == mock.models.SERVICE_NAME
     # Here we test that the resource storage was properly re-created
-    test_file_content = ctx.resource.blueprint.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
+    test_file_content = ctx.resource.service_template.read(TEST_FILE_ENTRY_ID, TEST_FILE_NAME)
     assert test_file_content == TEST_FILE_CONTENT
     # a non empty plugin workdir tells us that we kept the correct base_workdir
     assert ctx.plugin_workdir is not None

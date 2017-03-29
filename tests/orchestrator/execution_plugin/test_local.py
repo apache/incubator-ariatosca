@@ -462,7 +462,7 @@ if __name__ == '__main__':
         local_script_path = script_path
         script_path = os.path.basename(local_script_path) if local_script_path else None
         if script_path:
-            workflow_context.resource.deployment.upload(
+            workflow_context.resource.service.upload(
                 entry_id=str(workflow_context.service.id),
                 source=local_script_path,
                 path=script_path)

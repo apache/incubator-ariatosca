@@ -57,7 +57,7 @@ class Core(object):
         service_template.name = service_template_name
         self.model_storage.service_template.put(service_template)
         self.resource_storage.service_template.upload(
-            entry_id=service_template.name, source=service_template_dir)
+            entry_id=str(service_template.id), source=service_template_dir)
 
     def delete_service_template(self, service_template_id):
         service_template = self.model_storage.service_template.get(service_template_id)
@@ -66,7 +66,7 @@ class Core(object):
                                 "existing services")
 
         self.model_storage.service_template.delete(service_template)
-        self.resource_storage.service_template.delete(entry_id=service_template.name)
+        self.resource_storage.service_template.delete(entry_id=str(service_template.name))
 
     def create_service(self, service_template_name, inputs, service_name):
         service_template = self.model_storage.service_template.get_by_name(service_template_name)
