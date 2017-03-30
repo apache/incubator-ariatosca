@@ -28,7 +28,7 @@ def create_inputs(inputs, template_inputs):
     """
     :param inputs: key-value dict
     :param template_inputs: parameter name to parameter object dict
-    :return: created input models
+    :return: list of Parameter models
     """
     _merge_and_validate_inputs(inputs, template_inputs)
 
@@ -62,7 +62,7 @@ def _merge_and_validate_inputs(inputs, template_inputs):
             else:
                 missing_inputs.append(input_name)
         else:
-            # Validate type of inputs
+            # Validate input type
             try:
                 convert_value_to_type(str(inputs[input_name]), input_template.type_name)
             except ValueError:
