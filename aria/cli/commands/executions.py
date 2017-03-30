@@ -25,11 +25,7 @@ from ...storage.exceptions import StorageError
 from ...orchestrator.workflow_runner import WorkflowRunner
 from ...utils import threading
 
-_STATUS_CANCELING_MESSAGE = (
-    'NOTE: Executions currently in a "canceling/force-canceling" status '
-    'may take a while to change into "cancelled"')
-
-EXECUTION_COLUMNS = ['id', 'workflow_name', 'status', 'service_id',
+EXECUTION_COLUMNS = ['id', 'workflow_name', 'status', 'service_name',
                      'created_at', 'error']
 
 
@@ -58,60 +54,57 @@ def show(execution_id, model_storage, logger):
     except StorageError:
         raise AriaCliError('Execution {0} not found'.format(execution_id))
 
-    print_data(EXECUTION_COLUMNS, execution, 'Execution:', max_width=50)
+    print_data(EXECUTION_COLUMNS, execution.to_dict(), 'Execution:', max_width=50)
 
     # print execution parameters
     logger.info('Execution Inputs:')
-    execution_inputs = [ei.to_dict() for ei in execution.inputs]
-    for input_name, input_value in formatting.decode_dict(
-            execution_inputs).iteritems():
-        logger.info('\t{0}: \t{1}'.format(input_name, input_value))
-    if execution.status in (execution.CANCELLING, execution.FORCE_CANCELLING):
-        logger.info(_STATUS_CANCELING_MESSAGE)
+    if execution.inputs:
+        #TODO check this section, havent tested it
+        execution_inputs = [ei.to_dict() for ei in execution.inputs]
+        for input_name, input_value in formatting.decode_dict(
+                execution_inputs).iteritems():
+            logger.info('\t{0}: \t{1}'.format(input_name, input_value))
+    else:
+        logger.info('\tNo inputs')
     logger.info('')
 
 
 @executions.command(name='list',
                     short_help='List service executions')
-@aria.options.service_id(required=False)
+@aria.options.service_name(required=False)
 @aria.options.sort_by()
 @aria.options.descending
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
-def list(service_id,
+def list(service_name,
          sort_by,
          descending,
          model_storage,
          logger):
     """List executions
 
-    If `SERVICE_ID` is provided, list executions for that service.
+    If `SERVICE_NAME` is provided, list executions for that service.
     Otherwise, list executions for all services.
     """
-    if service_id:
+    if service_name:
         logger.info('Listing executions for service {0}...'.format(
-            service_id))
+            service_name))
         try:
-            service = model_storage.service.get(service_id)
+            service = model_storage.service.get_by_name(service_name)
             filters = dict(service=service)
         except StorageError:
             raise AriaCliError('Service {0} does not exist'.format(
-                service_id))
+                service_name))
     else:
         logger.info('Listing all executions...')
         filters = {}
 
-    executions = model_storage.execution.list(
+    executions = [e.to_dict() for e in model_storage.execution.list(
         filters=filters,
-        sort=utils.storage_sort_param(sort_by, descending))
+        sort=utils.storage_sort_param(sort_by, descending))]
 
     print_data(EXECUTION_COLUMNS, executions, 'Executions:')
-
-    if any(execution.status in (
-            execution.CANCELLING, execution.FORCE_CANCELLING)
-            for execution in executions):
-        logger.info(_STATUS_CANCELING_MESSAGE)
 
 
 @executions.command(name='start',

@@ -28,6 +28,7 @@ from .commands import nodes
 from .commands import workflows
 from .commands import executions
 from .commands import plugins
+from .commands import logs
 from .. import install_aria_extensions
 
 
@@ -57,6 +58,7 @@ def _register_commands():
     _aria.add_command(workflows.workflows)
     _aria.add_command(executions.executions)
     _aria.add_command(plugins.plugins)
+    _aria.add_command(logs.logs)
 
 
 _register_commands()
