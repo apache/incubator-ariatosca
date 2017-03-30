@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from json import JSONEncoder
 from StringIO import StringIO
 
 from . import exceptions
@@ -22,6 +23,19 @@ from ..parser.presentation import Value
 from ..utils.collections import OrderedDict
 from ..utils.console import puts
 from ..utils.conversion import convert_value_to_type
+
+
+class ModelJSONEncoder(JSONEncoder):
+    def default(self, o):
+        from .mixins import ModelMixin
+        if isinstance(o, ModelMixin):
+            if hasattr(o, 'value'):
+                dict_to_return = o.to_dict(fields=('value',))
+                return dict_to_return['value']
+            else:
+                return o.to_dict()
+        else:
+            return JSONEncoder.default(self, o)
 
 
 def create_inputs(inputs, template_inputs):

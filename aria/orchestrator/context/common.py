@@ -195,7 +195,7 @@ class BaseContext(object):
         try:
             return self.resource.service.read(entry_id=str(self.service.id), path=path)
         except exceptions.StorageError:
-            return self.resource.service.read(entry_id=str(self.service_template.id), path=path)
+            return self.resource.service_template.read(entry_id=str(self.service_template.id), path=path)
 
     def get_resource_and_render(self, path=None, variables=None):
         """
