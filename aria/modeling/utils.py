@@ -28,13 +28,13 @@ def create_inputs(inputs, template_inputs):
     """
     :param inputs: key-value dict
     :param template_inputs: parameter name to parameter object dict
-    :return: list of Parameter models
+    :return: dict of parameter name to Parameter models
     """
-    _merge_and_validate_inputs(inputs, template_inputs)
+    merged_inputs = _merge_and_validate_inputs(inputs, template_inputs)
 
     from . import models
     input_models = []
-    for input_name, input_val in inputs.iteritems():
+    for input_name, input_val in merged_inputs.iteritems():
         parameter = models.Parameter(
             name=input_name,
             type_name=template_inputs[input_name].type_name,
@@ -42,7 +42,7 @@ def create_inputs(inputs, template_inputs):
             value=input_val)
         input_models.append(parameter)
 
-    return input_models
+    return {input.name: input for input in input_models}
 
 
 def _merge_and_validate_inputs(inputs, template_inputs):

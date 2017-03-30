@@ -77,8 +77,7 @@ class Core(object):
             service = service_template.instantiate(None)
 
         template_inputs = service_template.inputs
-        input_models = modeling_utils.create_inputs(inputs, template_inputs)
-        service.inputs = {input.name: input for input in input_models}
+        service.inputs = modeling_utils.create_inputs(inputs, template_inputs)
         # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 
         # first put the service model so it could have an id, as fallback for setting its name

@@ -19,7 +19,7 @@ Provides the tasks to be entered into the task graph
 import copy
 
 from ....modeling import models
-from ....utils.collections import OrderedDict
+from ....modeling import utils as modeling_utils
 from ....utils.uuid import generate_uuid
 from ... import context
 from .. import exceptions
@@ -93,16 +93,6 @@ class OperationTask(BaseTask):
         self.interface_name = interface_name
         self.operation_name = operation_name
 
-        # Wrap inputs
-        inputs = copy.deepcopy(inputs) if inputs else {}
-        for k, v in inputs.iteritems():
-            if not isinstance(v, models.Parameter):
-                inputs[k] = models.Parameter.wrap(k, v)
-
-        # TODO: Suggestion: these extra inputs could be stored as a separate entry in the task
-        # model, because they are different from the operation inputs. If we do this, then the two
-        # kinds of inputs should *not* be merged here.
-
         operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = None
         if operation.plugin_specification:
@@ -112,9 +102,8 @@ class OperationTask(BaseTask):
                     'Could not find plugin of operation "{0}" on interface "{1}" for {2} "{3}"'
                     .format(self.operation_name, self.interface_name, actor_type, actor.name))
 
+        self.inputs = modeling_utils.create_inputs(inputs or {}, operation.inputs)
         self.implementation = operation.implementation
-        self.inputs = OperationTask._merge_inputs(operation.inputs, inputs)
-
         self.name = OperationTask.NAME_FORMAT.format(type=actor_type,
                                                      name=actor.name,
                                                      interface=self.interface_name,
@@ -200,13 +189,6 @@ class OperationTask(BaseTask):
     def _find_plugin(plugin_specification):
         workflow_context = context.workflow.current.get()
         return plugin_specification.find_plugin(workflow_context.model.plugin.list())
-
-    @staticmethod
-    def _merge_inputs(operation_inputs, override_inputs=None):
-        final_inputs = OrderedDict(operation_inputs)
-        if override_inputs:
-            final_inputs.update(override_inputs)
-        return final_inputs
 
 
 class WorkflowTask(BaseTask):
