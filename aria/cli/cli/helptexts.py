@@ -38,7 +38,7 @@ OUTPUT_PATH = "The local path to download to"
 SERVICE_TEMPLATE_FILENAME = (
     "The name of the archive's main service template file. "
     "This is only relevant if uploading an archive")
-INPUTS = "Inputs for the deployment {0}".format(INPUTS_PARAMS_USAGE)
+INPUTS = "Inputs for the service {0}".format(INPUTS_PARAMS_USAGE)
 PARAMETERS = "Parameters for the workflow {0}".format(INPUTS_PARAMS_USAGE)
 TASK_RETRY_INTERVAL = \
     "How long of a minimal interval should occur between task retry attempts [default: {0}]"
@@ -55,7 +55,7 @@ JSON_OUTPUT = "Output events in a consumable JSON format"
 
 SERVICE_ID = "The unique identifier for the service"
 EXECUTION_ID = "The unique identifier for the execution"
-IGNORE_RUNNING_NODES = "Delete the deployment even if it has running nodes"
+IGNORE_RUNNING_NODES = "Delete the service even if it has running nodes"
 
 NODE_NAME = "The node's name"
 

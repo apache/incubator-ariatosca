@@ -37,7 +37,7 @@ def workflows():
 @aria.pass_model_storage
 @aria.pass_logger
 def show(workflow_name, service_name, model_storage, logger):
-    """Show information for a specific workflow of a specific deployment
+    """Show information for a specific workflow of a specific service
 
     `WORKFLOW_NAME` is the name of the workflow to get information on.
     """
@@ -88,7 +88,7 @@ def show(workflow_name, service_name, model_storage, logger):
 
 
 @workflows.command(name='list',
-                   short_help='List workflows for a deployment')
+                   short_help='List workflows for a service')
 @aria.options.service_name(required=True)
 @aria.options.verbose()
 @aria.pass_model_storage

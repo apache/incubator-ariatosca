@@ -26,7 +26,7 @@ from ...core import Core
 from ...exceptions import AriaException
 
 
-DEPLOYMENT_COLUMNS = ['id', 'name', 'service_template_name', 'created_at', 'updated_at']
+SERVICE_COLUMNS = ['id', 'name', 'service_template_name', 'created_at', 'updated_at']
 
 
 @aria.group(name='services')
@@ -63,10 +63,10 @@ def list(service_template_id,
         logger.info('Listing all service...')
         filters = {}
 
-    deployments = [d.to_dict() for d in model_storage.service.list(
+    services = [d.to_dict() for d in model_storage.service.list(
         sort=storage_sort_param(sort_by=sort_by, descending=descending),
         filters=filters)]
-    print_data(DEPLOYMENT_COLUMNS, deployments, 'Services:')
+    print_data(SERVICE_COLUMNS, services, 'Services:')
 
 
 @services.command(name='create',

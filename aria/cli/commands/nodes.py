@@ -61,30 +61,30 @@ def show(node_id, model_storage, logger):
 
 
 @nodes.command(name='list',
-               short_help='List node for a deployment')
-@aria.options.service_id(required=False)
+               short_help='List node for a service')
+@aria.options.service_name(required=False)
 @aria.options.sort_by('service_name')
 @aria.options.descending
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
-def list(service_id,
+def list(service_name,
          sort_by,
          descending,
          model_storage,
          logger):
     """List nodes
 
-    If `SERVICE_ID` is provided, list nodes for that service.
+    If `SERVICE_NAME` is provided, list nodes for that service.
     Otherwise, list nodes for all services.
     """
-    if service_id:
-        logger.info('Listing nodes for service {0}...'.format(service_id))
+    if service_name:
+        logger.info('Listing nodes for service {0}...'.format(service_name))
         try:
-            service = model_storage.service_instance.get(service_id)
+            service = model_storage.service.get_by_name(service_name)
             filters = dict(service=service)
         except StorageError:
-            raise AriaCliError('Service {0} does not exist'.format(service_id))
+            raise AriaCliError('Service {0} does not exist'.format(service_name))
     else:
         logger.info('Listing all nodes...')
         filters = {}

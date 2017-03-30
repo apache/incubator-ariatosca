@@ -40,8 +40,8 @@ def generate(cols, data, defaults=None):
         defaults - A dictionary specifying default values for
                    key's that don't exist in the data itself.
 
-                   for example: {'deploymentId':'123'} will set the
-                   deploymentId value for all rows to '123'.
+                   for example: {'serviceId':'123'} will set the
+                   serviceId value for all rows to '123'.
 
     """
     def get_values_per_column(column, row_data):
