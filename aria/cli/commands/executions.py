@@ -17,12 +17,13 @@ import json
 import time
 
 from .. import utils
-from ...utils import formatting
 from ..table import print_data
 from ..cli import aria, helptexts
 from ..exceptions import AriaCliError
+from ...modeling.models import Execution
 from ...storage.exceptions import StorageError
 from ...orchestrator.workflow_runner import WorkflowRunner
+from ...utils import formatting
 from ...utils import threading
 
 EXECUTION_COLUMNS = ['id', 'workflow_name', 'status', 'service_name',
@@ -138,29 +139,33 @@ def start(workflow_name,
                        task_max_attempts, task_retry_interval)
 
     execution_thread_name = '{0}_{1}'.format(service_name, workflow_name)
-    execution_thread = threading.ExcThread(target=workflow_runner.execute,
-                                           name=execution_thread_name)
+    execution_thread = threading.ExceptionThread(target=workflow_runner.execute,
+                                                 name=execution_thread_name)
+    execution_thread.daemon = True  # allows force-cancel to exit immediately
 
     logger.info('Starting execution. Press Ctrl+C cancel')
+    execution_thread.start()
     try:
-        execution_thread.start()
-        execution_thread.join()
+        while execution_thread.is_alive():
+            # using join without a timeout blocks and ignores KeyboardInterrupt
+            execution_thread.join(1)
     except KeyboardInterrupt:
         _cancel_execution(workflow_runner, execution_thread, logger)
 
     execution_thread.raise_error_if_exists()
 
-    execution = workflow_runner.execution  #TODO refresh?
+    execution = workflow_runner.execution
     logger.info('Execution has ended with "{0}" status'.format(execution.status))
-    #TODO print error if exists
+    if execution.status == Execution.FAILED:
+        logger.info('Execution error:\n{0}'.format(execution.error))
 
 
 def _cancel_execution(workflow_runner, execution_thread, logger):
     logger.info('Cancelling execution. Press Ctrl+C again to force-cancel')
     try:
         workflow_runner.cancel()
-        execution_thread.join()
+        while execution_thread.is_alive():
+            execution_thread.join(1)
     except KeyboardInterrupt:
-        raise NotImplementedError('Force-cancelling functionality is not yet implemented')
-        # logger.info('Force-cancelling execution')
+        logger.info('Force-cancelling execution')
         # TODO handle execution (update status etc.) and exit process
