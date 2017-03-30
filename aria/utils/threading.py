@@ -258,7 +258,7 @@ class LockedList(list):
         return self.lock.__exit__(the_type, value, traceback)
 
 
-class ExcThread(Thread):
+class ExceptionThread(Thread):
     """
     A thread from which top level exceptions can be retrieved or reraised
     """
@@ -268,7 +268,7 @@ class ExcThread(Thread):
 
     def run(self):
         try:
-            super(ExcThread, self).run()
+            super(ExceptionThread, self).run()
         except BaseException:
             self.exception = sys.exc_info()
 

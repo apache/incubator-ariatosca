@@ -152,6 +152,7 @@ def start(workflow_name,
     except KeyboardInterrupt:
         _cancel_execution(workflow_runner, execution_thread, logger)
 
+    # raise any errors from the execution thread (note these are not workflow execution errors)
     execution_thread.raise_error_if_exists()
 
     execution = workflow_runner.execution

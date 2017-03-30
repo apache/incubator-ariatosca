@@ -299,16 +299,6 @@ class Options(object):
             callback=inputs_callback,
             help=helptexts.INPUTS)
 
-        self.output_path = click.option(
-            '-o',
-            '--output-path',
-            help=helptexts.OUTPUT_PATH)
-
-        self.optional_output_path = click.option(
-            '-o',
-            '--output-path',
-            help=helptexts.OUTPUT_PATH)
-
         self.json_output = click.option(
             '--json-output',
             is_flag=True,
@@ -410,15 +400,6 @@ class Options(object):
             type=int,
             default=default,
             help=helptexts.TASK_RETRY_INTERVAL.format(default))
-
-    @staticmethod
-    def timeout(default=900):
-        #TODO needed?
-        return click.option(
-            '--timeout',
-            type=int,
-            default=default,
-            help=helptexts.OPERATION_TIMEOUT)
 
     @staticmethod
     def service_id(required=False):

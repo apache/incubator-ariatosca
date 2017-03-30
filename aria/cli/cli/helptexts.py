@@ -29,12 +29,9 @@ SERVICE_TEMPLATE_ID = "The unique identifier for the service template"
 
 RESET_CONTEXT = "Reset the working environment"
 HARD_RESET = "Hard reset the configuration, including coloring and loggers"
-SHOW_ACTIVE_CONNECTION_INFORMATION = \
-    "Show connection information for the active manager"
 ENABLE_COLORS = "Enable colors in logger (use --hard when working with" \
                 " an initialized environment) [default: False]"
 
-OUTPUT_PATH = "The local path to download to"
 SERVICE_TEMPLATE_FILENAME = (
     "The name of the archive's main service template file. "
     "This is only relevant if uploading an archive")
@@ -44,13 +41,7 @@ TASK_RETRY_INTERVAL = \
     "How long of a minimal interval should occur between task retry attempts [default: {0}]"
 TASK_MAX_ATTEMPTS = \
     "How many times should a task be attempted in case of failures [default: {0}]"
-TASK_THREAD_POOL_SIZE = \
-    "The size of the thread pool to execute tasks in [default: {0}]"
 
-OPERATION_TIMEOUT = (
-    "Operation timeout in seconds (The execution itself will keep going, but "
-    "the CLI will stop waiting for it to terminate) [default: {0}]"
-)
 JSON_OUTPUT = "Output events in a consumable JSON format"
 
 SERVICE_ID = "The unique identifier for the service"
