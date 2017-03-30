@@ -1,0 +1,27 @@
+tosca_definitions_version: tosca_simple_profile_for_nfv_1_0
+
+node_types:
+  web_app:
+    derived_from: tosca.nodes.WebApplication
+    properties:
+      port:
+        type: integer
+        default: 8080
+
+topology_template:
+
+  node_templates:
+    web_server:
+      type: tosca.nodes.WebServer
+
+    web_app:
+      type: web_app
+      properties:
+        port: 9090
+      requirements:
+        - host: web_server
+      interfaces:
+        Standard:
+          configure: scripts/configure.sh
+          start: scripts/start.sh
+          stop: scripts/stop.sh
