@@ -96,13 +96,16 @@ class ExecutionBase(ModelMixin):
     ended_at = Column(DateTime, nullable=True, index=True)
     error = Column(Text, nullable=True)
     is_system_workflow = Column(Boolean, nullable=False, default=False)
-    parameters = Column(Dict)
     status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
     workflow_name = Column(Text)
 
     @declared_attr
     def service(cls):
         return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
     # region foreign keys
 

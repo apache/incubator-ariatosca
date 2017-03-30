@@ -32,7 +32,7 @@ from ..utils.imports import import_fullname
 
 DEFAULT_TASK_MAX_ATTEMPTS = 1
 DEFAULT_TASK_RETRY_INTERVAL = 1
-# TODO move this constant somewhere in the DSL parser
+# TODO move this constant somewhere in the DSL parser?
 WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('implementation', 'dependencies')
 
 
@@ -67,9 +67,10 @@ class WorkflowRunner(object):
             task_max_attempts=task_max_attempts,
             task_retry_interval=task_retry_interval)
 
-        # merged_inputs_dict = {input.name: input.value for input in self.execution.inputs.values()}
-        # self._tasks_graph = workflow_fn(ctx=workflow_context, **merged_inputs_dict)
-        self._tasks_graph = workflow_fn(ctx=workflow_context)
+        # transforming the execution inputs to dict, to pass them to the workflow function
+        execution_inputs_dict = {input.name: input.value for input in
+                                 self.execution.inputs.values()}
+        self._tasks_graph = workflow_fn(ctx=workflow_context, **execution_inputs_dict)
 
         self._engine = Engine(
             executor=ProcessExecutor(plugin_manager=plugin_manager),
@@ -96,14 +97,17 @@ class WorkflowRunner(object):
         execution = models.Execution(
             created_at=datetime.utcnow(),
             service=self.service,
-            workflow_name=self._workflow_name)
+            workflow_name=self._workflow_name,
+            inputs={})
 
-        # workflow_inputs = {k: v for k, v in
-        #                    self.service.workflows[self._workflow_name].properties
-        #                    if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES}
+        # built-in workflows don't have any inputs, and are also
+        # not a part of the service's workflows field
+        if self._workflow_name not in BUILTIN_WORKFLOWS:
+            workflow_inputs = {k: v for k, v in
+                               self.service.workflows[self._workflow_name].properties
+                               if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES}
 
-        # input_models = modeling_utils.create_inputs(inputs, workflow_inputs)
-        # execution.parameters = input_models
+            execution.inputs = modeling_utils.create_inputs(inputs, workflow_inputs)
 
         self._model_storage.execution.put(execution)
         return execution
