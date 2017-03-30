@@ -15,12 +15,14 @@
 
 
 def convert_value_to_type(str_value, type_name):
+    """Supports both python and yaml type names"""
+    #TODO add timestamp type?
     try:
-        if type_name.lower() in ['str', 'unicode']:
+        if type_name.lower() in ['str', 'unicode', 'string']:
             return str_value.decode('utf-8')
-        elif type_name.lower() == 'int':
+        elif type_name.lower() in ['int', 'integer']:
             return int(str_value)
-        elif type_name.lower() == 'bool':
+        elif type_name.lower() in ['bool', 'boolean']:
             return bool(str_value)
         elif type_name.lower() == 'float':
             return float(str_value)

@@ -258,7 +258,6 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
                                  updated_at=now,
                                  description=deepcopy_with_locators(self.description),
                                  service_template=self)
-        #service.name = '{0}_{1}'.format(self.name, service.id)
 
         context.modeling.instance = service
 
@@ -274,17 +273,11 @@ class ServiceTemplateBase(TemplateModelMixin): # pylint: disable=too-many-public
         utils.instantiate_dict(self, service.workflows, self.workflow_templates)
         utils.instantiate_dict(self, service.plugin_specifications, self.plugin_specifications)
 
-        # if self.substitution_template is not None:
-        #     service.substitution = self.substitution_template.instantiate(container)
+        if self.substitution_template is not None:
+            service.substitution = self.substitution_template.instantiate(container)
 
         utils.instantiate_dict(self, service.inputs, self.inputs)
         utils.instantiate_dict(self, service.outputs, self.outputs)
-
-        for name, the_input in context.modeling.inputs.iteritems():
-            if name not in service.inputs:
-                context.validation.report('input "{0}" is not supported'.format(name))
-            else:
-                service.inputs[name].value = the_input
 
         return service
 

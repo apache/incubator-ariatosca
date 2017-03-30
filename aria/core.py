@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from .modeling import models
-from .modeling import utils as storage_utils
+from .modeling import utils as modeling_utils
 from .exceptions import AriaException
 from .parser.consumption import (
     ConsumptionContext,
@@ -68,21 +68,23 @@ class Core(object):
         self.model_storage.service_template.delete(service_template)
         self.resource_storage.service_template.delete(entry_id=str(service_template.id))
 
-    def create_service(self, service_template_name, inputs, service_name):
+    def create_service(self, service_template_name, inputs, service_name=None):
         service_template = self.model_storage.service_template.get_by_name(service_template_name)
 
-        context = ConsumptionContext()
+        # creating an empty ConsumptionContext, initiating a threadlocal context
+        ConsumptionContext()
         with self.model_storage._all_api_kwargs['session'].no_autoflush:
             service = service_template.instantiate(None)
 
-        # template_inputs = self.model_storage.service_template.inputs
-        # input_models = storage_utils.create_inputs(inputs, template_inputs)
-        # service.inputs = input_models
-
+        template_inputs = service_template.inputs
+        input_models = modeling_utils.create_inputs(inputs, template_inputs)
+        service.inputs = {input.name: input for input in input_models}
         # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 
-        service.name = service_name
+        # first put the service model so it could have an id, as fallback for setting its name
         self.model_storage.service.put(service)
+        service.name = service_name or '{0}_{1}'.format(service_template_name, service.id)
+        self.model_storage.service.update(service)
         return service
 
     def delete_service(self, service_name, force=False):

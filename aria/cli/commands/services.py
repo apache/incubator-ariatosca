@@ -93,7 +93,6 @@ def create(service_template_name,
     """
     logger.info('Creating new service from service template {0}...'.format(
         service_template_name))
-    service_name = service_name or service_template_name
 
     try:
         core = Core(model_storage, resource_storage, plugin_manager)
@@ -165,8 +164,12 @@ def inputs(service_name, model_storage, logger):
     """
     logger.info('Showing inputs for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
-    inputs_ = StringIO()
-    for input_name, input in service.inputs.iteritems():
-        inputs_.write(' - "{0}":{1}'.format(input_name, os.linesep))
-        inputs_.write('     Value: {0}{1}'.format(input.value, os.linesep))
-    logger.info(inputs_.getvalue())
+    if service.inputs:
+        inputs_ = StringIO()
+        for input_name, input in service.inputs.iteritems():
+            inputs_.write(' - "{0}":{1}'.format(input_name, os.linesep))
+            inputs_.write('     Value: {0}{1}'.format(input.value, os.linesep))
+        logger.info(inputs_.getvalue())
+    else:
+        logger.info('\tNo inputs')
+    logger.info('')

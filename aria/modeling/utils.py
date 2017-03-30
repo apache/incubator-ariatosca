@@ -37,9 +37,9 @@ def create_inputs(inputs, template_inputs):
     for input_name, input_val in inputs.iteritems():
         parameter = models.Parameter(
             name=input_name,
-            type=template_inputs[input_name].type,
+            type_name=template_inputs[input_name].type_name,
             description=template_inputs[input_name].description,
-            str_value=str(input_val))
+            value=input_val)
         input_models.append(parameter)
 
     return input_models
@@ -64,9 +64,9 @@ def _merge_and_validate_inputs(inputs, template_inputs):
         else:
             # Validate type of inputs
             try:
-                convert_value_to_type(str(inputs[input_name]), input_template.type)
+                convert_value_to_type(str(inputs[input_name]), input_template.type_name)
             except ValueError:
-                wrong_type_inputs[input_name] = input_template.type
+                wrong_type_inputs[input_name] = input_template.type_name
 
     if missing_inputs:
         raise exceptions.MissingRequiredInputsException(
@@ -80,12 +80,12 @@ def _merge_and_validate_inputs(inputs, template_inputs):
                                 format(param_name, param_type))
         raise exceptions.InputOfWrongTypeException(error_message.getvalue())
 
-    unknown_inputs = [input_name for input_name in inputs.keys()
+    undeclared_inputs = [input_name for input_name in inputs.keys()
                       if input_name not in template_inputs]
-    if unknown_inputs:
+    if undeclared_inputs:
         raise exceptions.UndeclaredInputsException(
             'Undeclared inputs have been specified: {0}; Expected inputs: {1}'
-            .format(unknown_inputs, template_inputs.keys()))
+            .format(undeclared_inputs, template_inputs.keys()))
 
     return merged_inputs
 

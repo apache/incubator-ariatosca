@@ -25,7 +25,7 @@ from .workflows.builtin import BUILTIN_WORKFLOWS, BUILTIN_WORKFLOWS_PATH_PREFIX
 from .workflows.core.engine import Engine
 from .workflows.executor.process import ProcessExecutor
 from ..exceptions import AriaException
-from ..modeling import utils as storage_utils
+from ..modeling import utils as modeling_utils
 from ..modeling import models
 from ..utils.imports import import_fullname
 
@@ -85,6 +85,7 @@ class WorkflowRunner(object):
         return self._model_storage.service.get(self._service_id)
 
     def execute(self):
+        #TODO uncomment, commented for testing purposes
         # self._validate_no_active_executions()
         self._engine.execute()
 
@@ -101,7 +102,7 @@ class WorkflowRunner(object):
         #                    self.service.workflows[self._workflow_name].properties
         #                    if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES}
 
-        # input_models = storage_utils.create_inputs(inputs, workflow_inputs)
+        # input_models = modeling_utils.create_inputs(inputs, workflow_inputs)
         # execution.parameters = input_models
 
         self._model_storage.execution.put(execution)
