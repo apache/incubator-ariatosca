@@ -44,3 +44,19 @@ class AriaException(Exception):
                 # Make sure it's our traceback
                 cause_traceback = traceback
         self.cause_traceback = cause_traceback
+
+
+class DependentServicesError(AriaError):
+    pass
+
+
+class DependentActiveExecutionsError(AriaError):
+    pass
+
+
+class DependentAvailableNodesError(AriaError):
+    pass
+
+
+class ParsingError(AriaError):
+    pass

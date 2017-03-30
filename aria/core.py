@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from . import exceptions
 from .modeling import models
 from .modeling import utils as modeling_utils
-from .exceptions import AriaException
 from .parser.consumption import (
     ConsumptionContext,
     ConsumerChain,
@@ -62,8 +62,8 @@ class Core(object):
     def delete_service_template(self, service_template_id):
         service_template = self.model_storage.service_template.get(service_template_id)
         if service_template.services.all():
-            raise AriaException("Can't delete service template {0} - Service template has "
-                                "existing services")
+            raise exceptions.DependentServicesError(
+                "Can't delete service template {0} - Service template has existing services")
 
         self.model_storage.service_template.delete(service_template)
         self.resource_storage.service_template.delete(entry_id=str(service_template.id))
@@ -90,20 +90,20 @@ class Core(object):
     def delete_service(self, service_name, force=False):
         service = self.model_storage.service.get_by_name(service_name)
 
-        running_executions = [e for e in service.executions
-                              if e.status not in models.Execution.ACTIVE_STATES]
-        if running_executions:
-            raise AriaException("Can't delete service {0} - there is a running execution "
-                                "for this service. Running execution id: {1}"
-                                .format(service_name, running_executions[0].id))
+        active_executions = [e for e in service.executions
+                             if e.status not in models.Execution.ACTIVE_STATES]
+        if active_executions:
+            raise exceptions.DependentActiveExecutionsError(
+                "Can't delete service {0} - there is an active execution for this service. "
+                "Active execution id: {1}".format(service_name, active_executions[0].id))
 
         if not force:
-            running_nodes = [n for n in service.nodes.values()
-                             if n.state not in ('deleted', 'errored')]
-            if running_nodes:
-                raise AriaException("Can't delete service {0} - there are running nodes "
-                                    "for this service. Running node ids: {1}"
-                                    .format(service_name, running_nodes))
+            available_nodes = [n for n in service.nodes.values()
+                               if n.state not in ('deleted', 'errored')]
+            if available_nodes:
+                raise exceptions.DependentAvailableNodesError(
+                    "Can't delete service {0} - there are available nodes for this service. "
+                    "Available node ids: {1}".format(service_name, available_nodes))
 
         self.model_storage.service.delete(service)
 
@@ -113,5 +113,5 @@ class Core(object):
         context.presentation.location = UriLocation(service_template_path)
         ConsumerChain(context, (Read, Validate, ServiceTemplate)).consume()
         if context.validation.dump_issues():
-            raise AriaException('Failed to parse service template')
+            raise exceptions.ParsingError('Failed to parse service template')
         return context
