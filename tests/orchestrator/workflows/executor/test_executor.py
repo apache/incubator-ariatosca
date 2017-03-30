@@ -85,12 +85,11 @@ class MockContext(object):
 
     def __init__(self, *args, **kwargs):
         self.logger = logging.getLogger()
+        self.task = type('SubprocessMockTask', (object, ), {'plugin': None})
+        self.serialization_dict = {'context_cls': self.__class__, 'context': {}}
 
     def __getattr__(self, item):
-        if item == 'serialization_dict':
-            return {'context_cls': self.__class__, 'context': {}}
-        else:
-            return None
+        return None
 
     @classmethod
     def deserialize_from_dict(cls, **kwargs):
