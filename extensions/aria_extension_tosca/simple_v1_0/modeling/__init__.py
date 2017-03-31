@@ -85,9 +85,14 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
     if policies:
         for policy in policies.itervalues():
-            if model.policy_types.get_descendant(policy.type).role == 'plugin':
+            role = model.policy_types.get_descendant(policy.type).role
+            if role == 'plugin':
                 plugin_specification = create_plugin_specification_model(context, policy)
                 model.plugin_specifications[plugin_specification.name] = plugin_specification
+            elif role == 'workflow':
+                operation_template = create_workflow_operation_template_model(context,
+                                                                              model, policy)
+                model.workflow_templates[operation_template.name] = operation_template
 
     # Node templates
     node_templates = context.presentation.get('service_template', 'topology_template',
@@ -442,6 +447,29 @@ def create_plugin_specification_model(context, policy):
 
     model = PluginSpecification(name=policy._name,
                                 version=get('version'))
+
+    return model
+
+
+def create_workflow_operation_template_model(context, service_template, policy):
+    model = OperationTemplate(name=policy._name,
+                              service_template=service_template)
+
+    if policy.description:
+        model.description = policy.description.value
+
+    properties = policy._get_property_values(context)
+    for prop_name, prop in properties.iteritems():
+        if prop_name == 'implementation':
+            model.plugin_specification, model.implementation = \
+                parse_implementation_string(context, service_template, prop.value)
+        elif prop_name == 'dependencies':
+            model.dependencies = prop.value
+        else:
+            model.inputs[prop_name] = Parameter(name=prop_name,
+                                                type_name=prop.type,
+                                                value=prop.value,
+                                                description=prop.description)
 
     return model
 

@@ -31,7 +31,7 @@ def convert_to_dry(service):
     interfaces) to run dryly.
     """
 
-    for workflow in service.workflows:
+    for workflow in service.workflows.itervalues():
         convert_operation_to_dry(workflow)
 
     for node in service.nodes.itervalues():

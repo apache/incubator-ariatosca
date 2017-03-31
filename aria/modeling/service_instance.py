@@ -121,6 +121,7 @@ class ServiceBase(InstanceModelMixin):
     # endregion
 
     # region one_to_many relationships
+
     @declared_attr
     def updates(cls):
         return relationship.one_to_many(cls, 'service_update')
@@ -132,10 +133,6 @@ class ServiceBase(InstanceModelMixin):
     @declared_attr
     def executions(cls):
         return relationship.one_to_many(cls, 'execution')
-
-    @declared_attr
-    def operations(cls):
-        return relationship.one_to_many(cls, 'operation')
 
     @declared_attr
     def nodes(cls):
@@ -164,6 +161,7 @@ class ServiceBase(InstanceModelMixin):
     # endregion
 
     # region many_to_many relationships
+
     @declared_attr
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
@@ -1666,7 +1664,7 @@ class OperationBase(InstanceModelMixin):
 
     @declared_attr
     def service(cls):
-        return relationship.many_to_one(cls, 'service')
+        return relationship.many_to_one(cls, 'service', back_populates='workflows')
 
     @declared_attr
     def interface(cls):
@@ -1692,8 +1690,6 @@ class OperationBase(InstanceModelMixin):
     executor = Column(Text)
     max_retries = Column(Integer)
     retry_interval = Column(Integer)
-
-
 
     @property
     def as_raw(self):
