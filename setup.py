@@ -19,6 +19,7 @@ import sys
 
 from setuptools import setup, find_packages
 from setuptools.command.install import install
+from setuptools.command.develop import develop
 
 _PACKAGE_NAME = 'aria'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
@@ -63,20 +64,43 @@ except IOError:
 console_scripts = ['aria = aria.cli.cli:main']
 
 
-class InstallCommand(install):
-    user_options = install.user_options + [
+def _generate_user_options(command):
+    return command.user_options + [
         ('skip-ctx', None, 'Install with or without the ctx (Defaults to False)')
     ]
-    boolean_options = install.boolean_options + ['skip-ctx']
 
-    def initialize_options(self):
-        install.initialize_options(self)
-        self.skip_ctx = False
 
-    def run(self):
-        if self.skip_ctx is False:
-            console_scripts.append('ctx = aria.orchestrator.execution_plugin.ctx_proxy.client:main')
-        install.run(self)
+def _generate_boolean_options(command):
+    return command.boolean_options + ['skip-ctx']
+
+
+def _initialize_options(custom_cmd):
+    custom_cmd.command.initialize_options(custom_cmd)
+    custom_cmd.skip_ctx = False
+
+
+def _run(custom_cmd):
+    if custom_cmd.skip_ctx is False:
+        console_scripts.append('ctx = aria.orchestrator.execution_plugin.ctx_proxy.client:main')
+    custom_cmd.command.run(custom_cmd)
+
+
+class InstallCommand(install):
+    command = install
+
+    user_options = _generate_user_options(install)
+    boolean_options = _generate_boolean_options(install)
+    initialize_options = _initialize_options
+    run = _run
+
+
+class DevelopCommand(develop):
+    command = develop
+
+    user_options = _generate_user_options(develop)
+    boolean_options = _generate_boolean_options(develop)
+    initialize_options = _initialize_options
+    run = _run
 
 setup(
     name=_PACKAGE_NAME,
@@ -116,6 +140,7 @@ setup(
         'console_scripts': console_scripts
     },
     cmdclass={
-        'install': InstallCommand
+        'install': InstallCommand,      # used in pip install ...
+        'develop': DevelopCommand       # used in pip install -e ...
     }
 )
