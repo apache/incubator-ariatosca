@@ -16,7 +16,7 @@
 
 import pytest
 
-from aria.utils.threading import ExcThread
+from aria.utils import threading
 
 
 class TestPluginManager(object):
@@ -26,7 +26,7 @@ class TestPluginManager(object):
         def error_raising_func():
             raise ValueError('This is an error')
 
-        thread = ExcThread(target=error_raising_func)
+        thread = threading.ExceptionThread(target=error_raising_func)
         thread.start()
         thread.join()
 

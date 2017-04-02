@@ -104,7 +104,7 @@ class WorkflowRunner(object):
         # not a part of the service's workflows field
         if self._workflow_name not in BUILTIN_WORKFLOWS:
             workflow_inputs = {k: v for k, v in
-                               self.service.workflows[self._workflow_name].properties
+                               self.service.workflows[self._workflow_name].inputs
                                if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES}
 
             execution.inputs = modeling_utils.create_inputs(inputs, workflow_inputs)
@@ -136,6 +136,7 @@ class WorkflowRunner(object):
 
         try:
             # TODO: perhaps pass to import_fullname as paths instead of appending to sys path?
+            # TODO: revisit; workflow.implementation to be used instead?
             sys.path.append(workflow.properties['implementation'].value)
             # sys.path.append(os.path.dirname(str(context.presentation.location)))
         except KeyError:
