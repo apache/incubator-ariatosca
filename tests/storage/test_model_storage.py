@@ -15,29 +15,35 @@
 
 import pytest
 
+from aria import (
+    application_model_storage,
+    modeling
+)
 from aria.storage import (
     ModelStorage,
     exceptions,
-    sql_mapi
+    sql_mapi,
 )
-from aria import (application_model_storage, modeling)
-from ..storage import (release_sqlite_storage, init_inmemory_model_storage)
 
-from . import MockModel
+from tests import (
+    mock,
+    storage as tests_storage,
+    modeling as tests_modeling
+)
 
 
 @pytest.fixture
 def storage():
     base_storage = ModelStorage(sql_mapi.SQLAlchemyModelAPI,
-                                initiator=init_inmemory_model_storage)
-    base_storage.register(MockModel)
+                                initiator=tests_storage.init_inmemory_model_storage)
+    base_storage.register(tests_modeling.MockModel)
     yield base_storage
-    release_sqlite_storage(base_storage)
+    tests_storage.release_sqlite_storage(base_storage)
 
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.models.aria_declarative_base.metadata.remove(MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(tests_modeling.MockModel.__table__)  #pylint: disable=no-member
 
 
 def test_storage_base(storage):
@@ -46,7 +52,7 @@ def test_storage_base(storage):
 
 
 def test_model_storage(storage):
-    mock_model = MockModel(value=0, name='model_name')
+    mock_model = tests_modeling.MockModel(value=0, name='model_name')
     storage.mock_model.put(mock_model)
 
     assert storage.mock_model.get_by_name('model_name') == mock_model
@@ -61,7 +67,7 @@ def test_model_storage(storage):
 
 def test_application_storage_factory():
     storage = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
-                                        initiator=init_inmemory_model_storage)
+                                        initiator=tests_storage.init_inmemory_model_storage)
 
     assert storage.service_template
     assert storage.node_template
@@ -99,4 +105,35 @@ def test_application_storage_factory():
     assert storage.type
     assert storage.metadata
 
-    release_sqlite_storage(storage)
+    tests_storage.release_sqlite_storage(storage)
+
+
+@pytest.fixture
+def context(tmpdir):
+    result = mock.context.simple(str(tmpdir))
+    yield result
+    tests_storage.release_sqlite_storage(result.model)
+
+
+def test_mapi_include(context):
+    service1 = context.model.service.list()[0]
+    service1.name = 'service1'
+    service1.service_template.name = 'service_template1'
+    context.model.service.update(service1)
+
+    service_template2 = mock.models.create_service_template('service_template2')
+    service2 = mock.models.create_service(service_template2, 'service2')
+    context.model.service.put(service2)
+
+    assert service1 != service2
+    assert service1.service_template != service2.service_template
+
+    def assert_include(service):
+        st_name = context.model.service.get(service.id, include=('service_template_name',))
+        st_name_list = context.model.service.list(filters={'id': service.id},
+                                                  include=('service_template_name', ))
+        assert len(st_name) == len(st_name_list) == 1
+        assert st_name[0] == st_name_list[0][0] == service.service_template.name
+
+    assert_include(service1)
+    assert_include(service2)

@@ -22,8 +22,7 @@ def create_simple_topology_single_node(model_storage, create_operation):
     service_template = models.create_service_template()
     service = models.create_service(service_template)
 
-    node_template = models.create_dependency_node_template(
-        models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
+    node_template = models.create_dependency_node_template(service_template)
     interface_template = models.create_interface_template(
         service_template,
         'Standard', 'create',
@@ -55,10 +54,9 @@ def create_simple_topology_two_nodes(model_storage):
 
     # Creating a simple service with node -> node as a graph
 
-    dependency_node_template = models.create_dependency_node_template(
-        models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
-    dependent_node_template = models.create_dependent_node_template(
-        models.DEPENDENT_NODE_TEMPLATE_NAME, service_template, dependency_node_template)
+    dependency_node_template = models.create_dependency_node_template(service_template)
+    dependent_node_template = models.create_dependent_node_template(service_template,
+                                                                    dependency_node_template)
 
     dependency_node = models.create_node(
         models.DEPENDENCY_NODE_NAME, dependency_node_template, service)
@@ -87,9 +85,8 @@ def create_simple_topology_three_nodes(model_storage):
     service_id = create_simple_topology_two_nodes(model_storage)
     service = model_storage.service.get(service_id)
     third_node_template = models.create_dependency_node_template(
-        'another_dependency_node_template', service.service_template)
-    third_node = models.create_node(
-        'another_dependency_node', third_node_template, service)
+        service.service_template, name='another_dependency_node_template')
+    third_node = models.create_node('another_dependency_node', third_node_template, service)
     new_relationship = models.create_relationship(
         source=model_storage.node.get_by_name(models.DEPENDENT_NODE_NAME),
         target=third_node,

@@ -50,10 +50,10 @@ DEPENDENT_NODE_TEMPLATE_NAME = 'dependent_node_template'
 DEPENDENT_NODE_NAME = 'dependent_node'
 
 
-def create_service_template():
+def create_service_template(name=SERVICE_TEMPLATE_NAME):
     now = datetime.now()
     return models.ServiceTemplate(
-        name=SERVICE_TEMPLATE_NAME,
+        name=name,
         description=None,
         created_at=now,
         updated_at=now,
@@ -68,10 +68,10 @@ def create_service_template():
     )
 
 
-def create_service(service_template):
+def create_service(service_template, name=SERVICE_NAME):
     now = datetime.utcnow()
     return models.Service(
-        name=SERVICE_NAME,
+        name=name,
         service_template=service_template,
         description='',
         created_at=now,
@@ -81,7 +81,7 @@ def create_service(service_template):
     )
 
 
-def create_dependency_node_template(name, service_template):
+def create_dependency_node_template(service_template, name=DEPENDENCY_NODE_TEMPLATE_NAME):
     node_type = service_template.node_types.get_descendant('test_node_type')
     capability_type = service_template.capability_types.get_descendant('test_capability_type')
 
@@ -103,7 +103,8 @@ def create_dependency_node_template(name, service_template):
     return node_template
 
 
-def create_dependent_node_template(name, service_template, dependency_node_template):
+def create_dependent_node_template(
+        service_template, dependency_node_template, name=DEPENDENT_NODE_TEMPLATE_NAME):
     the_type = service_template.node_types.get_descendant('test_node_type')
 
     requirement_template = models.RequirementTemplate(

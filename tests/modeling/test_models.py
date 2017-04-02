@@ -89,10 +89,8 @@ def _service_update_storage():
 def _node_template_storage():
     storage = _service_storage()
     service_template = storage.service_template.list()[0]
-    dependency_node_template = mock.models.create_dependency_node_template(
-        mock.models.DEPENDENCY_NODE_TEMPLATE_NAME, service_template)
-    mock.models.create_dependent_node_template(
-        mock.models.DEPENDENCY_NODE_NAME, service_template, dependency_node_template)
+    dependency_node_template = mock.models.create_dependency_node_template(service_template)
+    mock.models.create_dependent_node_template(service_template, dependency_node_template)
     storage.service_template.update(service_template)
     return storage
 
@@ -104,10 +102,8 @@ def _nodes_storage():
         mock.models.DEPENDENCY_NODE_TEMPLATE_NAME)
     mock.models.create_node(mock.models.DEPENDENCY_NODE_NAME, dependency_node_template, service)
 
-    dependent_node_template = \
-        mock.models.create_dependent_node_template(mock.models.DEPENDENT_NODE_TEMPLATE_NAME,
-                                                   service.service_template,
-                                                   dependency_node_template)
+    dependent_node_template = mock.models.create_dependent_node_template(service.service_template,
+                                                                         dependency_node_template)
 
     mock.models.create_node(mock.models.DEPENDENT_NODE_NAME, dependent_node_template, service)
     storage.service.update(service)
