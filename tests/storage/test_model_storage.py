@@ -108,6 +108,19 @@ def test_application_storage_factory():
     tests_storage.release_sqlite_storage(storage)
 
 
+def test_cascade_deletion(context):
+    service = context.model.service.list()[0]
+
+    assert len(context.model.service_template.list()) == 1
+    assert len(service.nodes) == len(context.model.node.list()) == 2
+
+    context.model.service.delete(service)
+
+    assert len(context.model.service_template.list()) == 1
+    assert len(context.model.service.list()) == 0
+    assert len(context.model.node.list()) == 0
+
+
 @pytest.fixture
 def context(tmpdir):
     result = mock.context.simple(str(tmpdir))

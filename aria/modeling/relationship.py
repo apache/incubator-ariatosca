@@ -193,7 +193,8 @@ def one_to_many(model_class,
         child_table,
         back_populates=back_populates,
         other_fk=child_fk,
-        dict_key=dict_key)
+        dict_key=dict_key,
+        relationship_kwargs=dict(cascade='all'))
 
 
 def many_to_one(model_class,
