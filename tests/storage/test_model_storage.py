@@ -15,6 +15,12 @@
 
 import pytest
 
+from sqlalchemy import (
+    Column,
+    Integer,
+    Text
+)
+
 from aria import (
     application_model_storage,
     modeling
@@ -150,3 +156,54 @@ def test_mapi_include(context):
 
     assert_include(service1)
     assert_include(service2)
+
+
+class MockModel(modeling.models.aria_declarative_base, modeling.mixins.ModelMixin): #pylint: disable=abstract-method
+    __tablename__ = 'op_mock_model'
+
+    name = Column(Text)
+    value = Column(Integer)
+
+
+class TestFilterOperands(object):
+
+    @pytest.fixture()
+    def storage(self):
+        model_storage = application_model_storage(
+            sql_mapi.SQLAlchemyModelAPI, initiator=tests_storage.init_inmemory_model_storage)
+        model_storage.register(MockModel)
+        for value in (1, 2, 3, 4):
+            model_storage.op_mock_model.put(MockModel(value=value))
+        yield model_storage
+        tests_storage.release_sqlite_storage(model_storage)
+
+    def test_gt(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(gt=3)))) == 1
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(gt=4)))) == 0
+
+    def test_ge(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(ge=3)))) == 2
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(ge=5)))) == 0
+
+    def test_lt(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(lt=2)))) == 1
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(lt=1)))) == 0
+
+    def test_le(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(le=2)))) == 2
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(le=0)))) == 0
+
+    def test_eq(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(eq=2)))) == 1
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(eq=0)))) == 0
+
+    def test_neq(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(ne=2)))) == 3
+
+    def test_gt_and_lt(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(gt=1, lt=3)))) == 1
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(gt=2, lt=2)))) == 0
+
+    def test_eq_and_ne(self, storage):
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(eq=1, ne=3)))) == 1
+        assert len(storage.op_mock_model.list(filters=dict(value=dict(eq=1, ne=1)))) == 0

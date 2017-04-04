@@ -31,6 +31,13 @@ from . import (
     exceptions,
 )
 
+_predicates = {'ge': '__ge__',
+               'gt': '__gt__',
+               'lt': '__lt__',
+               'le': '__le__',
+               'eq': '__eq__',
+               'ne': '__ne__'}
+
 
 class SQLAlchemyModelAPI(api.ModelAPI):
     """
@@ -243,7 +250,10 @@ class SQLAlchemyModelAPI(api.ModelAPI):
     @staticmethod
     def _add_value_filter(query, filters):
         for column, value in filters.items():
-            if isinstance(value, (list, tuple)):
+            if isinstance(value, dict):
+                for predicate, operand in value.items():
+                    query = query.filter(getattr(column, predicate)(operand))
+            elif isinstance(value, (list, tuple)):
                 query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
@@ -269,11 +279,27 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         include, filters, sort, joins = self._get_joins_and_converted_columns(
             include, filters, sort
         )
+        filters = self._convert_operands(filters)
 
         query = self._get_base_query(include, joins)
         query = self._filter_query(query, filters)
         query = self._sort_query(query, sort)
         return query
+
+    @staticmethod
+    def _convert_operands(filters):
+        for column, conditions in filters.items():
+            if isinstance(conditions, dict):
+                for predicate, operand in conditions.items():
+                    if predicate not in _predicates:
+                        raise exceptions.StorageError(
+                            "{0} is not a valid predicate for filtering. Valid predicates are {1}"
+                            .format(predicate, ', '.join(_predicates.keys())))
+                    del filters[column][predicate]
+                    filters[column][_predicates[predicate]] = operand
+
+
+        return filters
 
     def _get_joins_and_converted_columns(self,
                                          include,
