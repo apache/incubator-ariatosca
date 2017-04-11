@@ -237,7 +237,8 @@ class TestCancel(BaseTest):
         t.start()
         time.sleep(10)
         eng.cancel_execution()
-        t.join(timeout=30)
+        t.join(timeout=60) # we need to give this a *lot* of time because Travis can be *very* slow
+        assert not t.is_alive() # if join is timed out it will not raise an exception
         assert workflow_context.states == ['start', 'cancel']
         assert workflow_context.exception is None
         invocations = global_test_holder.get('invocations', [])
