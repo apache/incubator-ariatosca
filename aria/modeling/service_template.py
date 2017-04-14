@@ -33,7 +33,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from ..parser import validation
 from ..parser.consumption import ConsumptionContext
 from ..parser.reading import deepcopy_with_locators
-from ..utils import collections, formatting, console
+from ..utils import (collections, formatting, console)
+from ..utils.versions import VersionString
 from .mixins import TemplateModelMixin
 from . import (
     relationship,
@@ -2135,13 +2136,15 @@ class PluginSpecificationBase(TemplateModelMixin):
         # moved to.
         plugins = model_storage.plugin.list()
         matching_plugins = []
-        for plugin in plugins:
-            # TODO: we need to use a version comparator
-            if (plugin.name == self.name) and \
-                    ((self.version is None) or (plugin.package_version >= self.version)):
-                matching_plugins.append(plugin)
+        if plugins:
+            for plugin in plugins:
+                if (plugin.name == self.name) and \
+                    ((self.version is None) or \
+                     (VersionString(plugin.package_version) >= self.version)):
+                    matching_plugins.append(plugin)
         self.plugin = None
         if matching_plugins:
             # Return highest version of plugin
-            self.plugin = sorted(matching_plugins, key=lambda plugin: plugin.package_version)[-1]
+            key = lambda plugin: VersionString(plugin.package_version).key
+            self.plugin = sorted(matching_plugins, key=key)[-1]
         return self.plugin is not None
