@@ -27,7 +27,7 @@ def configure_operation(operation):
     arguments = OrderedDict()
     arguments['script_path'] = operation.implementation
     arguments['process'] = _get_process(configuration.pop('process')) \
-        if 'process' in configuration else None
+        if 'process' in configuration else dict()
 
     host = None
     interface = operation.interface

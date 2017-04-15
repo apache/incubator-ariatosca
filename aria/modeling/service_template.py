@@ -280,7 +280,7 @@ class ServiceTemplateBase(TemplateModelMixin):
             ('interface_types', formatting.as_raw(self.interface_types)),
             ('artifact_types', formatting.as_raw(self.artifact_types))))
 
-    def instantiate(self, container, inputs=None):  # pylint: disable=arguments-differ
+    def instantiate(self, container, model_storage, inputs=None):  # pylint: disable=arguments-differ
         from . import models
         context = ConsumptionContext.get_thread_local()
         now = datetime.now()
@@ -295,7 +295,7 @@ class ServiceTemplateBase(TemplateModelMixin):
 
         for plugin_specification in self.plugin_specifications.itervalues():
             if plugin_specification.enabled:
-                if plugin_specification.resolve():
+                if plugin_specification.resolve(model_storage):
                     plugin = plugin_specification.plugin
                     service.plugins[plugin.name] = plugin
                 else:
@@ -1864,16 +1864,22 @@ class OperationTemplateBase(TemplateModelMixin):
 
     def instantiate(self, container):
         from . import models
-        if self.plugin_specification and self.plugin_specification.enabled:
-            plugin = self.plugin_specification.plugin
-            implementation = self.implementation if plugin is not None else None
-            # "plugin" would be none if a match was not found. In that case, a validation error
-            # should already have been reported in ServiceTemplateBase.instantiate, so we will
-            # continue silently here
+        if self.plugin_specification:
+            if self.plugin_specification.enabled:
+                plugin = self.plugin_specification.plugin
+                implementation = self.implementation if plugin is not None else None
+                # "plugin" would be none if a match was not found. In that case, a validation error
+                # should already have been reported in ServiceTemplateBase.instantiate, so we will
+                # continue silently here
+            else:
+                # If the plugin is disabled, the operation should be disabled, too
+                plugin = None
+                implementation = None
         else:
-            # If the plugin is disabled, the operation should be disabled, too
+            # using the execution plugin
             plugin = None
-            implementation = None
+            implementation = self.implementation
+
         operation = models.Operation(name=self.name,
                                      description=deepcopy_with_locators(self.description),
                                      relationship_edge=self.relationship_edge,
@@ -2119,25 +2125,16 @@ class PluginSpecificationBase(TemplateModelMixin):
     def coerce_values(self, container, report_issues):
         pass
 
-    def resolve(self):
+    def resolve(self, model_storage):
         # TODO: we are planning a separate "instantiation" module where this will be called or
-        # moved to. There, we will probably have a context with a storage manager. Until then,
-        # this is the only potentially available context, which of course will only be available
-        # if we're in a workflow.
-        from ..orchestrator import context
-        try:
-            workflow_context = context.workflow.current.get()
-            plugins = workflow_context.model.plugin.list()
-        except context.exceptions.ContextException:
-            plugins = None
-
+        # moved to.
+        plugins = model_storage.plugin.list()
         matching_plugins = []
-        if plugins:
-            for plugin in plugins:
-                # TODO: we need to use a version comparator
-                if (plugin.name == self.name) and \
+        for plugin in plugins:
+            # TODO: we need to use a version comparator
+            if (plugin.name == self.name) and \
                     ((self.version is None) or (plugin.package_version >= self.version)):
-                    matching_plugins.append(plugin)
+                matching_plugins.append(plugin)
         self.plugin = None
         if matching_plugins:
             # Return highest version of plugin

@@ -68,11 +68,19 @@ class Core(object):
 
         # creating an empty ConsumptionContext, initiating a threadlocal context
         context = consumption.ConsumptionContext()
+
         # setting no autoflush for the duration of instantiation - this helps avoid dependency
         # constraints as they're being set up
         with self.model_storage._all_api_kwargs['session'].no_autoflush:
-            service = service_template.instantiate(None, inputs)
+            service = service_template.instantiate(None, self.model_storage, inputs=inputs)
 
+        self.model_storage._all_api_kwargs['session'].flush()
+        consumption.ConsumerChain(
+            context,
+            (
+                consumption.FindHosts,
+                consumption.ConfigureOperations
+            )).consume()
         if context.validation.dump_issues():
             raise exceptions.InstantiationError('Failed to instantiate service template')
 

@@ -20,7 +20,7 @@ from .style import Style
 from .consumer import Consumer, ConsumerChain
 from .presentation import Read
 from .validation import Validate
-from .modeling import ServiceTemplate, Types, ServiceInstance
+from .modeling import ServiceTemplate, Types, ServiceInstance, FindHosts, ConfigureOperations
 from .inputs import Inputs
 
 __all__ = (
