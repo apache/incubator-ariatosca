@@ -69,3 +69,7 @@ class DependentAvailableNodesError(AriaError):
 
 class ParsingError(AriaError):
     pass
+
+
+class InstantiationError(AriaError):
+    pass

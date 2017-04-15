@@ -67,11 +67,14 @@ class Core(object):
         service_template = self.model_storage.service_template.get(service_template_id)
 
         # creating an empty ConsumptionContext, initiating a threadlocal context
-        consumption.ConsumptionContext()
+        context = consumption.ConsumptionContext()
         # setting no autoflush for the duration of instantiation - this helps avoid dependency
         # constraints as they're being set up
         with self.model_storage._all_api_kwargs['session'].no_autoflush:
             service = service_template.instantiate(None, inputs)
+
+        if context.validation.dump_issues():
+            raise exceptions.InstantiationError('Failed to instantiate service template')
 
         # If the user didn't enter a name for this service, we'll want to auto generate it.
         # But how will we ensure a unique but simple name? We'll append the services' unique id
