@@ -33,8 +33,6 @@ from ..utils.imports import import_fullname
 
 DEFAULT_TASK_MAX_ATTEMPTS = 1
 DEFAULT_TASK_RETRY_INTERVAL = 1
-# TODO move this constant somewhere in the DSL parser?
-WORKFLOW_POLICY_INTERNAL_PROPERTIES = ('implementation', 'dependencies')
 
 
 class WorkflowRunner(object):
@@ -115,9 +113,7 @@ class WorkflowRunner(object):
         if self._workflow_name in BUILTIN_WORKFLOWS:
             workflow_inputs = dict()  # built-in workflows don't have any inputs
         else:
-            workflow_inputs = dict((k, v) for k, v in
-                                   self.service.workflows[self._workflow_name].inputs.iteritems()
-                                   if k not in WORKFLOW_POLICY_INTERNAL_PROPERTIES)
+            workflow_inputs = self.service.workflows[self._workflow_name].inputs
 
         execution.inputs = modeling_utils.create_inputs(inputs, workflow_inputs)
         # TODO: these two following calls should execute atomically

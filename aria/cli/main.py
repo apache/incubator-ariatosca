@@ -47,11 +47,9 @@ def _register_commands():
     _aria.add_command(commands.logs.logs)
 
 
-_register_commands()
-
-
 def main():
     install_aria_extensions()
+    _register_commands()
     _aria()
 
 

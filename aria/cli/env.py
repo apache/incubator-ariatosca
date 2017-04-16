@@ -15,8 +15,6 @@
 
 
 import os
-import json
-import pkgutil
 
 from .config import config
 from .logger import Logging
@@ -77,11 +75,6 @@ class _Environment(object):
         if not self._plugin_manager:
             self._plugin_manager = self._init_plugin_manager()
         return self._plugin_manager
-
-    @staticmethod
-    def get_version_data():
-        data = pkgutil.get_data(__package__, 'VERSION')
-        return json.loads(data)
 
     def _init_workdir(self):
         if not os.path.exists(self._workdir):

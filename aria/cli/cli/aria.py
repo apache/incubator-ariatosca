@@ -31,6 +31,7 @@ from ..cli import helptexts
 from ..inputs import inputs_to_dict
 from ..constants import DEFAULT_SERVICE_TEMPLATE_FILENAME
 from ...utils.exceptions import get_exception_as_string
+from ... import __version__
 
 
 CLICK_CONTEXT_SETTINGS = dict(
@@ -75,11 +76,11 @@ class MutuallyExclusiveOption(click.Option):
             ctx, opts, args)
 
 
-def _format_version_data(version_data,
+def _format_version_data(version,
                          prefix=None,
                          suffix=None,
                          infix=None):
-    all_data = version_data.copy()
+    all_data = dict(version=version)
     all_data['prefix'] = prefix or ''
     all_data['suffix'] = suffix or ''
     all_data['infix'] = infix or ''
@@ -93,9 +94,8 @@ def show_version(ctx, param, value):
     if not value:
         return
 
-    cli_version_data = env.get_version_data()
     cli_version = _format_version_data(
-        cli_version_data,
+        __version__,
         prefix='ARIA CLI ',
         infix=' ' * 5,
         suffix='')
