@@ -73,13 +73,13 @@ def relationship_tasks(relationship, interface_name, source_operation_name=None,
         try:
             if _is_empty_task(relationship, interface_name, source_operation_name):
                 operations.append(StubTask())
-
-            operations.append(
-                OperationTask.for_relationship(relationship=relationship,
-                                               interface_name=interface_name,
-                                               operation_name=source_operation_name,
-                                               **kwargs)
-            )
+            else:
+                operations.append(
+                    OperationTask.for_relationship(relationship=relationship,
+                                                   interface_name=interface_name,
+                                                   operation_name=source_operation_name,
+                                                   **kwargs)
+                )
         except exceptions.OperationNotFoundException:
             # We will skip relationships which do not have the operation
             pass
@@ -87,13 +87,13 @@ def relationship_tasks(relationship, interface_name, source_operation_name=None,
         try:
             if _is_empty_task(relationship, interface_name, target_operation_name):
                 operations.append(StubTask())
-
-            operations.append(
-                OperationTask.for_relationship(relationship=relationship,
-                                               interface_name=interface_name,
-                                               operation_name=target_operation_name,
-                                               **kwargs)
-            )
+            else:
+                operations.append(
+                    OperationTask.for_relationship(relationship=relationship,
+                                                   interface_name=interface_name,
+                                                   operation_name=target_operation_name,
+                                                   **kwargs)
+                )
         except exceptions.OperationNotFoundException:
             # We will skip relationships which do not have the operation
             pass
