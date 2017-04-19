@@ -73,8 +73,8 @@ def _configure_remote(operation, configuration, arguments):
     if ('password' not in ssh) and ('key' not in ssh) and ('key_filename' not in ssh):
         ssh['password'] = default_password
 
-    arguments['use_sudo'] = ssh.get('use_sudo')
-    arguments['hide_output'] = ssh.get('hide_output')
+    arguments['use_sudo'] = ssh.get('use_sudo', False)
+    arguments['hide_output'] = ssh.get('hide_output', [])
     arguments['fabric_env'] = {}
     if 'warn_only' in ssh:
         arguments['fabric_env']['warn_only'] = ssh['warn_only']
