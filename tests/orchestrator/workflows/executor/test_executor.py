@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import uuid
-from contextlib import contextmanager
 
 import pytest
 import retrying
@@ -37,14 +34,19 @@ from aria.orchestrator.workflows.executor import (
 )
 
 import tests
+from . import MockTask
+
+
+def _get_implementation(func):
+    return '{module}.{func.__name__}'.format(module=__name__, func=func)
 
 
 def test_execute(executor):
     expected_value = 'value'
-    successful_task = MockTask(mock_successful_task)
-    failing_task = MockTask(mock_failing_task)
-    task_with_inputs = MockTask(mock_task_with_input, inputs={'input': models.Parameter.wrap(
-        'input', 'value')})
+    successful_task = MockTask(_get_implementation(mock_successful_task))
+    failing_task = MockTask(_get_implementation(mock_failing_task))
+    task_with_inputs = MockTask(_get_implementation(mock_task_with_input),
+                                inputs={'input': models.Parameter.wrap('input', 'value')})
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -79,54 +81,6 @@ if app:
 
 class MockException(Exception):
     pass
-
-
-class MockContext(object):
-
-    def __init__(self, *args, **kwargs):
-        self.logger = logging.getLogger()
-        self.task = type('SubprocessMockTask', (object, ), {'plugin': None})
-        self.serialization_dict = {'context_cls': self.__class__, 'context': {}}
-
-    def __getattr__(self, item):
-        return None
-
-    @classmethod
-    def deserialize_from_dict(cls, **kwargs):
-        return cls()
-
-
-class MockTask(object):
-
-    INFINITE_RETRIES = models.Task.INFINITE_RETRIES
-
-    def __init__(self, func, inputs=None):
-        self.states = []
-        self.exception = None
-        self.id = str(uuid.uuid4())
-        name = func.__name__
-        implementation = '{module}.{name}'.format(
-            module=__name__,
-            name=name)
-        self.implementation = implementation
-        self.logger = logging.getLogger()
-        self.name = name
-        self.inputs = inputs or {}
-        self.context = MockContext()
-        self.retry_count = 0
-        self.max_attempts = 1
-        self.plugin_fk = None
-        self.ignore_failure = False
-        self.interface_name = 'interface_name'
-        self.operation_name = 'operation_name'
-        self.model_task = None
-
-        for state in models.Task.STATES:
-            setattr(self, state.upper(), state)
-
-    @contextmanager
-    def _update(self):
-        yield self
 
 
 @pytest.fixture(params=[

@@ -20,7 +20,9 @@ Thread based executor
 import Queue
 import threading
 
-from aria.utils import imports
+import sys
+
+from aria.utils import imports, exceptions
 
 from .base import BaseExecutor
 
@@ -63,7 +65,9 @@ class ThreadExecutor(BaseExecutor):
                     task_func(ctx=task.context, **inputs)
                     self._task_succeeded(task)
                 except BaseException as e:
-                    self._task_failed(task, exception=e)
+                    self._task_failed(task,
+                                      exception=e,
+                                      traceback=exceptions.get_exception_as_string(*sys.exc_info()))
             # Daemon threads
             except BaseException as e:
                 pass

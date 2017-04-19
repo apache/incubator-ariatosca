@@ -38,7 +38,7 @@ API:
     * StorageDriver - class, abstract model implementation.
 """
 
-from aria.logger import LoggerMixin, NullHandler
+from aria.logger import LoggerMixin
 from . import sql_mapi
 
 __all__ = (
@@ -71,10 +71,6 @@ class Storage(LoggerMixin):
         :param kwargs:
         """
         super(Storage, self).__init__(**kwargs)
-        # Set the logger handler of any storage object to NullHandler.
-        # This is since the absence of a handler shows up while using the CLI in the form of:
-        # `No handlers could be found for logger "aria.ResourceStorage"`.
-        self.logger.addHandler(NullHandler())
         self.api = api_cls
         self.registered = {}
         self._initiator = initiator

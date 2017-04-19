@@ -90,8 +90,12 @@ class WorkflowRunner(object):
             tasks_graph=self._tasks_graph)
 
     @property
+    def execution_id(self):
+        return self._execution_id
+
+    @property
     def execution(self):
-        return self._model_storage.execution.get(self._execution_id)
+        return self._model_storage.execution.get(self.execution_id)
 
     @property
     def service(self):

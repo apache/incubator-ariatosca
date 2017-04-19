@@ -18,6 +18,8 @@ import os
 from .. import helptexts
 from .. import table
 from .. import utils
+from .. import logger as cli_logger
+from .. import execution_logging
 from ..core import aria
 from ...modeling.models import Execution
 from ...orchestrator.workflow_runner import WorkflowRunner
@@ -141,12 +143,19 @@ def start(workflow_name,
 
     logger.info('Starting {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
     execution_thread.start()
+
+    log_iterator = cli_logger.ModelLogIterator(model_storage, workflow_runner.execution_id)
     try:
         while execution_thread.is_alive():
-            # using join without a timeout blocks and ignores KeyboardInterrupt
+            execution_logging.log_list(log_iterator)
             execution_thread.join(1)
+
     except KeyboardInterrupt:
-        _cancel_execution(workflow_runner, execution_thread, logger)
+        _cancel_execution(workflow_runner, execution_thread, logger, log_iterator)
+
+    # It might be the case where some logs were written and the execution was terminated, thus we
+    # need to drain the remaining logs.
+    execution_logging.log_list(log_iterator)
 
     # raise any errors from the execution thread (note these are not workflow execution errors)
     execution_thread.raise_error_if_exists()
@@ -161,11 +170,12 @@ def start(workflow_name,
         model_storage.execution.delete(execution)
 
 
-def _cancel_execution(workflow_runner, execution_thread, logger):
+def _cancel_execution(workflow_runner, execution_thread, logger, log_iterator):
     logger.info('Cancelling execution. Press Ctrl+C again to force-cancel')
     try:
         workflow_runner.cancel()
         while execution_thread.is_alive():
+            execution_logging.log_list(log_iterator)
             execution_thread.join(1)
     except KeyboardInterrupt:
         logger.info('Force-cancelling execution')

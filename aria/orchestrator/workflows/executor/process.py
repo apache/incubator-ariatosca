@@ -42,12 +42,15 @@ import pickle
 import jsonpickle
 
 import aria
-from aria.extension import process_executor
-from aria.utils import imports
-from aria.utils import exceptions
 from aria.orchestrator.workflows.executor import base
 from aria.storage import instrumentation
+from aria.extension import process_executor
+from aria.utils import (
+    imports,
+    exceptions
+)
 from aria.modeling import types as modeling_types
+
 
 _IS_WIN = os.name == 'nt'
 
@@ -233,9 +236,10 @@ class ProcessExecutor(base.BaseExecutor):
         except BaseException as e:
             e.message += 'Task failed due to {0}.'.format(request['exception']) + \
                          UPDATE_TRACKED_CHANGES_FAILED_STR
-            self._task_failed(task, exception=e)
+            self._task_failed(
+                task, exception=e, traceback=exceptions.get_exception_as_string(*sys.exc_info()))
         else:
-            self._task_failed(task, exception=request['exception'])
+            self._task_failed(task, exception=request['exception'], traceback=request['traceback'])
 
     def _handle_apply_tracked_changes_request(self, task_id, request, response):
         task = self._tasks[task_id]
@@ -319,6 +323,7 @@ class _Messenger(object):
                 'type': type,
                 'task_id': self.task_id,
                 'exception': exceptions.wrap_if_needed(exception),
+                'traceback': exceptions.get_exception_as_string(*sys.exc_info()),
                 'tracked_changes': tracked_changes
             })
             response = _recv_message(sock)

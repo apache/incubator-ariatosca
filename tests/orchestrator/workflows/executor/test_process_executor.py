@@ -15,13 +15,10 @@
 
 import logging
 import os
-import uuid
 import Queue
-from contextlib import contextmanager
 
 import pytest
 
-from aria.modeling import models as aria_models
 from aria.orchestrator import events
 from aria.utils.plugin import create as create_plugin
 from aria.orchestrator.workflows.executor import process
@@ -33,17 +30,17 @@ from tests.fixtures import (  # pylint: disable=unused-import
     plugin_manager,
     fs_model as model
 )
+from . import MockTask
 
 
 class TestProcessExecutor(object):
 
     def test_plugin_execution(self, executor, mock_plugin):
-        task = MockTask(plugin=mock_plugin,
-                        implementation='mock_plugin1.operation')
+        task = MockTask('mock_plugin1.operation', plugin=mock_plugin)
 
         queue = Queue.Queue()
 
-        def handler(_, exception=None):
+        def handler(_, exception=None, **kwargs):
             queue.put(exception)
 
         events.on_success_task_signal.connect(handler)
@@ -100,31 +97,3 @@ class MockContext(object):
     @classmethod
     def deserialize_from_dict(cls, **kwargs):
         return cls()
-
-
-class MockTask(object):
-
-    INFINITE_RETRIES = aria_models.Task.INFINITE_RETRIES
-
-    def __init__(self, plugin, implementation):
-        self.id = str(uuid.uuid4())
-        self.implementation = implementation
-        self.logger = logging.getLogger()
-        self.name = implementation
-        self.inputs = {}
-        self.context = MockContext()
-        self.retry_count = 0
-        self.max_attempts = 1
-        self.plugin_fk = plugin.id
-        self.plugin = plugin
-        self.ignore_failure = False
-        self.interface_name = 'interface_name'
-        self.operation_name = 'operation_name'
-        self.model_task = None
-
-        for state in aria_models.Task.STATES:
-            setattr(self, state.upper(), state)
-
-    @contextmanager
-    def _update(self):
-        yield self

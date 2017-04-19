@@ -44,8 +44,8 @@ class BaseExecutor(logger.LoggerMixin):
         events.start_task_signal.send(task)
 
     @staticmethod
-    def _task_failed(task, exception):
-        events.on_failure_task_signal.send(task, exception=exception)
+    def _task_failed(task, exception, traceback=None):
+        events.on_failure_task_signal.send(task, exception=exception, traceback=traceback)
 
     @staticmethod
     def _task_succeeded(task):

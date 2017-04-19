@@ -38,43 +38,44 @@ class BaseContext(object):
     """
 
     class PrefixedLogger(object):
-        def __init__(self, logger, prefix='', task_id=None):
-            self._logger = logger
-            self._prefix = prefix
+        def __init__(self, base_logger, task_id=None):
+            self._logger = base_logger
             self._task_id = task_id
 
-        def __getattr__(self, item):
-            if item.upper() in logging._levelNames:
-                return partial(getattr(self._logger, item),
-                               extra={'prefix': self._prefix, 'task_id': self._task_id})
+        def __getattr__(self, attribute):
+            if attribute.upper() in logging._levelNames:
+                return partial(self._logger_with_task_id, _level=attribute)
             else:
-                return getattr(self._logger, item)
+                return getattr(self._logger, attribute)
 
-    def __init__(
-            self,
-            name,
-            service_id,
-            execution_id,
-            model_storage,
-            resource_storage,
-            workdir=None,
-            **kwargs):
+        def _logger_with_task_id(self, *args, **kwargs):
+            level = kwargs.pop('_level')
+            kwargs.setdefault('extra', {})['task_id'] = self._task_id
+            return getattr(self._logger, level)(*args, **kwargs)
+
+    def __init__(self,
+                 name,
+                 service_id,
+                 model_storage,
+                 resource_storage,
+                 execution_id,
+                 workdir=None,
+                 **kwargs):
         super(BaseContext, self).__init__(**kwargs)
         self._name = name
         self._id = generate_uuid(variant='uuid')
         self._model = model_storage
         self._resource = resource_storage
         self._service_id = service_id
-        self._execution_id = execution_id
         self._workdir = workdir
+        self._execution_id = execution_id
         self.logger = None
 
     def _register_logger(self, level=None, task_id=None):
         self.logger = self.PrefixedLogger(
-            logging.getLogger(aria_logger.TASK_LOGGER_NAME), self.logging_id, task_id=task_id)
+            logging.getLogger(aria_logger.TASK_LOGGER_NAME), task_id=task_id)
         self.logger.setLevel(level or logging.DEBUG)
         if not self.logger.handlers:
-            self.logger.addHandler(aria_logger.create_console_log_handler())
             self.logger.addHandler(self._get_sqla_handler())
 
     def _get_sqla_handler(self):
@@ -102,10 +103,6 @@ class BaseContext(object):
         finally:
             for handler in handlers:
                 self.logger.removeHandler(handler)
-
-    @property
-    def logging_id(self):
-        raise NotImplementedError
 
     @property
     def model(self):

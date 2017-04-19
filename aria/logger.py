@@ -51,6 +51,10 @@ class LoggerMixin(object):
     def __init__(self, *args, **kwargs):
         self.logger_name = self.logger_name or self.__class__.__name__
         self.logger = logging.getLogger('{0}.{1}'.format(_base_logger.name, self.logger_name))
+        # Set the logger handler of any object derived from LoggerMixing to NullHandler.
+        # This is since the absence of a handler shows up while using the CLI in the form of:
+        # `No handlers could be found for logger "..."`.
+        self.logger.addHandler(NullHandler())
         self.logger.setLevel(self.logger_level)
         super(LoggerMixin, self).__init__(*args, **kwargs)
 
@@ -177,10 +181,12 @@ class _SQLAlchemyHandler(logging.Handler):
         log = self._cls(
             execution_fk=self._execution_id,
             task_fk=record.task_id,
-            actor=record.prefix,
             level=record.levelname,
             msg=str(record.msg),
             created_at=created_at,
+
+            # Not mandatory.
+            traceback=getattr(record, 'traceback', None)
         )
         self._session.add(log)
 

@@ -22,45 +22,56 @@ Implementation of logger handlers for workflow and operation events.
 """
 
 from .. import events
+from ... import modeling
+
+
+def _get_task_name(task):
+    if isinstance(task.actor, modeling.model_bases.service_instance.RelationshipBase):
+        return '{source_node.name}->{target_node.name}'.format(
+            source_node=task.actor.source_node, target_node=task.actor.target_node)
+    else:
+        return task.actor.name
 
 
 @events.start_task_signal.connect
 def _start_task_handler(task, **kwargs):
-    task.context.logger.debug('Event: Starting task: {task.name}'.format(task=task))
+    task.context.logger.info('{name} {task.interface_name}.{task.operation_name} started...'
+                             .format(name=_get_task_name(task), task=task))
 
 
 @events.on_success_task_signal.connect
 def _success_task_handler(task, **kwargs):
-    task.context.logger.debug('Event: Task success: {task.name}'.format(task=task))
+    task.context.logger.info('{name} {task.interface_name}.{task.operation_name} successful'
+                             .format(name=_get_task_name(task), task=task))
 
 
 @events.on_failure_task_signal.connect
-def _failure_operation_handler(task, exception, **kwargs):
-    error = '{0}: {1}'.format(type(exception).__name__, exception)
-    task.context.logger.error('Event: Task failure: {task.name} [{error}]'.format(
-        task=task, error=error))
-
+def _failure_operation_handler(task, traceback, **kwargs):
+    task.context.logger.error(
+        '{name} {task.interface_name}.{task.operation_name} failed'
+        .format(name=_get_task_name(task), task=task), extra=dict(traceback=traceback)
+    )
 
 @events.start_workflow_signal.connect
 def _start_workflow_handler(context, **kwargs):
-    context.logger.debug('Event: Starting workflow: {context.name}'.format(context=context))
+    context.logger.info("Starting '{ctx.workflow_name}' workflow execution".format(ctx=context))
 
 
 @events.on_failure_workflow_signal.connect
 def _failure_workflow_handler(context, **kwargs):
-    context.logger.debug('Event: Workflow failure: {context.name}'.format(context=context))
+    context.logger.info("'{ctx.workflow_name}' workflow execution failed".format(ctx=context))
 
 
 @events.on_success_workflow_signal.connect
 def _success_workflow_handler(context, **kwargs):
-    context.logger.debug('Event: Workflow success: {context.name}'.format(context=context))
+    context.logger.info("'{ctx.workflow_name}' workflow execution succeeded".format(ctx=context))
 
 
 @events.on_cancelled_workflow_signal.connect
 def _cancel_workflow_handler(context, **kwargs):
-    context.logger.debug('Event: Workflow cancelled: {context.name}'.format(context=context))
+    context.logger.info("'{ctx.workflow_name}' workflow execution canceled".format(ctx=context))
 
 
 @events.on_cancelling_workflow_signal.connect
 def _cancelling_workflow_handler(context, **kwargs):
-    context.logger.debug('Event: Workflow cancelling: {context.name}'.format(context=context))
+    context.logger.info("Cancelling '{ctx.workflow_name}' workflow execution".format(ctx=context))

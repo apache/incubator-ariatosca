@@ -29,20 +29,8 @@ class BaseOperationContext(BaseContext):
     Context object used during operation creation and execution
     """
 
-    def __init__(self,
-                 name,
-                 model_storage,
-                 resource_storage,
-                 service_id,
-                 task_id,
-                 actor_id,
-                 **kwargs):
-        super(BaseOperationContext, self).__init__(
-            name=name,
-            model_storage=model_storage,
-            resource_storage=resource_storage,
-            service_id=service_id,
-            **kwargs)
+    def __init__(self, task_id, actor_id, **kwargs):
+        super(BaseOperationContext, self).__init__(**kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
         self._thread_local = threading.local()
@@ -53,10 +41,6 @@ class BaseOperationContext(BaseContext):
                   'operation_inputs={task.inputs}'\
             .format(task=self.task)
         return '{name}({0})'.format(details, name=self.name)
-
-    @property
-    def logging_id(self):
-        raise NotImplementedError
 
     @property
     def task(self):
@@ -119,10 +103,6 @@ class NodeOperationContext(BaseOperationContext):
     """
 
     @property
-    def logging_id(self):
-        return self.node.name or self.node.id
-
-    @property
     def node_template(self):
         """
         the node of the current operation
@@ -143,11 +123,6 @@ class RelationshipOperationContext(BaseOperationContext):
     """
     Context for relationship based operations.
     """
-
-    @property
-    def logging_id(self):
-        return '{0}->{1}'.format(self.source_node.name or self.source_node.id,
-                                 self.target_node.name or self.target_node.id)
 
     @property
     def source_node_template(self):

@@ -34,15 +34,19 @@ class DryExecutor(BaseExecutor):
             task.started_at = datetime.utcnow()
             task.status = task.STARTED
 
-        actor_type = type(task.actor).__name__.lower()
-        implementation = '{0} > '.format(task.plugin) if task.plugin else ''
-        implementation += task.implementation
-        inputs = dict(inp.unwrap() for inp in task.inputs.values())
+        if hasattr(task.actor, 'source_node'):
+            name = '{source_node.name}->{target_node.name}'.format(
+                source_node=task.actor.source_node, target_node=task.actor.target_node)
+        else:
+            name = task.actor.name
 
         task.context.logger.info(
-            'Executing {actor_type} {task.actor.name} operation {task.interface_name} '
-            '{task.operation_name}: {implementation} (Inputs: {inputs})'
-            .format(actor_type=actor_type, task=task, implementation=implementation, inputs=inputs))
+            '<dry> {name} {task.interface_name}.{task.operation_name} started...'
+            .format(name=name, task=task))
+
+        task.context.logger.info(
+            '<dry> {name} {task.interface_name}.{task.operation_name} successful'
+            .format(name=name, task=task))
 
         # updating the task manually instead of calling self._task_succeeded(task),
         # to avoid any side effects raising that event might cause

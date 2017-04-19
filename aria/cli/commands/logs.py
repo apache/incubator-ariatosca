@@ -12,13 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from .. import utils
+from .. import execution_logging
+from ..logger import ModelLogIterator
 from ..core import aria
 
 
 @aria.group(name='logs')
-@aria.options.verbose()
 def logs():
     """Show logs from workflow executions
     """
@@ -31,19 +30,15 @@ def logs():
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
-def list(execution_id,
-         model_storage,
-         logger):
+def list(execution_id, model_storage, logger):
     """Display logs for an execution
     """
     logger.info('Listing logs for execution id {0}'.format(execution_id))
-    logs_list = model_storage.log.list(filters=dict(execution_fk=execution_id),
-                                       sort=utils.storage_sort_param('created_at', False))
-    # TODO: print logs nicely
-    if logs_list:
-        for log in logs_list:
-            logger.info(log)
-    else:
+    log_iterator = ModelLogIterator(model_storage, execution_id)
+
+    any_logs = execution_logging.log_list(log_iterator)
+
+    if not any_logs:
         logger.info('\tNo logs')
 
 

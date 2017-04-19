@@ -50,8 +50,8 @@ class WorkflowContext(BaseContext):
                 name=self.__class__.__name__, self=self))
 
     @property
-    def logging_id(self):
-        return '{0}[{1}]'.format(self._workflow_name, self._execution_id)
+    def workflow_name(self):
+        return self._workflow_name
 
     @property
     def execution(self):

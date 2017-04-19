@@ -112,3 +112,21 @@ class Logging(object):
             log.setLevel(level)
 
         dictconfig.dictConfig(logger_dict)
+
+
+class ModelLogIterator(object):
+
+    def __init__(self, model_storage, execution_id, filters=None, sort=None):
+        self._last_visited_id = 0
+        self._model_storage = model_storage
+        self._execution_id = execution_id
+        self._additional_filters = filters or {}
+        self._sort = sort or {}
+
+    def __iter__(self):
+        filters = dict(execution_fk=self._execution_id, id=dict(gt=self._last_visited_id))
+        filters.update(self._additional_filters)
+
+        for log in self._model_storage.log.iter(filters=filters, sort=self._sort):
+            self._last_visited_id = log.id
+            yield log
