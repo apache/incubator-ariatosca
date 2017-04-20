@@ -249,7 +249,7 @@ def prune(value, is_removable_function=is_removable):
             else:
                 prune(v, is_removable_function)
     elif isinstance(value, dict):
-        for k, v in value.iteritems():
+        for k, v in value.items():
             if is_removable_function(value, k, v):
                 del value[k]
             else:

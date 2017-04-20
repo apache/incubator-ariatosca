@@ -1019,7 +1019,7 @@ class SubstitutionBase(InstanceModelMixin):
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('node_type_name', self.node_type_name),
+            ('node_type_name', self.node_type.name),
             ('mappings', formatting.as_raw_dict(self.mappings))))
 
     def validate(self):
@@ -1127,7 +1127,7 @@ class SubstitutionMappingBase(InstanceModelMixin):
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('name', self.name)))
+            ('name', self.name),))
 
     def coerce_values(self, report_issues):
         pass

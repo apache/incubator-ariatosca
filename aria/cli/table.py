@@ -85,9 +85,10 @@ def _generate(cols, data, column_formatters=None, defaults=None):
 
             return val
         else:
-            return defaults[column]
+            return defaults.get(column)
 
     column_formatters = column_formatters or dict()
+    defaults = defaults or dict()
     pretty_table = PrettyTable(list(cols))
 
     for datum in data:

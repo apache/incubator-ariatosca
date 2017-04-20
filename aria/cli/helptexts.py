@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-DEFAULT_MUTUALITY_MESSAGE = 'Cannot be used simultaneously'
+DEFAULT_MUTUALITY_ERROR_MESSAGE = 'mutually exclusive'
 VERBOSE = \
     "Show verbose output. You can supply this up to three times (i.e. -vvv)"
 
@@ -29,7 +29,7 @@ EXECUTION_ID = "The unique identifier for the execution"
 SERVICE_TEMPLATE_PATH = "The path to the application's service template file"
 SERVICE_TEMPLATE_FILENAME = (
     "The name of the archive's main service template file. "
-    "This is only relevant if uploading a (non-csar) archive")
+    "This is only relevant if uploading a (non-CSAR) archive")
 INPUTS_PARAMS_USAGE = (
     '(Can be provided as wildcard based paths '
     '(*.yaml, /my_inputs/, etc..) to YAML files, a JSON string or as '
@@ -48,3 +48,11 @@ SORT_BY = "Key for sorting the list"
 DESCENDING = "Sort list in descending order [default: False]"
 JSON_OUTPUT = "Output logs in a consumable JSON format"
 MARK_PATTERN = "Mark a regex pattern in the logs"
+
+SHOW_FULL = "Show full information"
+SHOW_JSON = "Show in JSON format (implies --full)"
+SHOW_YAML = "Show in YAML format (implies --full)"
+SHOW_TYPES = "Show only the type hierarchies"
+SHOW_GRAPH = "Show only the node graph"
+MODE_MUTUALITY_ERROR_MESSAGE = 'only one mode is possible'
+FORMAT_MUTUALITY_ERROR_MESSAGE = 'only one format is possible'

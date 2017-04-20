@@ -22,6 +22,7 @@ from sqlalchemy import (
     event
 )
 from sqlalchemy.ext import mutable
+from ruamel import yaml
 
 from . import exceptions
 
@@ -206,6 +207,8 @@ class _StrictDict(object):
                 (_StrictDictMixin, _MutableDict),
                 {'_key_cls': key_cls, '_value_cls': value_cls}
             )
+            yaml.representer.RoundTripRepresenter.add_representer(
+                listener_cls, yaml.representer.RoundTripRepresenter.represent_list)
             self._strict_map[strict_dict_map_key] = _StrictValue(type_cls=strict_dict_cls,
                                                                  listener_cls=listener_cls)
 
@@ -242,6 +245,8 @@ class _StrictList(object):
                 (_StrictListMixin, _MutableList),
                 {'_item_cls': item_cls}
             )
+            yaml.representer.RoundTripRepresenter.add_representer(
+                listener_cls, yaml.representer.RoundTripRepresenter.represent_list)
             self._strict_map[item_cls] = _StrictValue(type_cls=strict_list_cls,
                                                       listener_cls=listener_cls)
 

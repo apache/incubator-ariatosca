@@ -19,6 +19,7 @@ import sys
 import difflib
 import StringIO
 import traceback
+import inspect
 from functools import wraps
 
 import click
@@ -40,40 +41,57 @@ CLICK_CONTEXT_SETTINGS = dict(
 
 
 class MutuallyExclusiveOption(click.Option):
-    """Makes options mutually exclusive. The option must pass a `cls` argument
-    with this class name and a `mutually_exclusive` argument with a list of
-    argument names it is mutually exclusive with.
-
-    NOTE: All mutually exclusive options must use this. It's not enough to
-    use it in just one of the options.
-    """
-
     def __init__(self, *args, **kwargs):
-        self.mutually_exclusive = set(kwargs.pop('mutually_exclusive', []))
-        self.mutuality_error_message = \
-            kwargs.pop('mutuality_error_message',
-                       helptexts.DEFAULT_MUTUALITY_MESSAGE)
-        self.mutuality_string = ', '.join(self.mutually_exclusive)
+        self.mutually_exclusive = set(kwargs.pop('mutually_exclusive', tuple()))
+        self.mutuality_description = kwargs.pop('mutuality_description',
+                                                ', '.join(self.mutually_exclusive))
+        self.mutuality_error = kwargs.pop('mutuality_error',
+                                          helptexts.DEFAULT_MUTUALITY_ERROR_MESSAGE)
         if self.mutually_exclusive:
             help = kwargs.get('help', '')
-            kwargs['help'] = (
-                '{0}. This argument is mutually exclusive with '
-                'arguments: [{1}] ({2})'.format(
-                    help,
-                    self.mutuality_string,
-                    self.mutuality_error_message))
+            kwargs['help'] = '{0}. {1}'.format(help, self._message)
         super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
 
     def handle_parse_result(self, ctx, opts, args):
-        if self.mutually_exclusive.intersection(opts) and self.name in opts:
-            raise click.UsageError(
-                'Illegal usage: `{0}` is mutually exclusive with '
-                'arguments: [{1}] ({2}).'.format(
-                    self.name,
-                    self.mutuality_string,
-                    self.mutuality_error_message))
-        return super(MutuallyExclusiveOption, self).handle_parse_result(
-            ctx, opts, args)
+        if (self.name in opts) and self.mutually_exclusive.intersection(opts):
+            raise click.UsageError('Illegal usage: {0}'.format(self._message))
+        return super(MutuallyExclusiveOption, self).handle_parse_result(ctx, opts, args)
+
+    @property
+    def _message(self):
+        return '{0} be used together with {1} ({2}).'.format(
+            '{0} cannot'.format(', '.join(self.opts)) if hasattr(self, 'opts') else 'Cannot',
+            self.mutuality_description,
+            self.mutuality_error)
+
+
+def mutually_exclusive_option(*param_decls, **attrs):
+    """
+    Decorator for mutually exclusive options.
+
+    This decorator works similarly to `click.option`, but supports an extra ``mutually_exclusive``
+    argument, which is a list of argument names with which the option is mutually exclusive.
+
+    You can optionally also supply ``mutuality_description`` and ``mutuality_error`` to override the
+    default messages.
+
+    NOTE: All mutually exclusive options must use this. It's not enough to use it in just one of the
+    options.
+    """
+
+    # NOTE: This code is copied and slightly modified from click.decorators.option and
+    # click.decorators._param_memo. Unfortunately, using click's ``cls`` parameter support does not
+    # work as is with extra decorator arguments.
+
+    def decorator(func):
+        if 'help' in attrs:
+            attrs['help'] = inspect.cleandoc(attrs['help'])
+        param = MutuallyExclusiveOption(param_decls, **attrs)
+        if not hasattr(func, '__click_params__'):
+            func.__click_params__ = []
+        func.__click_params__.append(param)
+        return func
+    return decorator
 
 
 def _format_version_data(version,
@@ -105,13 +123,12 @@ def show_version(ctx, param, value):
 
 
 def inputs_callback(ctx, param, value):
-    """Allow to pass any inputs we provide to a command as
-    processed inputs instead of having to call `inputs_to_dict`
-    inside the command.
+    """
+    Allow to pass any inputs we provide to a command as processed inputs instead of having to call
+    ``inputs_to_dict`` inside the command.
 
-    `@aria.options.inputs` already calls this callback so that
-    every time you use the option it returns the inputs as a
-    dictionary.
+    ``@aria.options.inputs`` already calls this callback so that every time you use the option it
+    returns the inputs as a dictionary.
     """
     if not value:
         return {}
@@ -127,7 +144,6 @@ def set_verbosity_level(ctx, param, value):
 
 
 def set_cli_except_hook():
-
     def recommend(possible_solutions):
         logger.info('Possible solutions:')
         for solution in possible_solutions:
@@ -155,7 +171,8 @@ def set_cli_except_hook():
 
 
 def pass_logger(func):
-    """Simply passes the logger to a command.
+    """
+    Simply passes the logger to a command.
     """
     # Wraps here makes sure the original docstring propagates to click
     @wraps(func)
@@ -166,7 +183,8 @@ def pass_logger(func):
 
 
 def pass_plugin_manager(func):
-    """Simply passes the plugin manager to a command.
+    """
+    Simply passes the plugin manager to a command.
     """
     # Wraps here makes sure the original docstring propagates to click
     @wraps(func)
@@ -177,7 +195,8 @@ def pass_plugin_manager(func):
 
 
 def pass_model_storage(func):
-    """Simply passes the model storage to a command.
+    """
+    Simply passes the model storage to a command.
     """
     # Wraps here makes sure the original docstring propagates to click
     @wraps(func)
@@ -188,7 +207,8 @@ def pass_model_storage(func):
 
 
 def pass_resource_storage(func):
-    """Simply passes the resource storage to a command.
+    """
+    Simply passes the resource storage to a command.
     """
     # Wraps here makes sure the original docstring propagates to click
     @wraps(func)
@@ -199,11 +219,11 @@ def pass_resource_storage(func):
 
 
 def pass_context(func):
-    """Make click context ARIA specific
+    """
+    Make click context ARIA specific.
 
-    This exists purely for aesthetic reasons, otherwise
-    Some decorators are called `@click.something` instead of
-    `@aria.something`
+    This exists purely for aesthetic reasons, otherwise some decorators are called
+    ``@click.something`` instead of ``@aria.something``.
     """
     return click.pass_context(func)
 
@@ -227,7 +247,8 @@ class AliasedGroup(click.Group):
         ctx.fail('Too many matches: {0}'.format(', '.join(sorted(matches))))
 
     def resolve_command(self, ctx, args):
-        """Override clicks ``resolve_command`` method
+        """
+        Override clicks ``resolve_command`` method
         and appends *Did you mean ...* suggestions
         to the raised exception message.
         """
@@ -249,9 +270,9 @@ class AliasedGroup(click.Group):
 
 
 def group(name):
-    """Allow to create a group with a default click context
-    and a cls for click's `didyoueamn` without having to repeat
-    it for every group.
+    """
+    Allow to create a group with a default click context and a cls for click's ``didyoueamn``
+    without having to repeat it for every group.
     """
     return click.group(
         name=name,
@@ -260,34 +281,34 @@ def group(name):
 
 
 def command(*args, **kwargs):
-    """Make Click commands ARIA specific
+    """
+    Make Click commands ARIA specific.
 
-    This exists purely for aesthetical reasons, otherwise
-    Some decorators are called `@click.something` instead of
-    `@aria.something`
+    This exists purely for aesthetic reasons, otherwise some decorators are called
+    ``@click.something`` instead of ``@aria.something``.
     """
     return click.command(*args, **kwargs)
 
 
 def argument(*args, **kwargs):
-    """Make Click arguments ARIA specific
+    """
+    Make Click arguments ARIA specific.
 
-    This exists purely for aesthetic reasons, otherwise
-    Some decorators are called `@click.something` instead of
-    `@aria.something`
+    This exists purely for aesthetic reasons, otherwise some decorators are called
+    ``@click.something`` instead of ``@aria.something``
     """
     return click.argument(*args, **kwargs)
 
 
 class Options(object):
     def __init__(self):
-        """The options api is nicer when you use each option by calling
-        `@aria.options.some_option` instead of `@aria.some_option`.
+        """
+        The options API is nicer when you use each option by calling ``@aria.options.some_option``
+        instead of ``@aria.some_option``.
 
-        Note that some options are attributes and some are static methods.
-        The reason for that is that we want to be explicit regarding how
-        a developer sees an option. It it can receive arguments, it's a
-        method - if not, it's an attribute.
+        Note that some options are attributes and some are static methods. The reason for that is
+        that we want to be explicit regarding how a developer sees an option. If it can receive
+        arguments, it's a method - if not, it's an attribute.
         """
         self.version = click.option(
             '--version',
@@ -324,6 +345,66 @@ class Options(object):
             '--service-template-filename',
             default=defaults.SERVICE_TEMPLATE_FILENAME,
             help=helptexts.SERVICE_TEMPLATE_FILENAME)
+
+        self.service_template_mode_full = mutually_exclusive_option(
+            '-f',
+            '--full',
+            'mode_full',
+            mutually_exclusive=('mode_types',),
+            is_flag=True,
+            help=helptexts.SHOW_FULL,
+            mutuality_description='-t, --types',
+            mutuality_error=helptexts.MODE_MUTUALITY_ERROR_MESSAGE)
+
+        self.service_mode_full = mutually_exclusive_option(
+            '-f',
+            '--full',
+            'mode_full',
+            mutually_exclusive=('mode_graph',),
+            is_flag=True,
+            help=helptexts.SHOW_FULL,
+            mutuality_description='-g, --graph',
+            mutuality_error=helptexts.MODE_MUTUALITY_ERROR_MESSAGE)
+
+        self.mode_types = mutually_exclusive_option(
+            '-t',
+            '--types',
+            'mode_types',
+            mutually_exclusive=('mode_full',),
+            is_flag=True,
+            help=helptexts.SHOW_TYPES,
+            mutuality_description='-f, --full',
+            mutuality_error=helptexts.MODE_MUTUALITY_ERROR_MESSAGE)
+
+        self.mode_graph = mutually_exclusive_option(
+            '-g',
+            '--graph',
+            'mode_graph',
+            mutually_exclusive=('mode_full',),
+            is_flag=True,
+            help=helptexts.SHOW_GRAPH,
+            mutuality_description='-f, --full',
+            mutuality_error=helptexts.MODE_MUTUALITY_ERROR_MESSAGE)
+
+        self.format_json = mutually_exclusive_option(
+            '-j',
+            '--json',
+            'format_json',
+            mutually_exclusive=('format_yaml',),
+            is_flag=True,
+            help=helptexts.SHOW_JSON,
+            mutuality_description='-y, --yaml',
+            mutuality_error=helptexts.FORMAT_MUTUALITY_ERROR_MESSAGE)
+
+        self.format_yaml = mutually_exclusive_option(
+            '-y',
+            '--yaml',
+            'format_yaml',
+            mutually_exclusive=('format_json',),
+            is_flag=True,
+            help=helptexts.SHOW_YAML,
+            mutuality_description='-j, --json',
+            mutuality_error=helptexts.FORMAT_MUTUALITY_ERROR_MESSAGE)
 
     @staticmethod
     def verbose(expose_value=False):

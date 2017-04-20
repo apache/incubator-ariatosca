@@ -23,11 +23,13 @@ from .. import utils
 from ..core import aria
 from ...core import Core
 from ...storage import exceptions as storage_exceptions
+from ...parser import consumption
+from ...utils import (formatting, collections, console)
 
 
 DESCRIPTION_FIELD_LENGTH_LIMIT = 20
 SERVICE_TEMPLATE_COLUMNS = \
-    ['id', 'name', 'description', 'main_file_name', 'created_at', 'updated_at']
+    ('id', 'name', 'description', 'main_file_name', 'created_at', 'updated_at')
 
 
 @aria.group(name='service-templates')
@@ -43,32 +45,52 @@ def service_templates():
 @aria.argument('service-template-name')
 @aria.options.verbose()
 @aria.pass_model_storage
+@aria.options.service_template_mode_full
+@aria.options.mode_types
+@aria.options.format_json
+@aria.options.format_yaml
 @aria.pass_logger
-def show(service_template_name, model_storage, logger):
-    """Show information for a specific service templates
+def show(service_template_name, model_storage, mode_full, mode_types, format_json, format_yaml,
+         logger):
+    """Show information for a specific service template
 
     `SERVICE_TEMPLATE_NAME` is the name of the service template to show information on.
     """
-    logger.info('Showing service template {0}...'.format(service_template_name))
     service_template = model_storage.service_template.get_by_name(service_template_name)
-    service_template_dict = service_template.to_dict()
-    service_template_dict['#services'] = len(service_template.services)
 
-    column_formatters = \
-        dict(description=table.trim_formatter_generator(DESCRIPTION_FIELD_LENGTH_LIMIT))
-    columns = SERVICE_TEMPLATE_COLUMNS + ['#services']
-    table.print_data(columns, service_template_dict, 'Service-template:',
-                     column_formatters=column_formatters, col_max_width=50)
+    if format_json or format_yaml:
+        mode_full = True
 
-    if service_template_dict['description'] is not None:
-        logger.info('Description:')
-        logger.info('{0}{1}'.format(service_template_dict['description'].encode('UTF-8') or '',
-                                    os.linesep))
+    if mode_full:
+        consumption.ConsumptionContext()
+        if format_json:
+            console.puts(formatting.json_dumps(collections.prune(service_template.as_raw)))
+        elif format_yaml:
+            console.puts(formatting.yaml_dumps(collections.prune(service_template.as_raw)))
+        else:
+            service_template.dump()
+    elif mode_types:
+        consumption.ConsumptionContext()
+        service_template.dump_types()
+    else:
+        logger.info('Showing service template {0}...'.format(service_template_name))
+        service_template_dict = service_template.to_dict()
+        service_template_dict['#services'] = len(service_template.services)
+        columns = SERVICE_TEMPLATE_COLUMNS + ('#services',)
+        column_formatters = \
+            dict(description=table.trim_formatter_generator(DESCRIPTION_FIELD_LENGTH_LIMIT))
+        table.print_data(columns, service_template_dict, 'Service-template:',
+                         column_formatters=column_formatters, col_max_width=50)
 
-    if service_template.services:
-        logger.info('Existing services:')
-        for service in service_template.services:
-            logger.info('\t{0}'.format(service.name))
+        if service_template_dict['description'] is not None:
+            logger.info('Description:')
+            logger.info('{0}{1}'.format(service_template_dict['description'].encode('UTF-8') or '',
+                                        os.linesep))
+
+        if service_template.services:
+            logger.info('Existing services:')
+            for service in service_template.services:
+                logger.info('\t{0}'.format(service.name))
 
 
 @service_templates.command(name='list',
@@ -135,6 +157,7 @@ def store(service_template_path, service_template_name, service_template_filenam
 @aria.pass_logger
 def delete(service_template_name, model_storage, resource_storage, plugin_manager, logger):
     """Delete a service template
+
     `SERVICE_TEMPLATE_NAME` is the name of the service template to delete.
     """
     logger.info('Deleting service template {0}...'.format(service_template_name))
@@ -172,7 +195,7 @@ def validate(service_template, service_template_filename,
              model_storage, resource_storage, plugin_manager, logger):
     """Validate a service template
 
-    `SERVICE_TEMPLATE` is the path or url of the service template or archive to validate.
+    `SERVICE_TEMPLATE` is the path or URL of the service template or archive to validate.
     """
     logger.info('Validating service template: {0}'.format(service_template))
     service_template_path = service_template_utils.get(service_template, service_template_filename)
@@ -188,11 +211,10 @@ def validate(service_template, service_template_filename,
 @aria.options.verbose()
 @aria.pass_logger
 def create_archive(service_template_path, destination, logger):
-    """Create a csar archive on the local file system
+    """Create a CSAR archive
 
     `service_template_path` is the path of the service template to create the archive from
-
-    `destination` is the path of the output CSAR archive file
+    `destination` is the path of the output CSAR archive
     """
     logger.info('Creating a CSAR archive')
     if not destination.endswith(csar.CSAR_FILE_EXTENSION):

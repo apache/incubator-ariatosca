@@ -25,9 +25,12 @@ from ..core import aria
 from ...core import Core
 from ...modeling import exceptions as modeling_exceptions
 from ...storage import exceptions as storage_exceptions
+from ...parser import consumption
+from ...utils import (formatting, collections, console)
 
 
-SERVICE_COLUMNS = ['id', 'name', 'service_template_name', 'created_at', 'updated_at']
+DESCRIPTION_FIELD_LENGTH_LIMIT = 20
+SERVICE_COLUMNS = ('id', 'name', 'description', 'service_template_name', 'created_at', 'updated_at')
 
 
 @aria.group(name='services')
@@ -36,6 +39,52 @@ def services():
     """Handle services
     """
     pass
+
+
+@services.command(name='show',
+                  short_help='Display service information')
+@aria.argument('service-name')
+@aria.options.verbose()
+@aria.options.service_mode_full
+@aria.options.mode_graph
+@aria.options.format_json
+@aria.options.format_yaml
+@aria.pass_model_storage
+@aria.pass_logger
+def show(service_name, model_storage, mode_full, mode_graph, format_json, format_yaml, logger):
+    """Show information for a specific service template
+
+    `SERVICE_NAME` is the name of the service to display information on.
+    """
+    service = model_storage.service.get_by_name(service_name)
+
+    if format_json or format_yaml:
+        mode_full = True
+
+    if mode_full:
+        consumption.ConsumptionContext()
+        if format_json:
+            console.puts(formatting.json_dumps(collections.prune(service.as_raw)))
+        elif format_yaml:
+            console.puts(formatting.yaml_dumps(collections.prune(service.as_raw)))
+        else:
+            service.dump()
+    elif mode_graph:
+        consumption.ConsumptionContext()
+        service.dump_graph()
+    else:
+        logger.info('Showing service {0}...'.format(service_name))
+        service_dict = service.to_dict()
+        columns = SERVICE_COLUMNS
+        column_formatters = \
+            dict(description=table.trim_formatter_generator(DESCRIPTION_FIELD_LENGTH_LIMIT))
+        table.print_data(columns, service_dict, 'Service:',
+                         column_formatters=column_formatters, col_max_width=50)
+
+        if service_dict['description'] is not None:
+            logger.info('Description:')
+            logger.info('{0}{1}'.format(service_dict['description'].encode('UTF-8') or '',
+                                        os.linesep))
 
 
 @services.command(name='list', short_help='List services')

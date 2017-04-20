@@ -1063,7 +1063,7 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
     @property
     def as_raw(self):
         return collections.OrderedDict((
-            ('name', self.name)))
+            ('name', self.name),))
 
     def coerce_values(self, report_issues):
         pass
