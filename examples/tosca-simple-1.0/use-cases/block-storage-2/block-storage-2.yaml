@@ -72,4 +72,4 @@ topology_template:
 
     volume_id:
       description: The volume id of the block storage instance.
-      value: { get_attribute: [ my_storage, volume_id ] }
+      value: { get_property: [ my_storage, volume_id ] } # ARIA NOTE: wrong in spec

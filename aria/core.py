@@ -77,10 +77,14 @@ class Core(object):
             consumption.ConsumerChain(
                 context,
                 (
+                    consumption.CoerceServiceInstanceValues,
+                    consumption.ValidateServiceInstance,
                     consumption.SatisfyRequirements,
+                    consumption.CoerceServiceInstanceValues,
                     consumption.ValidateCapabilities,
                     consumption.FindHosts,
-                    consumption.ConfigureOperations
+                    consumption.ConfigureOperations,
+                    consumption.CoerceServiceInstanceValues
                 )).consume()
             if context.validation.dump_issues():
                 raise exceptions.InstantiationError('Failed to instantiate service template')

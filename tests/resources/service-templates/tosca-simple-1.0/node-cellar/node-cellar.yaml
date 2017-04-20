@@ -33,6 +33,7 @@ imports:
   - types/mongodb.yaml
   - types/nginx.yaml
   - aria-1.0
+
 dsl_definitions:
 
   default_openstack_credential: &DEFAULT_OPENSTACK_CREDENTIAL
@@ -94,8 +95,11 @@ topology_template:
           properties:
             unpack_credential:
               user: gigaspaces
-              token: { get_property: [ SELF, app_endpoint, protocol ] }
+              token: { get_attribute: [ SELF, tosca_id ] }
+              #token: { get_property: [ SELF, app_endpoint, protocol ] }
               #token: { get_property: [ HOST, flavor_name ] }
+              #token: { token: [ { get_property: [ HOST, flavor_name ] }, '.', 1 ] }
+              #token: { token: [ 'zero.one|two-three', '.|-', 3 ] }
       interfaces:
         Maintenance:
           enable: juju > charm.maintenance_on

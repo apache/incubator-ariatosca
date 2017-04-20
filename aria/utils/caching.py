@@ -65,22 +65,24 @@ class cachedmethod(object):  # pylint: disable=invalid-name
             return self.func(*args, **kwargs)
 
         instance = args[0]
-        cache = instance.get_method_cache()
+        if not hasattr(instance, '_method_cache'):
+            instance._method_cache = {}
+        method_cache = instance._method_cache
 
         key = (self.func, args[1:], frozenset(kwargs.items()))
 
         try:
             with self.lock:
-                return_value = cache[key]
+                return_value = method_cache[key]
                 self.hits += 1
         except KeyError:
             return_value = self.func(*args, **kwargs)
             with self.lock:
-                cache[key] = return_value
+                method_cache[key] = return_value
                 self.misses += 1
             # Another thread may override our cache entry here, so we need to read
             # it again to make sure all threads use the same return value
-            return_value = cache.get(key, return_value)
+            return_value = method_cache.get(key, return_value)
 
         return return_value
 
@@ -92,9 +94,6 @@ class HasCachedMethods(object):
 
     def __init__(self, method_cache=None):
         self._method_cache = method_cache or {}
-
-    def get_method_cache(self):
-        return self._method_cache
 
     @property
     def _method_cache_info(self):

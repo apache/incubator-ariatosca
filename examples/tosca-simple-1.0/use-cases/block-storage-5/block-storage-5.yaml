@@ -100,10 +100,10 @@ topology_template:
   outputs:
     private_ip_1:
       description: The private IP address of the application's first tier.
-      value: { get_attribute: [my_web_app_tier_1, private_address] }
+      value: { get_attribute: [ my_web_app_tier_1, private_address ] }
     private_ip_2:
       description: The private IP address of the application's second tier.
-      value: { get_attribute: [my_web_app_tier_2, private_address] }
+      value: { get_attribute: [ my_web_app_tier_2, private_address ] }
     volume_id:
       description: The volume id of the block storage instance.
-      value: { get_attribute: [my_storage, volume_id] }
+      value: { get_property: [ my_storage, volume_id ] } # ARIA NOTE: wrong in spec

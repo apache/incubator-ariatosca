@@ -15,7 +15,7 @@
 
 # TODO: this module will eventually be moved to a new "aria.instantiation" package
 
-from ...utils.formatting import full_type_name
+from ...utils.type import full_type_name
 from ...utils.collections import OrderedDict
 from ...parser import validation
 from ...parser.consumption import ConsumptionContext

@@ -34,6 +34,8 @@ from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
                                   ArtifactTemplate, Metadata, Parameter, PluginSpecification)
 
+from .constraints import (Equal, GreaterThan, GreaterOrEqual, LessThan, LessOrEqual, InRange,
+                          ValidValues, Length, MinLength, MaxLength, Pattern)
 from ..data_types import coerce_value
 
 
@@ -166,6 +168,8 @@ def create_node_template_model(context, service_template, node_template):
 
     create_parameter_models_from_values(model.properties,
                                         node_template._get_property_values(context))
+    create_parameter_models_from_values(model.attributes,
+                                        node_template._get_attribute_default_values(context))
     create_interface_template_models(context, service_template, model.interface_templates,
                                      node_template._get_interfaces(context))
 
@@ -181,10 +185,10 @@ def create_node_template_model(context, service_template, node_template):
             model.capability_templates[capability_name] = \
                 create_capability_template_model(context, service_template, capability)
 
-    if model.target_node_template_constraints:
+    if node_template.node_filter:
         model.target_node_template_constraints = []
-        create_node_filter_constraint_lambdas(context, node_template.node_filter,
-                                              model.target_node_template_constraints)
+        create_node_filter_constraints(context, node_template.node_filter,
+                                       model.target_node_template_constraints)
 
     return model
 
@@ -273,10 +277,10 @@ def create_requirement_template_model(context, service_template, requirement):
 
     model = RequirementTemplate(**model)
 
-    if model.target_node_template_constraints:
+    if requirement.node_filter:
         model.target_node_template_constraints = []
-        create_node_filter_constraint_lambdas(context, requirement.node_filter,
-                                              model.target_node_template_constraints)
+        create_node_filter_constraints(context, requirement.node_filter,
+                                       model.target_node_template_constraints)
 
     relationship = requirement.relationship
     if relationship is not None:
@@ -348,7 +352,7 @@ def create_interface_template_model(context, service_template, interface):
     inputs = interface.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name,
+            model.inputs[input_name] = Parameter(name=input_name, # pylint: disable=unexpected-keyword-arg
                                                  type_name=the_input.value.type,
                                                  value=the_input.value.value,
                                                  description=the_input.value.description)
@@ -395,7 +399,7 @@ def create_operation_template_model(context, service_template, operation):
     inputs = operation.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name,
+            model.inputs[input_name] = Parameter(name=input_name, # pylint: disable=unexpected-keyword-arg
                                                  type_name=the_input.value.type,
                                                  value=the_input.value.value,
                                                  description=the_input.value.description)
@@ -491,7 +495,7 @@ def create_workflow_operation_template_model(context, service_template, policy):
         elif prop_name == 'dependencies':
             model.dependencies = prop.value
         else:
-            model.inputs[prop_name] = Parameter(name=prop_name,
+            model.inputs[prop_name] = Parameter(name=prop_name, # pylint: disable=unexpected-keyword-arg
                                                 type_name=prop.type,
                                                 value=prop.value,
                                                 description=prop.description)
@@ -536,7 +540,7 @@ def create_types(context, root, types):
 def create_parameter_models_from_values(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(name=property_name,
+            properties[property_name] = Parameter(name=property_name, # pylint: disable=unexpected-keyword-arg
                                                   type_name=prop.type,
                                                   value=prop.value,
                                                   description=prop.description)
@@ -545,7 +549,7 @@ def create_parameter_models_from_values(properties, source_properties):
 def create_parameter_models_from_assignments(properties, source_properties):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(name=property_name,
+            properties[property_name] = Parameter(name=property_name, # pylint: disable=unexpected-keyword-arg
                                                   type_name=prop.value.type,
                                                   value=prop.value.value,
                                                   description=prop.value.description)
@@ -559,17 +563,13 @@ def create_interface_template_models(context, service_template, interfaces, sour
                 interfaces[interface_name] = interface
 
 
-def create_node_filter_constraint_lambdas(context, node_filter, target_node_template_constraints):
-    if node_filter is None:
-        return
-
+def create_node_filter_constraints(context, node_filter, target_node_template_constraints):
     properties = node_filter.properties
     if properties is not None:
         for property_name, constraint_clause in properties:
-            func = create_constraint_clause_lambda(context, node_filter, constraint_clause,
-                                                   property_name, None)
-            if func is not None:
-                target_node_template_constraints.append(func)
+            constraint = create_constraint(context, node_filter, constraint_clause, property_name,
+                                           None)
+            target_node_template_constraints.append(constraint)
 
     capabilities = node_filter.capabilities
     if capabilities is not None:
@@ -577,129 +577,64 @@ def create_node_filter_constraint_lambdas(context, node_filter, target_node_temp
             properties = capability.properties
             if properties is not None:
                 for property_name, constraint_clause in properties:
-                    func = create_constraint_clause_lambda(context, node_filter, constraint_clause,
-                                                           property_name, capability_name)
-                    if func is not None:
-                        target_node_template_constraints.append(func)
+                    constraint = create_constraint(context, node_filter, constraint_clause,
+                                                   property_name, capability_name)
+                    target_node_template_constraints.append(constraint)
 
 
-def create_constraint_clause_lambda(context, node_filter, constraint_clause, property_name, # pylint: disable=too-many-return-statements
-                                    capability_name):
+def create_constraint(context, node_filter, constraint_clause, property_name, capability_name): # pylint: disable=too-many-return-statements
     constraint_key = constraint_clause._raw.keys()[0]
+
     the_type = constraint_clause._get_type(context)
 
-    def coerce_constraint(constraint, container):
-        constraint = coerce_value(context, node_filter, the_type, None, None, constraint,
-                                  constraint_key) if the_type is not None else constraint
-        if hasattr(constraint, '_evaluate'):
-            constraint = constraint._evaluate(context, container)
-        return constraint
+    def coerce_constraint(constraint):
+        if the_type is not None:
+            return coerce_value(context, node_filter, the_type, None, None, constraint,
+                                constraint_key)
+        else:
+            return constraint
 
-    def get_value(node_type):
-        if capability_name is not None:
-            capability = node_type.capability_templates.get(capability_name)
-            prop = capability.properties.get(property_name) if capability is not None else None
-            return prop.value if prop is not None else None
-        value = node_type.properties.get(property_name)
-        return value.value if value is not None else None
+    def coerce_constraints(constraints):
+        if the_type is not None:
+            return tuple(coerce_constraint(constraint) for constraint in constraints)
+        else:
+            return constraints
 
     if constraint_key == 'equal':
-        def equal(node_type, container):
-            constraint = coerce_constraint(constraint_clause.equal, container)
-            value = get_value(node_type)
-            return value == constraint
-
-        return equal
-
+        return Equal(property_name, capability_name,
+                     coerce_constraint(constraint_clause.equal))
     elif constraint_key == 'greater_than':
-        def greater_than(node_type, container):
-            constraint = coerce_constraint(constraint_clause.greater_than, container)
-            value = get_value(node_type)
-            return value > constraint
-
-        return greater_than
-
+        return GreaterThan(property_name, capability_name,
+                           coerce_constraint(constraint_clause.greater_than))
     elif constraint_key == 'greater_or_equal':
-        def greater_or_equal(node_type, container):
-            constraint = coerce_constraint(constraint_clause.greater_or_equal, container)
-            value = get_value(node_type)
-            return value >= constraint
-
-        return greater_or_equal
-
+        return GreaterOrEqual(property_name, capability_name,
+                              coerce_constraint(constraint_clause.greater_or_equal))
     elif constraint_key == 'less_than':
-        def less_than(node_type, container):
-            constraint = coerce_constraint(constraint_clause.less_than, container)
-            value = get_value(node_type)
-            return value < constraint
-
-        return less_than
-
+        return LessThan(property_name, capability_name,
+                        coerce_constraint(constraint_clause.less_than))
     elif constraint_key == 'less_or_equal':
-        def less_or_equal(node_type, container):
-            constraint = coerce_constraint(constraint_clause.less_or_equal, container)
-            value = get_value(node_type)
-            return value <= constraint
-
-        return less_or_equal
-
+        return LessOrEqual(property_name, capability_name,
+                           coerce_constraint(constraint_clause.less_or_equal))
     elif constraint_key == 'in_range':
-        def in_range(node_type, container):
-            lower, upper = constraint_clause.in_range
-            lower, upper = coerce_constraint(lower, container), coerce_constraint(upper, container)
-            value = get_value(node_type)
-            if value < lower:
-                return False
-            if (upper != 'UNBOUNDED') and (value > upper):
-                return False
-            return True
-
-        return in_range
-
+        return InRange(property_name, capability_name,
+                       coerce_constraints(constraint_clause.in_range))
     elif constraint_key == 'valid_values':
-        def valid_values(node_type, container):
-            constraint = tuple(coerce_constraint(v, container)
-                               for v in constraint_clause.valid_values)
-            value = get_value(node_type)
-            return value in constraint
-
-        return valid_values
-
+        return ValidValues(property_name, capability_name,
+                           coerce_constraints(constraint_clause.valid_values))
     elif constraint_key == 'length':
-        def length(node_type, container): # pylint: disable=unused-argument
-            constraint = constraint_clause.length
-            value = get_value(node_type)
-            return len(value) == constraint
-
-        return length
-
+        return Length(property_name, capability_name,
+                      coerce_constraint(constraint_clause.length))
     elif constraint_key == 'min_length':
-        def min_length(node_type, container): # pylint: disable=unused-argument
-            constraint = constraint_clause.min_length
-            value = get_value(node_type)
-            return len(value) >= constraint
-
-        return min_length
-
+        return MinLength(property_name, capability_name,
+                         coerce_constraint(constraint_clause.min_length))
     elif constraint_key == 'max_length':
-        def max_length(node_type, container): # pylint: disable=unused-argument
-            constraint = constraint_clause.max_length
-            value = get_value(node_type)
-            return len(value) >= constraint
-
-        return max_length
-
+        return MaxLength(property_name, capability_name,
+                         coerce_constraint(constraint_clause.max_length))
     elif constraint_key == 'pattern':
-        def pattern(node_type, container): # pylint: disable=unused-argument
-            constraint = constraint_clause.pattern
-            # Note: the TOSCA 1.0 spec does not specify the regular expression grammar, so we will
-            # just use Python's
-            value = node_type.properties.get(property_name)
-            return re.match(constraint, str(value)) is not None
-
-        return pattern
-
-    return None
+        return Pattern(property_name, capability_name,
+                       coerce_constraint(constraint_clause.pattern))
+    else:
+        raise ValueError('malformed node_filter: {0}'.format(constraint_key))
 
 
 def split_prefix(string):

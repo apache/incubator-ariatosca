@@ -15,7 +15,7 @@
 
 from aria.utils.collections import FrozenDict
 from aria.utils.caching import cachedmethod
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknown_fields,
                                       short_form_field, primitive_field, object_field,
                                       object_dict_field, object_dict_unknown_fields,
@@ -32,7 +32,7 @@ from .presentation.field_validators import (node_template_or_type_validator,
 from .presentation.types import (convert_shorthand_to_full_type_name,
                                  get_type_by_full_or_shorthand_name)
 
-@dsl_specification('3.5.9', 'tosca-simple-1.0')
+@implements_specification('3.5.9', 'tosca-simple-1.0')
 class PropertyAssignment(AsIsPresentation):
     """
     This section defines the grammar for assigning values to named properties within TOSCA Node and
@@ -45,7 +45,7 @@ class PropertyAssignment(AsIsPresentation):
 
 @short_form_field('implementation')
 @has_fields
-@dsl_specification('3.5.13-2', 'tosca-simple-1.0')
+@implements_specification('3.5.13-2', 'tosca-simple-1.0')
 class OperationAssignment(ExtensiblePresentation):
     """
     An operation definition defines a named function or procedure that can be bound to an
@@ -105,7 +105,7 @@ class OperationAssignment(ExtensiblePresentation):
 
 @allow_unknown_fields
 @has_fields
-@dsl_specification('3.5.14-2', 'tosca-simple-1.0')
+@implements_specification('3.5.14-2', 'tosca-simple-1.0')
 class InterfaceAssignment(ExtensiblePresentation):
     """
     An interface definition defines a named interface that can be associated with a Node or
@@ -200,7 +200,7 @@ class RelationshipAssignment(ExtensiblePresentation):
 
 @short_form_field('node')
 @has_fields
-@dsl_specification('3.7.2', 'tosca-simple-1.0')
+@implements_specification('3.7.2', 'tosca-simple-1.0')
 class RequirementAssignment(ExtensiblePresentation):
     """
     A Requirement assignment allows template authors to provide either concrete names of TOSCA
@@ -297,7 +297,7 @@ class RequirementAssignment(ExtensiblePresentation):
 
         return None, None
 
-@dsl_specification('3.5.11', 'tosca-simple-1.0')
+@implements_specification('3.5.11', 'tosca-simple-1.0')
 class AttributeAssignment(AsIsPresentation):
     """
     This section defines the grammar for assigning values to named attributes within TOSCA Node and
@@ -309,7 +309,7 @@ class AttributeAssignment(AsIsPresentation):
     """
 
 @has_fields
-@dsl_specification('3.7.1', 'tosca-simple-1.0')
+@implements_specification('3.7.1', 'tosca-simple-1.0')
 class CapabilityAssignment(ExtensiblePresentation):
     """
     A capability assignment allows node template authors to assign values to properties and
@@ -351,7 +351,7 @@ class CapabilityAssignment(ExtensiblePresentation):
             if capability_definition is not None else None
 
 @has_fields
-@dsl_specification('3.5.6', 'tosca-simple-1.0')
+@implements_specification('3.5.6', 'tosca-simple-1.0')
 class ArtifactAssignment(ExtensiblePresentation):
     """
     An artifact definition defines a named, typed file that can be associated with Node Type or Node

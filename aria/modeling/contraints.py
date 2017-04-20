@@ -13,18 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .specification import implements_specification, iter_specifications
 
+class NodeTemplateConstraint(object):
+    """
+    Used to constrain requirements for node templates.
 
-MODULES = (
-    'consumption',
-    'loading',
-    'modeling',
-    'presentation',
-    'reading',
-    'validation')
+    Must be serializable.
+    """
 
-__all__ = (
-    'MODULES',
-    'implements_specification',
-    'iter_specifications')
+    def matches(self, source_node_template, target_node_template):
+        """
+        Returns true is the target matches the constraint for the source.
+        """
+        raise NotImplementedError

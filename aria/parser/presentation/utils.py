@@ -15,7 +15,8 @@
 
 from types import FunctionType
 
-from ...utils.formatting import full_type_name, safe_repr
+from ...utils.formatting import safe_repr
+from ...utils.type import full_type_name
 from ..validation import Issue
 from .null import NULL
 

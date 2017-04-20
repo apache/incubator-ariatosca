@@ -17,7 +17,6 @@
 
 from __future__ import absolute_import  # so we can import standard 'types'
 
-from types import FunctionType
 from datetime import datetime
 
 from sqlalchemy import (
@@ -25,7 +24,8 @@ from sqlalchemy import (
     Text,
     Integer,
     Boolean,
-    DateTime
+    DateTime,
+    PickleType
 )
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -347,16 +347,16 @@ class ServiceTemplateBase(TemplateModelMixin):
         if self.artifact_types is not None:
             self.artifact_types.validate()
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.meta_data, report_issues)
-        utils.coerce_dict_values(container, self.node_templates, report_issues)
-        utils.coerce_dict_values(container, self.group_templates, report_issues)
-        utils.coerce_dict_values(container, self.policy_templates, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.meta_data, report_issues)
+        utils.coerce_dict_values(self.node_templates, report_issues)
+        utils.coerce_dict_values(self.group_templates, report_issues)
+        utils.coerce_dict_values(self.policy_templates, report_issues)
         if self.substitution_template is not None:
-            self.substitution_template.coerce_values(container, report_issues)
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.outputs, report_issues)
-        utils.coerce_dict_values(container, self.workflow_templates, report_issues)
+            self.substitution_template.coerce_values(report_issues)
+        utils.coerce_dict_values(self.inputs, report_issues)
+        utils.coerce_dict_values(self.outputs, report_issues)
+        utils.coerce_dict_values(self.workflow_templates, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -427,7 +427,7 @@ class NodeTemplateBase(TemplateModelMixin):
     :ivar requirement_templates: Potential relationships with other nodes
     :vartype requirement_templates: [:class:`RequirementTemplate`]
     :ivar target_node_template_constraints: Constraints for filtering relationship targets
-    :vartype target_node_template_constraints: [:class:`FunctionType`]
+    :vartype target_node_template_constraints: [:class:`NodeTemplateConstraint`]
     :ivar service_template: Containing service template
     :vartype service_template: :class:`ServiceTemplate`
     :ivar group_templates: We are a member of these groups
@@ -504,6 +504,10 @@ class NodeTemplateBase(TemplateModelMixin):
         return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     @declared_attr
+    def attributes(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='attributes', dict_key='name')
+
+    @declared_attr
     def interface_templates(cls):
         return relationship.one_to_many(cls, 'interface_template', dict_key='name')
 
@@ -525,12 +529,12 @@ class NodeTemplateBase(TemplateModelMixin):
     default_instances = Column(Integer, default=1)
     min_instances = Column(Integer, default=0)
     max_instances = Column(Integer, default=None)
-    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
+    target_node_template_constraints = Column(PickleType)
 
-    def is_target_node_valid(self, target_node_template):
+    def is_target_node_template_valid(self, target_node_template):
         if self.target_node_template_constraints:
-            for node_type_constraint in self.target_node_template_constraints:
-                if not node_type_constraint(target_node_template, self):
+            for node_template_constraint in self.target_node_template_constraints:
+                if not node_template_constraint.matches(self, target_node_template):
                     return False
         return True
 
@@ -544,6 +548,7 @@ class NodeTemplateBase(TemplateModelMixin):
             ('min_instances', self.min_instances),
             ('max_instances', self.max_instances),
             ('properties', formatting.as_raw_dict(self.properties)),
+            ('attributes', formatting.as_raw_dict(self.properties)),
             ('interface_templates', formatting.as_raw_list(self.interface_templates)),
             ('artifact_templates', formatting.as_raw_list(self.artifact_templates)),
             ('capability_templates', formatting.as_raw_list(self.capability_templates)),
@@ -564,24 +569,34 @@ class NodeTemplateBase(TemplateModelMixin):
                            runtime_properties={},
                            node_template=self)
         utils.instantiate_dict(node, node.properties, self.properties)
+        utils.instantiate_dict(node, node.attributes, self.attributes)
         utils.instantiate_dict(node, node.interfaces, self.interface_templates)
         utils.instantiate_dict(node, node.artifacts, self.artifact_templates)
         utils.instantiate_dict(node, node.capabilities, self.capability_templates)
+
+        # Default attributes
+        if 'tosca_name' in node.attributes:
+            node.attributes['tosca_name'].value = self.name
+        if 'tosca_id' in node.attributes:
+            node.attributes['tosca_id'].value = name
+
         return node
 
     def validate(self):
         utils.validate_dict_values(self.properties)
+        utils.validate_dict_values(self.attributes)
         utils.validate_dict_values(self.interface_templates)
         utils.validate_dict_values(self.artifact_templates)
         utils.validate_dict_values(self.capability_templates)
         utils.validate_list_values(self.requirement_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
-        utils.coerce_dict_values(self, self.artifact_templates, report_issues)
-        utils.coerce_dict_values(self, self.capability_templates, report_issues)
-        utils.coerce_list_values(self, self.requirement_templates, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.attributes, report_issues)
+        utils.coerce_dict_values(self.interface_templates, report_issues)
+        utils.coerce_dict_values(self.artifact_templates, report_issues)
+        utils.coerce_dict_values(self.capability_templates, report_issues)
+        utils.coerce_list_values(self.requirement_templates, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -597,6 +612,7 @@ class NodeTemplateBase(TemplateModelMixin):
                 if self.max_instances is not None
                 else ' or more'))
             utils.dump_dict_values(self.properties, 'Properties')
+            utils.dump_dict_values(self.attributes, 'Attributes')
             utils.dump_interfaces(self.interface_templates)
             utils.dump_dict_values(self.artifact_templates, 'Artifact templates')
             utils.dump_dict_values(self.capability_templates, 'Capability templates')
@@ -720,9 +736,9 @@ class GroupTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interface_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.interface_templates, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -851,8 +867,8 @@ class PolicyTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -945,8 +961,8 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.mappings)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.mappings, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.mappings, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1049,7 +1065,7 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
         return collections.OrderedDict((
             ('name', self.name)))
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def instantiate(self, container):
@@ -1113,7 +1129,7 @@ class RequirementTemplateBase(TemplateModelMixin):
     :ivar target_capability_name: Name of capability in target node (optional)
     :vartype target_capability_name: basestring
     :ivar target_node_template_constraints: Constraints for filtering relationship targets
-    :vartype target_node_template_constraints: [:class:`FunctionType`]
+    :vartype target_node_template_constraints: [:class:`NodeTemplateConstraint`]
     :ivar relationship_template: Template for relationships (optional)
     :vartype relationship_template: :class:`RelationshipTemplate`
     :ivar node_template: Containing node template
@@ -1183,9 +1199,7 @@ class RequirementTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def relationship_template(cls):
-        return relationship.one_to_one(cls,
-                                       'relationship_template',
-                                       back_populates=relationship.NO_BACK_POP)
+        return relationship.one_to_one(cls, 'relationship_template')
 
     # endregion
 
@@ -1215,18 +1229,18 @@ class RequirementTemplateBase(TemplateModelMixin):
     # endregion
 
     target_capability_name = Column(Text)
-    target_node_template_constraints = Column(modeling_types.StrictList(FunctionType))
+    target_node_template_constraints = Column(PickleType)
 
     def find_target(self, source_node_template):
         context = ConsumptionContext.get_thread_local()
 
         # We might already have a specific node template, so we'll just verify it
         if self.target_node_template is not None:
-            if not source_node_template.is_target_node_valid(self.target_node_template):
+            if not source_node_template.is_target_node_template_valid(self.target_node_template):
                 context.validation.report('requirement "{0}" of node template "{1}" is for node '
                                           'template "{2}" but it does not match constraints'.format(
                                               self.name,
-                                              self.target_node_template_name,
+                                              self.target_node_template.name,
                                               source_node_template.name),
                                           level=validation.Issue.BETWEEN_TYPES)
             if (self.target_capability_type is not None) \
@@ -1247,7 +1261,7 @@ class RequirementTemplateBase(TemplateModelMixin):
                 if self.target_node_type.get_descendant(target_node_template.type.name) is None:
                     continue
 
-                if not source_node_template.is_target_node_valid(target_node_template):
+                if not source_node_template.is_target_node_template_valid(target_node_template):
                     continue
 
                 target_node_capability = self.find_target_capability(source_node_template,
@@ -1284,9 +1298,9 @@ class RequirementTemplateBase(TemplateModelMixin):
         if self.relationship_template:
             self.relationship_template.validate()
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         if self.relationship_template is not None:
-            self.relationship_template.coerce_values(container, report_issues)
+            self.relationship_template.coerce_values(report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1417,9 +1431,9 @@ class RelationshipTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interface_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interface_templates, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.interface_templates, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1543,8 +1557,8 @@ class CapabilityTemplateBase(TemplateModelMixin):
 
         # Apply requirement constraints
         if requirement.target_node_template_constraints:
-            for node_type_constraint in requirement.target_node_template_constraints:
-                if not node_type_constraint(target_node_template, source_node_template):
+            for node_template_constraint in requirement.target_node_template_constraints:
+                if not node_template_constraint.matches(source_node_template, target_node_template):
                     return False
 
         return True
@@ -1574,8 +1588,8 @@ class CapabilityTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1728,9 +1742,9 @@ class InterfaceTemplateBase(TemplateModelMixin):
         utils.validate_dict_values(self.inputs)
         utils.validate_dict_values(self.operation_templates)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.operation_templates, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.inputs, report_issues)
+        utils.coerce_dict_values(self.operation_templates, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1882,7 +1896,7 @@ class OperationTemplateBase(TemplateModelMixin):
                 plugin = None
                 implementation = None
         else:
-            # using the execution plugin
+            # Using the execution plugin
             plugin = None
             implementation = self.implementation
 
@@ -1903,8 +1917,8 @@ class OperationTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.inputs)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.inputs, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -2051,8 +2065,8 @@ class ArtifactTemplateBase(TemplateModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -2128,7 +2142,7 @@ class PluginSpecificationBase(TemplateModelMixin):
             ('version', self.version),
             ('enabled', self.enabled)))
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def resolve(self, model_storage):

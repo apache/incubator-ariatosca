@@ -14,20 +14,24 @@
 # limitations under the License.
 
 from cStringIO import StringIO
+import re
 
 from aria.utils.collections import FrozenList
-from aria.utils.formatting import as_raw, safe_repr
-from aria.parser import dsl_specification
+from aria.utils.formatting import (as_raw, safe_repr)
+from aria.utils.type import full_type_name
+from aria.parser import implements_specification
 from aria.parser.exceptions import InvalidValueError
 from aria.parser.validation import Issue
 from aria.modeling.exceptions import CannotEvaluateFunctionException
-from aria.modeling.functions import Function
+from aria.modeling.models import (Node, NodeTemplate, Relationship, RelationshipTemplate)
+from aria.modeling.functions import (Function, Evaluation)
+
 
 #
 # Intrinsic
 #
 
-@dsl_specification('4.3.1', 'tosca-simple-1.0')
+@implements_specification('4.3.1', 'tosca-simple-1.0')
 class Concat(Function):
     """
     The :code:`concat` function is used to concatenate two or more string values within a TOSCA
@@ -39,8 +43,8 @@ class Concat(Function):
 
         if not isinstance(argument, list):
             raise InvalidValueError(
-                'function "concat" argument must be a list of string expressions: %s'
-                % safe_repr(argument),
+                'function "concat" argument must be a list of string expressions: {0}'
+                .format(safe_repr(argument)),
                 locator=self.locator)
 
         string_expressions = []
@@ -58,15 +62,18 @@ class Concat(Function):
             string_expressions.append(string_expression)
         return {'concat': string_expressions}
 
-    def _evaluate(self, context, container):
+    def __evaluate__(self, container_holder):
+        final = True
         value = StringIO()
         for e in self.string_expressions:
-            if hasattr(e, '_evaluate'):
-                e = e._evaluate(context, container)
-            value.write(str(e))
-        return value.getvalue()
+            e, final = evaluate(e, final, container_holder)
+            if e is not None:
+                value.write(unicode(e))
+        value = value.getvalue()
+        return Evaluation(value, final)
 
-@dsl_specification('4.3.2', 'tosca-simple-1.0')
+
+@implements_specification('4.3.2', 'tosca-simple-1.0')
 class Token(Function):
     """
     The :code:`token` function is used within a TOSCA service template on a string to parse out
@@ -77,8 +84,8 @@ class Token(Function):
         self.locator = presentation._locator
 
         if (not isinstance(argument, list)) or (len(argument) != 3):
-            raise InvalidValueError('function "token" argument must be a list of 3 parameters: %s'
-                                    % safe_repr(argument),
+            raise InvalidValueError('function "token" argument must be a list of 3 parameters: {0}'
+                                    .format(safe_repr(argument)),
                                     locator=self.locator)
 
         self.string_with_tokens = parse_string_expression(context, presentation, 'token', 0,
@@ -94,21 +101,30 @@ class Token(Function):
         string_with_tokens = self.string_with_tokens
         if hasattr(string_with_tokens, 'as_raw'):
             string_with_tokens = as_raw(string_with_tokens)
-        string_of_token_chars = self.string_with_tokens
+        string_of_token_chars = self.string_of_token_chars
         if hasattr(string_of_token_chars, 'as_raw'):
             string_of_token_chars = as_raw(string_of_token_chars)
         return {'token': [string_with_tokens, string_of_token_chars, self.substring_index]}
 
-    def _evaluate(self, context, container):
-        string_with_tokens = self.string_with_tokens
-        if hasattr(string_with_tokens, '_evaluate'):
-            string_with_tokens = string_with_tokens._evaluate(context, container) # pylint: disable=no-member
+    def __evaluate__(self, container_holder):
+        final = True
+        string_with_tokens, final = evaluate(self.string_with_tokens, final, container_holder)
+        string_of_token_chars, final = evaluate(self.string_of_token_chars, final, container_holder)
+
+        if string_of_token_chars:
+            regex = '[' + ''.join(re.escape(c) for c in string_of_token_chars) + ']'
+            split = re.split(regex, string_with_tokens)
+            if self.substring_index < len(split):
+                return Evaluation(split[self.substring_index], final)
+
+        raise CannotEvaluateFunctionException()
+
 
 #
 # Property
 #
 
-@dsl_specification('4.4.1', 'tosca-simple-1.0')
+@implements_specification('4.4.1', 'tosca-simple-1.0')
 class GetInput(Function):
     """
     The :code:`get_input` function is used to retrieve the values of properties declared within the
@@ -127,23 +143,31 @@ class GetInput(Function):
                                                            'inputs', self.input_property_name)
             if the_input is None:
                 raise InvalidValueError(
-                    'function "get_input" argument is not a valid input name: %s'
-                    % safe_repr(argument),
+                    'function "get_input" argument is not a valid input name: {0}'
+                    .format(safe_repr(argument)),
                     locator=self.locator)
 
     @property
     def as_raw(self):
         return {'get_input': as_raw(self.input_property_name)}
 
-    def _evaluate(self, context, container): # pylint: disable=unused-argument
-        if not context.modeling.instance:
+    def __evaluate__(self, container_holder):
+        service = container_holder.service
+        if service is None:
             raise CannotEvaluateFunctionException()
-        the_input = context.modeling.instance.inputs.get(
-            self.input_property_name,
-            context.modeling.template.inputs.get(self.input_property_name))
-        return as_raw(the_input.value) if the_input is not None else None
 
-@dsl_specification('4.4.2', 'tosca-simple-1.0')
+        value = service.inputs.get(self.input_property_name)
+        if value is not None:
+            value = value.value
+            return Evaluation(value, False) # We never return final evaluations!
+
+        raise InvalidValueError(
+            'function "get_input" argument is not a valid input name: {0}'
+            .format(safe_repr(self.input_property_name)),
+            locator=self.locator)
+
+
+@implements_specification('4.4.2', 'tosca-simple-1.0')
 class GetProperty(Function):
     """
     The :code:`get_property` function is used to retrieve property values between modelable entities
@@ -156,8 +180,7 @@ class GetProperty(Function):
         if (not isinstance(argument, list)) or (len(argument) < 2):
             raise InvalidValueError(
                 'function "get_property" argument must be a list of at least 2 string expressions: '
-                '%s'
-                % safe_repr(argument),
+                '{0}'.format(safe_repr(argument)),
                 locator=self.locator)
 
         self.modelable_entity_name = parse_modelable_entity_name(context, presentation,
@@ -169,8 +192,8 @@ class GetProperty(Function):
     def as_raw(self):
         return {'get_property': [self.modelable_entity_name] + self.nested_property_name_or_index}
 
-    def _evaluate(self, context, container):
-        modelable_entities = get_modelable_entities(context, container, self.locator,
+    def __evaluate__(self, container_holder):
+        modelable_entities = get_modelable_entities(container_holder, 'get_property', self.locator,
                                                     self.modelable_entity_name)
         req_or_cap_name = self.nested_property_name_or_index[0]
 
@@ -197,31 +220,22 @@ class GetProperty(Function):
                 properties = modelable_entity.properties
                 nested_property_name_or_index = self.nested_property_name_or_index
 
-            if properties:
-                found = True
-                value = properties
-                for name in nested_property_name_or_index:
-                    if (isinstance(value, dict) and (name in value)) \
-                        or (isinstance(value, list) and name < len(list)):
-                        value = value[name]
-                        if hasattr(value, '_evaluate'):
-                            value = value._evaluate(context, modelable_entity)
-                    else:
-                        found = False
-                        break
-                if found:
-                    return as_raw(value)
+            evaluation = get_modelable_entity_parameter(modelable_entity, properties,
+                                                        nested_property_name_or_index)
+            if evaluation is not None:
+                return evaluation
 
         raise InvalidValueError(
-            'function "get_property" could not find "%s" in modelable entity "%s"' \
-            % ('.'.join(self.nested_property_name_or_index), self.modelable_entity_name),
+            'function "get_property" could not find "{0}" in modelable entity "{1}"'
+            .format('.'.join(self.nested_property_name_or_index), self.modelable_entity_name),
             locator=self.locator)
+
 
 #
 # Attribute
 #
 
-@dsl_specification('4.5.1', 'tosca-simple-1.0')
+@implements_specification('4.5.1', 'tosca-simple-1.0')
 class GetAttribute(Function):
     """
     The :code:`get_attribute` function is used to retrieve the values of named attributes declared
@@ -234,27 +248,41 @@ class GetAttribute(Function):
         if (not isinstance(argument, list)) or (len(argument) < 2):
             raise InvalidValueError(
                 'function "get_attribute" argument must be a list of at least 2 string expressions:'
-                ' %s'
-                % safe_repr(argument),
+                ' {0}'.format(safe_repr(argument)),
                 locator=self.locator)
 
         self.modelable_entity_name = parse_modelable_entity_name(context, presentation,
                                                                  'get_attribute', 0, argument[0])
         # The first of these will be tried as a req-or-cap name:
-        self.nested_property_name_or_index = argument[1:]
+        self.nested_attribute_name_or_index = argument[1:]
 
     @property
     def as_raw(self):
-        return {'get_attribute': [self.modelable_entity_name] + self.nested_property_name_or_index}
+        return {'get_attribute': [self.modelable_entity_name] + self.nested_attribute_name_or_index}
 
-    def _evaluate(self, context, container): # pylint: disable=no-self-use,unused-argument
-        raise CannotEvaluateFunctionException()
+    def __evaluate__(self, container_holder):
+        modelable_entities = get_modelable_entities(container_holder, 'get_attribute', self.locator,
+                                                    self.modelable_entity_name)
+        for modelable_entity in modelable_entities:
+            attributes = modelable_entity.attributes
+            nested_attribute_name_or_index = self.nested_attribute_name_or_index
+            evaluation = get_modelable_entity_parameter(modelable_entity, attributes,
+                                                        nested_attribute_name_or_index)
+            if evaluation is not None:
+                evaluation.final = False # We never return final evaluations!
+                return evaluation
+
+        raise InvalidValueError(
+            'function "get_attribute" could not find "{0}" in modelable entity "{1}"'
+            .format('.'.join(self.nested_attribute_name_or_index), self.modelable_entity_name),
+            locator=self.locator)
+
 
 #
 # Operation
 #
 
-@dsl_specification('4.6.1', 'tosca-simple-1.0')  # pylint: disable=abstract-method
+@implements_specification('4.6.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
 class GetOperationOutput(Function):
     """
     The :code:`get_operation_output` function is used to retrieve the values of variables exposed /
@@ -266,8 +294,8 @@ class GetOperationOutput(Function):
 
         if (not isinstance(argument, list)) or (len(argument) != 4):
             raise InvalidValueError(
-                'function "get_operation_output" argument must be a list of 4 parameters: %s'
-                % safe_repr(argument),
+                'function "get_operation_output" argument must be a list of 4 parameters: {0}'
+                .format(safe_repr(argument)),
                 locator=self.locator)
 
         self.modelable_entity_name = parse_string_expression(context, presentation,
@@ -295,11 +323,12 @@ class GetOperationOutput(Function):
         return {'get_operation_output': [self.modelable_entity_name, interface_name, operation_name,
                                          output_variable_name]}
 
+
 #
 # Navigation
 #
 
-@dsl_specification('4.7.1', 'tosca-simple-1.0')
+@implements_specification('4.7.1', 'tosca-simple-1.0')
 class GetNodesOfType(Function):
     """
     The :code:`get_nodes_of_type` function can be used to retrieve a list of all known instances of
@@ -316,8 +345,8 @@ class GetNodesOfType(Function):
             node_types = context.presentation.get('service_template', 'node_types')
             if (node_types is None) or (self.node_type_name not in node_types):
                 raise InvalidValueError(
-                    'function "get_nodes_of_type" argument is not a valid node type name: %s'
-                    % safe_repr(argument),
+                    'function "get_nodes_of_type" argument is not a valid node type name: {0}'
+                    .format(safe_repr(argument)),
                     locator=self.locator)
 
     @property
@@ -327,14 +356,15 @@ class GetNodesOfType(Function):
             node_type_name = as_raw(node_type_name)
         return {'get_nodes_of_type': node_type_name}
 
-    def _evaluate(self, context, container):
+    def __evaluate__(self, container):
         pass
+
 
 #
 # Artifact
 #
 
-@dsl_specification('4.8.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
+@implements_specification('4.8.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
 class GetArtifact(Function):
     """
     The :code:`get_artifact` function is used to retrieve artifact location between modelable
@@ -346,8 +376,8 @@ class GetArtifact(Function):
 
         if (not isinstance(argument, list)) or (len(argument) < 2) or (len(argument) > 4):
             raise InvalidValueError(
-                'function "get_artifact" argument must be a list of 2 to 4 parameters: %s'
-                % safe_repr(argument),
+                'function "get_artifact" argument must be a list of 2 to 4 parameters: {0}'
+                .format(safe_repr(argument)),
                 locator=self.locator)
 
         self.modelable_entity_name = parse_string_expression(context, presentation, 'get_artifact',
@@ -370,6 +400,7 @@ class GetArtifact(Function):
             location = as_raw(location)
         return {'get_artifacts': [self.modelable_entity_name, artifact_name, location, self.remove]}
 
+
 #
 # Utils
 #
@@ -386,6 +417,7 @@ def get_function(context, presentation, value):
                 return True, None
     return False, None
 
+
 def parse_string_expression(context, presentation, name, index, explanation, value): # pylint: disable=unused-argument
     is_function, func = get_function(context, presentation, value)
     if is_function:
@@ -393,6 +425,7 @@ def parse_string_expression(context, presentation, name, index, explanation, val
     else:
         value = str(value)
     return value
+
 
 def parse_int(context, presentation, name, index, explanation, value): # pylint: disable=unused-argument
     if not isinstance(value, int):
@@ -403,10 +436,12 @@ def parse_int(context, presentation, name, index, explanation, value): # pylint:
                                 presentation._locator)
     return value
 
+
 def parse_bool(context, presentation, name, index, explanation, value): # pylint: disable=unused-argument
     if not isinstance(value, bool):
         raise invalid_value(name, index, 'a boolean', explanation, value, presentation._locator)
     return value
+
 
 def parse_modelable_entity_name(context, presentation, name, index, value):
     value = parse_string_expression(context, presentation, name, index, 'the modelable entity name',
@@ -436,66 +471,104 @@ def parse_modelable_entity_name(context, presentation, name, index, value):
             or {}
         if (value not in node_templates) and (value not in relationship_templates):
             raise InvalidValueError(
-                'function "%s" parameter %d is not a valid modelable entity name: %s'
-                % (name, index + 1, safe_repr(value)),
+                'function "{0}" parameter {1:d} is not a valid modelable entity name: {2}'
+                .format(name, index + 1, safe_repr(value)),
                 locator=presentation._locator, level=Issue.BETWEEN_TYPES)
     return value
 
+
 def parse_self(presentation):
-    from .templates import NodeTemplate, RelationshipTemplate
-    from .types import NodeType, RelationshipType
+    from ..types import (NodeType, RelationshipType)
+    from ..templates import (
+        NodeTemplate as NodeTemplatePresentation,
+        RelationshipTemplate as RelationshipTemplatePresentation
+    )
 
     if presentation is None:
         return None, None
-    elif isinstance(presentation, NodeTemplate) or isinstance(presentation, NodeType):
+    elif isinstance(presentation, NodeTemplatePresentation) or isinstance(presentation, NodeType):
         return presentation, 'node_template'
-    elif isinstance(presentation, RelationshipTemplate) \
+    elif isinstance(presentation, RelationshipTemplatePresentation) \
         or isinstance(presentation, RelationshipType):
         return presentation, 'relationship_template'
     else:
         return parse_self(presentation._container)
 
-@dsl_specification('4.1', 'tosca-simple-1.0')
-def get_modelable_entities(context, container, locator, modelable_entity_name):
+
+def evaluate(value, final, container_holder):
+    """
+    Calls ``__evaluate__`` and passes on ``final`` state.
+    """
+
+    if hasattr(value, '__evaluate__'):
+        value = value.__evaluate__(container_holder)
+        if not value.final:
+            final = False
+        return value.value, final
+    else:
+        return value, final
+
+
+@implements_specification('4.1', 'tosca-simple-1.0')
+def get_modelable_entities(container_holder, name, locator, modelable_entity_name):
     """
     The following keywords MAY be used in some TOSCA function in place of a TOSCA Node or
     Relationship Template name.
     """
 
     if modelable_entity_name == 'SELF':
-        return get_self(context, container)
+        return get_self(container_holder, name, locator)
     elif modelable_entity_name == 'HOST':
-        return get_host(context, container)
+        return get_hosts(container_holder, name, locator)
     elif modelable_entity_name == 'SOURCE':
-        return get_source(context, container)
+        return get_source(container_holder, name, locator)
     elif modelable_entity_name == 'TARGET':
-        return get_target(context, container)
+        return get_target(container_holder, name, locator)
     elif isinstance(modelable_entity_name, basestring):
-        node_templates = \
-            context.presentation.get('service_template', 'topology_template', 'node_templates') \
-            or {}
-        if modelable_entity_name in node_templates:
-            return [node_templates[modelable_entity_name]]
-        relationship_templates = \
-            context.presentation.get('service_template', 'topology_template',
-                                     'relationship_templates') \
-            or {}
-        if modelable_entity_name in relationship_templates:
-            return [relationship_templates[modelable_entity_name]]
+        modelable_entities = []
 
-    raise InvalidValueError('function "get_property" could not find modelable entity "%s"'
-                            % modelable_entity_name,
+        service = container_holder.service
+        if service is not None:
+            for node in service.nodes.itervalues():
+                if node.node_template.name == modelable_entity_name:
+                    modelable_entities.append(node)
+        else:
+            service_template = container_holder.service_template
+            if service_template is not None:
+                for node_template in service_template.node_templates.itervalues():
+                    if node_template.name == modelable_entity_name:
+                        modelable_entities.append(node_template)
+
+        if not modelable_entities:
+            raise CannotEvaluateFunctionException()
+
+        return modelable_entities
+
+    raise InvalidValueError('function "{0}" could not find modelable entity "{1}"'
+                            .format(name, modelable_entity_name),
                             locator=locator)
 
-def get_self(context, container): # pylint: disable=unused-argument
+
+def get_self(container_holder, name, locator):
     """
     A TOSCA orchestrator will interpret this keyword as the Node or Relationship Template instance
     that contains the function at the time the function is evaluated.
     """
 
+    container = container_holder.container
+    if (not isinstance(container, Node)) and \
+        (not isinstance(container, NodeTemplate)) and \
+        (not isinstance(container, Relationship)) and \
+        (not isinstance(container, RelationshipTemplate)):
+        raise InvalidValueError('function "{0}" refers to "SELF" but it is not contained in '
+                                'a node or a relationship: {1}'.format(name,
+                                                                       full_type_name(container)),
+                                locator=locator)
+
     return [container]
 
-def get_host(context, container): # pylint: disable=unused-argument
+
+def get_hosts(container_holder, name, locator):
     """
     A TOSCA orchestrator will interpret this keyword to refer to the all nodes that "host" the node
     using this reference (i.e., as identified by its HostedOn relationship).
@@ -507,30 +580,98 @@ def get_host(context, container): # pylint: disable=unused-argument
     ends.
     """
 
-    return []
+    container = container_holder.container
+    if (not isinstance(container, Node)) and (not isinstance(container, NodeTemplate)):
+        raise InvalidValueError('function "{0}" refers to "HOST" but it is not contained in '
+                                'a node: {1}'.format(name, full_type_name(container)),
+                                locator=locator)
 
-def get_source(context, container): # pylint: disable=unused-argument
+    if not isinstance(container, Node):
+        # NodeTemplate does not have "host"; we'll wait until instantiation
+        raise CannotEvaluateFunctionException()
+
+    host = container.host
+    if host is None:
+        # We might have a host later
+        raise CannotEvaluateFunctionException()
+
+    return [host]
+
+
+def get_source(container_holder, name, locator):
     """
     A TOSCA orchestrator will interpret this keyword as the Node Template instance that is at the
     source end of the relationship that contains the referencing function.
     """
 
-    return []
+    container = container_holder.container
+    if (not isinstance(container, Relationship)) and \
+        (not isinstance(container, RelationshipTemplate)):
+        raise InvalidValueError('function "{0}" refers to "SOURCE" but it is not contained in '
+                                'a relationship: {1}'.format(name, full_type_name(container)),
+                                locator=locator)
 
-def get_target(context, container): # pylint: disable=unused-argument
+    if not isinstance(container, RelationshipTemplate):
+        # RelationshipTemplate does not have "source_node"; we'll wait until instantiation
+        raise CannotEvaluateFunctionException()
+
+    return [container.source_node]
+
+
+def get_target(container_holder, name, locator):
     """
     A TOSCA orchestrator will interpret this keyword as the Node Template instance that is at the
     target end of the relationship that contains the referencing function.
     """
 
+    container = container_holder.container
+    if (not isinstance(container, Relationship)) and \
+        (not isinstance(container, RelationshipTemplate)):
+        raise InvalidValueError('function "{0}" refers to "TARGET" but it is not contained in '
+                                'a relationship: {1}'.format(name, full_type_name(container)),
+                                locator=locator)
+
+    if not isinstance(container, RelationshipTemplate):
+        # RelationshipTemplate does not have "target_node"; we'll wait until instantiation
+        raise CannotEvaluateFunctionException()
+
+    return [container.target_node]
+
+
+def get_modelable_entity_parameter(modelable_entity, parameters, nested_parameter_name_or_index):
+    if not parameters:
+        return False, True, None
+
+    found = True
+    final = True
+    value = parameters
+
+    for name_or_index in nested_parameter_name_or_index:
+        if (isinstance(value, dict) and (name_or_index in value)) \
+            or ((isinstance(value, list) and (name_or_index < len(value)))):
+            value = value[name_or_index] # Parameter
+            # We are not using Parameter.value, but rather Parameter._value, because we want to make
+            # sure to get "final" (it is swallowed by Parameter.value)
+            value, final = evaluate(value._value, final, value)
+        else:
+            found = False
+            break
+
+    return Evaluation(value, final) if found else None
+
+
 def invalid_modelable_entity_name(name, index, value, locator, contexts):
-    return InvalidValueError('function "%s" parameter %d can be "%s" only in %s'
-                             % (name, index + 1, value, contexts),
+    return InvalidValueError('function "{0}" parameter {1:d} can be "{2}" only in {3}'
+                             .format(name, index + 1, value, contexts),
                              locator=locator, level=Issue.FIELD)
+
 
 def invalid_value(name, index, the_type, explanation, value, locator):
     return InvalidValueError(
-        'function "%s" %s is not %s%s: %s'
-        % (name, ('parameter %d' % (index + 1)) if index is not None else 'argument',
-           the_type, (', %s' % explanation) if explanation is not None else '', safe_repr(value)),
+        'function "{0}" {1} is not {2}{3}: {4}'
+        .format(name,
+                'parameter {0:d}'.format(index + 1) if index is not None else 'argument',
+                the_type,
+                ', {0}'.format(explanation) if explanation is not None else '',
+                safe_repr(value)),
         locator=locator, level=Issue.FIELD)

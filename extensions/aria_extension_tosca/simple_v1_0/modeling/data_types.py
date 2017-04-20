@@ -16,13 +16,14 @@
 import re
 
 from aria.utils.collections import OrderedDict
-from aria.utils.formatting import full_type_name, safe_repr
+from aria.utils.formatting import safe_repr
+from aria.utils.type import full_type_name
 from aria.utils.imports import import_fullname
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (get_locator, validate_primitive)
 from aria.parser.validation import Issue
 
-from ..functions import get_function
+from .functions import get_function
 from ..presentation.types import get_type_by_full_or_shorthand_name
 
 #
@@ -295,8 +296,12 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value): 
     elif constraint_key == 'pattern':
         constraint = constraint_clause.pattern
         try:
-            # Note: the TOSCA 1.0 spec does not specify the regular expression grammar, so we will
-            # just use Python's
+            # From TOSCA 1.0 3.5.2.1:
+            #
+            # "Note: Future drafts of this specification will detail the use of regular expressions
+            # and reference an appropriate standardized grammar."
+            #
+            # So we will just use Python's.
             if re.match(constraint, str(value)) is None:
                 report('does not match regular expression', constraint)
                 return False
@@ -327,20 +332,20 @@ def get_data_type_value(context, presentation, field_name, type_name):
 
 PRIMITIVE_DATA_TYPES = {
     # YAML 1.2:
-    'tag:yaml.org,2002:str': str,
+    'tag:yaml.org,2002:str': unicode,
     'tag:yaml.org,2002:integer': int,
     'tag:yaml.org,2002:float': float,
     'tag:yaml.org,2002:bool': bool,
     'tag:yaml.org,2002:null': None.__class__,
 
     # TOSCA aliases:
-    'string': str,
+    'string': unicode,
     'integer': int,
     'float': float,
     'boolean': bool,
     'null': None.__class__}
 
-@dsl_specification('3.2.1', 'tosca-simple-1.0')
+@implements_specification('3.2.1-3', 'tosca-simple-1.0')
 def get_primitive_data_type(type_name):
     """
     Many of the types we use in this profile are built-in types from the YAML 1.2 specification
@@ -370,6 +375,8 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
     Data types can use the :code:`coerce_value` extension to hook their own specialized function.
     If the extension is present, we will delegate to that hook.
     """
+
+    # TODO: should support models as well as presentations
 
     is_function, func = get_function(context, presentation, value)
     if is_function:

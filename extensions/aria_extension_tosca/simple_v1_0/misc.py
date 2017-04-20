@@ -16,7 +16,7 @@
 from aria.utils.caching import cachedmethod
 from aria.utils.console import puts
 from aria.utils.formatting import as_raw
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknown_fields,
                                       short_form_field, primitive_field, primitive_list_field,
                                       primitive_dict_unknown_fields, object_field,
@@ -36,7 +36,7 @@ from .presentation.field_validators import (constraint_clause_field_validator,
 from .presentation.types import (convert_shorthand_to_full_type_name,
                                  get_type_by_full_or_shorthand_name)
 
-@dsl_specification('3.5.1', 'tosca-simple-1.0')
+@implements_specification('3.5.1', 'tosca-simple-1.0')
 class Description(AsIsPresentation):
     """
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
@@ -53,10 +53,10 @@ class Description(AsIsPresentation):
 
 @allow_unknown_fields
 @has_fields
-@dsl_specification('3.9.3.2', 'tosca-simple-1.0')
+@implements_specification('3.9.3.2', 'tosca-simple-1.0')
 class MetaData(ExtensiblePresentation):
     @primitive_field(str)
-    @dsl_specification('3.9.3.3', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.3', 'tosca-simple-1.0')
     def template_name(self):
         """
         This optional metadata keyname can be used to declare the name of service template as a
@@ -64,7 +64,7 @@ class MetaData(ExtensiblePresentation):
         """
 
     @primitive_field(str)
-    @dsl_specification('3.9.3.4', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.4', 'tosca-simple-1.0')
     def template_author(self):
         """
         This optional metadata keyname can be used to declare the author(s) of the service template
@@ -72,7 +72,7 @@ class MetaData(ExtensiblePresentation):
         """
 
     @primitive_field(str)
-    @dsl_specification('3.9.3.5', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.5', 'tosca-simple-1.0')
     def template_version(self):
         """
         This optional metadata keyname can be used to declare a domain specific version of the
@@ -87,7 +87,7 @@ class MetaData(ExtensiblePresentation):
 
 @short_form_field('url')
 @has_fields
-@dsl_specification('3.5.5', 'tosca-simple-1.0')
+@implements_specification('3.5.5', 'tosca-simple-1.0')
 class Repository(ExtensiblePresentation):
     """
     A repository definition defines a named external repository which contains deployment and
@@ -128,7 +128,7 @@ class Repository(ExtensiblePresentation):
 
 @short_form_field('file')
 @has_fields
-@dsl_specification('3.5.7', 'tosca-simple-1.0')
+@implements_specification('3.5.7', 'tosca-simple-1.0')
 class Import(ExtensiblePresentation):
     """
     An import definition is used within a TOSCA Service Template to locate and uniquely name another
@@ -177,7 +177,7 @@ class Import(ExtensiblePresentation):
         """
 
 @has_fields
-@dsl_specification('3.5.2', 'tosca-simple-1.0')
+@implements_specification('3.5.2-1', 'tosca-simple-1.0')
 class ConstraintClause(ExtensiblePresentation):
     """
     A constraint clause defines an operation along with one or more compatible values that can be
@@ -376,7 +376,7 @@ class SubstitutionMappingsCapability(AsIsPresentation):
         validate_subtitution_mappings_capability(context, self)
 
 @has_fields
-@dsl_specification('2.10', 'tosca-simple-1.0')
+@implements_specification('2.10', 'tosca-simple-1.0')
 class SubstitutionMappings(ExtensiblePresentation):
     @field_validator(type_validator('node type', convert_shorthand_to_full_type_name, 'node_types'))
     @primitive_field(str, required=True)

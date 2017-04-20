@@ -15,7 +15,7 @@
 
 from aria.utils.collections import FrozenDict, FrozenList
 from aria.utils.caching import cachedmethod
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, primitive_field, primitive_list_field,
                                       object_field, object_list_field, object_dict_field,
                                       object_sequenced_list_field, field_validator,
@@ -26,7 +26,7 @@ from .assignments import (PropertyAssignment, AttributeAssignment, RequirementAs
 from .definitions import ParameterDefinition
 from .filters import NodeFilter
 from .misc import (Description, MetaData, Repository, Import, SubstitutionMappings)
-from .modeling.properties import get_assigned_and_defined_property_values, get_parameter_values
+from .modeling.properties import (get_assigned_and_defined_property_values, get_parameter_values)
 from .modeling.interfaces import get_template_interfaces
 from .modeling.requirements import get_template_requirements
 from .modeling.capabilities import get_template_capabilities
@@ -41,7 +41,7 @@ from .types import (ArtifactType, DataType, CapabilityType, InterfaceType, Relat
                     NodeType, GroupType, PolicyType)
 
 @has_fields
-@dsl_specification('3.7.3', 'tosca-simple-1.0')
+@implements_specification('3.7.3', 'tosca-simple-1.0')
 class NodeTemplate(ExtensiblePresentation):
     """
     A Node Template specifies the occurrence of a manageable software component as part of an
@@ -160,6 +160,11 @@ class NodeTemplate(ExtensiblePresentation):
         return FrozenDict(get_assigned_and_defined_property_values(context, self))
 
     @cachedmethod
+    def _get_attribute_default_values(self, context):
+        return FrozenDict(get_assigned_and_defined_property_values(context, self,
+                                                                   'attribute', 'attributes'))
+
+    @cachedmethod
     def _get_requirements(self, context):
         return FrozenList(get_template_requirements(context, self))
 
@@ -198,7 +203,7 @@ class NodeTemplate(ExtensiblePresentation):
             'copy'))
 
 @has_fields
-@dsl_specification('3.7.4', 'tosca-simple-1.0')
+@implements_specification('3.7.4', 'tosca-simple-1.0')
 class RelationshipTemplate(ExtensiblePresentation):
     """
     A Relationship Template specifies the occurrence of a manageable relationship between node
@@ -297,7 +302,7 @@ class RelationshipTemplate(ExtensiblePresentation):
             'copy'))
 
 @has_fields
-@dsl_specification('3.7.5', 'tosca-simple-1.0')
+@implements_specification('3.7.5', 'tosca-simple-1.0')
 class GroupTemplate(ExtensiblePresentation):
     """
     A group definition defines a logical grouping of node templates, typically for management
@@ -370,7 +375,7 @@ class GroupTemplate(ExtensiblePresentation):
         self._get_interfaces(context)
 
 @has_fields
-@dsl_specification('3.7.6', 'tosca-simple-1.0')
+@implements_specification('3.7.6', 'tosca-simple-1.0')
 class PolicyTemplate(ExtensiblePresentation):
     """
     A policy definition defines a policy that can be associated with a TOSCA topology or top-level
@@ -434,7 +439,7 @@ class PolicyTemplate(ExtensiblePresentation):
         self._get_property_values(context)
 
 @has_fields
-@dsl_specification('3.8', 'tosca-simple-1.0')
+@implements_specification('3.8', 'tosca-simple-1.0')
 class TopologyTemplate(ExtensiblePresentation):
     """
     This section defines the topology template of a cloud application. The main ingredients of the
@@ -544,7 +549,7 @@ class TopologyTemplate(ExtensiblePresentation):
             'substitution_mappings'))
 
 @has_fields
-@dsl_specification('3.9', 'tosca-simple-1.0')
+@implements_specification('3.9', 'tosca-simple-1.0')
 class ServiceTemplate(ExtensiblePresentation):
     """
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
@@ -553,7 +558,7 @@ class ServiceTemplate(ExtensiblePresentation):
     """
 
     @primitive_field(str)
-    @dsl_specification('3.9.3.1', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.1', 'tosca-simple-1.0')
     def tosca_definitions_version(self):
         """
         Defines the version of the TOSCA Simple Profile specification the template (grammar)
@@ -580,7 +585,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_field(Description)
-    @dsl_specification('3.9.3.6', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.6', 'tosca-simple-1.0')
     def description(self):
         """
         Declares a description for this Service Template and its contents.
@@ -589,7 +594,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @primitive_field()
-    @dsl_specification('3.9.3.7', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.7', 'tosca-simple-1.0')
     def dsl_definitions(self):
         """
         Declares optional DSL-specific definitions and conventions. For example, in YAML, this
@@ -602,7 +607,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(Repository)
-    @dsl_specification('3.9.3.8', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.8', 'tosca-simple-1.0')
     def repositories(self):
         """
         Declares the list of external repositories which contain artifacts that are referenced in
@@ -613,7 +618,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_list_field(Import)
-    @dsl_specification('3.9.3.9', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.9', 'tosca-simple-1.0')
     def imports(self):
         """
         Declares import statements external TOSCA Definitions documents. For example, these may be
@@ -623,7 +628,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(ArtifactType)
-    @dsl_specification('3.9.3.10', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.10', 'tosca-simple-1.0')
     def artifact_types(self):
         """
         This section contains an optional list of artifact type definitions for use in the service
@@ -633,7 +638,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(DataType)
-    @dsl_specification('3.9.3.11', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.11', 'tosca-simple-1.0')
     def data_types(self):
         """
         Declares a list of optional TOSCA Data Type definitions.
@@ -642,7 +647,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(CapabilityType)
-    @dsl_specification('3.9.3.12', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.12', 'tosca-simple-1.0')
     def capability_types(self):
         """
         This section contains an optional list of capability type definitions for use in the service
@@ -652,7 +657,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(InterfaceType)
-    @dsl_specification('3.9.3.13', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.13', 'tosca-simple-1.0')
     def interface_types(self):
         """
         This section contains an optional list of interface type definitions for use in the service
@@ -662,7 +667,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(RelationshipType)
-    @dsl_specification('3.9.3.14', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.14', 'tosca-simple-1.0')
     def relationship_types(self):
         """
         This section contains a set of relationship type definitions for use in the service
@@ -672,7 +677,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(NodeType)
-    @dsl_specification('3.9.3.15', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.15', 'tosca-simple-1.0')
     def node_types(self):
         """
         This section contains a set of node type definitions for use in the service template.
@@ -681,7 +686,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(GroupType)
-    @dsl_specification('3.9.3.16', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.16', 'tosca-simple-1.0')
     def group_types(self):
         """
         This section contains a list of group type definitions for use in the service template.
@@ -690,7 +695,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
 
     @object_dict_field(PolicyType)
-    @dsl_specification('3.9.3.17', 'tosca-simple-1.0')
+    @implements_specification('3.9.3.17', 'tosca-simple-1.0')
     def policy_types(self):
         """
         This section contains a list of policy type definitions for use in the service template.

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from aria.utils.caching import cachedmethod
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, object_sequenced_list_field, field_validator)
 
 from .misc import ConstraintClause
@@ -45,7 +45,7 @@ class CapabilityFilter(ExtensiblePresentation):
         return None
 
 @has_fields
-@dsl_specification('3.5.4', 'tosca-simple-1.0')
+@implements_specification('3.5.4', 'tosca-simple-1.0')
 class NodeFilter(ExtensiblePresentation):
     """
     A node filter definition defines criteria for selection of a TOSCA Node Template based upon the
@@ -58,7 +58,7 @@ class NodeFilter(ExtensiblePresentation):
 
     @field_validator(node_filter_properties_validator)
     @object_sequenced_list_field(ConstraintClause)
-    @dsl_specification('3.5.3', 'tosca-simple-1.0')
+    @implements_specification('3.5.3', 'tosca-simple-1.0')
     def properties(self):
         """
         An optional sequenced list of property filters that would be used to select (filter)

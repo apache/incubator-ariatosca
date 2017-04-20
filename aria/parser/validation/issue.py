@@ -16,7 +16,7 @@
 from __future__ import absolute_import  # so we can import standard 'collections'
 
 from ...utils.collections import OrderedDict
-from ...utils.formatting import full_type_name
+from ...utils.type import full_type_name
 
 
 class Issue(object):

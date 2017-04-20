@@ -251,16 +251,16 @@ class ServiceBase(InstanceModelMixin):
         utils.validate_dict_values(self.outputs)
         utils.validate_dict_values(self.workflows)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.meta_data, report_issues)
-        utils.coerce_dict_values(container, self.nodes, report_issues)
-        utils.coerce_dict_values(container, self.groups, report_issues)
-        utils.coerce_dict_values(container, self.policies, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.meta_data, report_issues)
+        utils.coerce_dict_values(self.nodes, report_issues)
+        utils.coerce_dict_values(self.groups, report_issues)
+        utils.coerce_dict_values(self.policies, report_issues)
         if self.substitution is not None:
-            self.substitution.coerce_values(container, report_issues)
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.outputs, report_issues)
-        utils.coerce_dict_values(container, self.workflows, report_issues)
+            self.substitution.coerce_values(report_issues)
+        utils.coerce_dict_values(self.inputs, report_issues)
+        utils.coerce_dict_values(self.outputs, report_issues)
+        utils.coerce_dict_values(self.workflows, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -513,6 +513,10 @@ class NodeBase(InstanceModelMixin):
     def properties(cls):
         return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
+    @declared_attr
+    def attributes(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='attributes', dict_key='name')
+
     # endregion
 
     description = Column(Text)
@@ -646,6 +650,7 @@ class NodeBase(InstanceModelMixin):
             ('name', self.name),
             ('type_name', self.type.name),
             ('properties', formatting.as_raw_dict(self.properties)),
+            ('attributes', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces)),
             ('artifacts', formatting.as_raw_list(self.artifacts)),
             ('capabilities', formatting.as_raw_list(self.capabilities)),
@@ -664,17 +669,19 @@ class NodeBase(InstanceModelMixin):
         # TODO: validate that node template is of type?
 
         utils.validate_dict_values(self.properties)
+        utils.validate_dict_values(self.attributes)
         utils.validate_dict_values(self.interfaces)
         utils.validate_dict_values(self.artifacts)
         utils.validate_dict_values(self.capabilities)
         utils.validate_list_values(self.outbound_relationships)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(self, self.properties, report_issues)
-        utils.coerce_dict_values(self, self.interfaces, report_issues)
-        utils.coerce_dict_values(self, self.artifacts, report_issues)
-        utils.coerce_dict_values(self, self.capabilities, report_issues)
-        utils.coerce_list_values(self, self.outbound_relationships, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.attributes, report_issues)
+        utils.coerce_dict_values(self.interfaces, report_issues)
+        utils.coerce_dict_values(self.artifacts, report_issues)
+        utils.coerce_dict_values(self.capabilities, report_issues)
+        utils.coerce_list_values(self.outbound_relationships, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -683,6 +690,7 @@ class NodeBase(InstanceModelMixin):
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
             console.puts('Template: {0}'.format(context.style.node(self.node_template.name)))
             utils.dump_dict_values(self.properties, 'Properties')
+            utils.dump_dict_values(self.attributes, 'Attributes')
             utils.dump_interfaces(self.interfaces)
             utils.dump_dict_values(self.artifacts, 'Artifacts')
             utils.dump_dict_values(self.capabilities, 'Capabilities')
@@ -797,9 +805,9 @@ class GroupBase(InstanceModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interfaces)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
-        utils.coerce_dict_values(container, self.interfaces, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.interfaces, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -916,8 +924,8 @@ class PolicyBase(InstanceModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1017,8 +1025,8 @@ class SubstitutionBase(InstanceModelMixin):
     def validate(self):
         utils.validate_dict_values(self.mappings)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.mappings, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.mappings, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1121,7 +1129,7 @@ class SubstitutionMappingBase(InstanceModelMixin):
         return collections.OrderedDict((
             ('name', self.name)))
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def validate(self):
@@ -1311,9 +1319,9 @@ class RelationshipBase(InstanceModelMixin):
         utils.validate_dict_values(self.properties)
         utils.validate_dict_values(self.interfaces)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
-        utils.coerce_dict_values(container, self.interfaces, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
+        utils.coerce_dict_values(self.interfaces, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1451,8 +1459,8 @@ class CapabilityBase(InstanceModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1598,9 +1606,9 @@ class InterfaceBase(InstanceModelMixin):
         utils.validate_dict_values(self.inputs)
         utils.validate_dict_values(self.operations)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
-        utils.coerce_dict_values(container, self.operations, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.inputs, report_issues)
+        utils.coerce_dict_values(self.operations, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1765,8 +1773,8 @@ class OperationBase(InstanceModelMixin):
         # TODO must be associated with interface or service
         utils.validate_dict_values(self.inputs)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.inputs, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.inputs, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1905,8 +1913,8 @@ class ArtifactBase(InstanceModelMixin):
     def validate(self):
         utils.validate_dict_values(self.properties)
 
-    def coerce_values(self, container, report_issues):
-        utils.coerce_dict_values(container, self.properties, report_issues)
+    def coerce_values(self, report_issues):
+        utils.coerce_dict_values(self.properties, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()

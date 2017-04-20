@@ -28,9 +28,11 @@ from .modeling import (
     Types,
     ServiceInstance,
     FindHosts,
+    ValidateServiceInstance,
     ConfigureOperations,
     SatisfyRequirements,
-    ValidateCapabilities
+    ValidateCapabilities,
+    CoerceServiceInstanceValues
 )
 from .inputs import Inputs
 
@@ -45,7 +47,10 @@ __all__ = (
     'ServiceTemplate',
     'Types',
     'ServiceInstance',
-    'Inputs',
+    'FindHosts',
+    'ValidateServiceInstance',
+    'ConfigureOperations',
     'SatisfyRequirements',
-    'ValidateCapabilities'
+    'ValidateCapabilities',
+    'CoerceServiceInstanceValues'
 )

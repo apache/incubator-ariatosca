@@ -146,13 +146,18 @@ def one_to_one(model_class,
                        false to disable
     :type back_populates: basestring|bool
     """
-    if back_populates is None:
-        back_populates = model_class.__tablename__
+    backref_kwargs = None
+    if back_populates is not NO_BACK_POP:
+        if back_populates is None:
+            back_populates = model_class.__tablename__
+        backref_kwargs = {'name': back_populates, 'uselist': False}
+        back_populates = None
 
     return _relationship(model_class,
                          other_table,
                          fk=fk,
                          back_populates=back_populates,
+                         backref_kwargs=backref_kwargs,
                          other_fk=other_fk)
 
 
@@ -190,6 +195,7 @@ def one_to_many(model_class,
     rel_kwargs.setdefault('cascade', 'all')
     if back_populates is None:
         back_populates = model_class.__tablename__
+
     return _relationship(
         model_class,
         child_table,
@@ -330,10 +336,11 @@ def _relationship(model_class,
 
     if backref_kwargs:
         assert back_populates is None
-        return relationship(lambda: _get_class_for_table(model_class, other_table_name),
-                            backref=backref(**backref_kwargs),
-                            **relationship_kwargs
-                           )
+        return relationship(
+            lambda: _get_class_for_table(model_class, other_table_name),
+            backref=backref(**backref_kwargs),
+            **relationship_kwargs
+        )
     else:
         if back_populates is not NO_BACK_POP:
             relationship_kwargs['back_populates'] = back_populates

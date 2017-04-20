@@ -71,18 +71,6 @@ class YamlAsRawDumper(yaml.dumper.RoundTripDumper):  # pylint: disable=too-many-
         return super(YamlAsRawDumper, self).represent_data(data)
 
 
-def full_type_name(value):
-    """
-    The full class name of a type or object.
-    """
-
-    if not isinstance(value, type):
-        value = value.__class__
-    module = str(value.__module__)
-    name = str(value.__name__)
-    return name if module == '__builtin__' else '%s.%s' % (module, name)
-
-
 def decode_list(data):
     decoded_list = []
     for item in data:
@@ -163,8 +151,8 @@ def as_raw(value):
             value = value()
     elif isinstance(value, list):
         value = list(value)
-        for i, _ in enumerate(value):
-            value[i] = as_raw(value[i])
+        for i, v in enumerate(value):
+            value[i] = as_raw(v)
     elif isinstance(value, dict):
         value = dict(value)
         for k, v in value.iteritems():

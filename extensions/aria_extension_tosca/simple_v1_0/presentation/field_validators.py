@@ -16,7 +16,7 @@
 import re
 
 from aria.utils.formatting import safe_repr
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (report_issue_for_unknown_type, derived_from_validator)
 from aria.parser.validation import Issue
 
@@ -28,8 +28,7 @@ from .types import get_type_by_full_or_shorthand_name, convert_shorthand_to_full
 # NodeTemplate, RelationshipTemplate
 #
 
-@dsl_specification('3.7.3.3', 'tosca-simple-1.0')
-@dsl_specification('3.7.4.3', 'tosca-simple-1.0')
+@implements_specification('3.7.3.3', 'tosca-simple-1.0')
 def copy_validator(template_type_name, templates_dict_name):
     """
     Makes sure that the field refers to an existing template defined in the root presenter.
@@ -304,8 +303,12 @@ def constraint_clause_pattern_validator(field, presentation, context):
     value = getattr(presentation, field.name)
     if value is not None:
         try:
-            # Note: the TOSCA 1.0 spec does not specify the regular expression grammar, so we will
-            # just use Python's
+            # From TOSCA 1.0 3.5.2.1:
+            #
+            # "Note: Future drafts of this specification will detail the use of regular expressions
+            # and reference an appropriate standardized grammar."
+            #
+            # So we will just use Python's.
             re.compile(value)
         except re.error as e:
             context.validation.report(

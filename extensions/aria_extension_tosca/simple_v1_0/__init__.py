@@ -30,8 +30,6 @@ from .types import (ArtifactType, DataType, CapabilityType, InterfaceType, Relat
                     NodeType, GroupType, PolicyType)
 from .data_types import (Timestamp, Version, Range, List, Map, ScalarSize, ScalarTime,
                          ScalarFrequency)
-from .functions import (Concat, Token, GetInput, GetProperty, GetAttribute, GetOperationOutput,
-                        GetNodesOfType, GetArtifact)
 
 MODULES = (
     'modeling',
@@ -89,12 +87,4 @@ __all__ = (
     'Map',
     'ScalarSize',
     'ScalarTime',
-    'ScalarFrequency',
-    'Concat',
-    'Token',
-    'GetInput',
-    'GetProperty',
-    'GetAttribute',
-    'GetOperationOutput',
-    'GetNodesOfType',
-    'GetArtifact')
+    'ScalarFrequency')

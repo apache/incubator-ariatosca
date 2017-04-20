@@ -17,40 +17,7 @@ import re
 
 from ..extension import parser
 from ..utils.collections import OrderedDict
-from ..utils.formatting import full_type_name
-
-_DSL_SPECIFICATIONS = {}
-
-
-def dsl_specification(section, spec):
-    """
-    Decorator for TOSCA specification.
-
-    Used for documentation and standards compliance.
-    """
-    def decorator(obj):
-        specification = _DSL_SPECIFICATIONS.get(spec)
-
-        if specification is None:
-            specification = {}
-            _DSL_SPECIFICATIONS[spec] = specification
-
-        if section in specification:
-            raise Exception('you cannot specify the same @dsl_specification twice, consider'
-                            ' adding \'-1\', \'-2\', etc.: %s, %s' % (spec, section))
-
-        specification[section] = OrderedDict((
-            ('code', full_type_name(obj)),
-            ('doc', obj.__doc__)))
-
-        try:
-            setattr(obj, '_dsl_specifications', {section: section, spec: spec})
-        except BaseException:
-            pass
-
-        return obj
-
-    return decorator
+from ..utils.specification import (DSL_SPECIFICATIONS, implements_specification) # pylint: disable=unused-import
 
 
 def iter_specifications():
@@ -63,11 +30,9 @@ def iter_specifications():
             details['code'] = sections[k]['code']
             yield k, _fix_details(sections[k], spec)
 
-    for spec, sections in _DSL_SPECIFICATIONS.iteritems():
+    for spec, sections in DSL_SPECIFICATIONS.iteritems():
         yield spec, iter_sections(spec, sections)
 
-
-# Utils
 
 def _section_key(value):
     try:

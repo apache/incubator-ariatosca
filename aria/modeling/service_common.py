@@ -23,19 +23,20 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..parser.consumption import ConsumptionContext
-from ..utils import collections, formatting, console
-from .mixins import InstanceModelMixin, TemplateModelMixin
+from ..utils import (collections, formatting, console, caching)
+from ..utils.type import (canonical_type_name, full_type_name)
+from .mixins import (InstanceModelMixin, TemplateModelMixin)
 from . import (
     relationship,
-    utils
+    functions
 )
 
 
-class ParameterBase(TemplateModelMixin):
+class ParameterBase(TemplateModelMixin, caching.HasCachedMethods):
     """
-    Represents a typed value.
+    Represents a typed value. The value can contain nested intrinsic functions.
 
-    This model is used by both service template and service instance elements.
+    This model can be used as the ``container_holder`` argument for :func:`functions.evaluate`.
 
     :ivar name: Name
     :vartype name: basestring
@@ -50,8 +51,120 @@ class ParameterBase(TemplateModelMixin):
 
     name = Column(Text)
     type_name = Column(Text)
-    value = Column(PickleType)
     description = Column(Text)
+    _value = Column(PickleType)
+
+    @property
+    def value(self):
+        value = self._value
+        if value is not None:
+            evaluation = functions.evaluate(value, self)
+            if evaluation is not None:
+                value = evaluation.value
+        return value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+
+    @property
+    @caching.cachedmethod
+    def owner(self):
+        """
+        The sole owner of this parameter, which is another model that relates to it.
+
+        *All* parameters should have an owner model. In case this property method fails to find
+        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
+        """
+
+        # Find first non-null relationship
+        for the_relationship in self.__mapper__.relationships:
+            v = getattr(self, the_relationship.key)
+            if v:
+                return v[0] # because we are many-to-many, the back reference will be a list
+
+        raise ValueError('orphaned parameter: does not have an owner: {0}'.format(self.name))
+
+
+    @property
+    @caching.cachedmethod
+    def container(self): # pylint: disable=too-many-return-statements,too-many-branches
+        """
+        The logical container for this parameter, which would be another model: service, node,
+        group, or policy (or their templates).
+
+        The logical container is equivalent to the ``SELF`` keyword used by intrinsic functions in
+        TOSCA.
+
+        *All* parameters should have a container model. In case this property method fails to find
+        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
+        """
+
+        from . import models
+
+        container = self.owner
+
+        # Extract interface from operation
+        if isinstance(container, models.Operation):
+            container = container.interface
+        elif isinstance(container, models.OperationTemplate):
+            container = container.interface_template
+
+        # Extract from other models
+        if isinstance(container, models.Interface):
+            container = container.node or container.group or container.relationship
+        elif isinstance(container, models.InterfaceTemplate):
+            container = container.node_template or container.group_template \
+                or container.relationship_template
+        elif isinstance(container, models.Capability) or isinstance(container, models.Artifact):
+            container = container.node
+        elif isinstance(container, models.CapabilityTemplate) \
+            or isinstance(container, models.ArtifactTemplate):
+            container = container.node_template
+        elif isinstance(container, models.Task):
+            container = container.actor
+
+        # Extract node from relationship
+        if isinstance(container, models.Relationship):
+            container = container.source_node
+        elif isinstance(container, models.RelationshipTemplate):
+            container = container.requirement_template.node_template
+
+        if container is not None:
+            return container
+
+        raise ValueError('orphaned parameter: does not have a container: {0}'.format(self.name))
+
+    @property
+    @caching.cachedmethod
+    def service(self):
+        """
+        The :class:`Service` containing this parameter, or None if not contained in a service.
+        """
+
+        from . import models
+        container = self.container
+        if isinstance(container, models.Service):
+            return container
+        elif hasattr(container, 'service'):
+            return container.service
+        return None
+
+    @property
+    @caching.cachedmethod
+    def service_template(self):
+        """
+        The :class:`ServiceTemplate` containing this parameter, or None if not contained in a
+        service template.
+        """
+
+        from . import models
+        container = self.container
+        if isinstance(container, models.ServiceTemplate):
+            return container
+        elif hasattr(container, 'service_template'):
+            return container.service_template
+        return None
 
     @property
     def as_raw(self):
@@ -63,27 +176,30 @@ class ParameterBase(TemplateModelMixin):
 
     def instantiate(self, container):
         from . import models
-        return models.Parameter(name=self.name,
+        return models.Parameter(name=self.name, # pylint: disable=unexpected-keyword-arg
                                 type_name=self.type_name,
-                                value=self.value,
+                                _value=self._value,
                                 description=self.description)
 
-    def coerce_values(self, container, report_issues):
-        if self.value is not None:
-            self.value = utils.coerce_value(container, self.value,
-                                            report_issues)
+    def coerce_values(self, report_issues):
+        value = self._value
+        if value is not None:
+            evaluation = functions.evaluate(value, self, report_issues)
+            if (evaluation is not None) and evaluation.final:
+                # A final evaluation can safely replace the existing value
+                self._value = evaluation.value
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
         if self.type_name is not None:
             console.puts('{0}: {1} ({2})'.format(
                 context.style.property(self.name),
-                context.style.literal(self.value),
+                context.style.literal(formatting.as_raw(self.value)),
                 context.style.type(self.type_name)))
         else:
             console.puts('{0}: {1}'.format(
                 context.style.property(self.name),
-                context.style.literal(self.value)))
+                context.style.literal(formatting.as_raw(self.value))))
         if self.description:
             console.puts(context.style.meta(self.description))
 
@@ -101,11 +217,15 @@ class ParameterBase(TemplateModelMixin):
         :param description: Description (optional)
         :type description: basestring
         """
-        return cls(name=name,
-                   type_name=formatting.full_type_name(value)
-                   if value is not None else None,
-                   value=value,
-                   description=description)
+
+        from . import models
+        type_name = canonical_type_name(value)
+        if type_name is None:
+            type_name = full_type_name(value)
+        return models.Parameter(name=name, # pylint: disable=unexpected-keyword-arg
+                                type_name=type_name,
+                                value=value,
+                                description=description)
 
 
 class TypeBase(InstanceModelMixin):
@@ -188,7 +308,7 @@ class TypeBase(InstanceModelMixin):
         self._append_raw_children(types)
         return types
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def dump(self):
@@ -237,7 +357,7 @@ class MetadataBase(TemplateModelMixin):
             ('name', self.name),
             ('value', self.value)))
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def instantiate(self, container):

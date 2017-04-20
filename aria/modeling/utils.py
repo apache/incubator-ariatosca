@@ -19,9 +19,6 @@ from StringIO import StringIO
 
 from . import exceptions
 from ..parser.consumption import ConsumptionContext
-from ..parser.exceptions import InvalidValueError
-from ..parser.presentation import Value
-from ..utils.collections import OrderedDict
 from ..utils.console import puts
 from ..utils.type import validate_value_type
 
@@ -39,6 +36,21 @@ class ModelJSONEncoder(JSONEncoder):
             return JSONEncoder.default(self, o)
 
 
+class NodeTemplateContainerHolder(object):
+    """
+    Wrapper that allows using a :class:`aria.modeling.models.NodeTemplate` model directly as the
+    ``container_holder`` argument for :func:`aria.modeling.functions.evaluate`.
+    """
+
+    def __init__(self, node_template):
+        self.container = node_template
+        self.service = None
+
+    @property
+    def service_template(self):
+        return self.container.service_template
+
+
 def create_inputs(inputs, template_inputs):
     """
     :param inputs: key-value dict
@@ -50,7 +62,7 @@ def create_inputs(inputs, template_inputs):
     from . import models
     input_models = []
     for input_name, input_val in merged_inputs.iteritems():
-        parameter = models.Parameter(
+        parameter = models.Parameter( # pylint: disable=unexpected-keyword-arg
             name=input_name,
             type_name=template_inputs[input_name].type_name,
             description=template_inputs[input_name].description,
@@ -109,39 +121,17 @@ def _merge_and_validate_inputs(inputs, template_inputs):
     return merged_inputs
 
 
-def coerce_value(container, value, report_issues=False):
-    if isinstance(value, Value):
-        value = value.value
-
-    if isinstance(value, list):
-        return [coerce_value(container, v, report_issues) for v in value]
-    elif isinstance(value, dict):
-        return OrderedDict((k, coerce_value(container, v, report_issues))
-                           for k, v in value.iteritems())
-    elif hasattr(value, '_evaluate'):
-        context = ConsumptionContext.get_thread_local()
-        try:
-            value = value._evaluate(context, container)
-            value = coerce_value(container, value, report_issues)
-        except exceptions.CannotEvaluateFunctionException:
-            pass
-        except InvalidValueError as e:
-            if report_issues:
-                context.validation.report(e.issue)
-    return value
-
-
-def coerce_dict_values(container, the_dict, report_issues=False):
+def coerce_dict_values(the_dict, report_issues=False):
     if not the_dict:
         return
-    coerce_list_values(container, the_dict.itervalues(), report_issues)
+    coerce_list_values(the_dict.itervalues(), report_issues)
 
 
-def coerce_list_values(container, the_list, report_issues=False):
+def coerce_list_values(the_list, report_issues=False):
     if not the_list:
         return
     for value in the_list:
-        value.coerce_values(container, report_issues)
+        value.coerce_values(report_issues)
 
 
 def validate_dict_values(the_dict):

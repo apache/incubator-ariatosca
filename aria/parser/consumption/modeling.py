@@ -42,7 +42,7 @@ class CoerceServiceTemplateValues(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.template.coerce_values(None, True)
+        self.context.modeling.template.coerce_values(True)
 
 
 class ValidateServiceTemplate(Consumer):
@@ -116,7 +116,7 @@ class CoerceServiceInstanceValues(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.coerce_values(None, True)
+        self.context.modeling.instance.coerce_values(True)
 
 
 class ValidateServiceInstance(Consumer):

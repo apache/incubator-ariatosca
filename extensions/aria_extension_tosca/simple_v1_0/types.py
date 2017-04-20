@@ -15,7 +15,7 @@
 
 from aria.utils.collections import FrozenDict, FrozenList
 from aria.utils.caching import cachedmethod
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, allow_unknown_fields, primitive_field,
                                       primitive_list_field, object_field, object_dict_field,
                                       object_list_field, object_sequenced_list_field,
@@ -46,7 +46,7 @@ from .presentation.field_validators import (data_type_derived_from_validator,
 from .presentation.types import convert_shorthand_to_full_type_name
 
 @has_fields
-@dsl_specification('3.6.3', 'tosca-simple-1.0')
+@implements_specification('3.6.3', 'tosca-simple-1.0')
 class ArtifactType(ExtensiblePresentation):
     """
     An Artifact Type is a reusable entity that defines the type of one or more files that are used
@@ -131,7 +131,7 @@ class ArtifactType(ExtensiblePresentation):
             'properties'))
 
 @has_fields
-@dsl_specification('3.6.5', 'tosca-simple-1.0')
+@implements_specification('3.6.5', 'tosca-simple-1.0')
 class DataType(ExtensiblePresentation):
     """
     A Data Type definition defines the schema for new named datatypes in TOSCA.
@@ -225,7 +225,7 @@ class DataType(ExtensiblePresentation):
             'properties'))
 
 @has_fields
-@dsl_specification('3.6.6', 'tosca-simple-1.0')
+@implements_specification('3.6.6', 'tosca-simple-1.0')
 class CapabilityType(ExtensiblePresentation):
     """
     A Capability Type is a reusable entity that describes a kind of capability that a Node Type can
@@ -328,7 +328,7 @@ class CapabilityType(ExtensiblePresentation):
 
 @allow_unknown_fields
 @has_fields
-@dsl_specification('3.6.4', 'tosca-simple-1.0')
+@implements_specification('3.6.4', 'tosca-simple-1.0')
 class InterfaceType(ExtensiblePresentation):
     """
     An Interface Type is a reusable entity that describes a set of operations that can be used to
@@ -406,7 +406,7 @@ class InterfaceType(ExtensiblePresentation):
             'operations'))
 
 @has_fields
-@dsl_specification('3.6.9', 'tosca-simple-1.0')
+@implements_specification('3.6.9', 'tosca-simple-1.0')
 class RelationshipType(ExtensiblePresentation):
     """
     A Relationship Type is a reusable entity that defines the type of one or more relationships
@@ -520,7 +520,7 @@ class RelationshipType(ExtensiblePresentation):
             'interfaces'))
 
 @has_fields
-@dsl_specification('3.6.8', 'tosca-simple-1.0')
+@implements_specification('3.6.8', 'tosca-simple-1.0')
 class NodeType(ExtensiblePresentation):
     """
     A Node Type is a reusable entity that defines the type of one or more Node Templates. As such, a
@@ -668,7 +668,7 @@ class NodeType(ExtensiblePresentation):
             'capabilities'))
 
 @has_fields
-@dsl_specification('3.6.10', 'tosca-simple-1.0')
+@implements_specification('3.6.10', 'tosca-simple-1.0')
 class GroupType(ExtensiblePresentation):
     """
     A Group Type defines logical grouping types for nodes, typically for different management
@@ -781,7 +781,7 @@ class GroupType(ExtensiblePresentation):
             'interfaces'))
 
 @has_fields
-@dsl_specification('3.6.11', 'tosca-simple-1.0')
+@implements_specification('3.6.11', 'tosca-simple-1.0')
 class PolicyType(ExtensiblePresentation):
     """
     A Policy Type defines a type of requirement that affects or governs an application or service's

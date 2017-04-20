@@ -124,7 +124,7 @@ class InstanceModelMixin(ModelMixin):
     def validate(self):
         pass
 
-    def coerce_values(self, container, report_issues):
+    def coerce_values(self, report_issues):
         pass
 
     def dump(self):

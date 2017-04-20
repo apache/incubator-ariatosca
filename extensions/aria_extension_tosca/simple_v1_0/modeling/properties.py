@@ -58,7 +58,8 @@ def get_inherited_property_definitions(context, presentation, field_name, for_pr
 # NodeTemplate, RelationshipTemplate, GroupTemplate, PolicyTemplate
 #
 
-def get_assigned_and_defined_property_values(context, presentation):
+def get_assigned_and_defined_property_values(context, presentation, field_name='property',
+                                             field_name_plural='properties'):
     """
     Returns the assigned property values while making sure they are defined in our type.
 
@@ -70,8 +71,9 @@ def get_assigned_and_defined_property_values(context, presentation):
     values = OrderedDict()
 
     the_type = presentation._get_type(context)
-    assignments = presentation.properties
-    definitions = the_type._get_properties(context) if the_type is not None else None
+    assignments = getattr(presentation, field_name_plural)
+    get_fn_name = '_get_{0}'.format(field_name_plural)
+    definitions = getattr(the_type, get_fn_name)(context) if the_type is not None else None
 
     # Fill in our assignments, but make sure they are defined
     if assignments:
@@ -80,14 +82,14 @@ def get_assigned_and_defined_property_values(context, presentation):
                 definition = definitions[name]
                 values[name] = coerce_property_value(context, value, definition, value.value)
             else:
-                context.validation.report('assignment to undefined property "%s" in "%s"'
-                                          % (name, presentation._fullname),
+                context.validation.report('assignment to undefined {0} "{1}" in "{2}"'
+                                          .format(field_name, name, presentation._fullname),
                                           locator=value._locator, level=Issue.BETWEEN_TYPES)
 
     # Fill in defaults from the definitions
     if definitions:
         for name, definition in definitions.iteritems():
-            if (values.get(name) is None) and (definition.default is not None):
+            if values.get(name) is None:
                 values[name] = coerce_property_value(context, presentation, definition,
                                                      definition.default)
 
@@ -181,7 +183,8 @@ def merge_property_definitions(context, presentation, property_definitions,
 def coerce_property_value(context, presentation, definition, value, aspect=None):
     the_type = definition._get_type(context) if definition is not None else None
     entry_schema = definition.entry_schema if definition is not None else None
-    constraints = definition._get_constraints(context) if definition is not None else None
+    constraints = definition._get_constraints(context) \
+        if ((definition is not None) and hasattr(definition, '_get_constraints')) else None
     value = coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect)
     if (the_type is not None) and hasattr(the_type, '_name'):
         type_name = the_type._name

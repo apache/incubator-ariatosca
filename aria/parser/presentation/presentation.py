@@ -15,7 +15,8 @@
 
 from ...utils.caching import HasCachedMethods
 from ...utils.collections import deepcopy_with_locators
-from ...utils.formatting import full_type_name, safe_repr
+from ...utils.formatting import safe_repr
+from ...utils.type import full_type_name
 from ...utils.console import puts
 from ..validation import Issue
 from .null import none_to_null

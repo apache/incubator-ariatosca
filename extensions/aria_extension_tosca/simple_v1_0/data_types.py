@@ -20,7 +20,7 @@ try:
 except ImportError:
     from total_ordering import total_ordering
 
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.utils.collections import StrictDict, OrderedDict
 from aria.utils.formatting import safe_repr
 
@@ -51,7 +51,7 @@ class Timezone(tzinfo):
 UTC = Timezone()
 
 @total_ordering
-@dsl_specification('timestamp', 'yaml-1.1')
+@implements_specification('timestamp', 'yaml-1.1')
 class Timestamp(object):
     '''
     TOSCA timestamps follow the YAML specification, which in turn is a variant of ISO8601.
@@ -146,7 +146,7 @@ class Timestamp(object):
         return '{0:g}'.format(the_datetime.microsecond / 1000000.0).lstrip('0')
 
 @total_ordering
-@dsl_specification('3.2.2', 'tosca-simple-1.0')
+@implements_specification('3.2.2', 'tosca-simple-1.0')
 class Version(object):
     """
     TOSCA supports the concept of "reuse" of type definitions, as well as template definitions which
@@ -229,7 +229,7 @@ class Version(object):
                             return True
         return False
 
-@dsl_specification('3.2.3', 'tosca-simple-1.0')
+@implements_specification('3.2.3', 'tosca-simple-1.0')
 class Range(object):
     """
     The range type can be used to define numeric ranges with a lower and upper boundary. For
@@ -276,7 +276,7 @@ class Range(object):
     def as_raw(self):
         return list(self.value)
 
-@dsl_specification('3.2.4', 'tosca-simple-1.0')
+@implements_specification('3.2.4', 'tosca-simple-1.0')
 class List(list):
     """
     The list type allows for specifying multiple values for a parameter of property. For example, if
@@ -309,7 +309,7 @@ class List(list):
     def as_raw(self):
         return list(self)
 
-@dsl_specification('3.2.5', 'tosca-simple-1.0')
+@implements_specification('3.2.5', 'tosca-simple-1.0')
 class Map(StrictDict):
     """
     The map type allows for specifying multiple values for a parameter of property as a map. In
@@ -349,7 +349,7 @@ class Map(StrictDict):
         return OrderedDict(self)
 
 @total_ordering
-@dsl_specification('3.2.6', 'tosca-simple-1.0')
+@implements_specification('3.2.6', 'tosca-simple-1.0')
 class Scalar(object):
     """
     The scalar-unit type can be used to define scalar values along with a unit from the list of
@@ -416,7 +416,7 @@ class Scalar(object):
             value = self.TYPE(scalar) # pylint: disable=no-member
         return self.value < value
 
-@dsl_specification('3.2.6.4', 'tosca-simple-1.0')
+@implements_specification('3.2.6.4', 'tosca-simple-1.0')
 class ScalarSize(Scalar):
     """
     Integer scalar for counting bytes.
@@ -444,7 +444,7 @@ class ScalarSize(Scalar):
     TYPE = int
     UNIT = 'bytes'
 
-@dsl_specification('3.2.6.5', 'tosca-simple-1.0')
+@implements_specification('3.2.6.5', 'tosca-simple-1.0')
 class ScalarTime(Scalar):
     """
     Floating point scalar for counting seconds.
@@ -469,7 +469,7 @@ class ScalarTime(Scalar):
     TYPE = float
     UNIT = 'seconds'
 
-@dsl_specification('3.2.6.6', 'tosca-simple-1.0')
+@implements_specification('3.2.6.6', 'tosca-simple-1.0')
 class ScalarFrequency(Scalar):
     """
     Floating point scalar for counting cycles per second (Hz).

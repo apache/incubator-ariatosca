@@ -21,7 +21,8 @@ from ...exceptions import AriaException
 from ...utils.collections import FrozenDict, FrozenList, deepcopy_with_locators, merge, OrderedDict
 from ...utils.caching import cachedmethod
 from ...utils.console import puts
-from ...utils.formatting import as_raw, safe_repr, full_type_name
+from ...utils.formatting import as_raw, safe_repr
+from ...utils.type import full_type_name
 from ...utils.exceptions import print_exception
 from ..exceptions import InvalidValueError
 

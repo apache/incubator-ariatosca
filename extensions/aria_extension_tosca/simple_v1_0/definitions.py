@@ -15,7 +15,7 @@
 
 from aria.utils.collections import FrozenDict
 from aria.utils.caching import cachedmethod
-from aria.parser import dsl_specification
+from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, short_form_field, allow_unknown_fields,
                                       primitive_field, primitive_list_field, object_field,
                                       object_list_field, object_dict_field,
@@ -35,7 +35,7 @@ from .modeling.interfaces import (get_and_override_input_definitions_from_type,
                                   get_and_override_operation_definitions_from_type)
 
 @has_fields
-@dsl_specification('3.5.8', 'tosca-simple-1.0')
+@implements_specification('3.5.8', 'tosca-simple-1.0')
 class PropertyDefinition(ExtensiblePresentation):
     """
     A property definition defines a named, typed value and related data that can be associated with
@@ -86,7 +86,7 @@ class PropertyDefinition(ExtensiblePresentation):
 
     @primitive_field(str, default='supported', allowed=('supported', 'unsupported', 'experimental',
                                                         'deprecated'))
-    @dsl_specification(section='3.5.8.3', spec='tosca-simple-1.0')
+    @implements_specification(section='3.5.8.3', spec='tosca-simple-1.0')
     def status(self):
         """
         The optional status of the property relative to the specification or implementation.
@@ -121,7 +121,7 @@ class PropertyDefinition(ExtensiblePresentation):
         return get_property_constraints(context, self)
 
 @has_fields
-@dsl_specification('3.5.10', 'tosca-simple-1.0')
+@implements_specification('3.5.10', 'tosca-simple-1.0')
 class AttributeDefinition(ExtensiblePresentation):
     """
     An attribute definition defines a named, typed value that can be associated with an entity
@@ -190,7 +190,7 @@ class AttributeDefinition(ExtensiblePresentation):
         return get_data_type(context, self, 'type')
 
 @has_fields
-@dsl_specification('3.5.12', 'tosca-simple-1.0')
+@implements_specification('3.5.12', 'tosca-simple-1.0')
 class ParameterDefinition(PropertyDefinition):
     """
     A parameter definition is essentially a TOSCA property definition; however, it also allows a
@@ -225,7 +225,7 @@ class ParameterDefinition(PropertyDefinition):
 
 @short_form_field('implementation')
 @has_fields
-@dsl_specification('3.5.13-1', 'tosca-simple-1.0')
+@implements_specification('3.5.13-1', 'tosca-simple-1.0')
 class OperationDefinition(ExtensiblePresentation):
     """
     An operation definition defines a named function or procedure that can be bound to an
@@ -266,7 +266,7 @@ class OperationDefinition(ExtensiblePresentation):
 
 @allow_unknown_fields
 @has_fields
-@dsl_specification('3.5.14-1', 'tosca-simple-1.0')
+@implements_specification('3.5.14-1', 'tosca-simple-1.0')
 class InterfaceDefinition(ExtensiblePresentation):
     """
     An interface definition defines a named interface that can be associated with a Node or
@@ -352,7 +352,7 @@ class RelationshipDefinition(ExtensiblePresentation):
 
 @short_form_field('capability')
 @has_fields
-@dsl_specification('3.6.2', 'tosca-simple-1.0')
+@implements_specification('3.6.2', 'tosca-simple-1.0')
 class RequirementDefinition(ExtensiblePresentation):
     """
     The Requirement definition describes a named requirement (dependencies) of a TOSCA Node Type or
@@ -418,7 +418,7 @@ class RequirementDefinition(ExtensiblePresentation):
 
 @short_form_field('type')
 @has_fields
-@dsl_specification('3.6.1', 'tosca-simple-1.0')
+@implements_specification('3.6.1', 'tosca-simple-1.0')
 class CapabilityDefinition(ExtensiblePresentation):
     """
     A capability definition defines a named, typed set of data that can be associated with Node Type
