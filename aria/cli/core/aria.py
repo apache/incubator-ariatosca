@@ -425,5 +425,14 @@ class Options(object):
             required=required,
             help=helptexts.SERVICE_ID)
 
+    @staticmethod
+    def mark_pattern():
+        return click.option(
+            '-m',
+            '--mark-pattern',
+            help=helptexts.MARK_PATTERN,
+            type=str,
+            required=False
+        )
 
 options = Options()

@@ -19,7 +19,6 @@ import copy
 import logging
 from logutils import dictconfig
 
-
 HIGH_VERBOSE = 3
 MEDIUM_VERBOSE = 2
 LOW_VERBOSE = 1

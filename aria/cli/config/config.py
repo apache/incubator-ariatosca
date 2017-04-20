@@ -52,10 +52,6 @@ class CliConfig(object):
         return cls(config_path)
 
     @property
-    def colors(self):
-        return self._config.get('colors', False)
-
-    @property
     def logging(self):
         return self.Logging(self._config.get('logging'))
 
@@ -71,3 +67,24 @@ class CliConfig(object):
         @property
         def loggers(self):
             return self._logging.get('loggers', {})
+
+        @property
+        def execution(self):
+            return self.Execution(self._logging.get('execution'))
+
+        class Execution(object):
+
+            def __init__(self, execution_logging):
+                self._execution_logging = execution_logging
+
+            @property
+            def colors_enabled(self):
+                return self.colors.get('enabled', False)
+
+            @property
+            def colors(self):
+                return self._execution_logging.get('colors', {})
+
+            @property
+            def formats(self):
+                return self._execution_logging.get('formats', {})

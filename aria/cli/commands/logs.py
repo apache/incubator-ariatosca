@@ -18,6 +18,7 @@ from ..core import aria
 
 
 @aria.group(name='logs')
+@aria.options.verbose()
 def logs():
     """Show logs from workflow executions
     """
@@ -28,15 +29,16 @@ def logs():
               short_help='List execution logs')
 @aria.argument('execution-id')
 @aria.options.verbose()
+@aria.options.mark_pattern()
 @aria.pass_model_storage
 @aria.pass_logger
-def list(execution_id, model_storage, logger):
+def list(execution_id, mark_pattern, model_storage, logger):
     """Display logs for an execution
     """
     logger.info('Listing logs for execution id {0}'.format(execution_id))
     log_iterator = ModelLogIterator(model_storage, execution_id)
 
-    any_logs = execution_logging.log_list(log_iterator)
+    any_logs = execution_logging.log_list(log_iterator, mark_pattern=mark_pattern)
 
     if not any_logs:
         logger.info('\tNo logs')

@@ -30,11 +30,12 @@ class BaseOperationContext(BaseContext):
     """
 
     def __init__(self, task_id, actor_id, **kwargs):
-        super(BaseOperationContext, self).__init__(**kwargs)
         self._task_id = task_id
         self._actor_id = actor_id
         self._thread_local = threading.local()
-        self._register_logger(task_id=self.task.id)
+        logger_level = kwargs.pop('logger_level', None)
+        super(BaseOperationContext, self).__init__(**kwargs)
+        self._register_logger(task_id=self.task.id, level=logger_level)
 
     def __repr__(self):
         details = 'implementation={task.implementation}; ' \
@@ -80,7 +81,8 @@ class BaseOperationContext(BaseContext):
             'workdir': self._workdir,
             'model_storage': self.model.serialization_dict if self.model else None,
             'resource_storage': self.resource.serialization_dict if self.resource else None,
-            'execution_id': self._execution_id
+            'execution_id': self._execution_id,
+            'logger_level': self.logger.level
         }
         return {
             'context_cls': context_cls,

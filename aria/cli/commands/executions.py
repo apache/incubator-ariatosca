@@ -109,6 +109,7 @@ def list(service_name,
 @aria.options.dry_execution
 @aria.options.task_max_attempts()
 @aria.options.task_retry_interval()
+@aria.options.mark_pattern()
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_resource_storage
@@ -120,6 +121,7 @@ def start(workflow_name,
           dry,
           task_max_attempts,
           task_retry_interval,
+          mark_pattern,
           model_storage,
           resource_storage,
           plugin_manager,
@@ -146,7 +148,7 @@ def start(workflow_name,
     log_iterator = cli_logger.ModelLogIterator(model_storage, workflow_runner.execution_id)
     try:
         while execution_thread.is_alive():
-            execution_logging.log_list(log_iterator)
+            execution_logging.log_list(log_iterator, mark_pattern=mark_pattern)
             execution_thread.join(1)
 
     except KeyboardInterrupt:
@@ -154,7 +156,7 @@ def start(workflow_name,
 
     # It might be the case where some logs were written and the execution was terminated, thus we
     # need to drain the remaining logs.
-    execution_logging.log_list(log_iterator)
+    execution_logging.log_list(log_iterator, mark_pattern=mark_pattern)
 
     # raise any errors from the execution thread (note these are not workflow execution errors)
     execution_thread.raise_error_if_exists()
