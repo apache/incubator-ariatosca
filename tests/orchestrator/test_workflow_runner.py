@@ -86,7 +86,7 @@ def test_existing_active_executions(request, service, model):
 def test_existing_executions_but_no_active_ones(request, service, model):
     existing_terminated_execution = models.Execution(
         service=service,
-        status=models.Execution.TERMINATED,
+        status=models.Execution.SUCCEEDED,
         workflow_name='uninstall')
     model.execution.put(existing_terminated_execution)
     # no active executions exist, so no error should be raised

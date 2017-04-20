@@ -56,21 +56,20 @@ class ExecutionBase(ModelMixin):
     __private_fields__ = ['service_fk',
                           'service_template']
 
-    TERMINATED = 'terminated'
+    SUCCEEDED = 'succeeded'
     FAILED = 'failed'
     CANCELLED = 'cancelled'
     PENDING = 'pending'
     STARTED = 'started'
     CANCELLING = 'cancelling'
-    FORCE_CANCELLING = 'force_cancelling'
 
-    STATES = (TERMINATED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING, FORCE_CANCELLING)
-    END_STATES = (TERMINATED, FAILED, CANCELLED)
+    STATES = (SUCCEEDED, FAILED, CANCELLED, PENDING, STARTED, CANCELLING)
+    END_STATES = (SUCCEEDED, FAILED, CANCELLED)
 
     VALID_TRANSITIONS = {
         PENDING: (STARTED, CANCELLED),
         STARTED: END_STATES + (CANCELLING,),
-        CANCELLING: END_STATES + (FORCE_CANCELLING,)
+        CANCELLING: END_STATES
     }
 
     @orm.validates('status')

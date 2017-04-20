@@ -139,7 +139,6 @@ def start(workflow_name,
     execution_thread_name = '{0}_{1}'.format(service_name, workflow_name)
     execution_thread = threading.ExceptionThread(target=workflow_runner.execute,
                                                  name=execution_thread_name)
-    execution_thread.daemon = True  # allows force-cancel to exit immediately
 
     logger.info('Starting {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
     execution_thread.start()
@@ -172,11 +171,10 @@ def start(workflow_name,
 
 def _cancel_execution(workflow_runner, execution_thread, logger, log_iterator):
     logger.info('Cancelling execution. Press Ctrl+C again to force-cancel')
-    try:
-        workflow_runner.cancel()
-        while execution_thread.is_alive():
+    workflow_runner.cancel()
+    while execution_thread.is_alive():
+        try:
             execution_logging.log_list(log_iterator)
             execution_thread.join(1)
-    except KeyboardInterrupt:
-        logger.info('Force-cancelling execution')
-        # TODO handle execution (update status etc.) and exit process
+        except KeyboardInterrupt:
+            pass

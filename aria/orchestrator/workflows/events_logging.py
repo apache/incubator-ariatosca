@@ -52,6 +52,7 @@ def _failure_operation_handler(task, traceback, **kwargs):
         .format(name=_get_task_name(task), task=task), extra=dict(traceback=traceback)
     )
 
+
 @events.start_workflow_signal.connect
 def _start_workflow_handler(context, **kwargs):
     context.logger.info("Starting '{ctx.workflow_name}' workflow execution".format(ctx=context))

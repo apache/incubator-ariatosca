@@ -81,6 +81,9 @@ def _task_succeeded(task, *args, **kwargs):
 @events.start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
+    # the execution may already be in the process of cancelling
+    if execution.status in (execution.CANCELLING, execution.CANCELLED):
+        return
     execution.status = execution.STARTED
     execution.started_at = datetime.utcnow()
     workflow_context.execution = execution
@@ -98,7 +101,7 @@ def _workflow_failed(workflow_context, exception, *args, **kwargs):
 @events.on_success_workflow_signal.connect
 def _workflow_succeeded(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
-    execution.status = execution.TERMINATED
+    execution.status = execution.SUCCEEDED
     execution.ended_at = datetime.utcnow()
     workflow_context.execution = execution
 
@@ -106,13 +109,16 @@ def _workflow_succeeded(workflow_context, *args, **kwargs):
 @events.on_cancelled_workflow_signal.connect
 def _workflow_cancelled(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
-    # _workflow_cancelling function may have called this function
-    # already
+    # _workflow_cancelling function may have called this function already
     if execution.status == execution.CANCELLED:
         return
-    execution.status = execution.CANCELLED
-    execution.ended_at = datetime.utcnow()
-    workflow_context.execution = execution
+    # the execution may have already been finished
+    elif execution.status in (execution.SUCCEEDED, execution.FAILED):
+        _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
+    else:
+        execution.status = execution.CANCELLED
+        execution.ended_at = datetime.utcnow()
+        workflow_context.execution = execution
 
 
 @events.on_cancelling_workflow_signal.connect
@@ -120,8 +126,12 @@ def _workflow_cancelling(workflow_context, *args, **kwargs):
     execution = workflow_context.execution
     if execution.status == execution.PENDING:
         return _workflow_cancelled(workflow_context=workflow_context)
-    execution.status = execution.CANCELLING
-    workflow_context.execution = execution
+    # the execution may have already been finished
+    elif execution.status in (execution.SUCCEEDED, execution.FAILED):
+        _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
+    else:
+        execution.status = execution.CANCELLING
+        workflow_context.execution = execution
 
 
 def _update_node_state_if_necessary(task, is_transitional=False):
@@ -135,3 +145,9 @@ def _update_node_state_if_necessary(task, is_transitional=False):
         if state:
             node.state = state
             task.context.model.node.update(node)
+
+
+def _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, status):
+    workflow_context.logger.info(
+        "'{workflow_name}' workflow execution {status} before the cancel request"
+        "was fully processed".format(workflow_name=workflow_context.workflow_name, status=status))

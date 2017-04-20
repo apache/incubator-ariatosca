@@ -157,7 +157,7 @@ class TestEngine(BaseTest):
         execution = workflow_context.execution
         assert execution.started_at <= execution.ended_at <= datetime.utcnow()
         assert execution.error is None
-        assert execution.status == models.Execution.TERMINATED
+        assert execution.status == models.Execution.SUCCEEDED
 
     def test_single_task_successful_execution(self, workflow_context, executor):
         @workflow
