@@ -127,6 +127,9 @@ setup(
                            include=['{0}*'.format(name) for name in _EXTENSION_NAMES]),
     package_dir=dict((name, '{0}/{1}'.format(_EXTENSION_DIR, name)) for name in _EXTENSION_NAMES),
     package_data={
+        'aria': [
+            'cli/config/config_template.yaml'
+        ],
         'aria_extension_tosca': [
             'profiles/tosca-simple-1.0/**',
             'profiles/tosca-simple-nfv-1.0/**',
