@@ -56,7 +56,8 @@ class Core(object):
         service_template = self.model_storage.service_template.get(service_template_id)
         if service_template.services:
             raise exceptions.DependentServicesError(
-                "Can't delete service template {0} - Service template has existing services")
+                'Can\'t delete service template `{0}` - service template has existing services'
+                .format(service_template.name))
 
         self.model_storage.service_template.delete(service_template)
         self.resource_storage.service_template.delete(entry_id=str(service_template.id))
@@ -87,7 +88,8 @@ class Core(object):
                     consumption.CoerceServiceInstanceValues
                 )).consume()
             if context.validation.dump_issues():
-                raise exceptions.InstantiationError('Failed to instantiate service template')
+                raise exceptions.InstantiationError('Failed to instantiate service template `{0}`'
+                                                    .format(service_template.name))
 
         storage_session.flush()  # flushing so service.id would auto-populate
         service.name = service_name or '{0}_{1}'.format(service_template.name, service.id)
@@ -100,15 +102,15 @@ class Core(object):
         active_executions = [e for e in service.executions if e.is_active()]
         if active_executions:
             raise exceptions.DependentActiveExecutionsError(
-                "Can't delete service {0} - there is an active execution for this service. "
-                "Active execution id: {1}".format(service.name, active_executions[0].id))
+                'Can\'t delete service `{0}` - there is an active execution for this service. '
+                'Active execution ID: {1}'.format(service.name, active_executions[0].id))
 
         if not force:
             available_nodes = [str(n.id) for n in service.nodes.values() if n.is_available()]
             if available_nodes:
                 raise exceptions.DependentAvailableNodesError(
-                    "Can't delete service {0} - there are available nodes for this service. "
-                    "Available node ids: {1}".format(service.name, ', '.join(available_nodes)))
+                    'Can\'t delete service `{0}` - there are available nodes for this service. '
+                    'Available node IDs: {1}'.format(service.name, ', '.join(available_nodes)))
 
         self.model_storage.service.delete(service)
 

@@ -62,19 +62,19 @@ def test_refresh_state_of_tracked_attributes(context, executor):
 
 
 def test_apply_tracked_changes_during_an_operation(context, executor):
-    inputs = {
+    arguments = {
         'committed': {'some': 'new', 'properties': 'right here'},
         'changed_but_refreshed': {'some': 'newer', 'properties': 'right there'}
     }
 
     expected_initial = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME).attributes
     out = _run_workflow(
-        context=context, executor=executor, op_func=_mock_updating_operation, inputs=inputs)
+        context=context, executor=executor, op_func=_mock_updating_operation, arguments=arguments)
 
     expected_after_update = expected_initial.copy()
-    expected_after_update.update(inputs['committed']) # pylint: disable=no-member
+    expected_after_update.update(arguments['committed']) # pylint: disable=no-member
     expected_after_change = expected_after_update.copy()
-    expected_after_change.update(inputs['changed_but_refreshed']) # pylint: disable=no-member
+    expected_after_change.update(arguments['changed_but_refreshed']) # pylint: disable=no-member
 
     assert out['initial'] == expected_initial
     assert out['after_update'] == expected_after_update
@@ -82,26 +82,26 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
     assert out['after_refresh'] == expected_after_change
 
 
-def _run_workflow(context, executor, op_func, inputs=None):
+def _run_workflow(context, executor, op_func, arguments=None):
     @workflow
     def mock_workflow(ctx, graph):
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
         interface_name = 'test_interface'
         operation_name = 'operation'
-        wf_inputs = inputs or {}
+        wf_arguments = arguments or {}
         interface = mock.models.create_interface(
             ctx.service,
             interface_name,
             operation_name,
-            operation_kwargs=dict(implementation=_operation_mapping(op_func),
-                                  inputs=wf_inputs)
+            operation_kwargs=dict(function=_operation_mapping(op_func),
+                                  arguments=wf_arguments)
         )
         node.interfaces[interface.name] = interface
         task = api.task.OperationTask(
             node,
             interface_name=interface_name,
             operation_name=operation_name,
-            inputs=wf_inputs)
+            arguments=wf_arguments)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter

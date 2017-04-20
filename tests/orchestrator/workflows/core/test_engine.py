@@ -57,17 +57,17 @@ class BaseTest(object):
     @staticmethod
     def _op(ctx,
             func,
-            inputs=None,
+            arguments=None,
             max_attempts=None,
             retry_interval=None,
             ignore_failure=None):
         node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
         interface_name = 'aria.interfaces.lifecycle'
-        operation_kwargs = dict(implementation='{name}.{func.__name__}'.format(
+        operation_kwargs = dict(function='{name}.{func.__name__}'.format(
             name=__name__, func=func))
-        if inputs:
-            # the operation has to declare the inputs before those may be passed
-            operation_kwargs['inputs'] = inputs
+        if arguments:
+            # the operation has to declare the arguments before those may be passed
+            operation_kwargs['arguments'] = arguments
         operation_name = 'create'
         interface = mock.models.create_interface(node.service, interface_name, operation_name,
                                                  operation_kwargs=operation_kwargs)
@@ -77,7 +77,7 @@ class BaseTest(object):
             node,
             interface_name='aria.interfaces.lifecycle',
             operation_name=operation_name,
-            inputs=inputs or {},
+            arguments=arguments,
             max_attempts=max_attempts,
             retry_interval=retry_interval,
             ignore_failure=ignore_failure,
@@ -189,8 +189,8 @@ class TestEngine(BaseTest):
     def test_two_tasks_execution_order(self, workflow_context, executor):
         @workflow
         def mock_workflow(ctx, graph):
-            op1 = self._op(ctx, func=mock_ordered_task, inputs={'counter': 1})
-            op2 = self._op(ctx, func=mock_ordered_task, inputs={'counter': 2})
+            op1 = self._op(ctx, func=mock_ordered_task, arguments={'counter': 1})
+            op2 = self._op(ctx, func=mock_ordered_task, arguments={'counter': 2})
             graph.sequence(op1, op2)
         self._execute(
             workflow_func=mock_workflow,
@@ -204,9 +204,9 @@ class TestEngine(BaseTest):
     def test_stub_and_subworkflow_execution(self, workflow_context, executor):
         @workflow
         def sub_workflow(ctx, graph):
-            op1 = self._op(ctx, func=mock_ordered_task, inputs={'counter': 1})
+            op1 = self._op(ctx, func=mock_ordered_task, arguments={'counter': 1})
             op2 = api.task.StubTask()
-            op3 = self._op(ctx, func=mock_ordered_task, inputs={'counter': 2})
+            op3 = self._op(ctx, func=mock_ordered_task, arguments={'counter': 2})
             graph.sequence(op1, op2, op3)
 
         @workflow
@@ -229,7 +229,7 @@ class TestCancel(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             operations = (
-                self._op(ctx, func=mock_sleep_task, inputs=dict(seconds=0.1))
+                self._op(ctx, func=mock_sleep_task, arguments=dict(seconds=0.1))
                 for _ in range(number_of_tasks)
             )
             return graph.sequence(*operations)
@@ -270,7 +270,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 1},
+                          arguments={'failure_count': 1},
                           max_attempts=2)
             graph.add_tasks(op)
         self._execute(
@@ -286,7 +286,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 2},
+                          arguments={'failure_count': 2},
                           max_attempts=2)
             graph.add_tasks(op)
         with pytest.raises(exceptions.ExecutorException):
@@ -303,7 +303,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 1},
+                          arguments={'failure_count': 1},
                           max_attempts=3)
             graph.add_tasks(op)
         self._execute(
@@ -319,7 +319,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 2},
+                          arguments={'failure_count': 2},
                           max_attempts=3)
             graph.add_tasks(op)
         self._execute(
@@ -335,7 +335,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 1},
+                          arguments={'failure_count': 1},
                           max_attempts=-1)
             graph.add_tasks(op)
         self._execute(
@@ -361,7 +361,7 @@ class TestRetries(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
-                          inputs={'failure_count': 1},
+                          arguments={'failure_count': 1},
                           max_attempts=2,
                           retry_interval=retry_interval)
             graph.add_tasks(op)
@@ -382,7 +382,7 @@ class TestRetries(BaseTest):
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_conditional_failure_task,
                           ignore_failure=True,
-                          inputs={'failure_count': 100},
+                          arguments={'failure_count': 100},
                           max_attempts=100)
             graph.add_tasks(op)
         self._execute(
@@ -405,7 +405,7 @@ class TestTaskRetryAndAbort(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_task_retry,
-                          inputs={'message': self.message},
+                          arguments={'message': self.message},
                           retry_interval=default_retry_interval,
                           max_attempts=2)
             graph.add_tasks(op)
@@ -429,8 +429,8 @@ class TestTaskRetryAndAbort(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_task_retry,
-                          inputs={'message': self.message,
-                                  'retry_interval': custom_retry_interval},
+                          arguments={'message': self.message,
+                                     'retry_interval': custom_retry_interval},
                           retry_interval=default_retry_interval,
                           max_attempts=2)
             graph.add_tasks(op)
@@ -452,7 +452,7 @@ class TestTaskRetryAndAbort(BaseTest):
         @workflow
         def mock_workflow(ctx, graph):
             op = self._op(ctx, func=mock_task_abort,
-                          inputs={'message': self.message},
+                          arguments={'message': self.message},
                           retry_interval=100,
                           max_attempts=100)
             graph.add_tasks(op)

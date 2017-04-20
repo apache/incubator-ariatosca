@@ -15,7 +15,12 @@
 """
 ARIA orchestrator
 """
-from .decorators import workflow, operation, WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
+from .decorators import (
+    workflow,
+    operation,
+    WORKFLOW_DECORATOR_RESERVED_ARGUMENTS,
+    OPERATION_DECORATOR_RESERVED_ARGUMENTS
+)
 
 from . import (
     context,

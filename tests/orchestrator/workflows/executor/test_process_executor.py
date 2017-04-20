@@ -66,7 +66,7 @@ class TestProcessExecutor(object):
     def test_closed(self, executor):
         executor.close()
         with pytest.raises(RuntimeError) as exc_info:
-            executor.execute(task=MockTask(implementation='some.implementation'))
+            executor.execute(task=MockTask(function='some.function'))
         assert 'closed' in exc_info.value.message
 
 

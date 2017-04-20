@@ -146,9 +146,8 @@ class OperationTask(BaseTask):
 
             # Only non-stub tasks have these fields
             plugin=api_task.plugin,
-            implementation=api_task.implementation,
-            inputs=api_task.inputs
-
+            function=api_task.function,
+            arguments=api_task.arguments
         )
         self._workflow_context.model.task.put(task_model)
 

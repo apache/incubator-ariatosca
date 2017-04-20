@@ -203,13 +203,18 @@ class ParameterBase(TemplateModelMixin, caching.HasCachedMethods):
         if self.description:
             console.puts(context.style.meta(self.description))
 
-    def unwrap(self):
+    @property
+    def unwrapped(self):
         return self.name, self.value
 
     @classmethod
     def wrap(cls, name, value, description=None):
         """
         Wraps an arbitrary value as a parameter. The type will be guessed via introspection.
+
+        For primitive types, we will prefer their TOSCA aliases. See the `TOSCA Simple Profile v1.0
+        cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01
+        /TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc373867862>`__
 
         :param name: Parameter name
         :type name: basestring

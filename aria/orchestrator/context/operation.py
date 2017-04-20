@@ -42,8 +42,8 @@ class BaseOperationContext(common.BaseContext):
         self._register_logger(task_id=self.task.id, level=logger_level)
 
     def __repr__(self):
-        details = 'implementation={task.implementation}; ' \
-                  'operation_inputs={task.inputs}'\
+        details = 'function={task.function}; ' \
+                  'operation_arguments={task.arguments}'\
             .format(task=self.task)
         return '{name}({0})'.format(details, name=self.name)
 

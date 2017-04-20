@@ -26,14 +26,19 @@ import re
 from types import FunctionType
 from datetime import datetime
 
+from ruamel import yaml
+
 from aria.parser.validation import Issue
-from aria.utils.collections import StrictDict
+from aria.utils.formatting import string_list_as_string
+from aria.utils.collections import (StrictDict, OrderedDict)
+from aria.orchestrator import WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
 from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                   GroupTemplate, PolicyTemplate, SubstitutionTemplate,
                                   SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
                                   ArtifactTemplate, Metadata, Parameter, PluginSpecification)
 
+from .parameters import coerce_parameter_value
 from .constraints import (Equal, GreaterThan, GreaterOrEqual, LessThan, LessOrEqual, InRange,
                           ValidValues, Length, MinLength, MaxLength, Pattern)
 from ..data_types import coerce_value
@@ -375,7 +380,7 @@ def create_operation_template_model(context, service_template, operation):
     implementation = operation.implementation
     if implementation is not None:
         primary = implementation.primary
-        parse_implementation_string(context, service_template, operation, model, primary)
+        extract_implementation_primary(context, service_template, operation, model, primary)
         relationship_edge = operation._get_extensions(context).get('relationship_edge')
         if relationship_edge is not None:
             if relationship_edge == 'source':
@@ -384,17 +389,38 @@ def create_operation_template_model(context, service_template, operation):
                 model.relationship_edge = True
 
         dependencies = implementation.dependencies
+        configuration = OrderedDict()
         if dependencies:
             for dependency in dependencies:
                 key, value = split_prefix(dependency)
                 if key is not None:
-                    if model.configuration is None:
-                        model.configuration = {}
-                    set_nested(model.configuration, key.split('.'), value)
+                    # Special ARIA prefix: signifies configuration parameters
+
+                    # Parse as YAML
+                    try:
+                        value = yaml.load(value)
+                    except yaml.parser.MarkedYAMLError as e:
+                        context.validation.report(
+                            'YAML parser {0} in operation configuration: {1}'
+                            .format(e.problem, value),
+                            locator=implementation._locator,
+                            level=Issue.FIELD)
+                        continue
+
+                    # Coerce to intrinsic functions, if there are any
+                    value = coerce_parameter_value(context, implementation, None, value).value
+
+                    # Support dot-notation nesting
+                    set_nested(configuration, key.split('.'), value)
                 else:
                     if model.dependencies is None:
                         model.dependencies = []
                     model.dependencies.append(dependency)
+
+        # Convert configuration to Parameter models
+        for key, value in configuration.iteritems():
+            model.configuration[key] = Parameter.wrap(key, value,
+                                                      description='Operation configuration.')
 
     inputs = operation.inputs
     if inputs:
@@ -491,14 +517,21 @@ def create_workflow_operation_template_model(context, service_template, policy):
     properties = policy._get_property_values(context)
     for prop_name, prop in properties.iteritems():
         if prop_name == 'implementation':
-            parse_implementation_string(context, service_template, policy, model, prop.value)
-        elif prop_name == 'dependencies':
-            model.dependencies = prop.value
+            model.function = prop.value
         else:
             model.inputs[prop_name] = Parameter(name=prop_name, # pylint: disable=unexpected-keyword-arg
                                                 type_name=prop.type,
                                                 value=prop.value,
                                                 description=prop.description)
+
+    used_reserved_names = WORKFLOW_DECORATOR_RESERVED_ARGUMENTS.intersection(model.inputs.keys())
+    if used_reserved_names:
+        context.validation.report('using reserved arguments in workflow policy "{0}": {1}'
+                                  .format(
+                                      policy._name,
+                                      string_list_as_string(used_reserved_names)),
+                                  locator=policy._locator,
+                                  level=Issue.EXTERNAL)
 
     return model
 
@@ -639,13 +672,13 @@ def create_constraint(context, node_filter, constraint_clause, property_name, ca
 
 def split_prefix(string):
     """
-    Splits the prefix on the first unescaped ">".
+    Splits the prefix on the first non-escaped ">".
     """
 
-    split = IMPLEMENTATION_PREFIX_REGEX.split(string, 2)
+    split = IMPLEMENTATION_PREFIX_REGEX.split(string, 1)
     if len(split) < 2:
-        return None, string
-    return split[0].strip(), split[1].lstrip()
+        return None, None
+    return split[0].strip(), split[1].strip()
 
 
 def set_nested(the_dict, keys, value):
@@ -671,13 +704,18 @@ def set_nested(the_dict, keys, value):
         set_nested(the_dict[key], keys, value)
 
 
-def parse_implementation_string(context, service_template, presentation, model, implementation):
-    plugin_name, model.implementation = split_prefix(implementation)
-    if plugin_name is not None:
-        model.plugin_specification = service_template.plugin_specifications.get(plugin_name)
+def extract_implementation_primary(context, service_template, presentation, model, primary):
+    prefix, postfix = split_prefix(primary)
+    if prefix:
+        # Special ARIA prefix
+        model.plugin_specification = service_template.plugin_specifications.get(prefix)
+        model.function = postfix
         if model.plugin_specification is None:
             context.validation.report(
                 'no policy for plugin "{0}" specified in operation implementation: {1}'
-                .format(plugin_name, implementation),
+                .format(prefix, primary),
                 locator=presentation._get_child_locator('properties', 'implementation'),
                 level=Issue.BETWEEN_TYPES)
+    else:
+        # Standard TOSCA artifact with default plugin
+        model.implementation = primary

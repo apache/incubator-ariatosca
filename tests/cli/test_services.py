@@ -19,7 +19,7 @@ import mock
 from aria.cli.env import _Environment
 from aria.core import Core
 from aria.exceptions import DependentActiveExecutionsError, DependentAvailableNodesError
-from aria.modeling.exceptions import InputsException
+from aria.modeling.exceptions import ParameterException
 from aria.storage import exceptions as storage_exceptions
 
 from .base_test import (  # pylint: disable=unused-import
@@ -120,11 +120,11 @@ class TestServicesCreate(TestCliBase):
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
         monkeypatch.setattr(Core,
                             'create_service',
-                            raise_exception(InputsException))
+                            raise_exception(ParameterException))
 
         assert_exception_raised(
             self.invoke('services create -t with_inputs test_s'),
-            expected_exception=InputsException)
+            expected_exception=ParameterException)
 
         assert "Service created. The service's name is test_s" not in self.logger_output_string
 
@@ -152,8 +152,8 @@ class TestServicesDelete(TestCliBase):
         assert_exception_raised(
             self.invoke('services delete test_s'),
             expected_exception=DependentActiveExecutionsError,
-            expected_msg="Can't delete service {name} - there is an active execution "
-                         "for this service. Active execution id: 1".format(
+            expected_msg="Can't delete service `{name}` - there is an active execution "
+                         "for this service. Active execution ID: 1".format(
                              name=mock_models.SERVICE_NAME))
 
     def test_delete_available_nodes_error(self, monkeypatch, mock_storage):
@@ -161,8 +161,8 @@ class TestServicesDelete(TestCliBase):
         assert_exception_raised(
             self.invoke('services delete test_s'),
             expected_exception=DependentAvailableNodesError,
-            expected_msg="Can't delete service {name} - there are available nodes "
-                         "for this service. Available node ids: 1".format(
+            expected_msg="Can't delete service `{name}` - there are available nodes "
+                         "for this service. Available node IDs: 1".format(
                              name=mock_models.SERVICE_NAME))
 
     def test_delete_available_nodes_error_with_force(self, monkeypatch, mock_storage):

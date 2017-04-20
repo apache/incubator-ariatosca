@@ -48,8 +48,7 @@ def test_missing_workflow_implementation(service, request):
     workflow = models.Operation(
         name='test_workflow',
         service=service,
-        implementation='nonexistent.workflow.implementation',
-        inputs={})
+        function='nonexistent.workflow.implementation')
     service.workflows['test_workflow'] = workflow
 
     with pytest.raises(exceptions.WorkflowImplementationNotFoundError):
@@ -190,7 +189,7 @@ def test_execution_inputs_override_workflow_inputs(request):
 def test_execution_inputs_undeclared_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
-    with pytest.raises(modeling_exceptions.UndeclaredInputsException):
+    with pytest.raises(modeling_exceptions.UndeclaredParametersException):
         _create_workflow_runner(request, mock_workflow, inputs={'undeclared_input': 'value'})
 
 
@@ -198,7 +197,7 @@ def test_execution_inputs_missing_required_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(
         request, inputs={'required_input': models.Parameter.wrap('required_input', value=None)})
 
-    with pytest.raises(modeling_exceptions.MissingRequiredInputsException):
+    with pytest.raises(modeling_exceptions.MissingRequiredParametersException):
         _create_workflow_runner(request, mock_workflow, inputs={})
 
 
@@ -206,13 +205,13 @@ def test_execution_inputs_wrong_type_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(
         request, inputs={'input': models.Parameter.wrap('input', 'value')})
 
-    with pytest.raises(modeling_exceptions.InputsOfWrongTypeException):
+    with pytest.raises(modeling_exceptions.ParametersOfWrongTypeException):
         _create_workflow_runner(request, mock_workflow, inputs={'input': 5})
 
 
 def test_execution_inputs_builtin_workflow_with_inputs(request):
     # built-in workflows don't have inputs
-    with pytest.raises(modeling_exceptions.UndeclaredInputsException):
+    with pytest.raises(modeling_exceptions.UndeclaredParametersException):
         _create_workflow_runner(request, 'install', inputs={'undeclared_input': 'value'})
 
 
@@ -259,8 +258,9 @@ def _setup_mock_workflow_in_service(request, inputs=None):
     workflow = models.Operation(
         name=mock_workflow_name,
         service=service,
-        implementation='workflow.mock_workflow',
-        inputs=inputs or {})
+        function='workflow.mock_workflow',
+        inputs=inputs or {},
+        arguments=inputs or {})
     service.workflows[mock_workflow_name] = workflow
     return mock_workflow_name
 

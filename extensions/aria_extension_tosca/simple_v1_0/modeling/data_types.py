@@ -26,6 +26,7 @@ from aria.parser.validation import Issue
 from .functions import get_function
 from ..presentation.types import get_type_by_full_or_shorthand_name
 
+
 #
 # DataType
 #
@@ -49,6 +50,7 @@ def get_inherited_constraints(context, presentation):
             constraints = parent_constraints
 
     return constraints
+
 
 def coerce_data_type_value(context, presentation, data_type, entry_schema, constraints, value, # pylint: disable=unused-argument
                            aspect):
@@ -121,6 +123,7 @@ def coerce_data_type_value(context, presentation, data_type, entry_schema, const
 
     return value
 
+
 def validate_data_type_name(context, presentation):
     """
     Makes sure the complex data type's name is not that of a built-in type.
@@ -131,6 +134,7 @@ def validate_data_type_name(context, presentation):
         context.validation.report('data type name is that of a built-in type: %s'
                                   % safe_repr(name),
                                   locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+
 
 #
 # PropertyDefinition, AttributeDefinition, EntrySchema, DataType
@@ -172,6 +176,7 @@ def get_data_type(context, presentation, field_name, allow_none=False):
     # Try primitive data type
     return get_primitive_data_type(type_name)
 
+
 #
 # PropertyDefinition, EntrySchema
 #
@@ -194,6 +199,7 @@ def get_property_constraints(context, presentation):
             constraints = type_constraints
 
     return constraints
+
 
 #
 # ConstraintClause
@@ -310,6 +316,7 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value): 
 
     return True
 
+
 #
 # Repository
 #
@@ -325,6 +332,7 @@ def get_data_type_value(context, presentation, field_name, type_name):
                                   % (field_name, presentation._fullname, type_name),
                                   locator=presentation._locator, level=Issue.BETWEEN_TYPES)
     return None
+
 
 #
 # Utils
@@ -345,6 +353,7 @@ PRIMITIVE_DATA_TYPES = {
     'boolean': bool,
     'null': None.__class__}
 
+
 @implements_specification('3.2.1-3', 'tosca-simple-1.0')
 def get_primitive_data_type(type_name):
     """
@@ -358,12 +367,14 @@ def get_primitive_data_type(type_name):
 
     return PRIMITIVE_DATA_TYPES.get(type_name)
 
+
 def get_data_type_name(the_type):
     """
     Returns the name of the type, whether it's a DataType, a primitive type, or another class.
     """
 
     return the_type._name if hasattr(the_type, '_name') else full_type_name(the_type)
+
 
 def coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect=None): # pylint: disable=too-many-return-statements
     """
@@ -410,6 +421,7 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
     # Coerce to primitive type
     return coerce_to_primitive(context, presentation, the_type, constraints, value, aspect)
 
+
 def coerce_to_primitive(context, presentation, primitive_type, constraints, value, aspect=None):
     """
     Returns the value after it's coerced to a primitive type, translating exceptions to validation
@@ -434,6 +446,7 @@ def coerce_to_primitive(context, presentation, primitive_type, constraints, valu
         value = None
 
     return value
+
 
 def coerce_to_data_type_class(context, presentation, cls, entry_schema, constraints, value,
                               aspect=None):
@@ -463,6 +476,7 @@ def coerce_to_data_type_class(context, presentation, cls, entry_schema, constrai
 
     return value
 
+
 def apply_constraints_to_value(context, presentation, constraints, value):
     """
     Applies all constraints to the value. If the value conforms, returns the value. If it does not
@@ -478,12 +492,14 @@ def apply_constraints_to_value(context, presentation, constraints, value):
             value = None
     return value
 
+
 def get_container_data_type(presentation):
     if presentation is None:
         return None
     if type(presentation).__name__ == 'DataType':
         return presentation
     return get_container_data_type(presentation._container)
+
 
 def report_issue_for_bad_format(context, presentation, the_type, value, aspect, e):
     if aspect == 'default':

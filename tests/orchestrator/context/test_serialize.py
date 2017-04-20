@@ -47,7 +47,7 @@ def _mock_workflow(ctx, graph):
         node.service,
         'test',
         'op',
-        operation_kwargs=dict(implementation=_operation_mapping(),
+        operation_kwargs=dict(function=_operation_mapping(),
                               plugin=plugin)
     )
     node.interfaces[interface.name] = interface
@@ -60,8 +60,8 @@ def _mock_workflow(ctx, graph):
 def _mock_operation(ctx):
     # We test several things in this operation
     # ctx.task, ctx.node, etc... tell us that the model storage was properly re-created
-    # a correct ctx.task.implementation tells us we kept the correct task_id
-    assert ctx.task.implementation == _operation_mapping()
+    # a correct ctx.task.function tells us we kept the correct task_id
+    assert ctx.task.function == _operation_mapping()
     # a correct ctx.node.name tells us we kept the correct actor_id
     assert ctx.node.name == mock.models.DEPENDENCY_NODE_NAME
     # a correct ctx.name tells us we kept the correct name

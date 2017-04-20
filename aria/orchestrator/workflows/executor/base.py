@@ -33,10 +33,10 @@ class BaseExecutor(logger.LoggerMixin):
         Execute a task
         :param task: task to execute
         """
-        if task.implementation:
+        if task.function:
             self._execute(task)
         else:
-            # In this case the task is missing an implementation. This task still gets to an
+            # In this case the task is missing a function. This task still gets to an
             # executor, but since there is nothing to run, we by default simply skip the execution
             # itself.
             self._task_started(task)

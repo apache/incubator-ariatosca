@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import merge, deepcopy_with_locators, OrderedDict
+from aria.utils.collections import (merge, deepcopy_with_locators, OrderedDict)
 from aria.parser.presentation import get_locator
 from aria.parser.validation import Issue
 
-from .properties import (coerce_property_value, convert_property_definitions_to_values)
+from .parameters import (coerce_parameter_value, convert_parameter_definitions_to_values)
+
 
 #
 # InterfaceType
@@ -44,6 +45,7 @@ def get_inherited_operations(context, presentation):
         operation._reset_method_cache()
 
     return operations
+
 
 #
 # InterfaceDefinition
@@ -73,6 +75,7 @@ def get_and_override_input_definitions_from_type(context, presentation):
 
     return inputs
 
+
 def get_and_override_operation_definitions_from_type(context, presentation):
     """
     Returns our operation definitions added on top of those of the interface type, if specified.
@@ -95,6 +98,7 @@ def get_and_override_operation_definitions_from_type(context, presentation):
                                 presentation, 'definition')
 
     return operations
+
 
 #
 # NodeType, RelationshipType, GroupType
@@ -123,6 +127,7 @@ def get_inherited_interface_definitions(context, presentation, type_name, for_pr
                                 for_presentation=for_presentation)
 
     return interfaces
+
 
 #
 # NodeTemplate, RelationshipTemplate, GroupTemplate
@@ -186,6 +191,7 @@ def get_template_interfaces(context, presentation, type_name):
 
     return template_interfaces
 
+
 #
 # Utils
 #
@@ -200,13 +206,14 @@ def convert_interface_definition_from_type_to_template(context, presentation, co
     raw = convert_interface_definition_from_type_to_raw_template(context, presentation)
     return InterfaceAssignment(name=presentation._name, raw=raw, container=container)
 
+
 def convert_interface_definition_from_type_to_raw_template(context, presentation): # pylint: disable=invalid-name
     raw = OrderedDict()
 
     # Copy default values for inputs
     inputs = presentation._get_inputs(context)
     if inputs is not None:
-        raw['inputs'] = convert_property_definitions_to_values(context, inputs)
+        raw['inputs'] = convert_parameter_definitions_to_values(context, inputs)
 
     # Copy operations
     operations = presentation._get_operations(context)
@@ -221,10 +228,11 @@ def convert_interface_definition_from_type_to_raw_template(context, presentation
                 raw[operation_name]['implementation'] = deepcopy_with_locators(implementation._raw)
             inputs = operation.inputs
             if inputs is not None:
-                raw[operation_name]['inputs'] = convert_property_definitions_to_values(context,
-                                                                                       inputs)
+                raw[operation_name]['inputs'] = convert_parameter_definitions_to_values(context,
+                                                                                        inputs)
 
     return raw
+
 
 def convert_requirement_interface_definitions_from_type_to_raw_template(context, raw_requirement, # pylint: disable=invalid-name
                                                                         interface_definitions):
@@ -239,6 +247,7 @@ def convert_requirement_interface_definitions_from_type_to_raw_template(context,
             merge(raw_requirement['interfaces'][interface_name], raw_interface)
         else:
             raw_requirement['interfaces'][interface_name] = raw_interface
+
 
 def merge_interface(context, presentation, interface_assignment, our_interface_assignment,
                     interface_definition, interface_name):
@@ -282,6 +291,7 @@ def merge_interface(context, presentation, interface_assignment, our_interface_a
                               our_input_assignments, input_definitions, interface_name,
                               operation_name, presentation)
 
+
 def merge_raw_input_definition(context, the_raw_input, our_input, interface_name, operation_name,
                                presentation, type_name):
     # Check if we changed the type
@@ -305,6 +315,7 @@ def merge_raw_input_definition(context, the_raw_input, our_input, interface_name
     # Merge
     merge(the_raw_input, our_input._raw)
 
+
 def merge_input_definitions(context, inputs, our_inputs, interface_name, operation_name,
                             presentation, type_name):
     for input_name, our_input in our_inputs.iteritems():
@@ -314,6 +325,7 @@ def merge_input_definitions(context, inputs, our_inputs, interface_name, operati
         else:
             inputs[input_name] = our_input._clone(presentation)
 
+
 def merge_raw_input_definitions(context, raw_inputs, our_inputs, interface_name, operation_name,
                                 presentation, type_name):
     for input_name, our_input in our_inputs.iteritems():
@@ -322,6 +334,7 @@ def merge_raw_input_definitions(context, raw_inputs, our_inputs, interface_name,
                                        operation_name, presentation, type_name)
         else:
             raw_inputs[input_name] = deepcopy_with_locators(our_input._raw)
+
 
 def merge_raw_operation_definition(context, raw_operation, our_operation, interface_name,
                                    presentation, type_name):
@@ -353,6 +366,7 @@ def merge_raw_operation_definition(context, raw_operation, our_operation, interf
             raw_operation['implementation'] = \
                 deepcopy_with_locators(our_operation._raw['implementation'])
 
+
 def merge_operation_definitions(context, operations, our_operations, interface_name, presentation,
                                 type_name):
     if not our_operations:
@@ -363,6 +377,7 @@ def merge_operation_definitions(context, operations, our_operations, interface_n
                                            interface_name, presentation, type_name)
         else:
             operations[operation_name] = our_operation._clone(presentation)
+
 
 def merge_raw_operation_definitions(context, raw_operations, our_operations, interface_name,
                                     presentation, type_name):
@@ -377,6 +392,7 @@ def merge_raw_operation_definitions(context, raw_operations, our_operations, int
                                            presentation, type_name)
         else:
             raw_operations[operation_name] = deepcopy_with_locators(our_operation._raw)
+
 
 # From either an InterfaceType or an InterfaceDefinition:
 def merge_interface_definition(context, interface, our_source, presentation, type_name):
@@ -408,6 +424,7 @@ def merge_interface_definition(context, interface, our_source, presentation, typ
         merge_raw_operation_definitions(context, interface._raw, our_operations, our_source._name,
                                         presentation, type_name)
 
+
 def merge_interface_definitions(context, interfaces, our_interfaces, presentation,
                                 for_presentation=None):
     if not our_interfaces:
@@ -419,11 +436,13 @@ def merge_interface_definitions(context, interfaces, our_interfaces, presentatio
         else:
             interfaces[name] = our_interface._clone(for_presentation)
 
+
 def merge_interface_definitions_from_their_types(context, interfaces, presentation):
     for interface in interfaces.itervalues():
         the_type = interface._get_type(context) # InterfaceType
         if the_type is not None:
             merge_interface_definition(context, interface, the_type, presentation, 'type')
+
 
 def assign_raw_inputs(context, values, assignments, definitions, interface_name, operation_name,
                       presentation):
@@ -454,8 +473,9 @@ def assign_raw_inputs(context, values, assignments, definitions, interface_name,
         # Note: default value has already been assigned
 
         # Coerce value
-        values['inputs'][input_name] = coerce_property_value(context, assignment, definition,
-                                                             assignment.value)
+        values['inputs'][input_name] = coerce_parameter_value(context, assignment, definition,
+                                                              assignment.value)
+
 
 def validate_required_inputs(context, presentation, assignment, definition, original_assignment,
                              interface_name, operation_name=None):

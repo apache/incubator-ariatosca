@@ -16,8 +16,9 @@
 from aria.utils.collections import deepcopy_with_locators, OrderedDict
 from aria.parser.validation import Issue
 
-from .properties import (convert_property_definitions_to_values, merge_raw_property_definitions,
-                         get_assigned_and_defined_property_values)
+from .parameters import (convert_parameter_definitions_to_values, merge_raw_parameter_definitions,
+                         get_assigned_and_defined_parameter_values)
+
 
 #
 # CapabilityType
@@ -37,6 +38,7 @@ def get_inherited_valid_source_types(context, presentation):
             if parent is not None else None
 
     return valid_source_types
+
 
 #
 # NodeType
@@ -92,6 +94,7 @@ def get_inherited_capability_definitions(context, presentation, for_presentation
 
     return capability_definitions
 
+
 #
 # NodeTemplate
 #
@@ -127,8 +130,9 @@ def get_template_capabilities(context, presentation):
                 capability_assignment = capability_assignments[capability_name]
 
                 # Assign properties
-                values = get_assigned_and_defined_property_values(context,
-                                                                  our_capability_assignment)
+                values = get_assigned_and_defined_parameter_values(context,
+                                                                   our_capability_assignment,
+                                                                   'property')
                 if values:
                     capability_assignment._raw['properties'] = values
             else:
@@ -138,6 +142,7 @@ def get_template_capabilities(context, presentation):
                     locator=our_capability_assignment._locator, level=Issue.BETWEEN_TYPES)
 
     return capability_assignments
+
 
 #
 # Utils
@@ -150,11 +155,12 @@ def convert_capability_from_definition_to_assignment(context, presentation, cont
 
     properties = presentation.properties
     if properties is not None:
-        raw['properties'] = convert_property_definitions_to_values(context, properties)
+        raw['properties'] = convert_parameter_definitions_to_values(context, properties)
 
     # TODO attributes
 
     return CapabilityAssignment(name=presentation._name, raw=raw, container=container)
+
 
 def merge_capability_definition_from_type(context, presentation, capability_definition):
     raw_properties = OrderedDict()
@@ -162,12 +168,12 @@ def merge_capability_definition_from_type(context, presentation, capability_defi
     # Merge properties from type
     the_type = capability_definition._get_type(context)
     type_property_defintions = the_type._get_properties(context)
-    merge_raw_property_definitions(context, presentation, raw_properties, type_property_defintions,
-                                   'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_properties, type_property_defintions,
+                                    'properties')
 
     # Merge our properties
-    merge_raw_property_definitions(context, presentation, raw_properties,
-                                   capability_definition.properties, 'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_properties,
+                                    capability_definition.properties, 'properties')
 
     if raw_properties:
         capability_definition._raw['properties'] = raw_properties

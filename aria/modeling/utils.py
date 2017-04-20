@@ -21,6 +21,8 @@ from . import exceptions
 from ..parser.consumption import ConsumptionContext
 from ..utils.console import puts
 from ..utils.type import validate_value_type
+from ..utils.collections import OrderedDict
+from ..utils.formatting import string_list_as_string
 
 
 class ModelJSONEncoder(JSONEncoder):
@@ -39,7 +41,7 @@ class ModelJSONEncoder(JSONEncoder):
 class NodeTemplateContainerHolder(object):
     """
     Wrapper that allows using a :class:`aria.modeling.models.NodeTemplate` model directly as the
-    ``container_holder`` argument for :func:`aria.modeling.functions.evaluate`.
+    ``container_holder`` input for :func:`aria.modeling.functions.evaluate`.
     """
 
     def __init__(self, node_template):
@@ -51,74 +53,84 @@ class NodeTemplateContainerHolder(object):
         return self.container.service_template
 
 
-def create_inputs(inputs, template_inputs):
+def merge_parameter_values(parameter_values, declared_parameters):
     """
-    :param inputs: key-value dict
-    :param template_inputs: parameter name to parameter object dict
-    :return: dict of parameter name to Parameter models
+    Merges parameter values according to those declared by a type.
+
+    Exceptions will be raised for validation errors.
+
+    :param parameter_values: provided parameter values or None
+    :type parameter_values: {basestring, object}
+    :param declared_parameters: declared parameters
+    :type declared_parameters: {basestring, :class:`aria.modeling.models.Parameter`}
+    :return: the merged parameters
+    :rtype: {basestring, :class:`aria.modeling.models.Parameter`}
+    :raises aria.modeling.exceptions.UndeclaredParametersException: if a key in ``parameter_values``
+            does not exist in ``declared_parameters``
+    :raises aria.modeling.exceptions.MissingRequiredParametersException: if a key in
+            ``declared_parameters`` does not exist in ``parameter_values`` and also has no default
+            value
+    :raises aria.modeling.exceptions.ParametersOfWrongTypeException: if a value in
+            ``parameter_values`` does not match its type in ``declared_parameters``
     """
-    merged_inputs = _merge_and_validate_inputs(inputs, template_inputs)
 
     from . import models
-    input_models = []
-    for input_name, input_val in merged_inputs.iteritems():
-        parameter = models.Parameter( # pylint: disable=unexpected-keyword-arg
-            name=input_name,
-            type_name=template_inputs[input_name].type_name,
-            description=template_inputs[input_name].description,
-            value=input_val)
-        input_models.append(parameter)
 
-    return dict((inp.name, inp) for inp in input_models)
+    parameter_values = parameter_values or {}
 
+    undeclared_names = list(set(parameter_values.keys()).difference(declared_parameters.keys()))
+    if undeclared_names:
+        raise exceptions.UndeclaredParametersException(
+            'Undeclared parameters have been provided: {0}; Declared: {1}'
+            .format(string_list_as_string(undeclared_names),
+                    string_list_as_string(declared_parameters.keys())))
 
-def _merge_and_validate_inputs(inputs, template_inputs):
-    """
-    :param inputs: key-value dict
-    :param template_inputs: parameter name to parameter object dict
-    :return:
-    """
-    merged_inputs = inputs.copy()
+    parameters = OrderedDict()
 
-    missing_inputs = []
-    wrong_type_inputs = {}
-    for input_name, input_template in template_inputs.iteritems():
-        if input_name not in inputs:
-            if input_template.value is not None:
-                merged_inputs[input_name] = input_template.value  # apply default value
-            else:
-                missing_inputs.append(input_name)
-        else:
-            # Validate input type
+    missing_names = []
+    wrong_type_values = OrderedDict()
+    for declared_parameter_name, declared_parameter in declared_parameters.iteritems():
+        if declared_parameter_name in parameter_values:
+            # Value has been provided
+            value = parameter_values[declared_parameter_name]
+
+            # Validate type
+            type_name = declared_parameter.type_name
             try:
-                validate_value_type(inputs[input_name], input_template.type_name)
+                validate_value_type(value, type_name)
             except ValueError:
-                wrong_type_inputs[input_name] = input_template.type_name
+                wrong_type_values[declared_parameter_name] = type_name
             except RuntimeError:
                 # TODO: This error shouldn't be raised (or caught), but right now we lack support
                 # for custom data_types, which will raise this error. Skipping their validation.
                 pass
 
-    if missing_inputs:
-        raise exceptions.MissingRequiredInputsException(
-            'Required inputs {0} have not been specified - expected inputs: {1}'
-            .format(missing_inputs, template_inputs.keys()))
+            # Wrap in Parameter model
+            parameters[declared_parameter_name] = models.Parameter( # pylint: disable=unexpected-keyword-arg
+                name=declared_parameter_name,
+                type_name=type_name,
+                description=declared_parameter.description,
+                value=value)
+        elif declared_parameter.value is not None:
+            # Copy default value from declaration
+            parameters[declared_parameter_name] = declared_parameter.instantiate(None)
+        else:
+            # Required value has not been provided
+            missing_names.append(declared_parameter_name)
 
-    if wrong_type_inputs:
+    if missing_names:
+        raise exceptions.MissingRequiredParametersException(
+            'Declared parameters {0} have not been provided values'
+            .format(string_list_as_string(missing_names)))
+
+    if wrong_type_values:
         error_message = StringIO()
-        for param_name, param_type in wrong_type_inputs.iteritems():
-            error_message.write('Input "{0}" must be of type {1}{2}'
+        for param_name, param_type in wrong_type_values.iteritems():
+            error_message.write('Parameter "{0}" is not of declared type "{1}"{2}'
                                 .format(param_name, param_type, os.linesep))
-        raise exceptions.InputsOfWrongTypeException(error_message.getvalue())
+        raise exceptions.ParametersOfWrongTypeException(error_message.getvalue())
 
-    undeclared_inputs = [input_name for input_name in inputs.keys()
-                         if input_name not in template_inputs]
-    if undeclared_inputs:
-        raise exceptions.UndeclaredInputsException(
-            'Undeclared inputs have been specified: {0}; Expected inputs: {1}'
-            .format(undeclared_inputs, template_inputs.keys()))
-
-    return merged_inputs
+    return parameters
 
 
 def coerce_dict_values(the_dict, report_issues=False):

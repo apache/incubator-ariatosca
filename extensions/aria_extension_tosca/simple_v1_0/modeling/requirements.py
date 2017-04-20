@@ -14,12 +14,13 @@
 # limitations under the License.
 
 from aria.parser.validation import Issue
-from aria.utils.collections import deepcopy_with_locators, OrderedDict
+from aria.utils.collections import (deepcopy_with_locators, OrderedDict)
 
-from .properties import (convert_property_definitions_to_values, validate_required_values,
-                         coerce_property_value)
+from .parameters import (convert_parameter_definitions_to_values, validate_required_values,
+                         coerce_parameter_value)
 from .interfaces import (convert_requirement_interface_definitions_from_type_to_raw_template,
                          merge_interface_definitions, merge_interface, validate_required_inputs)
+
 
 #
 # NodeType
@@ -48,6 +49,7 @@ def get_inherited_requirement_definitions(context, presentation):
             requirement_definitions.append((requirement_name, our_requirement_definition))
 
     return requirement_definitions
+
 
 #
 # NodeTemplate
@@ -127,6 +129,7 @@ def get_template_requirements(context, presentation):
 
     return requirement_assignments
 
+
 #
 # Utils
 #
@@ -195,8 +198,8 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
             if relationship_property_definitions:
                 # Convert property definitions to values
                 raw['relationship']['properties'] = \
-                    convert_property_definitions_to_values(context,
-                                                           relationship_property_definitions)
+                    convert_parameter_definitions_to_values(context,
+                                                            relationship_property_definitions)
 
         # These are our interface definitions
         # InterfaceDefinition:
@@ -229,6 +232,7 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         relationship_property_definitions, \
         relationship_interface_definitions
 
+
 def add_requirement_assignments(context, presentation, requirement_assignments,
                                 requirement_definitions, our_requirement_assignments):
     for requirement_name, our_requirement_assignment in our_requirement_assignments:
@@ -258,6 +262,7 @@ def add_requirement_assignments(context, presentation, requirement_assignments,
                                       locator=our_requirement_assignment._locator,
                                       level=Issue.BETWEEN_TYPES)
 
+
 def merge_requirement_assignment(context, relationship_property_definitions,
                                  relationship_interface_definitions, requirement, our_requirement):
     our_capability = our_requirement.capability
@@ -283,6 +288,7 @@ def merge_requirement_assignment(context, relationship_property_definitions,
                                                   relationship_interface_definitions,
                                                   requirement, our_relationship)
 
+
 def merge_requirement_assignment_relationship(context, presentation, property_definitions,
                                               interface_definitions, requirement, our_relationship):
     our_relationship_properties = our_relationship._raw.get('properties')
@@ -296,7 +302,7 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
             if property_name in property_definitions:
                 definition = property_definitions[property_name]
                 requirement._raw['relationship']['properties'][property_name] = \
-                    coerce_property_value(context, presentation, definition, prop)
+                    coerce_parameter_value(context, presentation, definition, prop)
             else:
                 context.validation.report(
                     'relationship property "%s" not declared at definition of requirement "%s"'
@@ -330,6 +336,7 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
                        presentation._container._container._fullname),
                     locator=our_relationship._locator, level=Issue.BETWEEN_TYPES)
 
+
 def validate_requirement_assignment(context, presentation, requirement_assignment,
                                     relationship_property_definitions,
                                     relationship_interface_definitions):
@@ -347,6 +354,7 @@ def validate_requirement_assignment(context, presentation, requirement_assignmen
                 if relationship.interfaces is not None else None
             validate_required_inputs(context, presentation, interface_assignment,
                                      relationship_interface_definition, None, interface_name)
+
 
 def get_first_requirement(requirement_definitions, name):
     if requirement_definitions is not None:

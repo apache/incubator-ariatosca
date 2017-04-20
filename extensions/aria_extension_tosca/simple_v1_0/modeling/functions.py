@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cStringIO import StringIO
+from StringIO import StringIO # Note: cStringIO does not support Unicode
 import re
 
 from aria.utils.collections import FrozenList
@@ -69,7 +69,7 @@ class Concat(Function):
             e, final = evaluate(e, final, container_holder)
             if e is not None:
                 value.write(unicode(e))
-        value = value.getvalue()
+        value = value.getvalue() or u''
         return Evaluation(value, final)
 
 

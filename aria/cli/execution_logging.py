@@ -105,12 +105,12 @@ def stylize_log(item, mark_pattern):
     # implementation
     if item.task:
         # operation task
-        implementation = item.task.implementation
-        inputs = dict(i.unwrap() for i in item.task.inputs.values())
+        implementation = item.task.function
+        inputs = dict(arg.unwrapped for arg in item.task.arguments.values())
     else:
         # execution task
         implementation = item.execution.workflow_name
-        inputs = dict(i.unwrap() for i in item.execution.inputs.values())
+        inputs = dict(inp.unwrapped for inp in item.execution.inputs.values())
 
     stylized_str = color.StringStylizer(_get_format())
     _populate_level(stylized_str, item)

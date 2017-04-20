@@ -17,6 +17,8 @@
 Contains validation related utilities
 """
 
+from .formatting import string_list_as_string
+
 
 class ValidatorMixin(object):
     """
@@ -82,8 +84,8 @@ def validate_function_arguments(func, func_kwargs):
     for arg in non_default_args:
         if arg not in func_kwargs:
             raise ValueError(
-                "The argument '{arg}' doest not have a default value, and it "
-                "isn't passed to {func.__name__}".format(arg=arg, func=func))
+                'The argument "{arg}" is not provided and does not have a default value for '
+                'function "{func.__name__}"'.format(arg=arg, func=func))
 
     # check if there are any extra kwargs
     extra_kwargs = [arg for arg in func_kwargs.keys() if arg not in args]
@@ -91,5 +93,5 @@ def validate_function_arguments(func, func_kwargs):
     # assert that the function has kwargs
     if extra_kwargs and not has_kwargs:
         raise ValueError("The following extra kwargs were supplied: {extra_kwargs}".format(
-            extra_kwargs=extra_kwargs
+            extra_kwargs=string_list_as_string(extra_kwargs)
         ))

@@ -86,12 +86,12 @@ def test_host_ip(workflow_context, executor, dataholder):
     interface_name = 'Standard'
     operation_name = 'create'
     _, dependency_node, _, _, _ = _get_elements(workflow_context)
-    inputs = {'putput': True, 'holder_path': dataholder.path}
+    arguments = {'putput': True, 'holder_path': dataholder.path}
     interface = mock.models.create_interface(
         dependency_node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__), inputs=inputs)
+        operation_kwargs=dict(function=op_path(host_ip, module_path=__name__), arguments=arguments)
     )
     dependency_node.interfaces[interface.name] = interface
     dependency_node.attributes['ip'] = models.Parameter.wrap('ip', '1.1.1.1')
@@ -105,7 +105,7 @@ def test_host_ip(workflow_context, executor, dataholder):
                 dependency_node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                inputs=inputs
+                arguments=arguments
             )
         )
 
@@ -118,13 +118,13 @@ def test_relationship_tool_belt(workflow_context, executor, dataholder):
     interface_name = 'Configure'
     operation_name = 'post_configure'
     _, _, _, _, relationship = _get_elements(workflow_context)
-    inputs = {'putput': True, 'holder_path': dataholder.path}
+    arguments = {'putput': True, 'holder_path': dataholder.path}
     interface = mock.models.create_interface(
         relationship.source_node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(relationship_operation, module_path=__name__),
-                              inputs=inputs)
+        operation_kwargs=dict(function=op_path(relationship_operation, module_path=__name__),
+                              arguments=arguments)
     )
     relationship.interfaces[interface.name] = interface
     workflow_context.model.relationship.update(relationship)
@@ -136,7 +136,7 @@ def test_relationship_tool_belt(workflow_context, executor, dataholder):
                 relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                inputs=inputs
+                arguments=arguments
             )
         )
 

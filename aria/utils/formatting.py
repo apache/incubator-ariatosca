@@ -124,7 +124,9 @@ def string_list_as_string(strings):
     Nice representation of a list of strings.
     """
 
-    return ', '.join('"%s"' % safe_str(v) for v in strings)
+    if not strings:
+        return 'none'
+    return ', '.join('"{0}"'.format(safe_str(v)) for v in strings)
 
 
 def pluralize(noun):

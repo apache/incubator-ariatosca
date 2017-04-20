@@ -26,7 +26,7 @@ from .assignments import (PropertyAssignment, AttributeAssignment, RequirementAs
 from .definitions import ParameterDefinition
 from .filters import NodeFilter
 from .misc import (Description, MetaData, Repository, Import, SubstitutionMappings)
-from .modeling.properties import (get_assigned_and_defined_property_values, get_parameter_values)
+from .modeling.parameters import (get_assigned_and_defined_parameter_values, get_parameter_values)
 from .modeling.interfaces import get_template_interfaces
 from .modeling.requirements import get_template_requirements
 from .modeling.capabilities import get_template_capabilities
@@ -157,12 +157,11 @@ class NodeTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
     def _get_attribute_default_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self,
-                                                                   'attribute', 'attributes'))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'attribute'))
 
     @cachedmethod
     def _get_requirements(self, context):
@@ -281,7 +280,7 @@ class RelationshipTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
     def _get_interfaces(self, context):
@@ -363,7 +362,7 @@ class GroupTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
     def _get_interfaces(self, context):
@@ -427,7 +426,7 @@ class PolicyTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
     def _get_targets(self, context):

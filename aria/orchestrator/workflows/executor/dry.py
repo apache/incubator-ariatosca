@@ -33,7 +33,7 @@ class DryExecutor(BaseExecutor):                                                
             task.status = task.STARTED
 
         dry_msg = '<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
-        logger = task.context.logger.info if task.implementation else task.context.logger.debug
+        logger = task.context.logger.info if task.function else task.context.logger.debug
 
         if hasattr(task.actor, 'source_node'):
             name = '{source_node.name}->{target_node.name}'.format(
@@ -41,11 +41,11 @@ class DryExecutor(BaseExecutor):                                                
         else:
             name = task.actor.name
 
-        if task.implementation:
+        if task.function:
             logger(dry_msg.format(name=name, task=task, suffix='started...'))
             logger(dry_msg.format(name=name, task=task, suffix='successful'))
         else:
-            logger(dry_msg.format(name=name, task=task, suffix='has no implementation'))
+            logger(dry_msg.format(name=name, task=task, suffix='has no function'))
 
         # updating the task manually instead of calling self._task_succeeded(task),
         # to avoid any side effects raising that event might cause

@@ -43,7 +43,7 @@ def ctx(tmpdir):
         relationship.source_node.service,
         RELATIONSHIP_INTERFACE_NAME,
         RELATIONSHIP_OPERATION_NAME,
-        operation_kwargs={'implementation': 'test'}
+        operation_kwargs=dict(function='test')
     )
     relationship.interfaces[interface.name] = interface
     context.model.relationship.update(relationship)
@@ -53,7 +53,7 @@ def ctx(tmpdir):
         node.service,
         NODE_INTERFACE_NAME,
         NODE_OPERATION_NAME,
-        operation_kwargs={'implementation': 'test'}
+        operation_kwargs=dict(function='test')
     )
     node.interfaces[interface.name] = interface
     context.model.node.update(node)
@@ -92,7 +92,7 @@ class TestOperationTask(object):
             node.service,
             NODE_INTERFACE_NAME,
             NODE_OPERATION_NAME,
-            operation_kwargs=dict(plugin=storage_plugin, implementation='test')
+            operation_kwargs=dict(plugin=storage_plugin, function='test')
         )
         node.interfaces[interface.name] = interface
         ctx.model.node.update(node)
@@ -103,9 +103,9 @@ class TestOperationTask(object):
         assert storage_task.actor == core_task.context.node._original_model
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
-        assert core_task.implementation == api_task.implementation
+        assert core_task.function == api_task.function
         assert core_task.actor == api_task.actor == node
-        assert core_task.inputs == api_task.inputs == storage_task.inputs
+        assert core_task.arguments == api_task.arguments == storage_task.arguments
         assert core_task.plugin == storage_plugin
 
     def test_relationship_operation_task_creation(self, ctx):

@@ -69,7 +69,7 @@ def execute_operation(
                 node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                inputs=operation_kwargs
+                arguments=operation_kwargs
             )
         )
 

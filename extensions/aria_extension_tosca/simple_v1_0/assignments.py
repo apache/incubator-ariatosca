@@ -23,7 +23,7 @@ from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknow
 
 from .filters import NodeFilter
 from .misc import Description, OperationImplementation
-from .modeling.properties import get_assigned_and_defined_property_values
+from .modeling.parameters import get_assigned_and_defined_parameter_values
 from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_validators import (node_template_or_type_validator,
                                             relationship_template_or_type_validator,
@@ -428,7 +428,7 @@ class ArtifactAssignment(ExtensiblePresentation):
 
     @cachedmethod
     def _get_property_values(self, context):
-        return FrozenDict(get_assigned_and_defined_property_values(context, self))
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
     def _validate(self, context):
