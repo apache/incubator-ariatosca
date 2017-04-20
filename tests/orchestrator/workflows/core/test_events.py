@@ -110,8 +110,7 @@ def run_operation_on_node(ctx, op_name, interface_name):
         service=node.service,
         interface_name=interface_name,
         operation_name=op_name,
-        operation_kwargs=dict(implementation='{name}.{func.__name__}'.format(name=__name__,
-                                                                             func=func)))
+        operation_kwargs=dict(function='{name}.{func.__name__}'.format(name=__name__, func=func)))
     node.interfaces[interface.name] = interface
 
     eng = engine.Engine(executor=ThreadExecutor(),

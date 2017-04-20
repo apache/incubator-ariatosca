@@ -104,6 +104,16 @@ topology_template:
         Maintenance:
           enable: juju > charm.maintenance_on
           disable: juju > charm.maintenance_off
+        Standard:
+          create:
+            implementation:
+              primary: create_node_cellar.sh
+              dependencies:
+                - "process.args.1 > { get_attribute: [ SELF, tosca_id ] }"
+                - "process.args.2 > { get_property: [ HOST, flavor_name ] }"
+                - ssh.user > admin
+                - ssh.password > '1234'
+                - ssh.use_sudo > true
       requirements:
         - database: node_cellar_database
       capabilities:
@@ -161,16 +171,7 @@ topology_template:
             relationship:
               interfaces:
                 Configure:
-                  target_changed:
-                    implementation:
-                      primary: changed.sh
-                      dependencies:
-                        #- { concat: [ process.args.1 >, mongodb ] }
-                        - process.args.1 > mongodb
-                        - process.args.2 > host
-                        - ssh.user > admin
-                        - ssh.password > 1234
-                        - ssh.use_sudo > true
+                  target_changed: changed.sh
 
     nginx:
       type: nginx.Nginx
@@ -251,6 +252,7 @@ topology_template:
         Standard:
           inputs:
             openstack_credential: { get_input: openstack_credential }
+          create: create_data_volume.sh
 
   groups:
   

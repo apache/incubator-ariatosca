@@ -26,7 +26,8 @@ from . import context
 from .workflows.api import task_graph
 
 
-WORKFLOW_DECORATOR_RESERVED_ARGUMENTS = ('ctx', 'graph')
+WORKFLOW_DECORATOR_RESERVED_ARGUMENTS = set(('ctx', 'graph'))
+OPERATION_DECORATOR_RESERVED_ARGUMENTS = set(('ctx', 'toolbelt'))
 
 
 def workflow(func=None, suffix_template=''):

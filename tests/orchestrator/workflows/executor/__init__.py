@@ -25,11 +25,11 @@ class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
-    def __init__(self, implementation, inputs=None, plugin=None, storage=None):
-        self.implementation = self.name = implementation
+    def __init__(self, function, arguments=None, plugin=None, storage=None):
+        self.function = self.name = function
         self.plugin_fk = plugin.id if plugin else None
         self.plugin = plugin or None
-        self.inputs = inputs or {}
+        self.arguments = arguments or {}
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())

@@ -55,7 +55,28 @@ class BaseTask(object):
 
 class OperationTask(BaseTask):
     """
-    Represents an operation task in the task graph
+    Represents an operation task in the task graph.
+
+    :ivar name: formatted name (includes actor type, actor name, and interface/operation names)
+    :vartype name: basestring
+    :ivar actor: node or relationship
+    :vartype actor: :class:`aria.modeling.models.Node`|:class:`aria.modeling.models.Relationship`
+    :ivar interface_name: interface name on actor
+    :vartype interface_name: basestring
+    :ivar operation_name: operation name on interface
+    :vartype operation_name: basestring
+    :ivar plugin: plugin (or None for default plugin)
+    :vartype plugin: :class:`aria.modeling.models.Plugin`
+    :ivar function: path to Python function
+    :vartype function: basestring
+    :ivar arguments: arguments to send to Python function
+    :vartype arguments: {basestring, :class:`aria.modeling.models.Parameter`}
+    :ivar ignore_failure: whether to ignore failures
+    :vartype ignore_failure: bool
+    :ivar max_attempts: maximum number of attempts allowed in case of failure
+    :vartype max_attempts: int
+    :ivar retry_interval: interval between retries (in seconds)
+    :vartype retry_interval: int
     """
 
     NAME_FORMAT = '{interface}:{operation}@{type}:{name}'
@@ -64,43 +85,61 @@ class OperationTask(BaseTask):
                  actor,
                  interface_name,
                  operation_name,
-                 inputs=None,
+                 arguments=None,
+                 ignore_failure=None,
                  max_attempts=None,
-                 retry_interval=None,
-                 ignore_failure=None):
+                 retry_interval=None):
         """
-        Do not call this constructor directly. Instead, use :meth:`for_node` or
-        :meth:`for_relationship`.
+        :param actor: node or relationship
+        :type actor: :class:`aria.modeling.models.Node`|:class:`aria.modeling.models.Relationship`
+        :param interface_name: interface name on actor
+        :type interface_name: basestring
+        :param operation_name: operation name on interface
+        :type operation_name: basestring
+        :param arguments: override argument values
+        :type arguments: {basestring, object}
+        :param ignore_failure: override whether to ignore failures
+        :type ignore_failure: bool
+        :param max_attempts: override maximum number of attempts allowed in case of failure
+        :type max_attempts: int
+        :param retry_interval: override interval between retries (in seconds)
+        :type retry_interval: int
+        :raises aria.orchestrator.workflows.exceptions.OperationNotFoundException: if
+                ``interface_name`` and ``operation_name`` to not refer to an operation on the actor
         """
+
         assert isinstance(actor, (models.Node, models.Relationship))
-        super(OperationTask, self).__init__()
-        self.actor = actor
-        self.interface_name = interface_name
-        self.operation_name = operation_name
-        self.max_attempts = max_attempts or self.workflow_context._task_max_attempts
-        self.retry_interval = retry_interval or self.workflow_context._task_retry_interval
-        self.ignore_failure = \
-            self.workflow_context._task_ignore_failure if ignore_failure is None else ignore_failure
-        self.name = OperationTask.NAME_FORMAT.format(type=type(actor).__name__.lower(),
-                                                     name=actor.name,
-                                                     interface=self.interface_name,
-                                                     operation=self.operation_name)
+
         # Creating OperationTask directly should raise an error when there is no
         # interface/operation.
-
-        if not has_operation(self.actor, self.interface_name, self.operation_name):
+        if not has_operation(actor, interface_name, operation_name):
             raise exceptions.OperationNotFoundException(
-                'Could not find operation "{self.operation_name}" on interface '
-                '"{self.interface_name}" for {actor_type} "{actor.name}"'.format(
-                    self=self,
+                'Could not find operation "{operation_name}" on interface '
+                '"{interface_name}" for {actor_type} "{actor.name}"'.format(
+                    operation_name=operation_name,
+                    interface_name=interface_name,
                     actor_type=type(actor).__name__.lower(),
                     actor=actor)
             )
 
+        super(OperationTask, self).__init__()
+
+        self.name = OperationTask.NAME_FORMAT.format(type=type(actor).__name__.lower(),
+                                                     name=actor.name,
+                                                     interface=interface_name,
+                                                     operation=operation_name)
+        self.actor = actor
+        self.interface_name = interface_name
+        self.operation_name = operation_name
+        self.ignore_failure = \
+            self.workflow_context._task_ignore_failure if ignore_failure is None else ignore_failure
+        self.max_attempts = max_attempts or self.workflow_context._task_max_attempts
+        self.retry_interval = retry_interval or self.workflow_context._task_retry_interval
+
         operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = operation.plugin
-        self.inputs = modeling_utils.create_inputs(inputs or {}, operation.inputs)
-        self.implementation = operation.implementation
+        self.function = operation.function
+        self.arguments = modeling_utils.merge_parameter_values(arguments, operation.arguments)
 
     def __repr__(self):
         return self.name

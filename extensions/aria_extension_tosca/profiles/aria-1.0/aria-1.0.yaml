@@ -59,11 +59,3 @@ policy_types:
           service topology.
         type: string
         required: true
-      dependencies:
-        description: >-
-          The optional ordered list of one or more dependent or secondary implementation artifact
-          name which are referenced by the primary implementation artifact (e.g., a library the
-          script installs or a secondary script).
-        type: list
-        entry_schema: string
-        required: false

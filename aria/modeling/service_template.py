@@ -287,7 +287,7 @@ class ServiceTemplateBase(TemplateModelMixin):
                                  service_template=self)
         context.modeling.instance = service
 
-        service.inputs = utils.create_inputs(inputs or {}, self.inputs)
+        service.inputs = utils.merge_parameter_values(inputs, self.inputs)
         # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 
         for plugin_specification in self.plugin_specifications.itervalues():
@@ -1762,20 +1762,22 @@ class OperationTemplateBase(TemplateModelMixin):
     :vartype name: basestring
     :ivar description: Human-readable description
     :vartype description: basestring
-    :ivar plugin_specification: Associated plugin
-    :vartype plugin_specification: :class:`PluginSpecification`
     :ivar relationship_edge: When true specified that the operation is on the relationship's
                              target edge instead of its source (only used by relationship
                              operations)
     :vartype relationship_edge: bool
     :ivar implementation: Implementation (interpreted by the plugin)
     :vartype implementation: basestring
-    :ivar configuration: Configuration (interpreted by the plugin)
-    :vartype configuration: {basestring, object}
     :ivar dependencies: Dependency strings (interpreted by the plugin)
     :vartype dependencies: [basestring]
     :ivar inputs: Parameters that can be used by this operation
     :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar plugin_specification: Associated plugin
+    :vartype plugin_specification: :class:`PluginSpecification`
+    :ivar configuration: Configuration (interpreted by the plugin)
+    :vartype configuration: {basestring, :class:`Parameter`}
+    :ivar function: Name of the operation function
+    :vartype function: basestring
     :ivar executor: Name of executor to run the operation with
     :vartype executor: basestring
     :ivar max_attempts: Maximum number of attempts allowed in case of failure
@@ -1855,13 +1857,17 @@ class OperationTemplateBase(TemplateModelMixin):
     def inputs(cls):
         return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
+    @declared_attr
+    def configuration(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='configuration', dict_key='name')
+
     # endregion
 
     description = Column(Text)
     relationship_edge = Column(Boolean)
     implementation = Column(Text)
-    configuration = Column(modeling_types.StrictDict(key_cls=basestring))
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
+    function = Column(Text)
     executor = Column(Text)
     max_attempts = Column(Integer)
     retry_interval = Column(Integer)
@@ -1873,48 +1879,39 @@ class OperationTemplateBase(TemplateModelMixin):
             ('description', self.description),
             ('implementation', self.implementation),
             ('dependencies', self.dependencies),
-            ('executor', self.executor),
-            ('max_attempts', self.max_attempts),
-            ('retry_interval', self.retry_interval),
             ('inputs', formatting.as_raw_dict(self.inputs))))
 
     def instantiate(self, container):
         from . import models
-        if self.plugin_specification:
-            if self.plugin_specification.enabled:
-                plugin = self.plugin_specification.plugin
-                implementation = self.implementation if plugin is not None else None
-                # "plugin" would be none if a match was not found. In that case, a validation error
-                # should already have been reported in ServiceTemplateBase.instantiate, so we will
-                # continue silently here
-            else:
-                # If the plugin is disabled, the operation should be disabled, too
-                plugin = None
-                implementation = None
-        else:
-            # Using the execution plugin
-            plugin = None
-            implementation = self.implementation
+
+        plugin = self.plugin_specification.plugin \
+            if (self.plugin_specification is not None) and self.plugin_specification.enabled \
+            else None
 
         operation = models.Operation(name=self.name,
                                      description=deepcopy_with_locators(self.description),
                                      relationship_edge=self.relationship_edge,
-                                     plugin=plugin,
-                                     implementation=implementation,
-                                     configuration=self.configuration,
+                                     implementation=self.implementation,
                                      dependencies=self.dependencies,
                                      executor=self.executor,
+                                     plugin=plugin,
+                                     function=self.function,
                                      max_attempts=self.max_attempts,
                                      retry_interval=self.retry_interval,
                                      operation_template=self)
+
         utils.instantiate_dict(container, operation.inputs, self.inputs)
+        utils.instantiate_dict(container, operation.configuration, self.configuration)
+
         return operation
 
     def validate(self):
         utils.validate_dict_values(self.inputs)
+        utils.validate_dict_values(self.configuration)
 
     def coerce_values(self, report_issues):
         utils.coerce_dict_values(self.inputs, report_issues)
+        utils.coerce_dict_values(self.configuration, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1922,20 +1919,13 @@ class OperationTemplateBase(TemplateModelMixin):
         if self.description:
             console.puts(context.style.meta(self.description))
         with context.style.indent:
-            if self.plugin_specification is not None:
-                console.puts('Plugin specification: {0}'.format(
-                    context.style.literal(self.plugin_specification.name)))
             if self.implementation is not None:
                 console.puts('Implementation: {0}'.format(
                     context.style.literal(self.implementation)))
-            if self.configuration:
-                with context.style.indent:
-                    for k, v in self.configuration.iteritems():
-                        console.puts('{0}: {1}'.format(context.style.property(k),
-                                                       context.style.literal(v)))
             if self.dependencies:
                 console.puts('Dependencies: {0}'.format(
                     ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
+            utils.dump_dict_values(self.inputs, 'Inputs')
             if self.executor is not None:
                 console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
             if self.max_attempts is not None:
@@ -1943,7 +1933,12 @@ class OperationTemplateBase(TemplateModelMixin):
             if self.retry_interval is not None:
                 console.puts('Retry interval: {0}'.format(
                     context.style.literal(self.retry_interval)))
-            utils.dump_dict_values(self.inputs, 'Inputs')
+            if self.plugin_specification is not None:
+                console.puts('Plugin specification: {0}'.format(
+                    context.style.literal(self.plugin_specification.name)))
+            utils.dump_dict_values(self.configuration, 'Configuration')
+            if self.function is not None:
+                console.puts('Function: {0}'.format(context.style.literal(self.function)))
 
 
 class ArtifactTemplateBase(TemplateModelMixin):

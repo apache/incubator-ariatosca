@@ -44,11 +44,11 @@ class CeleryExecutor(BaseExecutor):
 
     def _execute(self, task):
         self._tasks[task.id] = task
-        inputs = dict(inp.unwrap() for inp in task.inputs.values())
-        inputs['ctx'] = task.context
+        arguments = dict(arg.unwrapped for arg in task.arguments.values())
+        arguments['ctx'] = task.context
         self._results[task.id] = self._app.send_task(
             task.operation_mapping,
-            kwargs=inputs,
+            kwargs=arguments,
             task_id=task.id,
             queue=self._get_queue(task))
 

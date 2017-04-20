@@ -755,7 +755,7 @@ class TestTask(object):
 
     @pytest.mark.parametrize(
         'is_valid, status, due_at, started_at, ended_at, max_attempts, attempts_count, '
-        'retry_interval, ignore_failure, name, operation_mapping, inputs, plugin_id',
+        'retry_interval, ignore_failure, name, operation_mapping, arguments, plugin_id',
         [
             (False, m_cls, now, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
             (False, Task.STARTED, m_cls, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
@@ -784,7 +784,7 @@ class TestTask(object):
     )
     def test_task_model_creation(self, execution_storage, is_valid, status, due_at, started_at,
                                  ended_at, max_attempts, attempts_count, retry_interval,
-                                 ignore_failure, name, operation_mapping, inputs, plugin_id):
+                                 ignore_failure, name, operation_mapping, arguments, plugin_id):
         task = _test_model(
             is_valid=is_valid,
             storage=execution_storage,
@@ -800,8 +800,8 @@ class TestTask(object):
                 retry_interval=retry_interval,
                 ignore_failure=ignore_failure,
                 name=name,
-                implementation=operation_mapping,
-                inputs=inputs,
+                function=operation_mapping,
+                arguments=arguments,
                 plugin_fk=plugin_id,
             ))
         if is_valid:
@@ -813,8 +813,8 @@ class TestTask(object):
         def create_task(max_attempts):
             Task(execution_fk='eid',
                  name='name',
-                 implementation='',
-                 inputs={},
+                 function='',
+                 arguments={},
                  max_attempts=max_attempts)
         create_task(max_attempts=1)
         create_task(max_attempts=2)

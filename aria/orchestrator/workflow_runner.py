@@ -42,9 +42,10 @@ class WorkflowRunner(object):
                  executor=None, task_max_attempts=DEFAULT_TASK_MAX_ATTEMPTS,
                  task_retry_interval=DEFAULT_TASK_RETRY_INTERVAL):
         """
-        Manages a single workflow execution on a given service
+        Manages a single workflow execution on a given service.
+
         :param workflow_name: Workflow name
-        :param service_id: Service id
+        :param service_id: Service ID
         :param inputs: A key-value dict of inputs for the execution
         :param model_storage: Model storage
         :param resource_storage: Resource storage
@@ -80,7 +81,7 @@ class WorkflowRunner(object):
             task_retry_interval=task_retry_interval)
 
         # transforming the execution inputs to dict, to pass them to the workflow function
-        execution_inputs_dict = dict(inp.unwrap() for inp in self.execution.inputs.values())
+        execution_inputs_dict = dict(inp.unwrapped for inp in self.execution.inputs.values())
         self._tasks_graph = workflow_fn(ctx=workflow_context, **execution_inputs_dict)
 
         executor = executor or ProcessExecutor(plugin_manager=plugin_manager)
@@ -119,7 +120,7 @@ class WorkflowRunner(object):
         else:
             workflow_inputs = self.service.workflows[self._workflow_name].inputs
 
-        execution.inputs = modeling_utils.create_inputs(inputs, workflow_inputs)
+        execution.inputs = modeling_utils.merge_parameter_values(inputs, workflow_inputs)
         # TODO: these two following calls should execute atomically
         self._validate_no_active_executions(execution)
         self._model_storage.execution.put(execution)
@@ -136,7 +137,7 @@ class WorkflowRunner(object):
         active_executions = [e for e in self.service.executions if e.is_active()]
         if active_executions:
             raise exceptions.ActiveExecutionsError(
-                "Can't start execution; Service {0} has an active execution with id {1}"
+                "Can't start execution; Service {0} has an active execution with ID {1}"
                 .format(self.service.name, active_executions[0].id))
 
     def _get_workflow_fn(self):
@@ -156,10 +157,10 @@ class WorkflowRunner(object):
         sys.path.append(service_template_resources_path)
 
         try:
-            workflow_fn = import_fullname(workflow.implementation)
+            workflow_fn = import_fullname(workflow.function)
         except ImportError:
             raise exceptions.WorkflowImplementationNotFoundError(
-                'Could not find workflow {0} implementation at {1}'.format(
-                    self._workflow_name, workflow.implementation))
+                'Could not find workflow {0} function at {1}'.format(
+                    self._workflow_name, workflow.function))
 
         return workflow_fn

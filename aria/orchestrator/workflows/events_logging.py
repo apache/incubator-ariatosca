@@ -35,8 +35,8 @@ def _get_task_name(task):
 
 @events.start_task_signal.connect
 def _start_task_handler(task, **kwargs):
-    # If the task has not implementation this is an empty task.
-    if task.implementation:
+    # If the task has no function this is an empty task.
+    if task.function:
         suffix = 'started...'
         logger = task.context.logger.info
     else:
@@ -48,7 +48,7 @@ def _start_task_handler(task, **kwargs):
 
 @events.on_success_task_signal.connect
 def _success_task_handler(task, **kwargs):
-    if not task.implementation:
+    if not task.function:
         return
     task.context.logger.info('{name} {task.interface_name}.{task.operation_name} successful'
                              .format(name=_get_task_name(task), task=task))

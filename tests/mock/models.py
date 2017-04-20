@@ -225,11 +225,11 @@ def create_interface(service, interface_name, operation_name, operation_kwargs=N
                      interface_kwargs=None):
     the_type = service.service_template.interface_types.get_descendant('test_interface_type')
 
-    if operation_kwargs and operation_kwargs.get('inputs'):
-        operation_kwargs['inputs'] = dict(
-            (input_name, models.Parameter.wrap(input_name, input_value))
-            for input_name, input_value in operation_kwargs['inputs'].iteritems()
-            if input_value is not None)
+    if operation_kwargs and operation_kwargs.get('arguments'):
+        operation_kwargs['arguments'] = dict(
+            (argument_name, models.Parameter.wrap(argument_name, argument_value))
+            for argument_name, argument_value in operation_kwargs['arguments'].iteritems()
+            if argument_value is not None)
 
     operation = models.Operation(
         name=operation_name,

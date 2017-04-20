@@ -230,10 +230,10 @@ class TaskBase(ModelMixin):
     :vartype relationship: :class:`Relationship`
     :ivar plugin: The implementing plugin (set to None for default execution plugin)
     :vartype plugin: :class:`Plugin`
-    :ivar inputs: Parameters that can be used by this task
-    :vartype inputs: {basestring: :class:`Parameter`}
-    :ivar implementation: Python path to an ``@operation`` function
-    :vartype implementation: basestring
+    :ivar function: Python path to an ``@operation`` function
+    :vartype function: basestring
+    :ivar arguments: Arguments that can be used by this task
+    :vartype arguments: {basestring: :class:`Parameter`}
     :ivar max_attempts: Maximum number of retries allowed in case of failure
     :vartype max_attempts: int
     :ivar retry_interval: Interval between retries (in seconds)
@@ -300,10 +300,10 @@ class TaskBase(ModelMixin):
         return relationship.many_to_one(cls, 'execution')
 
     @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
+    def arguments(cls):
+        return relationship.many_to_many(cls, 'parameter', prefix='arguments', dict_key='name')
 
-    implementation = Column(String)
+    function = Column(String)
     max_attempts = Column(Integer, default=1)
     retry_interval = Column(Float, default=0)
     ignore_failure = Column(Boolean, default=False)

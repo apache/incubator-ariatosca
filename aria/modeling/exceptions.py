@@ -22,9 +22,9 @@ class ModelingException(AriaException):
     """
 
 
-class InputsException(ModelingException):
+class ParameterException(ModelingException):
     """
-    ARIA inputs exception.
+    ARIA parameter exception.
     """
     pass
 
@@ -41,19 +41,19 @@ class CannotEvaluateFunctionException(ModelingException):
     """
 
 
-class MissingRequiredInputsException(InputsException):
+class MissingRequiredParametersException(ParameterException):
     """
-    ARIA modeling exception: Required inputs have been omitted.
-    """
-
-
-class InputsOfWrongTypeException(InputsException):
-    """
-    ARIA modeling exception: Inputs of the wrong types have been provided.
+    ARIA modeling exception: Required parameters have been omitted.
     """
 
 
-class UndeclaredInputsException(InputsException):
+class ParametersOfWrongTypeException(ParameterException):
     """
-    ARIA modeling exception: Undeclared inputs have been provided.
+    ARIA modeling exception: Parameters of the wrong types have been provided.
+    """
+
+
+class UndeclaredParametersException(ParameterException):
+    """
+    ARIA modeling exception: Undeclared parameters have been provided.
     """

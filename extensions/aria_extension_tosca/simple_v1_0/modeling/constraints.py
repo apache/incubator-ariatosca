@@ -15,7 +15,7 @@
 
 import re
 
-from aria.modeling.contraints import NodeTemplateConstraint
+from aria.modeling.constraints import NodeTemplateConstraint
 from aria.modeling.utils import NodeTemplateContainerHolder
 from aria.modeling.functions import evaluate
 from aria.parser import implements_specification

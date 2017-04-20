@@ -16,6 +16,7 @@
 from aria.utils.formatting import safe_repr
 from aria.parser.validation import Issue
 
+
 def validate_subtitution_mappings_requirement(context, presentation):
     if not validate_format(context, presentation, 'requirement'):
         return
@@ -56,6 +57,7 @@ def validate_subtitution_mappings_requirement(context, presentation):
             % (presentation._name, node_template._name, safe_repr(requirement_name)),
             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
         return
+
 
 def validate_subtitution_mappings_capability(context, presentation):
     if not validate_format(context, presentation, 'capability'):
@@ -99,6 +101,7 @@ def validate_subtitution_mappings_capability(context, presentation):
             % (capability_type._name, presentation._name, type_capability_type._name),
             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
+
 #
 # Utils
 #
@@ -113,6 +116,7 @@ def validate_format(context, presentation, name):
             locator=presentation._locator, level=Issue.FIELD)
         return False
     return True
+
 
 def get_node_template(context, presentation, name):
     node_template_name = presentation._raw[0]

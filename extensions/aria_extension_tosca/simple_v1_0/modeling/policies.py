@@ -15,6 +15,7 @@
 
 from ..presentation.types import convert_shorthand_to_full_type_name
 
+
 #
 # PolicyType
 #
@@ -48,6 +49,7 @@ def get_inherited_targets(context, presentation):
                 group_types.append(all_group_types[our_target])
 
     return node_types, group_types
+
 
 #
 # PolicyTemplate

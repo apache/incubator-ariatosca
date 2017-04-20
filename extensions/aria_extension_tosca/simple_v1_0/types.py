@@ -33,9 +33,9 @@ from .modeling.capabilities import (get_inherited_valid_source_types,
                                     get_inherited_capability_definitions)
 from .modeling.data_types import (get_data_type, get_inherited_constraints, coerce_data_type_value,
                                   validate_data_type_name)
-from .modeling.interfaces import get_inherited_interface_definitions, get_inherited_operations
+from .modeling.interfaces import (get_inherited_interface_definitions, get_inherited_operations)
 from .modeling.policies import get_inherited_targets
-from .modeling.properties import get_inherited_property_definitions
+from .modeling.parameters import get_inherited_parameter_definitions
 from .modeling.requirements import get_inherited_requirement_definitions
 from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_getters import data_type_class_getter
@@ -115,7 +115,7 @@ class ArtifactType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     def _validate(self, context):
         super(ArtifactType, self)._validate(context)
@@ -201,7 +201,7 @@ class DataType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_constraints(self, context):
@@ -307,7 +307,7 @@ class CapabilityType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_valid_source_types(self, context):
@@ -385,7 +385,7 @@ class InterfaceType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_inputs(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'inputs'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'inputs'))
 
     @cachedmethod
     def _get_operations(self, context):
@@ -493,11 +493,11 @@ class RelationshipType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_attributes(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'attributes'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'attributes'))
 
     @cachedmethod
     def _get_interfaces(self, context):
@@ -624,11 +624,11 @@ class NodeType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_attributes(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'attributes'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'attributes'))
 
     @cachedmethod
     def _get_requirements(self, context):
@@ -760,7 +760,7 @@ class GroupType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_interfaces(self, context):
@@ -848,7 +848,7 @@ class PolicyType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_properties(self, context):
-        return FrozenDict(get_inherited_property_definitions(context, self, 'properties'))
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
     def _get_targets(self, context):

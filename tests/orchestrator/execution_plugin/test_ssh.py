@@ -217,7 +217,7 @@ class TestWithActualSSHServer(object):
         @workflow
         def mock_workflow(ctx, graph):
             node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-            inputs = {
+            arguments = {
                 'script_path': script_path,
                 'fabric_env': _FABRIC_ENV,
                 'process': process,
@@ -226,30 +226,30 @@ class TestWithActualSSHServer(object):
                 'test_operation': '',
             }
             if hide_output:
-                inputs['hide_output'] = hide_output
+                arguments['hide_output'] = hide_output
             if commands:
-                inputs['commands'] = commands
+                arguments['commands'] = commands
             interface = mock.models.create_interface(
                 node.service,
                 'test',
                 'op',
                 operation_kwargs=dict(
-                    implementation='{0}.{1}'.format(
+                    function='{0}.{1}'.format(
                         operations.__name__,
                         operation.__name__),
-                    inputs=inputs)
+                    arguments=arguments)
             )
             node.interfaces[interface.name] = interface
 
             ops = []
             for test_operation in test_operations:
-                op_inputs = inputs.copy()
-                op_inputs['test_operation'] = test_operation
+                op_arguments = arguments.copy()
+                op_arguments['test_operation'] = test_operation
                 ops.append(api.task.OperationTask(
                     node,
                     interface_name='test',
                     operation_name='op',
-                    inputs=op_inputs))
+                    arguments=op_arguments))
 
             graph.sequence(*ops)
             return graph

@@ -140,8 +140,8 @@ class ProcessExecutor(base.BaseExecutor):
     def _create_arguments_dict(self, task):
         return {
             'task_id': task.id,
-            'implementation': task.implementation,
-            'operation_inputs': dict(inp.unwrap() for inp in task.inputs.values()),
+            'function': task.function,
+            'operation_arguments': dict(arg.unwrapped for arg in task.arguments.values()),
             'port': self._server_port,
             'context': task.context.serialization_dict,
         }
@@ -290,8 +290,8 @@ def _main():
     port = arguments['port']
     messenger = _Messenger(task_id=task_id, port=port)
 
-    implementation = arguments['implementation']
-    operation_inputs = arguments['operation_inputs']
+    function = arguments['function']
+    operation_arguments = arguments['operation_arguments']
     context_dict = arguments['context']
 
     try:
@@ -302,11 +302,11 @@ def _main():
 
     try:
         messenger.started()
-        task_func = imports.load_attribute(implementation)
+        task_func = imports.load_attribute(function)
         aria.install_aria_extensions()
         for decorate in process_executor.decorate():
             task_func = decorate(task_func)
-        task_func(ctx=ctx, **operation_inputs)
+        task_func(ctx=ctx, **operation_arguments)
         ctx.close()
         messenger.succeeded()
     except BaseException as e:

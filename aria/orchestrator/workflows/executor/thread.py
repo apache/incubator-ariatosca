@@ -60,9 +60,9 @@ class ThreadExecutor(BaseExecutor):
                 task = self._queue.get(timeout=1)
                 self._task_started(task)
                 try:
-                    task_func = imports.load_attribute(task.implementation)
-                    inputs = dict(inp.unwrap() for inp in task.inputs.values())
-                    task_func(ctx=task.context, **inputs)
+                    task_func = imports.load_attribute(task.function)
+                    arguments = dict(arg.unwrapped for arg in task.arguments.values())
+                    task_func(ctx=task.context, **arguments)
                     self._task_succeeded(task)
                 except BaseException as e:
                     self._task_failed(task,

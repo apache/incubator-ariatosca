@@ -151,7 +151,7 @@ def create(service_template_name,
     except storage_exceptions.StorageError as e:
         utils.check_overriding_storage_exceptions(e, 'service', service_name)
         raise
-    except modeling_exceptions.InputsException:
+    except modeling_exceptions.ParameterException:
         service_templates.print_service_template_inputs(model_storage, service_template_name,
                                                         logger)
         raise

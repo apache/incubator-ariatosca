@@ -15,10 +15,10 @@
 
 from aria.utils.collections import OrderedDict
 
+
 #
 # NodeType, NodeTemplate
 #
-
 
 def get_inherited_artifact_definitions(context, presentation, for_presentation=None):
 

@@ -38,16 +38,16 @@ import tests
 from . import MockTask
 
 
-def _get_implementation(func):
+def _get_function(func):
     return '{module}.{func.__name__}'.format(module=__name__, func=func)
 
 
 def execute_and_assert(executor, storage=None):
     expected_value = 'value'
-    successful_task = MockTask(_get_implementation(mock_successful_task), storage=storage)
-    failing_task = MockTask(_get_implementation(mock_failing_task), storage=storage)
-    task_with_inputs = MockTask(_get_implementation(mock_task_with_input),
-                                inputs={'input': models.Parameter.wrap('input', 'value')},
+    successful_task = MockTask(_get_function(mock_successful_task), storage=storage)
+    failing_task = MockTask(_get_function(mock_failing_task), storage=storage)
+    task_with_inputs = MockTask(_get_function(mock_task_with_input),
+                                arguments={'input': models.Parameter.wrap('input', 'value')},
                                 storage=storage)
 
     for task in [successful_task, failing_task, task_with_inputs]:
