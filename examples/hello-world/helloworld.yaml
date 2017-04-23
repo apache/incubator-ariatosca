@@ -1,18 +1,23 @@
-tosca_definitions_version: tosca_simple_profile_for_nfv_1_0
+tosca_definitions_version: tosca_simple_yaml_1_0
 
 node_types:
+  web_server:
+    derived_from: tosca.nodes.Root
+    capabilities:
+      host:
+        type: tosca.capabilities.Container
+
   web_app:
     derived_from: tosca.nodes.WebApplication
     properties:
       port:
         type: integer
-        default: 8080
 
 topology_template:
 
   node_templates:
     web_server:
-      type: tosca.nodes.WebServer
+      type: web_server
 
     web_app:
       type: web_app
