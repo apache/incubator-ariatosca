@@ -17,7 +17,8 @@ import os
 
 from aria.utils.caching import cachedmethod
 
-from .utils import (get_example_uri, get_test_uri, create_context, create_consumer)
+from .utils import (create_context, create_consumer)
+from ..helpers import (get_example_uri, get_service_template_uri)
 
 
 def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
@@ -37,10 +38,10 @@ def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
 
 def consume_node_cellar(consumer_class_name='instance', cache=True):
     cachedmethod.ENABLED = cache
-    uri = get_test_uri('tosca-simple-1.0', 'node-cellar', 'node-cellar.yaml')
+    uri = get_service_template_uri('tosca-simple-1.0', 'node-cellar', 'node-cellar.yaml')
     context = create_context(uri)
-    context.args.append('--inputs=' + get_test_uri('tosca-simple-1.0', 'node-cellar',
-                                                   'inputs.yaml'))
+    context.args.append('--inputs=' + get_service_template_uri('tosca-simple-1.0', 'node-cellar',
+                                                               'inputs.yaml'))
     consumer, dumper = create_consumer(context, consumer_class_name)
     consumer.consume()
     context.validation.dump_issues()

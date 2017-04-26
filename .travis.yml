@@ -19,6 +19,8 @@ env:
 - TOX_ENV=pylint_tests
 - TOX_ENV=py27
 - TOX_ENV=py26
+- TOX_ENV=py27e2e
+- TOX_ENV=py26e2e
 install:
   - pip install --upgrade pip
   - pip install --upgrade setuptools
