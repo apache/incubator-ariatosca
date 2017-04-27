@@ -25,6 +25,7 @@ from sqlalchemy import (
 from sqlalchemy import DateTime
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.orderinglist import ordering_list
 
 from .mixins import InstanceModelMixin
 from ..orchestrator import execution_plugin
@@ -485,12 +486,22 @@ class NodeBase(InstanceModelMixin):
     @declared_attr
     def outbound_relationships(cls):
         return relationship.one_to_many(
-            cls, 'relationship', child_fk='source_node_fk', back_populates='source_node')
+            cls, 'relationship', child_fk='source_node_fk', back_populates='source_node',
+            rel_kwargs=dict(
+                order_by='Relationship.source_position',
+                collection_class=ordering_list('source_position', count_from=0)
+            )
+        )
 
     @declared_attr
     def inbound_relationships(cls):
         return relationship.one_to_many(
-            cls, 'relationship', child_fk='target_node_fk', back_populates='target_node')
+            cls, 'relationship', child_fk='target_node_fk', back_populates='target_node',
+            rel_kwargs=dict(
+                order_by='Relationship.target_position',
+                collection_class=ordering_list('target_position', count_from=0)
+            )
+        )
 
     # endregion
 
@@ -1166,9 +1177,9 @@ class RelationshipBase(InstanceModelMixin):
     :vartype properties: {basestring: :class:`Parameter`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interfaces`}
-    :ivar source_position: ??
+    :ivar source_position: The position of the relationship in the outbound relationships.
     :vartype source_position: int
-    :ivar target_position: ??
+    :ivar target_position: The position of the relationship in the inbound relationships.
     :vartype target_position: int
     :ivar source_node: Source node
     :vartype source_node: :class:`Node`
@@ -1185,7 +1196,9 @@ class RelationshipBase(InstanceModelMixin):
                           'target_node_fk',
                           'target_capability_fk',
                           'requirement_template_fk',
-                          'relationship_template_fk']
+                          'relationship_template_fk',
+                          'target_position',
+                          'source_position']
 
     # region foreign keys
 
@@ -1289,8 +1302,8 @@ class RelationshipBase(InstanceModelMixin):
 
     # endregion
 
-    source_position = Column(Integer) # ???
-    target_position = Column(Integer) # ???
+    source_position = Column(Integer)
+    target_position = Column(Integer)
 
     def configure_operations(self):
         for interface in self.interfaces.itervalues():

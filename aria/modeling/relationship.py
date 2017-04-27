@@ -14,7 +14,6 @@
 # limitations under the License.
 
 # pylint: disable=invalid-name, redefined-outer-name
-
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy import (
@@ -161,7 +160,8 @@ def one_to_many(model_class,
                 child_table,
                 child_fk=None,
                 dict_key=None,
-                back_populates=None):
+                back_populates=None,
+                rel_kwargs=None):
     """
     Declare a one-to-many relationship property. The property value would be a list or dict of
     instances of the child table's model.
@@ -186,6 +186,8 @@ def one_to_many(model_class,
                            false to disable
     :type back_populates: basestring|bool
     """
+    rel_kwargs = rel_kwargs or {}
+    rel_kwargs.setdefault('cascade', 'all')
     if back_populates is None:
         back_populates = model_class.__tablename__
     return _relationship(
@@ -194,7 +196,7 @@ def one_to_many(model_class,
         back_populates=back_populates,
         other_fk=child_fk,
         dict_key=dict_key,
-        relationship_kwargs=dict(cascade='all'))
+        relationship_kwargs=rel_kwargs)
 
 
 def many_to_one(model_class,

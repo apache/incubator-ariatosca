@@ -155,7 +155,10 @@ def test_relationship_model_ordering(context):
         """
         assert direction in ('inbound', 'outbound')
 
-        relationships = getattr(node, direction + '_relationships')
+        def get_relationships():
+            return getattr(node, direction + '_relationships')
+
+        relationships = get_relationships()
         assert len(relationships) == 2
 
         reversed_relationship = list(reversed(relationships))
@@ -163,7 +166,7 @@ def test_relationship_model_ordering(context):
 
         relationships[:] = reversed_relationship
         context.model.node.update(node)
-        assert relationships == reversed_relationship
+        assert get_relationships() == reversed_relationship
 
     flip_and_assert(source_node, 'outbound')
     flip_and_assert(target_node, 'inbound')
