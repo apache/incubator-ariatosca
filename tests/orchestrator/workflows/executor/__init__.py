@@ -34,7 +34,7 @@ class MockTask(object):
         self.id = str(uuid.uuid4())
         self.logger = logging.getLogger()
         self.context = MockContext()
-        self.retry_count = 0
+        self.attempts_count = 1
         self.max_attempts = 1
         self.ignore_failure = False
         self.interface_name = 'interface_name'

@@ -1762,10 +1762,10 @@ class OperationTemplateBase(TemplateModelMixin):
     :vartype dependencies: [basestring]
     :ivar inputs: Parameters that can be used by this operation
     :vartype inputs: {basestring: :class:`Parameter`}
-    :ivar executor: Executor name
+    :ivar executor: Name of executor to run the operation with
     :vartype executor: basestring
-    :ivar max_retries: Maximum number of retries allowed in case of failure
-    :vartype max_retries: int
+    :ivar max_attempts: Maximum number of attempts allowed in case of failure
+    :vartype max_attempts: int
     :ivar retry_interval: Interval between retries (in seconds)
     :vartype retry_interval: int
     :ivar interface_template: Containing interface template
@@ -1848,7 +1848,7 @@ class OperationTemplateBase(TemplateModelMixin):
     configuration = Column(modeling_types.StrictDict(key_cls=basestring))
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
     executor = Column(Text)
-    max_retries = Column(Integer)
+    max_attempts = Column(Integer)
     retry_interval = Column(Integer)
 
     @property
@@ -1859,7 +1859,7 @@ class OperationTemplateBase(TemplateModelMixin):
             ('implementation', self.implementation),
             ('dependencies', self.dependencies),
             ('executor', self.executor),
-            ('max_retries', self.max_retries),
+            ('max_attempts', self.max_attempts),
             ('retry_interval', self.retry_interval),
             ('inputs', formatting.as_raw_dict(self.inputs))))
 
@@ -1889,7 +1889,7 @@ class OperationTemplateBase(TemplateModelMixin):
                                      configuration=self.configuration,
                                      dependencies=self.dependencies,
                                      executor=self.executor,
-                                     max_retries=self.max_retries,
+                                     max_attempts=self.max_attempts,
                                      retry_interval=self.retry_interval,
                                      operation_template=self)
         utils.instantiate_dict(container, operation.inputs, self.inputs)
@@ -1923,8 +1923,8 @@ class OperationTemplateBase(TemplateModelMixin):
                     ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
             if self.executor is not None:
                 console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
-            if self.max_retries is not None:
-                console.puts('Max retries: {0}'.format(context.style.literal(self.max_retries)))
+            if self.max_attempts is not None:
+                console.puts('Max attempts: {0}'.format(context.style.literal(self.max_attempts)))
             if self.retry_interval is not None:
                 console.puts('Retry interval: {0}'.format(
                     context.style.literal(self.retry_interval)))

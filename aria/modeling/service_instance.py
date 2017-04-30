@@ -74,10 +74,6 @@ class ServiceBase(InstanceModelMixin):
     :vartype created_at: :class:`datetime.datetime`
     :ivar updated_at: Update timestamp
     :vartype updated_at: :class:`datetime.datetime`
-    :ivar permalink: ??
-    :vartype permalink: basestring
-    :ivar scaling_groups: ??
-    :vartype scaling_groups: {}
     :ivar modifications: Modifications of this service
     :vartype modifications: [:class:`ServiceModification`]
     :ivar updates: Updates of this service
@@ -186,13 +182,6 @@ class ServiceBase(InstanceModelMixin):
     description = Column(Text)
     created_at = Column(DateTime, nullable=False, index=True)
     updated_at = Column(DateTime)
-
-    # region orchestration
-
-    permalink = Column(Text)
-    scaling_groups = Column(modeling_types.Dict)
-
-    # endregion
 
     def satisfy_requirements(self):
         satisfied = True
@@ -346,8 +335,6 @@ class NodeBase(InstanceModelMixin):
     :vartype host: :class:`Node`
     :ivar runtime_properties: TODO: should be replaced with attributes
     :vartype runtime_properties: {}
-    :ivar scaling_groups: ??
-    :vartype scaling_groups: []
     :ivar state: The state of the node, according to to the TOSCA-defined node states
     :vartype state: string
     :ivar version: Used by `aria.storage.instrumentation`
@@ -530,7 +517,6 @@ class NodeBase(InstanceModelMixin):
 
     description = Column(Text)
     runtime_properties = Column(modeling_types.Dict)
-    scaling_groups = Column(modeling_types.List)
     state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
     version = Column(Integer, default=1)
 
@@ -1653,10 +1639,10 @@ class OperationBase(InstanceModelMixin):
     :vartype dependencies: [basestring]
     :ivar inputs: Parameters that can be used by this operation
     :vartype inputs: {basestring: :class:`Parameter`}
-    :ivar executor: Executor name
+    :ivar executor: Name of executor to run the operation with
     :vartype executor: basestring
-    :ivar max_retries: Maximum number of retries allowed in case of failure
-    :vartype max_retries: int
+    :ivar max_attempts: Maximum number of attempts allowed in case of failure
+    :vartype max_attempts: int
     :ivar retry_interval: Interval between retries (in seconds)
     :vartype retry_interval: int
     :ivar interface: Containing interface
@@ -1742,7 +1728,7 @@ class OperationBase(InstanceModelMixin):
     configuration = Column(modeling_types.StrictDict(key_cls=basestring))
     dependencies = Column(modeling_types.StrictList(item_cls=basestring))
     executor = Column(Text)
-    max_retries = Column(Integer)
+    max_attempts = Column(Integer)
     retry_interval = Column(Integer)
 
     def configure(self):
@@ -1771,7 +1757,7 @@ class OperationBase(InstanceModelMixin):
             ('implementation', self.implementation),
             ('dependencies', self.dependencies),
             ('executor', self.executor),
-            ('max_retries', self.max_retries),
+            ('max_attempts', self.max_attempts),
             ('retry_interval', self.retry_interval),
             ('inputs', formatting.as_raw_dict(self.inputs))))
 
@@ -1805,8 +1791,8 @@ class OperationBase(InstanceModelMixin):
                         ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
             if self.executor is not None:
                 console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
-            if self.max_retries is not None:
-                console.puts('Max retries: {0}'.format(context.style.literal(self.max_retries)))
+            if self.max_attempts is not None:
+                console.puts('Max attempts: {0}'.format(context.style.literal(self.max_attempts)))
             if self.retry_interval is not None:
                 console.puts('Retry interval: {0}'.format(
                     context.style.literal(self.retry_interval)))

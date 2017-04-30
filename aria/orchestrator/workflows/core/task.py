@@ -229,17 +229,17 @@ class OperationTask(BaseTask):
         self._update_fields['ended_at'] = value
 
     @property
-    def retry_count(self):
+    def attempts_count(self):
         """
-        Returns the retry count for the task
-        :return: retry count
+        Returns the attempts count for the task
+        :return: attempts count
         """
-        return self.model_task.retry_count
+        return self.model_task.attempts_count
 
-    @retry_count.setter
+    @attempts_count.setter
     @_locked
-    def retry_count(self, value):
-        self._update_fields['retry_count'] = value
+    def attempts_count(self, value):
+        self._update_fields['attempts_count'] = value
 
     @property
     def due_at(self):

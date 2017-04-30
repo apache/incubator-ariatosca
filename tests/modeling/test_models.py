@@ -41,7 +41,7 @@ from aria.modeling.models import (
 )
 
 from tests import mock
-from ..storage import release_sqlite_storage, init_inmemory_model_storage
+from tests.storage import release_sqlite_storage, init_inmemory_model_storage
 
 
 @contextmanager
@@ -206,31 +206,25 @@ class TestServiceTemplate(object):
 class TestService(object):
 
     @pytest.mark.parametrize(
-        'is_valid, name, created_at, description, inputs, permalink, '
-        'outputs, scaling_groups, updated_at',
+        'is_valid, name, created_at, description, inputs, '
+        'outputs, updated_at',
         [
-            (False, m_cls, now, 'desc', {}, 'perlnk', {}, {}, now),
-            (False, 'name', m_cls, 'desc', {}, 'perlnk', {}, {}, now),
-            (False, 'name', now, m_cls, {}, 'perlnk', {}, {}, now),
-            (False, 'name', now, 'desc', {}, m_cls, {}, {}, now),
-            (False, 'name', now, 'desc', {}, 'perlnk', m_cls, {}, now),
-            (False, 'name', now, 'desc', {}, 'perlnk', {}, m_cls, now),
-            (False, 'name', now, 'desc', {}, 'perlnk', {}, {}, m_cls),
+            (False, m_cls, now, 'desc', {}, {}, now),
+            (False, 'name', m_cls, 'desc', {}, {}, now),
+            (False, 'name', now, m_cls, {}, {}, now),
+            (False, 'name', now, 'desc', m_cls, {}, now),
+            (False, 'name', now, 'desc', {}, m_cls, now),
+            (False, 'name', now, 'desc', {}, {}, m_cls),
 
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
-            (True, None, now, 'desc', {}, 'perlnk', {}, {}, now),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
-            (True, 'name', now, None, {}, 'perlnk', {}, {}, now),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
-            (True, 'name', now, 'desc', {}, None, {}, {}, now),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, None, now),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, None),
-            (True, 'name', now, 'desc', {}, 'perlnk', {}, {}, now),
+            (True, 'name', now, 'desc', {}, {}, now),
+            (True, None, now, 'desc', {}, {}, now),
+            (True, 'name', now, None, {}, {}, now),
+            (True, 'name', now, 'desc', {}, {}, None),
+            (True, 'name', now, 'desc', {}, {}, now),
         ]
     )
     def test_service_model_creation(self, service_storage, is_valid, name, created_at, description,
-                                    inputs, permalink, outputs, scaling_groups, updated_at):
+                                    inputs, outputs, updated_at):
         service = _test_model(
             is_valid=is_valid,
             storage=service_storage,
@@ -241,9 +235,7 @@ class TestService(object):
                 created_at=created_at,
                 description=description,
                 inputs=inputs,
-                permalink=permalink,
                 outputs=outputs,
-                scaling_groups=scaling_groups,
                 updated_at=updated_at
             ))
         if is_valid:
@@ -254,27 +246,25 @@ class TestService(object):
 class TestExecution(object):
 
     @pytest.mark.parametrize(
-        'is_valid, created_at, started_at, ended_at, error, is_system_workflow, inputs, '
+        'is_valid, created_at, started_at, ended_at, error, inputs, '
         'status, workflow_name',
         [
-            (False, m_cls, now, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (False, now, m_cls, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (False, now, now, m_cls, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (False, now, now, now, m_cls, False, {}, Execution.STARTED, 'wf_name'),
-            (False, now, now, now, 'error', False, m_cls, Execution.STARTED, 'wf_name'),
-            (False, now, now, now, 'error', False, {}, m_cls, 'wf_name'),
-            (False, now, now, now, 'error', False, {}, Execution.STARTED, m_cls),
+            (False, m_cls, now, now, 'error', {}, Execution.STARTED, 'wf_name'),
+            (False, now, m_cls, now, 'error', {}, Execution.STARTED, 'wf_name'),
+            (False, now, now, m_cls, 'error', {}, Execution.STARTED, 'wf_name'),
+            (False, now, now, now, m_cls, {}, Execution.STARTED, 'wf_name'),
+            (False, now, now, now, 'error', m_cls, Execution.STARTED, 'wf_name'),
+            (False, now, now, now, 'error', {}, m_cls, 'wf_name'),
+            (False, now, now, now, 'error', {}, Execution.STARTED, m_cls),
 
-            (True, now, now, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (True, now, None, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (True, now, now, None, 'error', False, {}, Execution.STARTED, 'wf_name'),
-            (True, now, now, now, None, False, {}, Execution.STARTED, 'wf_name'),
-            (True, now, now, now, 'error', False, {}, Execution.STARTED, 'wf_name'),
+            (True, now, now, now, 'error', {}, Execution.STARTED, 'wf_name'),
+            (True, now, None, now, 'error', {}, Execution.STARTED, 'wf_name'),
+            (True, now, now, None, 'error', {}, Execution.STARTED, 'wf_name'),
+            (True, now, now, now, None, {}, Execution.STARTED, 'wf_name'),
         ]
     )
     def test_execution_model_creation(self, service_storage, is_valid, created_at, started_at,
-                                      ended_at, error, is_system_workflow, inputs, status,
-                                      workflow_name):
+                                      ended_at, error, inputs, status, workflow_name):
         execution = _test_model(
             is_valid=is_valid,
             storage=service_storage,
@@ -285,7 +275,6 @@ class TestExecution(object):
                 started_at=started_at,
                 ended_at=ended_at,
                 error=error,
-                is_system_workflow=is_system_workflow,
                 inputs=inputs,
                 status=status,
                 workflow_name=workflow_name,
@@ -549,23 +538,22 @@ class TestNodeTemplate(object):
 
 class TestNode(object):
     @pytest.mark.parametrize(
-        'is_valid, name, runtime_properties, scaling_groups, state, version',
+        'is_valid, name, runtime_properties, state, version',
         [
-            (False, m_cls, {}, [], 'state', 1),
-            (False, 'name', m_cls, [], 'state', 1),
-            (False, 'name', {}, m_cls, 'state', 1),
-            (False, 'name', {}, [], m_cls, 1),
-            (False, m_cls, {}, [], 'state', m_cls),
+            (False, m_cls, {}, 'state', 1),
+            (False, 'name', m_cls, 'state', 1),
+            (False, 'name', {}, 'state', 1),
+            (False, 'name', {}, m_cls, 1),
+            (False, m_cls, {}, 'state', m_cls),
 
-            (True, 'name', {}, [], 'initial', 1),
-            (True, None, {}, [], 'initial', 1),
-            (True, 'name', None, [], 'initial', 1),
-            (True, 'name', {}, None, 'initial', 1),
-            (True, 'name', {}, [], 'initial', None),
+            (True, 'name', {}, 'initial', 1),
+            (True, None, {}, 'initial', 1),
+            (True, 'name', None, 'initial', 1),
+            (True, 'name', {}, 'initial', None),
         ]
     )
     def test_node_model_creation(self, node_template_storage, is_valid, name, runtime_properties,
-                                 scaling_groups, state, version):
+                                 state, version):
         node = _test_model(
             is_valid=is_valid,
             storage=node_template_storage,
@@ -575,7 +563,6 @@ class TestNode(object):
                 type=node_template_storage.type.list()[0],
                 name=name,
                 runtime_properties=runtime_properties,
-                scaling_groups=scaling_groups,
                 state=state,
                 version=version,
                 service=node_template_storage.service.list()[0]
@@ -771,7 +758,7 @@ class TestPlugin(object):
 class TestTask(object):
 
     @pytest.mark.parametrize(
-        'is_valid, status, due_at, started_at, ended_at, max_attempts, retry_count, '
+        'is_valid, status, due_at, started_at, ended_at, max_attempts, attempts_count, '
         'retry_interval, ignore_failure, name, operation_mapping, inputs, plugin_id',
         [
             (False, m_cls, now, now, now, 1, 1, 1, True, 'name', 'map', {}, '1'),
@@ -800,7 +787,7 @@ class TestTask(object):
         ]
     )
     def test_task_model_creation(self, execution_storage, is_valid, status, due_at, started_at,
-                                 ended_at, max_attempts, retry_count, retry_interval,
+                                 ended_at, max_attempts, attempts_count, retry_interval,
                                  ignore_failure, name, operation_mapping, inputs, plugin_id):
         task = _test_model(
             is_valid=is_valid,
@@ -813,7 +800,7 @@ class TestTask(object):
                 started_at=started_at,
                 ended_at=ended_at,
                 max_attempts=max_attempts,
-                retry_count=retry_count,
+                attempts_count=attempts_count,
                 retry_interval=retry_interval,
                 ignore_failure=ignore_failure,
                 name=name,

@@ -127,7 +127,7 @@ class TestOperationTask(object):
         with pytest.raises(exceptions.TaskException):
             core_task.ended_at = now
         with pytest.raises(exceptions.TaskException):
-            core_task.retry_count = 2
+            core_task.attempts_count = 2
         with pytest.raises(exceptions.TaskException):
             core_task.due_at = now
 
@@ -141,16 +141,16 @@ class TestOperationTask(object):
             core_task.status = core_task.STARTED
             core_task.started_at = future_time
             core_task.ended_at = future_time
-            core_task.retry_count = 2
+            core_task.attempts_count = 2
             core_task.due_at = future_time
             assert core_task.status != core_task.STARTED
             assert core_task.started_at != future_time
             assert core_task.ended_at != future_time
-            assert core_task.retry_count != 2
+            assert core_task.attempts_count != 2
             assert core_task.due_at != future_time
 
         assert core_task.status == core_task.STARTED
         assert core_task.started_at == future_time
         assert core_task.ended_at == future_time
-        assert core_task.retry_count == 2
+        assert core_task.attempts_count == 2
         assert core_task.due_at == future_time

@@ -92,7 +92,6 @@ class ExecutionBase(ModelMixin):
     started_at = Column(DateTime, nullable=True, index=True)
     ended_at = Column(DateTime, nullable=True, index=True)
     error = Column(Text, nullable=True)
-    is_system_workflow = Column(Boolean, nullable=False, default=False)
     status = Column(Enum(*STATES, name='execution_status'), default=PENDING)
     workflow_name = Column(Text)
 
@@ -252,8 +251,8 @@ class TaskBase(ModelMixin):
     :vartype started_at: datetime
     :ivar ended_at: Timestamp for when task ended
     :vartype ended_at: datetime
-    :ivar retry_count: How many retries occurred
-    :vartype retry_count: int
+    :ivar attempts_count: How many attempts occurred
+    :vartype attempts_count: int
     """
 
     __tablename__ = 'task'
@@ -314,7 +313,7 @@ class TaskBase(ModelMixin):
     due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
     started_at = Column(DateTime, default=None)
     ended_at = Column(DateTime, default=None)
-    retry_count = Column(Integer, default=0)
+    attempts_count = Column(Integer, default=1)
 
     def has_ended(self):
         return self.status in (self.SUCCESS, self.FAILED)

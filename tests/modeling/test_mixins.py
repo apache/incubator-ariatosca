@@ -97,8 +97,6 @@ def test_model_to_dict(context):
     expected_keys = [
         'description',
         'created_at',
-        'permalink',
-        'scaling_groups',
         'updated_at'
     ]
 
@@ -128,7 +126,6 @@ def test_relationship_model_ordering(context):
         version=None,
         node_template=new_node_template,
         state=modeling.models.Node.INITIAL,
-        scaling_groups=[]
     )
 
     source_node.outbound_relationships.append(modeling.models.Relationship(

@@ -49,7 +49,7 @@ def _task_failed(task, exception, *args, **kwargs):
     with task._update():
         should_retry = all([
             not isinstance(exception, exceptions.TaskAbortException),
-            task.retry_count < task.max_attempts - 1 or task.max_attempts == task.INFINITE_RETRIES,
+            task.attempts_count < task.max_attempts or task.max_attempts == task.INFINITE_RETRIES,
             # ignore_failure check here means the task will not be retries and it will be marked
             # as failed. The engine will also look at ignore_failure so it won't fail the
             # workflow.
@@ -62,7 +62,7 @@ def _task_failed(task, exception, *args, **kwargs):
             if retry_interval is None:
                 retry_interval = task.retry_interval
             task.status = task.RETRYING
-            task.retry_count += 1
+            task.attempts_count += 1
             task.due_at = datetime.utcnow() + timedelta(seconds=retry_interval)
         else:
             task.ended_at = datetime.utcnow()

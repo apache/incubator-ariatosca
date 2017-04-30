@@ -81,8 +81,6 @@ def create_service(service_template, name=SERVICE_NAME, inputs=None):
         description='',
         created_at=now,
         updated_at=now,
-        permalink='',
-        scaling_groups={},
     )
 
 
@@ -196,7 +194,6 @@ def create_node(dependency_node_template, service, name=NODE_NAME, state=models.
         version=None,
         node_template=dependency_node_template,
         state=state,
-        scaling_groups=[],
         service=service,
         interfaces=get_standard_interface(service),
     )
