@@ -136,8 +136,8 @@ def _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node,
 
 @workflow
 def single_operation_workflow(graph, node, interface_name, op_name, **_):
-    graph.add_tasks(api.task.OperationTask.for_node(
-        node=node,
+    graph.add_tasks(api.task.OperationTask(
+        node,
         interface_name=interface_name,
         operation_name=op_name))
 

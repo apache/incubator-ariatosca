@@ -195,6 +195,8 @@ class _SQLAlchemyHandler(logging.Handler):
         except BaseException:
             self._session.rollback()
             raise
+        finally:
+            self._session.close()
 
 
 _default_file_formatter = logging.Formatter(

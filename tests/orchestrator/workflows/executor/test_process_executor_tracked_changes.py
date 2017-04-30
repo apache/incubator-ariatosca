@@ -99,10 +99,11 @@ def _run_workflow(context, executor, op_func, inputs=None):
                                   inputs=wf_inputs)
         )
         node.interfaces[interface.name] = interface
-        task = api.task.OperationTask.for_node(node=node,
-                                               interface_name=interface_name,
-                                               operation_name=operation_name,
-                                               inputs=wf_inputs)
+        task = api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name,
+            inputs=wf_inputs)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter

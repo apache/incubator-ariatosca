@@ -18,11 +18,11 @@ Builtin stop workflow
 """
 
 from .workflows import stop_node
-from ..api.task import WorkflowTask
+from ..api import task as api_task
 from ... import workflow
 
 
 @workflow
 def stop(ctx, graph):
     for node in ctx.model.node.iter():
-        graph.add_tasks(WorkflowTask(stop_node, node=node))
+        graph.add_tasks(api_task.WorkflowTask(stop_node, node=node))

@@ -100,3 +100,8 @@ interface_types:
         Operation to remove a target node.
       _extensions:
         relationship_edge: source
+    remove_source:
+      description: >-
+        Operation to remove the source node.
+      _extensions:
+        relationship_edge: target

@@ -62,8 +62,8 @@ class TestOperationTask(object):
         ignore_failure = True
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.for_node(
-                node=node,
+            api_task = api.task.OperationTask(
+                node,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs,
@@ -109,8 +109,8 @@ class TestOperationTask(object):
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.for_relationship(
-                relationship=relationship,
+            api_task = api.task.OperationTask(
+                relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs,
@@ -154,8 +154,8 @@ class TestOperationTask(object):
         retry_interval = 10
 
         with context.workflow.current.push(ctx):
-            api_task = api.task.OperationTask.for_relationship(
-                relationship=relationship,
+            api_task = api.task.OperationTask(
+                relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs,
@@ -193,8 +193,8 @@ class TestOperationTask(object):
         dependency_node.interfaces[interface_name] = interface
 
         with context.workflow.current.push(ctx):
-            task = api.task.OperationTask.for_node(
-                node=dependency_node,
+            task = api.task.OperationTask(
+                dependency_node,
                 interface_name=interface_name,
                 operation_name=operation_name)
 

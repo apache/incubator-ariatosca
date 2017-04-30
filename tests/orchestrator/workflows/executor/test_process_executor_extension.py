@@ -46,10 +46,11 @@ def test_decorate_extension(context, executor):
                                   inputs=inputs)
         )
         node.interfaces[interface.name] = interface
-        task = api.task.OperationTask.for_node(node=node,
-                                               interface_name=interface_name,
-                                               operation_name=operation_name,
-                                               inputs=inputs)
+        task = api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name,
+            inputs=inputs)
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter

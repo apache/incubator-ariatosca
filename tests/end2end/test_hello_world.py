@@ -29,8 +29,7 @@ def test_hello_world(testenv):
     finally:
         # Even if some assertions failed, attempt to execute uninstall so the
         # webserver process doesn't stay up once the test is finished
-        # TODO: remove force_service_delete=True
-        testenv.uninstall_service(force_service_delete=True)
+        testenv.uninstall_service()
 
     _verify_webserver_down('http://localhost:9090')
     testenv.verify_clean_storage()
@@ -57,5 +56,5 @@ def _verify_deployed_service_in_storage(service_name, model_storage):
     assert service.name == service_name
     assert len(service.executions) == 1
     assert len(service.nodes) == 2
-    # TODO: validate node states
+    assert all(node.state == node.STARTED for node in service.nodes.values())
     assert len(service.executions[0].logs) > 0

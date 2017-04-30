@@ -70,7 +70,7 @@ class TestEnvironment(object):
         assert len(self.model_storage.log.list()) == 0
 
     def _get_cli(self):
-        cli = sh.aria.bake(_out=sys.stdout.write, _err=sys.stderr.write)
+        cli = sh.aria.bake('-vvv', _out=sys.stdout.write, _err=sys.stderr.write)
 
         # the `sh` library supports underscore-dash auto-replacement for commands and option flags
         # yet not for subcommands (e.g. `aria service-templates`); The following class fixes this.

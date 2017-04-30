@@ -44,7 +44,8 @@ class Engine(logger.LoggerMixin):
         self._execution_graph = networkx.DiGraph()
         self._executor = executor
         translation.build_execution_graph(task_graph=tasks_graph,
-                                          execution_graph=self._execution_graph)
+                                          execution_graph=self._execution_graph,
+                                          default_executor=self._executor)
 
     def execute(self):
         """
@@ -109,12 +110,11 @@ class Engine(logger.LoggerMixin):
                     self._workflow_context.model.task.refresh(task.model_task)
             yield task
 
-    def _handle_executable_task(self, task):
-        if isinstance(task, engine_task.StubTask):
-            task.status = models.Task.SUCCESS
-        else:
+    @staticmethod
+    def _handle_executable_task(task):
+        if isinstance(task, engine_task.OperationTask):
             events.sent_task_signal.send(task)
-            self._executor.execute(task)
+        task.execute()
 
     def _handle_ended_tasks(self, task):
         if task.status == models.Task.FAILED and not task.ignore_failure:

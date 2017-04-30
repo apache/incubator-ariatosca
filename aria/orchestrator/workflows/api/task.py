@@ -21,6 +21,7 @@ from ... import context
 from ....modeling import models
 from ....modeling import utils as modeling_utils
 from ....utils.uuid import generate_uuid
+from .. import exceptions
 
 
 class BaseTask(object):
@@ -71,102 +72,44 @@ class OperationTask(BaseTask):
         Do not call this constructor directly. Instead, use :meth:`for_node` or
         :meth:`for_relationship`.
         """
-
-        actor_type = type(actor).__name__.lower()
         assert isinstance(actor, (models.Node, models.Relationship))
-        assert actor_type in ('node', 'relationship')
-        assert interface_name and operation_name
         super(OperationTask, self).__init__()
-
         self.actor = actor
-        self.max_attempts = (self.workflow_context._task_max_attempts
-                             if max_attempts is None else max_attempts)
-        self.retry_interval = (self.workflow_context._task_retry_interval
-                               if retry_interval is None else retry_interval)
-        self.ignore_failure = (self.workflow_context._task_ignore_failure
-                               if ignore_failure is None else ignore_failure)
         self.interface_name = interface_name
         self.operation_name = operation_name
+        self.max_attempts = max_attempts or self.workflow_context._task_max_attempts
+        self.retry_interval = retry_interval or self.workflow_context._task_retry_interval
+        self.ignore_failure = \
+            self.workflow_context._task_ignore_failure if ignore_failure is None else ignore_failure
+        self.name = OperationTask.NAME_FORMAT.format(type=type(actor).__name__.lower(),
+                                                     name=actor.name,
+                                                     interface=self.interface_name,
+                                                     operation=self.operation_name)
+        # Creating OperationTask directly should raise an error when there is no
+        # interface/operation.
+
+        if not has_operation(self.actor, self.interface_name, self.operation_name):
+            raise exceptions.OperationNotFoundException(
+                'Could not find operation "{self.operation_name}" on interface '
+                '"{self.interface_name}" for {actor_type} "{actor.name}"'.format(
+                    self=self,
+                    actor_type=type(actor).__name__.lower(),
+                    actor=actor)
+            )
 
         operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = operation.plugin
         self.inputs = modeling_utils.create_inputs(inputs or {}, operation.inputs)
         self.implementation = operation.implementation
-        self.name = OperationTask.NAME_FORMAT.format(type=actor_type,
-                                                     name=actor.name,
-                                                     interface=self.interface_name,
-                                                     operation=self.operation_name)
 
     def __repr__(self):
         return self.name
 
-    @classmethod
-    def for_node(cls,
-                 node,
-                 interface_name,
-                 operation_name,
-                 max_attempts=None,
-                 retry_interval=None,
-                 ignore_failure=None,
-                 inputs=None):
-        """
-        Creates an operation on a node.
 
-        :param node: The node on which to run the operation
-        :param interface_name: The interface name
-        :param operation_name: The operation name within the interface
-        :param max_attempts: The maximum number of attempts in case the operation fails
-                             (if not specified the defaults it taken from the workflow context)
-        :param retry_interval: The interval in seconds between attempts when the operation fails
-                               (if not specified the defaults it taken from the workflow context)
-        :param ignore_failure: Whether to ignore failures
-                               (if not specified the defaults it taken from the workflow context)
-        :param inputs: Additional operation inputs
-        """
-
-        assert isinstance(node, models.Node)
-        return cls(
-            actor=node,
-            interface_name=interface_name,
-            operation_name=operation_name,
-            max_attempts=max_attempts,
-            retry_interval=retry_interval,
-            ignore_failure=ignore_failure,
-            inputs=inputs)
-
-    @classmethod
-    def for_relationship(cls,
-                         relationship,
-                         interface_name,
-                         operation_name,
-                         max_attempts=None,
-                         retry_interval=None,
-                         ignore_failure=None,
-                         inputs=None):
-        """
-        Creates an operation on a relationship edge.
-
-        :param relationship: The relationship on which to run the operation
-        :param interface_name: The interface name
-        :param operation_name: The operation name within the interface
-        :param max_attempts: The maximum number of attempts in case the operation fails
-                             (if not specified the defaults it taken from the workflow context)
-        :param retry_interval: The interval in seconds between attempts when the operation fails
-                               (if not specified the defaults it taken from the workflow context)
-        :param ignore_failure: Whether to ignore failures
-                               (if not specified the defaults it taken from the workflow context)
-        :param inputs: Additional operation inputs
-        """
-
-        assert isinstance(relationship, models.Relationship)
-        return cls(
-            actor=relationship,
-            interface_name=interface_name,
-            operation_name=operation_name,
-            max_attempts=max_attempts,
-            retry_interval=retry_interval,
-            ignore_failure=ignore_failure,
-            inputs=inputs)
+class StubTask(BaseTask):
+    """
+    Enables creating empty tasks.
+    """
 
 
 class WorkflowTask(BaseTask):
@@ -199,7 +142,83 @@ class WorkflowTask(BaseTask):
             return super(WorkflowTask, self).__getattribute__(item)
 
 
-class StubTask(BaseTask):
+def create_task(actor, interface_name, operation_name, **kwargs):
     """
-    Enables creating empty tasks.
+    This helper function enables safe creation of OperationTask, if the supplied interface or
+    operation do not exist, None is returned.
+    :param actor: the actor for this task
+    :param interface_name: the name of the interface
+    :param operation_name: the name of the operation
+    :param kwargs: any additional kwargs to be passed to the task OperationTask
+    :return: and OperationTask or None (if the interface/operation does not exists)
     """
+    try:
+        return OperationTask(
+            actor,
+            interface_name=interface_name,
+            operation_name=operation_name,
+            **kwargs
+        )
+    except exceptions.OperationNotFoundException:
+        return None
+
+
+def create_relationships_tasks(
+        node, interface_name, source_operation_name=None, target_operation_name=None, **kwargs):
+    """
+    Creates a relationship task (source and target) for all of a node_instance relationships.
+    :param basestring source_operation_name: the relationship operation name.
+    :param basestring interface_name: the name of the interface.
+    :param source_operation_name:
+    :param target_operation_name:
+    :param NodeInstance node: the source_node
+    :return:
+    """
+    sub_tasks = []
+    for relationship in node.outbound_relationships:
+        relationship_operations = create_relationship_tasks(
+            relationship,
+            interface_name,
+            source_operation_name=source_operation_name,
+            target_operation_name=target_operation_name,
+            **kwargs)
+        sub_tasks.append(relationship_operations)
+    return sub_tasks
+
+
+def create_relationship_tasks(relationship, interface_name, source_operation_name=None,
+                              target_operation_name=None, **kwargs):
+    """
+    Creates a relationship task source and target.
+    :param Relationship relationship: the relationship instance itself
+    :param source_operation_name:
+    :param target_operation_name:
+
+    :return:
+    """
+    operations = []
+    if source_operation_name:
+        operations.append(
+            create_task(
+                relationship,
+                interface_name=interface_name,
+                operation_name=source_operation_name,
+                **kwargs
+            )
+        )
+    if target_operation_name:
+        operations.append(
+            create_task(
+                relationship,
+                interface_name=interface_name,
+                operation_name=target_operation_name,
+                **kwargs
+            )
+        )
+
+    return [o for o in operations if o]
+
+
+def has_operation(actor, interface_name, operation_name):
+    interface = actor.interfaces.get(interface_name, None)
+    return interface and interface.operations.get(operation_name, False)

@@ -17,8 +17,8 @@
 Builtin execute_operation workflow
 """
 
-from . import utils
 from ... import workflow
+from ..api import task
 
 
 @workflow
@@ -65,11 +65,11 @@ def execute_operation(
     # registering actual tasks to sequences
     for node in filtered_nodes:
         graph.add_tasks(
-            _create_node_task(
-                node=node,
+            task.OperationTask(
+                node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                operation_kwargs=operation_kwargs
+                inputs=operation_kwargs
             )
         )
 
@@ -99,23 +99,3 @@ def _filter_nodes(context, node_template_ids=(), node_ids=(), type_names=()):
                 _is_node_by_id(node.id),
                 _is_node_by_type(node.node_template.type))):
             yield node
-
-
-def _create_node_task(
-        node,
-        interface_name,
-        operation_name,
-        operation_kwargs):
-    """
-    A workflow which executes a single operation
-    :param node: the node instance to install
-    :param basestring operation: the operation name
-    :param dict operation_kwargs:
-    :return:
-    """
-
-    return utils.create_node_task(
-        node=node,
-        interface_name=interface_name,
-        operation_name=operation_name,
-        inputs=operation_kwargs)

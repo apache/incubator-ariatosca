@@ -16,7 +16,6 @@
 """
 Dry executor
 """
-
 from datetime import datetime
 
 from .base import BaseExecutor

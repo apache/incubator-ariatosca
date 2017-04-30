@@ -84,10 +84,10 @@ def test_node_operation_task_execution(ctx, thread_executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_node(
+            api.task.OperationTask(
+                node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                node=node,
                 inputs=inputs
             )
         )
@@ -141,8 +141,8 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_relationship(
-                relationship=relationship,
+            api.task.OperationTask(
+                relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs
@@ -209,9 +209,10 @@ def test_invalid_task_operation_id(ctx, thread_executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_node(node=node,
-                                            interface_name=interface_name,
-                                            operation_name=operation_name)
+            api.task.OperationTask(
+                node,
+                interface_name=interface_name,
+                operation_name=operation_name)
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
@@ -250,10 +251,11 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
 
     @workflow
     def basic_workflow(graph, **_):
-        graph.add_tasks(api.task.OperationTask.for_node(node=node,
-                                                        interface_name=interface_name,
-                                                        operation_name=operation_name,
-                                                        inputs=inputs))
+        graph.add_tasks(api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name,
+            inputs=inputs))
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
     expected_file = tmpdir.join('workdir', 'plugins', str(ctx.service.id),
@@ -298,10 +300,10 @@ def test_node_operation_logging(ctx, executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_node(
+            api.task.OperationTask(
+                node,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                node=node,
                 inputs=inputs
             )
         )
@@ -331,10 +333,10 @@ def test_relationship_operation_logging(ctx, executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_relationship(
+            api.task.OperationTask(
+                relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
-                relationship=relationship,
                 inputs=inputs
             )
         )

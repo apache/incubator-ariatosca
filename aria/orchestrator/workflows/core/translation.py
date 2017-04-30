@@ -18,12 +18,14 @@ Translation of user graph's API to the execution graph
 """
 
 from .. import api
+from ..executor import base
 from . import task as core_task
 
 
 def build_execution_graph(
         task_graph,
         execution_graph,
+        default_executor,
         start_cls=core_task.StartWorkflowTask,
         end_cls=core_task.EndWorkflowTask,
         depends_on=()):
@@ -37,31 +39,33 @@ def build_execution_graph(
     :param depends_on: internal use
     """
     # Insert start marker
-    start_task = start_cls(id=_start_graph_suffix(task_graph.id))
+    start_task = start_cls(id=_start_graph_suffix(task_graph.id), executor=base.StubTaskExecutor())
     _add_task_and_dependencies(execution_graph, start_task, depends_on)
 
     for api_task in task_graph.topological_order(reverse=True):
         dependencies = task_graph.get_dependencies(api_task)
         operation_dependencies = _get_tasks_from_dependencies(
-            execution_graph,
-            dependencies,
-            default=[start_task])
+            execution_graph, dependencies, default=[start_task])
 
         if isinstance(api_task, api.task.OperationTask):
-            # Add the task an the dependencies
-            operation_task = core_task.OperationTask(api_task)
+            if api_task.implementation:
+                operation_task = core_task.OperationTask(api_task, executor=default_executor)
+            else:
+                operation_task = core_task.OperationTask(api_task,
+                                                         executor=base.EmptyOperationExecutor())
             _add_task_and_dependencies(execution_graph, operation_task, operation_dependencies)
         elif isinstance(api_task, api.task.WorkflowTask):
             # Build the graph recursively while adding start and end markers
             build_execution_graph(
                 task_graph=api_task,
                 execution_graph=execution_graph,
+                default_executor=default_executor,
                 start_cls=core_task.StartSubWorkflowTask,
                 end_cls=core_task.EndSubWorkflowTask,
                 depends_on=operation_dependencies
             )
         elif isinstance(api_task, api.task.StubTask):
-            stub_task = core_task.StubTask(id=api_task.id)
+            stub_task = core_task.StubTask(id=api_task.id, executor=base.StubTaskExecutor())
             _add_task_and_dependencies(execution_graph, stub_task, operation_dependencies)
         else:
             raise RuntimeError('Undefined state')
@@ -71,7 +75,7 @@ def build_execution_graph(
         execution_graph,
         _get_non_dependency_tasks(task_graph),
         default=[start_task])
-    end_task = end_cls(id=_end_graph_suffix(task_graph.id))
+    end_task = end_cls(id=_end_graph_suffix(task_graph.id), executor=base.StubTaskExecutor())
     _add_task_and_dependencies(execution_graph, end_task, workflow_dependencies)
 
 
@@ -85,11 +89,14 @@ def _get_tasks_from_dependencies(execution_graph, dependencies, default=()):
     """
     Returns task list from dependencies.
     """
-    return [execution_graph.node[dependency.id
-                                 if isinstance(dependency, (api.task.OperationTask,
-                                                            api.task.StubTask))
-                                 else _end_graph_suffix(dependency.id)]['task']
-            for dependency in dependencies] or default
+    tasks = []
+    for dependency in dependencies:
+        if isinstance(dependency, (api.task.OperationTask, api.task.StubTask)):
+            dependency_id = dependency.id
+        else:
+            dependency_id = _end_graph_suffix(dependency.id)
+        tasks.append(execution_graph.node[dependency_id]['task'])
+    return tasks or default
 
 
 def _start_graph_suffix(id):

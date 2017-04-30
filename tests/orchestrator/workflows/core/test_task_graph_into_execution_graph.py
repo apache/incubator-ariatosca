@@ -17,6 +17,7 @@ from networkx import topological_sort, DiGraph
 
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api, core
+from aria.orchestrator.workflows.executor import base
 
 from tests import mock
 from tests import storage
@@ -41,17 +42,20 @@ def test_task_graph_into_execution_graph(tmpdir):
 
     with context.workflow.current.push(task_context):
         test_task_graph = api.task.WorkflowTask(sub_workflow, name='test_task_graph')
-        simple_before_task = api.task.OperationTask.for_node(node=node,
-                                                             interface_name=interface_name,
-                                                             operation_name=operation_name)
-        simple_after_task = api.task.OperationTask.for_node(node=node,
-                                                            interface_name=interface_name,
-                                                            operation_name=operation_name)
+        simple_before_task = api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name)
+        simple_after_task = api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name)
 
         inner_task_graph = api.task.WorkflowTask(sub_workflow, name='test_inner_task_graph')
-        inner_task = api.task.OperationTask.for_node(node=node,
-                                                     interface_name=interface_name,
-                                                     operation_name=operation_name)
+        inner_task = api.task.OperationTask(
+            node,
+            interface_name=interface_name,
+            operation_name=operation_name)
         inner_task_graph.add_tasks(inner_task)
 
     test_task_graph.add_tasks(simple_before_task)
@@ -63,7 +67,8 @@ def test_task_graph_into_execution_graph(tmpdir):
     # Direct check
     execution_graph = DiGraph()
     core.translation.build_execution_graph(task_graph=test_task_graph,
-                                           execution_graph=execution_graph)
+                                           execution_graph=execution_graph,
+                                           default_executor=base.StubTaskExecutor())
     execution_tasks = topological_sort(execution_graph)
 
     assert len(execution_tasks) == 7

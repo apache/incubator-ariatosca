@@ -245,8 +245,8 @@ class TestWithActualSSHServer(object):
             for test_operation in test_operations:
                 op_inputs = inputs.copy()
                 op_inputs['test_operation'] = test_operation
-                ops.append(api.task.OperationTask.for_node(
-                    node=node,
+                ops.append(api.task.OperationTask(
+                    node,
                     interface_name='test',
                     operation_name='op',
                     inputs=op_inputs))

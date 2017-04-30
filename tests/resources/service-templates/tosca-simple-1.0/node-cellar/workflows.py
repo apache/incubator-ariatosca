@@ -1,5 +1,5 @@
 from aria import workflow
-from aria.orchestrator.workflows.builtin import utils
+from aria.orchestrator.workflows.api import task
 from aria.orchestrator.workflows.exceptions import TaskException
 
 
@@ -16,9 +16,9 @@ def maintenance(ctx, graph, enabled):
 
     for node in ctx.model.node.iter():
         try:
-            graph.add_tasks(utils.create_node_task(node=node,
-                                                   interface_name=INTERFACE_NAME,
-                                                   operation_name=ENABLE_OPERATION_NAME if enabled
-                                                   else DISABLE_OPERATION_NAME))
+            graph.add_tasks(task.OperationTask(node,
+                                               interface_name=INTERFACE_NAME,
+                                               operation_name=ENABLE_OPERATION_NAME if enabled
+                                               else DISABLE_OPERATION_NAME))
         except TaskException:
             pass

@@ -47,9 +47,13 @@ class BaseTask(object):
     Base class for Task objects
     """
 
-    def __init__(self, id, *args, **kwargs):
+    def __init__(self, id, executor, *args, **kwargs):
         super(BaseTask, self).__init__(*args, **kwargs)
         self._id = id
+        self._executor = executor
+
+    def execute(self):
+        return self._executor.execute(self)
 
     @property
     def id(self):
@@ -61,8 +65,11 @@ class BaseTask(object):
 
 class StubTask(BaseTask):
     """
-    Base stub task for all tasks that don't actually run anything
+    Base stub task for marker user tasks that only mark the start/end of a workflow
+    or sub-workflow
     """
+    STARTED = models.Task.STARTED
+    SUCCESS = models.Task.SUCCESS
 
     def __init__(self, *args, **kwargs):
         super(StubTask, self).__init__(*args, **kwargs)
@@ -70,10 +77,10 @@ class StubTask(BaseTask):
         self.due_at = datetime.utcnow()
 
     def has_ended(self):
-        return self.status in (models.Task.SUCCESS, models.Task.FAILED)
+        return self.status == self.SUCCESS
 
     def is_waiting(self):
-        return self.status in (models.Task.PENDING, models.Task.RETRYING)
+        return not self.has_ended()
 
 
 class StartWorkflowTask(StubTask):
@@ -108,14 +115,14 @@ class OperationTask(BaseTask):
     """
     Operation task
     """
-
     def __init__(self, api_task, *args, **kwargs):
-        super(OperationTask, self).__init__(id=api_task.id, **kwargs)
+        # If no executor is provided, we infer that this is an empty task which does not need to be
+        # executed.
+        super(OperationTask, self).__init__(id=api_task.id, *args, **kwargs)
         self._workflow_context = api_task._workflow_context
         self.interface_name = api_task.interface_name
         self.operation_name = api_task.operation_name
         model_storage = api_task._workflow_context.model
-        plugin = api_task.plugin
 
         base_task_model = model_storage.task.model_cls
         if isinstance(api_task.actor, models.Node):
@@ -130,15 +137,18 @@ class OperationTask(BaseTask):
 
         task_model = create_task_model(
             name=api_task.name,
-            implementation=api_task.implementation,
             actor=api_task.actor,
-            inputs=api_task.inputs,
             status=base_task_model.PENDING,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
             ignore_failure=api_task.ignore_failure,
-            plugin=plugin,
-            execution=self._workflow_context.execution
+            execution=self._workflow_context.execution,
+
+            # Only non-stub tasks have these fields
+            plugin=api_task.plugin,
+            implementation=api_task.implementation,
+            inputs=api_task.inputs
+
         )
         self._workflow_context.model.task.put(task_model)
 
@@ -152,6 +162,9 @@ class OperationTask(BaseTask):
                                 workdir=self._workflow_context._workdir)
         self._task_id = task_model.id
         self._update_fields = None
+
+    def execute(self):
+        super(OperationTask, self).execute()
 
     @contextmanager
     def _update(self):

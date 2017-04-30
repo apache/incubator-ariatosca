@@ -40,7 +40,6 @@ def _task_started(task, *args, **kwargs):
     with task._update():
         task.started_at = datetime.utcnow()
         task.status = task.STARTED
-
         _update_node_state_if_necessary(task, is_transitional=True)
 
 

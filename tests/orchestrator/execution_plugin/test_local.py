@@ -489,8 +489,8 @@ if __name__ == '__main__':
                     inputs=inputs)
             )
             node.interfaces[interface.name] = interface
-            graph.add_tasks(api.task.OperationTask.for_node(
-                node=node,
+            graph.add_tasks(api.task.OperationTask(
+                node,
                 interface_name='test',
                 operation_name='op',
                 inputs=inputs))

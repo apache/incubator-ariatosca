@@ -24,6 +24,7 @@ from aria.orchestrator.workflows import (
     api,
     core,
     exceptions,
+    executor
 )
 
 from tests import mock, storage
@@ -66,20 +67,22 @@ class TestOperationTask(object):
 
     def _create_node_operation_task(self, ctx, node):
         with workflow_context.current.push(ctx):
-            api_task = api.task.OperationTask.for_node(
-                node=node,
+            api_task = api.task.OperationTask(
+                node,
                 interface_name=NODE_INTERFACE_NAME,
                 operation_name=NODE_OPERATION_NAME)
-            core_task = core.task.OperationTask(api_task=api_task)
+            core_task = core.task.OperationTask(api_task=api_task,
+                                                executor=executor.base.EmptyOperationExecutor())
         return api_task, core_task
 
     def _create_relationship_operation_task(self, ctx, relationship):
         with workflow_context.current.push(ctx):
-            api_task = api.task.OperationTask.for_relationship(
-                relationship=relationship,
+            api_task = api.task.OperationTask(
+                relationship,
                 interface_name=RELATIONSHIP_INTERFACE_NAME,
                 operation_name=RELATIONSHIP_OPERATION_NAME)
-            core_task = core.task.OperationTask(api_task=api_task)
+            core_task = core.task.OperationTask(api_task=api_task,
+                                                executor=executor.base.EmptyOperationExecutor())
         return api_task, core_task
 
     def test_node_operation_task_creation(self, ctx):

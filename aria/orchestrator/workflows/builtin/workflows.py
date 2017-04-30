@@ -18,10 +18,7 @@ TSOCA normative lifecycle workflows.
 """
 
 from ... import workflow
-from .utils import (
-    create_node_task,
-    create_relationships_tasks
-)
+from ..api import task
 
 
 NORMATIVE_STANDARD_INTERFACE = 'Standard' # 'tosca.interfaces.node.lifecycle.Standard'
@@ -72,19 +69,18 @@ __all__ = (
 @workflow(suffix_template='{node.name}')
 def install_node(graph, node, **kwargs):
     # Create
-    sequence = [create_node_task(node,
-                                 NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE)]
+    sequence = [task.create_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CREATE)]
 
     # Configure
-    sequence += create_relationships_tasks(node,
-                                           NORMATIVE_CONFIGURE_INTERFACE,
-                                           NORMATIVE_PRE_CONFIGURE_SOURCE,
-                                           NORMATIVE_PRE_CONFIGURE_TARGET)
-    sequence.append(create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE))
-    sequence += create_relationships_tasks(node,
-                                           NORMATIVE_CONFIGURE_INTERFACE,
-                                           NORMATIVE_POST_CONFIGURE_SOURCE,
-                                           NORMATIVE_POST_CONFIGURE_TARGET)
+    sequence += task.create_relationships_tasks(node,
+                                                NORMATIVE_CONFIGURE_INTERFACE,
+                                                NORMATIVE_PRE_CONFIGURE_SOURCE,
+                                                NORMATIVE_PRE_CONFIGURE_TARGET)
+    sequence.append(task.create_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_CONFIGURE))
+    sequence += task.create_relationships_tasks(node,
+                                                NORMATIVE_CONFIGURE_INTERFACE,
+                                                NORMATIVE_POST_CONFIGURE_SOURCE,
+                                                NORMATIVE_POST_CONFIGURE_TARGET)
     # Start
     sequence += _create_start_tasks(node)
 
@@ -97,9 +93,7 @@ def uninstall_node(graph, node, **kwargs):
     sequence = _create_stop_tasks(node)
 
     # Delete
-    sequence.append(create_node_task(node,
-                                     NORMATIVE_STANDARD_INTERFACE,
-                                     NORMATIVE_DELETE))
+    sequence.append(task.create_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_DELETE))
 
     graph.sequence(*sequence)
 
@@ -115,16 +109,41 @@ def stop_node(graph, node, **kwargs):
 
 
 def _create_start_tasks(node):
-    sequence = [create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START)]
-    sequence += create_relationships_tasks(node,
-                                           NORMATIVE_CONFIGURE_INTERFACE,
-                                           NORMATIVE_ADD_SOURCE, NORMATIVE_ADD_TARGET)
+    sequence = [task.create_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_START)]
+    sequence += task.create_relationships_tasks(node,
+                                                NORMATIVE_CONFIGURE_INTERFACE,
+                                                NORMATIVE_ADD_SOURCE, NORMATIVE_ADD_TARGET)
     return sequence
 
 
 def _create_stop_tasks(node):
-    sequence = [create_node_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP)]
-    sequence += create_relationships_tasks(node,
-                                           NORMATIVE_CONFIGURE_INTERFACE,
-                                           NORMATIVE_REMOVE_SOURCE, NORMATIVE_REMOVE_TARGET)
+    sequence = [task.create_task(node, NORMATIVE_STANDARD_INTERFACE, NORMATIVE_STOP)]
+    sequence += task.create_relationships_tasks(node,
+                                                NORMATIVE_CONFIGURE_INTERFACE,
+                                                NORMATIVE_REMOVE_SOURCE, NORMATIVE_REMOVE_TARGET)
     return sequence
+
+
+def create_node_task_dependencies(graph, tasks_and_nodes, reverse=False):
+    """
+    Creates dependencies between tasks if there is a relationship (outbound) between their nodes.
+    """
+
+    def get_task(node_name):
+        for api_task, task_node in tasks_and_nodes:
+            if task_node.name == node_name:
+                return api_task
+        return None
+
+    for api_task, node in tasks_and_nodes:
+        dependencies = []
+        for relationship in node.outbound_relationships:
+            dependency = get_task(relationship.target_node.name)
+            if dependency:
+                dependencies.append(dependency)
+        if dependencies:
+            if reverse:
+                for dependency in dependencies:
+                    graph.add_dependency(dependency, api_task)
+            else:
+                graph.add_dependency(api_task, dependencies)

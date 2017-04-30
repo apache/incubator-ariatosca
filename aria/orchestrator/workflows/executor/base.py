@@ -50,3 +50,14 @@ class BaseExecutor(logger.LoggerMixin):
     @staticmethod
     def _task_succeeded(task):
         events.on_success_task_signal.send(task)
+
+
+class StubTaskExecutor(BaseExecutor):
+    def execute(self, task):
+        task.status = task.SUCCESS
+
+
+class EmptyOperationExecutor(BaseExecutor):
+    def execute(self, task):
+        events.start_task_signal.send(task)
+        events.on_success_task_signal.send(task)

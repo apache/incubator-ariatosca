@@ -90,8 +90,8 @@ def test_host_ip(workflow_context, executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_node(
-                node=dependency_node,
+            api.task.OperationTask(
+                dependency_node,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs
@@ -121,8 +121,8 @@ def test_relationship_tool_belt(workflow_context, executor):
     @workflow
     def basic_workflow(graph, **_):
         graph.add_tasks(
-            api.task.OperationTask.for_relationship(
-                relationship=relationship,
+            api.task.OperationTask(
+                relationship,
                 interface_name=interface_name,
                 operation_name=operation_name,
                 inputs=inputs
