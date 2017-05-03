@@ -19,15 +19,18 @@ from aria import workflow, operation
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import thread
-from aria.orchestrator.context.toolbelt import RelationshipToolBelt
 
-from tests import mock, storage
+from tests import (
+    mock,
+    storage,
+    helpers
+)
 from . import (
     op_path,
     execute,
 )
 
-global_test_holder = {}
+global_test_holder = helpers.FilesystemDataHolder()
 
 
 @pytest.fixture
@@ -85,6 +88,8 @@ def test_host_ip(workflow_context, executor):
                               inputs=inputs)
     )
     dependency_node.interfaces[interface.name] = interface
+    dependency_node.runtime_properties['ip'] = '1.1.1.1'
+
     workflow_context.model.node.update(dependency_node)
 
     @workflow
@@ -131,12 +136,11 @@ def test_relationship_tool_belt(workflow_context, executor):
 
     execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
 
-    assert isinstance(global_test_holder.get(api.task.OperationTask.NAME_FORMAT.format(
+    assert global_test_holder.get(api.task.OperationTask.NAME_FORMAT.format(
         type='relationship',
         name=relationship.name,
         interface=interface_name,
-        operation=operation_name
-    )), RelationshipToolBelt)
+        operation=operation_name)) == relationship.source_node.name
 
 
 def test_wrong_model_toolbelt():
@@ -151,7 +155,7 @@ def host_ip(toolbelt, **_):
 
 @operation(toolbelt=True)
 def relationship_operation(ctx, toolbelt, **_):
-    global_test_holder[ctx.name] = toolbelt
+    global_test_holder[ctx.name] = toolbelt._op_context.source_node.name
 
 
 @pytest.fixture(autouse=True)

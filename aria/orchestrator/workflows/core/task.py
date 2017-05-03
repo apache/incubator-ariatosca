@@ -175,10 +175,9 @@ class OperationTask(BaseTask):
         self._update_fields = {}
         try:
             yield
-            task = self.model_task
             for key, value in self._update_fields.items():
-                setattr(task, key, value)
-            self.model_task = task
+                setattr(self.model_task, key, value)
+            self.model_task = self.model_task
         finally:
             self._update_fields = None
 

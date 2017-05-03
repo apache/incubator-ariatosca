@@ -28,14 +28,17 @@ from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 
 import tests
-from tests import mock, storage
+from tests import (
+    mock,
+    storage,
+    helpers
+)
 from . import (
     op_path,
     execute,
 )
 
-global_test_holder = {}
-
+global_test_holder = helpers.FilesystemDataHolder()
 
 @pytest.fixture
 def ctx(tmpdir):
@@ -75,7 +78,7 @@ def test_node_operation_task_execution(ctx, thread_executor):
         node.service,
         interface_name,
         operation_name,
-        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__),
+        operation_kwargs=dict(implementation=op_path(basic_node_operation, module_path=__name__),
                               inputs=inputs)
     )
     node.interfaces[interface.name] = interface
@@ -94,18 +97,11 @@ def test_node_operation_task_execution(ctx, thread_executor):
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
 
-    operation_context = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
-        type='node',
-        name=node.name,
-        interface=interface_name,
-        operation=operation_name
-    )]
-
-    assert isinstance(operation_context, context.operation.NodeOperationContext)
+    assert global_test_holder['ctx_name'] == context.operation.NodeOperationContext.__name__
 
     # Task bases assertions
-    assert operation_context.task.actor == node
-    assert operation_context.task.name == api.task.OperationTask.NAME_FORMAT.format(
+    assert global_test_holder['actor_name'] == node.name
+    assert global_test_holder['task_name'] == api.task.OperationTask.NAME_FORMAT.format(
         type='node',
         name=node.name,
         interface=interface_name,
@@ -113,12 +109,12 @@ def test_node_operation_task_execution(ctx, thread_executor):
     )
     operations = interface.operations
     assert len(operations) == 1
-    assert operation_context.task.implementation == operations.values()[0].implementation           # pylint: disable=no-member
-    assert operation_context.task.inputs['putput'].value is True
+    assert global_test_holder['implementation'] == operations.values()[0].implementation             # pylint: disable=no-member
+    assert global_test_holder['inputs']['putput'] is True
 
     # Context based attributes (sugaring)
-    assert operation_context.node_template == node.node_template
-    assert operation_context.node == node
+    assert global_test_holder['template_name'] == node.node_template.name
+    assert global_test_holder['node_name'] == node.name
 
 
 def test_relationship_operation_task_execution(ctx, thread_executor):
@@ -131,7 +127,8 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
         relationship.source_node.service,
         interface_name,
         operation_name,
-        operation_kwargs=dict(implementation=op_path(basic_operation, module_path=__name__),
+        operation_kwargs=dict(implementation=op_path(basic_relationship_operation,
+                                                     module_path=__name__),
                               inputs=inputs),
     )
 
@@ -151,21 +148,14 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
 
-    operation_context = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
-        type='relationship',
-        name=relationship.name,
-        interface=interface_name,
-        operation=operation_name
-    )]
-
-    assert isinstance(operation_context, context.operation.RelationshipOperationContext)
+    assert global_test_holder['ctx_name'] == context.operation.RelationshipOperationContext.__name__
 
     # Task bases assertions
-    assert operation_context.task.actor == relationship
-    assert interface_name in operation_context.task.name
+    assert global_test_holder['actor_name'] == relationship.name
+    assert interface_name in global_test_holder['task_name']
     operations = interface.operations
-    assert operation_context.task.implementation == operations.values()[0].implementation           # pylint: disable=no-member
-    assert operation_context.task.inputs['putput'].value is True
+    assert global_test_holder['implementation'] == operations.values()[0].implementation           # pylint: disable=no-member
+    assert global_test_holder['inputs']['putput'] is True
 
     # Context based attributes (sugaring)
     dependency_node_template = ctx.model.node_template.get_by_name(
@@ -175,11 +165,11 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
         mock.models.DEPENDENT_NODE_TEMPLATE_NAME)
     dependent_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
 
-    assert operation_context.target_node_template == dependency_node_template
-    assert operation_context.target_node == dependency_node
-    assert operation_context.relationship == relationship
-    assert operation_context.source_node_template == dependent_node_template
-    assert operation_context.source_node == dependent_node
+    assert global_test_holder['target_node_template_name'] == dependency_node_template.name
+    assert global_test_holder['target_node_name'] == dependency_node.name
+    assert global_test_holder['relationship_name'] == relationship.name
+    assert global_test_holder['source_node_template_name'] == dependent_node_template.name
+    assert global_test_holder['source_node_name'] == dependent_node.name
 
 
 def test_invalid_task_operation_id(ctx, thread_executor):
@@ -386,8 +376,29 @@ def logged_operation(ctx, **_):
 
 
 @operation
-def basic_operation(ctx, **_):
-    global_test_holder[ctx.name] = ctx
+def basic_node_operation(ctx, **_):
+    operation_common(ctx)
+    global_test_holder['template_name'] = ctx.node_template.name
+    global_test_holder['node_name'] = ctx.node.name
+
+
+@operation
+def basic_relationship_operation(ctx, **_):
+    operation_common(ctx)
+    global_test_holder['target_node_template_name'] = ctx.target_node_template.name
+    global_test_holder['target_node_name'] = ctx.target_node.name
+    global_test_holder['relationship_name'] = ctx.relationship.name
+    global_test_holder['source_node_template_name'] = ctx.source_node_template.name
+    global_test_holder['source_node_name'] = ctx.source_node.name
+
+
+def operation_common(ctx):
+    global_test_holder['ctx_name'] = ctx.__class__.__name__
+
+    global_test_holder['actor_name'] = ctx.task.actor.name
+    global_test_holder['task_name'] = ctx.task.name
+    global_test_holder['implementation'] = ctx.task.implementation
+    global_test_holder['inputs'] = dict(i.unwrap() for i in ctx.task.inputs.values())
 
 
 @operation
