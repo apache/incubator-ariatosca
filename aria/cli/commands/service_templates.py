@@ -182,20 +182,21 @@ def validate(service_template, service_template_filename,
 
 
 @service_templates.command(name='create-archive',
-                           short_help='Create a csar archive')
+                           short_help='Create a CSAR archive')
 @aria.argument('service-template-path')
 @aria.argument('destination')
 @aria.options.verbose()
 @aria.pass_logger
 def create_archive(service_template_path, destination, logger):
-    """Create a csar archive
+    """Create a csar archive on the local file system
 
     `service_template_path` is the path of the service template to create the archive from
-    `destination` is the path of the output csar archive
+
+    `destination` is the path of the output CSAR archive file
     """
-    logger.info('Creating a csar archive')
+    logger.info('Creating a CSAR archive')
     csar.write(os.path.dirname(service_template_path), service_template_path, destination, logger)
-    logger.info('Csar archive created at {0}'.format(destination))
+    logger.info('CSAR archive created at {0}'.format(destination))
 
 
 def print_service_template_inputs(model_storage, service_template_name, logger):

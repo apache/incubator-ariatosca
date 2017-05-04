@@ -238,9 +238,9 @@ class TestServiceTemplatesCreateArchive(TestCliBase):
 
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
         self.invoke('service_templates create_archive stubpath stubdest')
-        assert 'Creating a csar archive' in self.logger_output_string
+        assert 'Creating a CSAR archive' in self.logger_output_string
 
     def test_create_archive_successful(self, monkeypatch, mock_object):
         monkeypatch.setattr(csar, 'write', mock_object)
         self.invoke('service_templates create_archive stubpath stubdest')
-        assert 'Csar archive created at stubdest' in self.logger_output_string
+        assert 'CSAR archive created at stubdest' in self.logger_output_string
