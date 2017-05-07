@@ -213,8 +213,13 @@ class ProcessExecutor(base.BaseExecutor):
         with contextlib.closing(self._server_socket.accept()[0]) as connection:
             message = _recv_message(connection)
             response = {}
-            yield message, response
-            _send_message(connection, response)
+            try:
+                yield message, response
+            except BaseException as e:
+                response['exception'] = exceptions.wrap_if_needed(e)
+                raise
+            finally:
+                _send_message(connection, response)
 
     def _handle_task_started_request(self, task_id, **kwargs):
         self._task_started(self._tasks[task_id])
@@ -378,7 +383,6 @@ def _main():
     task_id = arguments['task_id']
     port = arguments['port']
     messenger = _Messenger(task_id=task_id, port=port)
-    messenger.started()
 
     implementation = arguments['implementation']
     operation_inputs = arguments['operation_inputs']
@@ -390,6 +394,7 @@ def _main():
 
     with instrumentation.track_changes() as instrument:
         try:
+            messenger.started()
             ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
             _patch_session(ctx=ctx, messenger=messenger, instrument=instrument)
             task_func = imports.load_attribute(implementation)
