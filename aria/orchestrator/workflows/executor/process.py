@@ -47,12 +47,11 @@ from aria.storage import instrumentation
 from aria.extension import process_executor
 from aria.utils import (
     imports,
-    exceptions
+    exceptions,
+    process as process_utils
 )
 from aria.modeling import types as modeling_types
 
-
-_IS_WIN = os.name == 'nt'
 
 _INT_FMT = 'I'
 _INT_SIZE = struct.calcsize(_INT_FMT)
@@ -127,13 +126,7 @@ class ProcessExecutor(base.BaseExecutor):
         with open(arguments_json_path, 'wb') as f:
             f.write(pickle.dumps(self._create_arguments_dict(task)))
 
-        env = os.environ.copy()
-        # See _update_env for plugin_prefix usage
-        if task.plugin_fk and self._plugin_manager:
-            plugin_prefix = self._plugin_manager.get_plugin_prefix(task.plugin)
-        else:
-            plugin_prefix = None
-        self._update_env(env=env, plugin_prefix=plugin_prefix)
+        env = self._construct_subprocess_env(task=task)
         # Asynchronously start the operation in a subprocess
         subprocess.Popen(
             '{0} {1} {2}'.format(sys.executable, __file__, arguments_json_path),
@@ -156,40 +149,19 @@ class ProcessExecutor(base.BaseExecutor):
             'context': task.context.serialization_dict,
         }
 
-    def _update_env(self, env, plugin_prefix):
-        pythonpath_dirs = []
-        # If this is a plugin operation, plugin prefix will point to where
-        # This plugin is installed.
-        # We update the environment variables that the subprocess will be started with based on it
-        if plugin_prefix:
+    def _construct_subprocess_env(self, task):
+        env = os.environ.copy()
 
-            # Update PATH environment variable to include plugin's bin dir
-            bin_dir = 'Scripts' if _IS_WIN else 'bin'
-            env['PATH'] = '{0}{1}{2}'.format(
-                os.path.join(plugin_prefix, bin_dir),
-                os.pathsep,
-                env.get('PATH', ''))
+        if task.plugin_fk and self._plugin_manager:
+            # If this is a plugin operation,
+            # load the plugin on the subprocess env we're constructing
+            self._plugin_manager.load_plugin(task.plugin, env=env)
 
-            # Update PYTHONPATH environment variable to include plugin's site-packages
-            # directories
-            if _IS_WIN:
-                pythonpath_dirs = [os.path.join(plugin_prefix, 'Lib', 'site-packages')]
-            else:
-                # In some linux environments, there will be both a lib and a lib64 directory
-                # with the latter, containing compiled packages.
-                pythonpath_dirs = [os.path.join(
-                    plugin_prefix, 'lib{0}'.format(b),
-                    'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1]),
-                    'site-packages') for b in ('', '64')]
+        # Add user supplied directories to injected PYTHONPATH
+        if self._python_path:
+            process_utils.append_to_pythonpath(*self._python_path, env=env)
 
-        # Add used supplied directories to injected PYTHONPATH
-        pythonpath_dirs.extend(self._python_path)
-
-        if pythonpath_dirs:
-            env['PYTHONPATH'] = '{0}{1}{2}'.format(
-                os.pathsep.join(pythonpath_dirs),
-                os.pathsep,
-                env.get('PYTHONPATH', ''))
+        return env
 
     def _listener(self):
         # Notify __init__ method this thread has actually started

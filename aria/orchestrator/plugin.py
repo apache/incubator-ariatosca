@@ -23,6 +23,9 @@ from datetime import datetime
 import wagon
 
 from . import exceptions
+from ..utils import process as process_utils
+
+_IS_WIN = os.name == 'nt'
 
 
 class PluginManager(object):
@@ -62,11 +65,40 @@ class PluginManager(object):
             raise exceptions.PluginAlreadyExistsError(
                 'Plugin {0}, version {1} already exists'.format(plugin.package_name,
                                                                 plugin.package_version))
-        self._install_wagon(source=source, prefix=self.get_plugin_prefix(plugin))
+        self._install_wagon(source=source, prefix=self.get_plugin_dir(plugin))
         self._model.plugin.put(plugin)
         return plugin
 
-    def get_plugin_prefix(self, plugin):
+    def load_plugin(self, plugin, env=None):
+        """
+        Load the plugin into an environment.
+        Loading the plugin means the plugin's code and binaries paths will be appended to the
+        environment's PATH and PYTHONPATH, thereby allowing usage of the plugin.
+        :param plugin: The plugin to load
+        :param env: The environment to load the plugin into; If `None`, os.environ will be used.
+        """
+        env = env or os.environ
+        plugin_dir = self.get_plugin_dir(plugin)
+
+        # Update PATH environment variable to include plugin's bin dir
+        bin_dir = 'Scripts' if _IS_WIN else 'bin'
+        process_utils.append_to_path(os.path.join(plugin_dir, bin_dir), env=env)
+
+        # Update PYTHONPATH environment variable to include plugin's site-packages
+        # directories
+        if _IS_WIN:
+            pythonpath_dirs = [os.path.join(plugin_dir, 'Lib', 'site-packages')]
+        else:
+            # In some linux environments, there will be both a lib and a lib64 directory
+            # with the latter, containing compiled packages.
+            pythonpath_dirs = [os.path.join(
+                plugin_dir, 'lib{0}'.format(b),
+                'python{0}.{1}'.format(sys.version_info[0], sys.version_info[1]),
+                'site-packages') for b in ('', '64')]
+
+        process_utils.append_to_pythonpath(*pythonpath_dirs, env=env)
+
+    def get_plugin_dir(self, plugin):
         return os.path.join(
             self._plugins_dir,
             '{0}-{1}'.format(plugin.package_name, plugin.package_version))

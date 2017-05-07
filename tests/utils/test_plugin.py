@@ -38,9 +38,9 @@ class TestPluginManager(object):
         assert plugin.package_name == PACKAGE_NAME
         assert plugin.package_version == PACKAGE_VERSION
         assert plugin == model.plugin.get(plugin.id)
-        plugin_prefix = os.path.join(plugins_dir, '{0}-{1}'.format(PACKAGE_NAME, PACKAGE_VERSION))
-        assert os.path.isdir(plugin_prefix)
-        assert plugin_prefix == plugin_manager.get_plugin_prefix(plugin)
+        plugin_dir = os.path.join(plugins_dir, '{0}-{1}'.format(PACKAGE_NAME, PACKAGE_VERSION))
+        assert os.path.isdir(plugin_dir)
+        assert plugin_dir == plugin_manager.get_plugin_dir(plugin)
 
     def test_install_already_exits(self, plugin_manager, mock_plugin):
         plugin_manager.install(mock_plugin)
