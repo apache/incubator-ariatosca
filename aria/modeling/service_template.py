@@ -211,10 +211,6 @@ class ServiceTemplateBase(TemplateModelMixin):
         return relationship.one_to_many(cls, 'service', dict_key='name')
 
     @declared_attr
-    def operation_templates(cls):
-        return relationship.one_to_many(cls, 'operation_template')
-
-    @declared_attr
     def node_templates(cls):
         return relationship.one_to_many(cls, 'node_template', dict_key='name')
 
@@ -483,6 +479,22 @@ class NodeTemplateBase(TemplateModelMixin):
     def nodes(cls):
         return relationship.one_to_many(cls, 'node')
 
+    @declared_attr
+    def interface_templates(cls):
+        return relationship.one_to_many(cls, 'interface_template', dict_key='name')
+
+    @declared_attr
+    def artifact_templates(cls):
+        return relationship.one_to_many(cls, 'artifact_template', dict_key='name')
+
+    @declared_attr
+    def capability_templates(cls):
+        return relationship.one_to_many(cls, 'capability_template', dict_key='name')
+
+    @declared_attr
+    def requirement_templates(cls):
+        return relationship.one_to_many(cls, 'requirement_template', child_fk='node_template_fk')
+
     # endregion
 
     # region many_to_one relationships
@@ -506,22 +518,6 @@ class NodeTemplateBase(TemplateModelMixin):
     @declared_attr
     def attributes(cls):
         return relationship.many_to_many(cls, 'parameter', prefix='attributes', dict_key='name')
-
-    @declared_attr
-    def interface_templates(cls):
-        return relationship.one_to_many(cls, 'interface_template', dict_key='name')
-
-    @declared_attr
-    def artifact_templates(cls):
-        return relationship.one_to_many(cls, 'artifact_template', dict_key='name')
-
-    @declared_attr
-    def capability_templates(cls):
-        return relationship.one_to_many(cls, 'capability_template', dict_key='name')
-
-    @declared_attr
-    def requirement_templates(cls):
-        return relationship.one_to_many(cls, 'requirement_template', child_fk='node_template_fk')
 
     # endregion
 
@@ -1209,11 +1205,6 @@ class RequirementTemplateBase(TemplateModelMixin):
     def relationships(cls):
         return relationship.one_to_many(cls, 'relationship')
 
-    @declared_attr
-    def target_node_type(cls):
-        return relationship.many_to_one(
-            cls, 'type', fk='target_node_type_fk', back_populates=relationship.NO_BACK_POP)
-
     # endregion
 
     # region many_to_one relationships
@@ -1221,6 +1212,11 @@ class RequirementTemplateBase(TemplateModelMixin):
     @declared_attr
     def node_template(cls):
         return relationship.many_to_one(cls, 'node_template', fk='node_template_fk')
+
+    @declared_attr
+    def target_node_type(cls):
+        return relationship.many_to_one(
+            cls, 'type', fk='target_node_type_fk', back_populates=relationship.NO_BACK_POP)
 
     # endregion
 
@@ -1845,7 +1841,8 @@ class OperationTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def service_template(cls):
-        return relationship.many_to_one(cls, 'service_template')
+        return relationship.many_to_one(cls, 'service_template',
+                                        back_populates='workflow_templates')
 
     @declared_attr
     def interface_template(cls):
