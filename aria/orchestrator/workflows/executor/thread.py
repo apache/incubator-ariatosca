@@ -46,7 +46,7 @@ class ThreadExecutor(BaseExecutor):
             thread.start()
             self._pool.append(thread)
 
-    def execute(self, task):
+    def _execute(self, task):
         self._queue.put(task)
 
     def close(self):

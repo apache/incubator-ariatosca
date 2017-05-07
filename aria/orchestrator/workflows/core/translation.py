@@ -48,11 +48,7 @@ def build_execution_graph(
             execution_graph, dependencies, default=[start_task])
 
         if isinstance(api_task, api.task.OperationTask):
-            if api_task.implementation:
-                operation_task = core_task.OperationTask(api_task, executor=default_executor)
-            else:
-                operation_task = core_task.OperationTask(api_task,
-                                                         executor=base.EmptyOperationExecutor())
+            operation_task = core_task.OperationTask(api_task, executor=default_executor)
             _add_task_and_dependencies(execution_graph, operation_task, operation_dependencies)
         elif isinstance(api_task, api.task.WorkflowTask):
             # Build the graph recursively while adding start and end markers

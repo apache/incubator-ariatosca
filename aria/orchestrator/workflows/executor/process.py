@@ -116,7 +116,7 @@ class ProcessExecutor(base.BaseExecutor):
         self._server_socket.close()
         self._listener_thread.join(timeout=60)
 
-    def execute(self, task):
+    def _execute(self, task):
         self._check_closed()
         self._tasks[task.id] = task
 

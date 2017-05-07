@@ -163,9 +163,6 @@ class OperationTask(BaseTask):
         self._task_id = task_model.id
         self._update_fields = None
 
-    def execute(self):
-        super(OperationTask, self).execute()
-
     @contextmanager
     def _update(self):
         """

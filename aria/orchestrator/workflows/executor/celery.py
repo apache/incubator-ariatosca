@@ -42,7 +42,7 @@ class CeleryExecutor(BaseExecutor):
         self._receiver_thread.start()
         self._started_queue.get(timeout=30)
 
-    def execute(self, task):
+    def _execute(self, task):
         self._tasks[task.id] = task
         inputs = dict(inp.unwrap() for inp in task.inputs.values())
         inputs['ctx'] = task.context

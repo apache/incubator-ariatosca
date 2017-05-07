@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
 import Queue
 
@@ -66,7 +65,7 @@ class TestProcessExecutor(object):
     def test_closed(self, executor):
         executor.close()
         with pytest.raises(RuntimeError) as exc_info:
-            executor.execute(task=None)
+            executor.execute(task=MockTask(implementation='some.implementation'))
         assert 'closed' in exc_info.value.message
 
 
@@ -82,18 +81,3 @@ def mock_plugin(plugin_manager, tmpdir):
     source = os.path.join(tests.resources.DIR, 'plugins', 'mock-plugin1')
     plugin_path = create_plugin(source=source, destination_dir=str(tmpdir))
     return plugin_manager.install(source=plugin_path)
-
-
-class MockContext(object):
-
-    def __init__(self, *args, **kwargs):
-        self.logger = logging.getLogger('mock_logger')
-        self.task = type('SubprocessMockTask', (object, ), {'plugin': None})
-        self.serialization_dict = {'context_cls': self.__class__, 'context': {}}
-
-    def __getattr__(self, item):
-        return None
-
-    @classmethod
-    def deserialize_from_dict(cls, **kwargs):
-        return cls()

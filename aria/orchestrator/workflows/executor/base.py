@@ -25,13 +25,22 @@ class BaseExecutor(logger.LoggerMixin):
     """
     Base class for executors for running tasks
     """
+    def _execute(self, task):
+        raise NotImplementedError
 
     def execute(self, task):
         """
         Execute a task
         :param task: task to execute
         """
-        raise NotImplementedError
+        if task.implementation:
+            self._execute(task)
+        else:
+            # In this case the task is missing an implementation. This task still gets to an
+            # executor, but since there is nothing to run, we by default simply skip the execution
+            # itself.
+            self._task_started(task)
+            self._task_succeeded(task)
 
     def close(self):
         """
@@ -52,12 +61,6 @@ class BaseExecutor(logger.LoggerMixin):
         events.on_success_task_signal.send(task)
 
 
-class StubTaskExecutor(BaseExecutor):
+class StubTaskExecutor(BaseExecutor):                                                               # pylint: disable=abstract-method
     def execute(self, task):
         task.status = task.SUCCESS
-
-
-class EmptyOperationExecutor(BaseExecutor):
-    def execute(self, task):
-        events.start_task_signal.send(task)
-        events.on_success_task_signal.send(task)
