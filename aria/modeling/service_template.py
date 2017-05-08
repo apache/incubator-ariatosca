@@ -549,9 +549,13 @@ class NodeTemplateBase(TemplateModelMixin):
             ('requirement_templates', formatting.as_raw_list(self.requirement_templates))))
 
     def instantiate(self, container):
-        context = ConsumptionContext.get_thread_local()
         from . import models
-        name = context.modeling.generate_node_id(self.name)
+        if self.nodes:
+            highest_name_suffix = max(int(n.name.rsplit('_', 1)[-1]) for n in self.nodes)
+            suffix = highest_name_suffix + 1
+        else:
+            suffix = 1
+        name = '{name}_{index}'.format(name=self.name, index=suffix)
         node = models.Node(name=name,
                            type=self.type,
                            description=deepcopy_with_locators(self.description),

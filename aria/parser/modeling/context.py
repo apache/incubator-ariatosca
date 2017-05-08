@@ -67,11 +67,6 @@ class ModelingContext(object):
         if self.instance is not None:
             model_storage.service.put(self.instance)
 
-    def generate_node_id(self, template_name):
-        return self.node_id_format.format(
-            template=template_name,
-            id=self.generate_id())
-
     def generate_id(self):
         if self.id_type == IdType.LOCAL_SERIAL:
             return self._serial_id_counter.next()
