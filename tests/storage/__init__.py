@@ -51,6 +51,5 @@ def init_inmemory_model_storage():
 
     engine = create_engine(uri, **engine_kwargs)
     session_factory = orm.sessionmaker(bind=engine)
-    session = orm.scoped_session(session_factory=session_factory)
 
-    return dict(engine=engine, session=session)
+    return dict(engine=engine, session=session_factory())

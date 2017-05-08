@@ -42,10 +42,9 @@ class Engine(logger.LoggerMixin):
         super(Engine, self).__init__(**kwargs)
         self._workflow_context = workflow_context
         self._execution_graph = networkx.DiGraph()
-        self._executor = executor
         translation.build_execution_graph(task_graph=tasks_graph,
                                           execution_graph=self._execution_graph,
-                                          default_executor=self._executor)
+                                          default_executor=executor)
 
     def execute(self):
         """

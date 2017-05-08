@@ -38,7 +38,6 @@ from . import (
     execute,
 )
 
-global_test_holder = helpers.FilesystemDataHolder()
 
 @pytest.fixture
 def ctx(tmpdir):
@@ -68,11 +67,18 @@ def thread_executor():
         ex.close()
 
 
-def test_node_operation_task_execution(ctx, thread_executor):
+@pytest.fixture
+def dataholder(tmpdir):
+    dataholder_path = str(tmpdir.join('dataholder'))
+    holder = helpers.FilesystemDataHolder(dataholder_path)
+    return holder
+
+
+def test_node_operation_task_execution(ctx, thread_executor, dataholder):
     interface_name = 'Standard'
     operation_name = 'create'
 
-    inputs = {'putput': True}
+    inputs = {'putput': True, 'holder_path': dataholder.path}
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         node.service,
@@ -97,11 +103,11 @@ def test_node_operation_task_execution(ctx, thread_executor):
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
 
-    assert global_test_holder['ctx_name'] == context.operation.NodeOperationContext.__name__
+    assert dataholder['ctx_name'] == context.operation.NodeOperationContext.__name__
 
     # Task bases assertions
-    assert global_test_holder['actor_name'] == node.name
-    assert global_test_holder['task_name'] == api.task.OperationTask.NAME_FORMAT.format(
+    assert dataholder['actor_name'] == node.name
+    assert dataholder['task_name'] == api.task.OperationTask.NAME_FORMAT.format(
         type='node',
         name=node.name,
         interface=interface_name,
@@ -109,19 +115,19 @@ def test_node_operation_task_execution(ctx, thread_executor):
     )
     operations = interface.operations
     assert len(operations) == 1
-    assert global_test_holder['implementation'] == operations.values()[0].implementation             # pylint: disable=no-member
-    assert global_test_holder['inputs']['putput'] is True
+    assert dataholder['implementation'] == operations.values()[0].implementation             # pylint: disable=no-member
+    assert dataholder['inputs']['putput'] is True
 
     # Context based attributes (sugaring)
-    assert global_test_holder['template_name'] == node.node_template.name
-    assert global_test_holder['node_name'] == node.name
+    assert dataholder['template_name'] == node.node_template.name
+    assert dataholder['node_name'] == node.name
 
 
-def test_relationship_operation_task_execution(ctx, thread_executor):
+def test_relationship_operation_task_execution(ctx, thread_executor, dataholder):
     interface_name = 'Configure'
     operation_name = 'post_configure'
 
-    inputs = {'putput': True}
+    inputs = {'putput': True, 'holder_path': dataholder.path}
     relationship = ctx.model.relationship.list()[0]
     interface = mock.models.create_interface(
         relationship.source_node.service,
@@ -148,14 +154,14 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
 
-    assert global_test_holder['ctx_name'] == context.operation.RelationshipOperationContext.__name__
+    assert dataholder['ctx_name'] == context.operation.RelationshipOperationContext.__name__
 
     # Task bases assertions
-    assert global_test_holder['actor_name'] == relationship.name
-    assert interface_name in global_test_holder['task_name']
+    assert dataholder['actor_name'] == relationship.name
+    assert interface_name in dataholder['task_name']
     operations = interface.operations
-    assert global_test_holder['implementation'] == operations.values()[0].implementation           # pylint: disable=no-member
-    assert global_test_holder['inputs']['putput'] is True
+    assert dataholder['implementation'] == operations.values()[0].implementation           # pylint: disable=no-member
+    assert dataholder['inputs']['putput'] is True
 
     # Context based attributes (sugaring)
     dependency_node_template = ctx.model.node_template.get_by_name(
@@ -165,14 +171,14 @@ def test_relationship_operation_task_execution(ctx, thread_executor):
         mock.models.DEPENDENT_NODE_TEMPLATE_NAME)
     dependent_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
 
-    assert global_test_holder['target_node_template_name'] == dependency_node_template.name
-    assert global_test_holder['target_node_name'] == dependency_node.name
-    assert global_test_holder['relationship_name'] == relationship.name
-    assert global_test_holder['source_node_template_name'] == dependent_node_template.name
-    assert global_test_holder['source_node_name'] == dependent_node.name
+    assert dataholder['target_node_template_name'] == dependency_node_template.name
+    assert dataholder['target_node_name'] == dependency_node.name
+    assert dataholder['relationship_name'] == relationship.name
+    assert dataholder['source_node_template_name'] == dependent_node_template.name
+    assert dataholder['source_node_name'] == dependent_node.name
 
 
-def test_invalid_task_operation_id(ctx, thread_executor):
+def test_invalid_task_operation_id(ctx, thread_executor, dataholder):
     """
     Checks that the right id is used. The task created with id == 1, thus running the task on
     node with id == 2. will check that indeed the node uses the correct id.
@@ -191,7 +197,8 @@ def test_invalid_task_operation_id(ctx, thread_executor):
         node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(get_node_id, module_path=__name__))
+        operation_kwargs=dict(implementation=op_path(get_node_id, module_path=__name__),
+                              inputs={'holder_path': dataholder.path})
     )
     node.interfaces[interface.name] = interface
     ctx.model.node.update(node)
@@ -202,12 +209,13 @@ def test_invalid_task_operation_id(ctx, thread_executor):
             api.task.OperationTask(
                 node,
                 interface_name=interface_name,
-                operation_name=operation_name)
+                operation_name=operation_name,
+            )
         )
 
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=thread_executor)
 
-    op_node_id = global_test_holder[api.task.OperationTask.NAME_FORMAT.format(
+    op_node_id = dataholder[api.task.OperationTask.NAME_FORMAT.format(
         type='node',
         name=node.name,
         interface=interface_name,
@@ -376,42 +384,41 @@ def logged_operation(ctx, **_):
 
 
 @operation
-def basic_node_operation(ctx, **_):
-    operation_common(ctx)
-    global_test_holder['template_name'] = ctx.node_template.name
-    global_test_holder['node_name'] = ctx.node.name
+def basic_node_operation(ctx, holder_path, **_):
+    holder = helpers.FilesystemDataHolder(holder_path)
+
+    operation_common(ctx, holder)
+    holder['template_name'] = ctx.node_template.name
+    holder['node_name'] = ctx.node.name
 
 
 @operation
-def basic_relationship_operation(ctx, **_):
-    operation_common(ctx)
-    global_test_holder['target_node_template_name'] = ctx.target_node_template.name
-    global_test_holder['target_node_name'] = ctx.target_node.name
-    global_test_holder['relationship_name'] = ctx.relationship.name
-    global_test_holder['source_node_template_name'] = ctx.source_node_template.name
-    global_test_holder['source_node_name'] = ctx.source_node.name
+def basic_relationship_operation(ctx, holder_path, **_):
+    holder = helpers.FilesystemDataHolder(holder_path)
+
+    operation_common(ctx, holder)
+    holder['target_node_template_name'] = ctx.target_node_template.name
+    holder['target_node_name'] = ctx.target_node.name
+    holder['relationship_name'] = ctx.relationship.name
+    holder['source_node_template_name'] = ctx.source_node_template.name
+    holder['source_node_name'] = ctx.source_node.name
 
 
-def operation_common(ctx):
-    global_test_holder['ctx_name'] = ctx.__class__.__name__
+def operation_common(ctx, holder):
+    holder['ctx_name'] = ctx.__class__.__name__
 
-    global_test_holder['actor_name'] = ctx.task.actor.name
-    global_test_holder['task_name'] = ctx.task.name
-    global_test_holder['implementation'] = ctx.task.implementation
-    global_test_holder['inputs'] = dict(i.unwrap() for i in ctx.task.inputs.values())
+    holder['actor_name'] = ctx.task.actor.name
+    holder['task_name'] = ctx.task.name
+    holder['implementation'] = ctx.task.implementation
+    holder['inputs'] = dict(i.unwrap() for i in ctx.task.inputs.values())
 
 
 @operation
-def get_node_id(ctx, **_):
-    global_test_holder[ctx.name] = ctx.node.id
+def get_node_id(ctx, holder_path, **_):
+    helpers.FilesystemDataHolder(holder_path)[ctx.name] = ctx.node.id
 
 
 @operation
 def _test_plugin_workdir(ctx, filename, content):
     with open(os.path.join(ctx.plugin_workdir, filename), 'w') as f:
         f.write(content)
-
-
-@pytest.fixture(autouse=True)
-def cleanup():
-    global_test_holder.clear()

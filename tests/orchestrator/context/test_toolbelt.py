@@ -30,12 +30,10 @@ from . import (
     execute,
 )
 
-global_test_holder = helpers.FilesystemDataHolder()
-
 
 @pytest.fixture
 def workflow_context(tmpdir):
-    context = mock.context.simple(str(tmpdir), inmemory=True)
+    context = mock.context.simple(str(tmpdir))
     yield context
     storage.release_sqlite_storage(context.model)
 
@@ -47,6 +45,13 @@ def executor():
         yield result
     finally:
         result.close()
+
+
+@pytest.fixture
+def dataholder(tmpdir):
+    dataholder_path = str(tmpdir.join('dataholder'))
+    holder = helpers.FilesystemDataHolder(dataholder_path)
+    return holder
 
 
 def _get_elements(workflow_context):
@@ -75,17 +80,17 @@ def _get_elements(workflow_context):
         relationship
 
 
-def test_host_ip(workflow_context, executor):
+def test_host_ip(workflow_context, executor, dataholder):
+
     interface_name = 'Standard'
     operation_name = 'create'
     _, dependency_node, _, _, _ = _get_elements(workflow_context)
-    inputs = {'putput': True}
+    inputs = {'putput': True, 'holder_path': dataholder.path}
     interface = mock.models.create_interface(
         dependency_node.service,
         interface_name=interface_name,
         operation_name=operation_name,
-        operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__),
-                              inputs=inputs)
+        operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__), inputs=inputs)
     )
     dependency_node.interfaces[interface.name] = interface
     dependency_node.runtime_properties['ip'] = '1.1.1.1'
@@ -105,14 +110,14 @@ def test_host_ip(workflow_context, executor):
 
     execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
 
-    assert global_test_holder.get('host_ip') == dependency_node.runtime_properties.get('ip')
+    assert dataholder.get('host_ip') == dependency_node.runtime_properties.get('ip')
 
 
-def test_relationship_tool_belt(workflow_context, executor):
+def test_relationship_tool_belt(workflow_context, executor, dataholder):
     interface_name = 'Configure'
     operation_name = 'post_configure'
     _, _, _, _, relationship = _get_elements(workflow_context)
-    inputs = {'putput': True}
+    inputs = {'putput': True, 'holder_path': dataholder.path}
     interface = mock.models.create_interface(
         relationship.source_node.service,
         interface_name=interface_name,
@@ -136,7 +141,7 @@ def test_relationship_tool_belt(workflow_context, executor):
 
     execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
 
-    assert global_test_holder.get(api.task.OperationTask.NAME_FORMAT.format(
+    assert dataholder.get(api.task.OperationTask.NAME_FORMAT.format(
         type='relationship',
         name=relationship.name,
         interface=interface_name,
@@ -149,15 +154,10 @@ def test_wrong_model_toolbelt():
 
 
 @operation(toolbelt=True)
-def host_ip(toolbelt, **_):
-    global_test_holder['host_ip'] = toolbelt.host_ip
+def host_ip(toolbelt, holder_path, **_):
+    helpers.FilesystemDataHolder(holder_path)['host_ip'] = toolbelt.host_ip
 
 
 @operation(toolbelt=True)
-def relationship_operation(ctx, toolbelt, **_):
-    global_test_holder[ctx.name] = toolbelt._op_context.source_node.name
-
-
-@pytest.fixture(autouse=True)
-def cleanup():
-    global_test_holder.clear()
+def relationship_operation(ctx, toolbelt, holder_path, **_):
+    helpers.FilesystemDataHolder(holder_path)[ctx.name] = toolbelt._op_context.source_node.name
