@@ -32,20 +32,20 @@ class DryExecutor(BaseExecutor):                                                
             task.started_at = datetime.utcnow()
             task.status = task.STARTED
 
+        dry_msg = '<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
+        logger = task.context.logger.info if task.implementation else task.context.logger.debug
+
+        if hasattr(task.actor, 'source_node'):
+            name = '{source_node.name}->{target_node.name}'.format(
+                source_node=task.actor.source_node, target_node=task.actor.target_node)
+        else:
+            name = task.actor.name
+
         if task.implementation:
-            if hasattr(task.actor, 'source_node'):
-                name = '{source_node.name}->{target_node.name}'.format(
-                    source_node=task.actor.source_node, target_node=task.actor.target_node)
-            else:
-                name = task.actor.name
-
-            task.context.logger.info(
-                '<dry> {name} {task.interface_name}.{task.operation_name} started...'
-                .format(name=name, task=task))
-
-            task.context.logger.info(
-                '<dry> {name} {task.interface_name}.{task.operation_name} successful'
-                .format(name=name, task=task))
+            logger(dry_msg.format(name=name, task=task, suffix='started...'))
+            logger(dry_msg.format(name=name, task=task, suffix='successful'))
+        else:
+            logger(dry_msg.format(name=name, task=task, suffix='has no implementation'))
 
         # updating the task manually instead of calling self._task_succeeded(task),
         # to avoid any side effects raising that event might cause
