@@ -22,7 +22,7 @@ import zipfile
 import requests
 from ruamel import yaml
 
-
+CSAR_FILE_EXTENSION = '.csar'
 META_FILE = 'TOSCA-Metadata/TOSCA.meta'
 META_FILE_VERSION_KEY = 'TOSCA-Meta-File-Version'
 META_FILE_VERSION_VALUE = '1.0'
@@ -38,17 +38,19 @@ BASE_METADATA = {
 }
 
 
-def write(source, entry, destination, logger):
-    source = os.path.expanduser(source)
-    destination = os.path.expanduser(destination)
-    entry_definitions = os.path.join(source, entry)
+def write(service_template_path, destination, logger):
+
+    service_template_path = os.path.abspath(os.path.expanduser(service_template_path))
+    source = os.path.dirname(service_template_path)
+    entry = os.path.basename(service_template_path)
+
     meta_file = os.path.join(source, META_FILE)
     if not os.path.isdir(source):
         raise ValueError('{0} is not a directory. Please specify the service template '
                          'directory.'.format(source))
-    if not os.path.isfile(entry_definitions):
+    if not os.path.isfile(service_template_path):
         raise ValueError('{0} does not exists. Please specify a valid entry point.'
-                         .format(entry_definitions))
+                         .format(service_template_path))
     if os.path.exists(destination):
         raise ValueError('{0} already exists. Please provide a path to where the CSAR should be '
                          'created.'.format(destination))
@@ -175,4 +177,4 @@ def read(source, destination=None, logger=None):
 
 
 def is_csar_archive(source):
-    return source.endswith('.csar')
+    return source.endswith(CSAR_FILE_EXTENSION)

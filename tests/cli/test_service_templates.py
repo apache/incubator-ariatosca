@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+import zipfile
 
 import pytest
 import mock
@@ -131,6 +133,18 @@ class TestServiceTemplatesStore(TestCliBase):
         assert 'Service template {name} stored'.format(
             name=mock_models.SERVICE_TEMPLATE_NAME) in self.logger_output_string
 
+    def test_store_relative_path_single_yaml_file(self, monkeypatch, mock_object):
+        monkeypatch.setattr(Core, 'create_service_template', mock_object)
+        monkeypatch.setattr(os.path, 'isfile', lambda x: True)
+        monkeypatch.setattr(service_template_utils, '_is_archive', lambda x: False)
+
+        self.invoke('service_templates store service_template.yaml {name}'.format(
+            name=mock_models.SERVICE_TEMPLATE_NAME))
+
+        mock_object.assert_called_with(os.path.join(os.getcwd(), 'service_template.yaml'),
+                                       mock.ANY,
+                                       mock.ANY)
+
     def test_store_raises_exception_resulting_from_name_uniqueness(self, monkeypatch, mock_object):
 
         monkeypatch.setattr(service_template_utils, 'get', mock_object)
@@ -244,3 +258,11 @@ class TestServiceTemplatesCreateArchive(TestCliBase):
         monkeypatch.setattr(csar, 'write', mock_object)
         self.invoke('service_templates create_archive stubpath stubdest')
         assert 'CSAR archive created at stubdest' in self.logger_output_string
+
+    def test_create_archive_from_relative_path(self, monkeypatch, mock_object):
+
+        monkeypatch.setattr(os.path, 'isfile', mock_object)
+        monkeypatch.setattr(zipfile, 'ZipFile', mock.MagicMock)
+
+        self.invoke('service_templates create_archive archive stubdest')
+        mock_object.assert_called_with(os.path.join(os.getcwd(), 'archive'))

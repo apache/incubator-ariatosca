@@ -53,7 +53,7 @@ def get(source, service_template_filename):
             return _get_service_template_file_from_archive(source, service_template_filename)
         else:
             # Maybe check if yaml.
-            return source
+            return os.path.abspath(source)
     elif len(source.split('/')) == 2:
         url = _map_to_github_url(source)
         downloaded_file = utils.download_file(url)

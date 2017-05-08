@@ -195,7 +195,9 @@ def create_archive(service_template_path, destination, logger):
     `destination` is the path of the output CSAR archive file
     """
     logger.info('Creating a CSAR archive')
-    csar.write(os.path.dirname(service_template_path), service_template_path, destination, logger)
+    if not destination.endswith(csar.CSAR_FILE_EXTENSION):
+        destination += csar.CSAR_FILE_EXTENSION
+    csar.write(service_template_path, destination, logger)
     logger.info('CSAR archive created at {0}'.format(destination))
 
 
