@@ -79,13 +79,9 @@ class BaseContext(object):
             self.logger.addHandler(self._get_sqla_handler())
 
     def _get_sqla_handler(self):
-        api_kwargs = {}
-        if self._model._initiator:
-            api_kwargs.update(self._model._initiator(**self._model._initiator_kwargs))
-        api_kwargs.update(**self._model._api_kwargs)
-        return aria_logger.create_sqla_log_handler(log_cls=modeling.models.Log,
-                                                   execution_id=self._execution_id,
-                                                   **api_kwargs)
+        return aria_logger.create_sqla_log_handler(model=self._model,
+                                                   log_cls=modeling.models.Log,
+                                                   execution_id=self._execution_id)
 
     def __repr__(self):
         return (
@@ -196,7 +192,6 @@ class BaseContext(object):
 
     def _render_resource(self, resource_content, variables):
         variables = variables or {}
-        if 'ctx' not in variables:
-            variables['ctx'] = self
+        variables.setdefault('ctx', self)
         resource_template = jinja2.Template(resource_content)
         return resource_template.render(variables)

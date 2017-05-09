@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import copy
 import json
+import os
 
 import sqlalchemy.event
 
@@ -26,11 +26,19 @@ from ..storage.exceptions import StorageError
 _VERSION_ID_COL = 'version'
 _STUB = object()
 _INSTRUMENTED = {
-    _models.Node.runtime_properties: dict
+    'modified': {
+        _models.Node.runtime_properties: dict,
+        _models.Node.state: str,
+        _models.Task.status: str,
+    },
+    'new': (_models.Log, )
+
 }
 
+_NEW_INSTANCE = 'NEW_INSTANCE'
 
-def track_changes(instrumented=None):
+
+def track_changes(model=None, instrumented=None):
     """Track changes in the specified model columns
 
     This call will register event listeners using sqlalchemy's event mechanism. The listeners
@@ -50,32 +58,78 @@ def track_changes(instrumented=None):
     will then call ``apply_tracked_changes()`` that resides in this module as well.
     At that point, the changes will actually be written back to the database.
 
+    :param model: the model storage. it should hold a mapi for each model. the session of each mapi
+    is needed to setup events
     :param instrumented: A dict from model columns to their python native type
     :return: The instrumentation context
     """
-    return _Instrumentation(instrumented or _INSTRUMENTED)
+    return _Instrumentation(model, instrumented or _INSTRUMENTED)
 
 
 class _Instrumentation(object):
 
-    def __init__(self, instrumented):
+    def __init__(self, model, instrumented):
         self.tracked_changes = {}
+        self.new_instances = {}
         self.listeners = []
+        self._instances_to_expunge = []
+        self._model = model
         self._track_changes(instrumented)
 
+    @property
+    def _new_instance_id(self):
+        return '{prefix}_{index}'.format(prefix=_NEW_INSTANCE,
+                                         index=len(self._instances_to_expunge))
+
+    def expunge_session(self):
+        for new_instance in self._instances_to_expunge:
+            self._get_session_from_model(new_instance.__tablename__).expunge(new_instance)
+
+    def _get_session_from_model(self, tablename):
+        mapi = getattr(self._model, tablename, None)
+        if mapi:
+            return mapi._session
+        raise StorageError("Could not retrieve session for {0}".format(tablename))
+
     def _track_changes(self, instrumented):
-        instrumented_classes = {}
-        for instrumented_attribute, attribute_type in instrumented.items():
+        instrumented_attribute_classes = {}
+        # Track any newly-set attributes.
+        for instrumented_attribute, attribute_type in instrumented.get('modified', {}).items():
             self._register_set_attribute_listener(
                 instrumented_attribute=instrumented_attribute,
                 attribute_type=attribute_type)
             instrumented_class = instrumented_attribute.parent.entity
-            instrumented_class_attributes = instrumented_classes.setdefault(instrumented_class, {})
+            instrumented_class_attributes = instrumented_attribute_classes.setdefault(
+                instrumented_class, {})
             instrumented_class_attributes[instrumented_attribute.key] = attribute_type
-        for instrumented_class, instrumented_attributes in instrumented_classes.items():
-            self._register_instance_listeners(
-                instrumented_class=instrumented_class,
-                instrumented_attributes=instrumented_attributes)
+
+        # Track any global instance update such as 'refresh' or 'load'
+        for instrumented_class, instrumented_attributes in instrumented_attribute_classes.items():
+            self._register_instance_listeners(instrumented_class=instrumented_class,
+                                              instrumented_attributes=instrumented_attributes)
+
+        # Track any newly created instances.
+        for instrumented_class in instrumented.get('new', {}):
+            self._register_new_instance_listener(instrumented_class)
+
+    def _register_new_instance_listener(self, instrumented_class):
+        if self._model is None:
+            raise StorageError("In order to keep track of new instances, a ctx is needed")
+
+        def listener(_, instance):
+            if not isinstance(instance, instrumented_class):
+                return
+            self._instances_to_expunge.append(instance)
+            tracked_instances = self.new_instances.setdefault(instance.__modelname__, {})
+            tracked_attributes = tracked_instances.setdefault(self._new_instance_id, {})
+            instance_as_dict = instance.to_dict()
+            instance_as_dict.update((k, getattr(instance, k))
+                                    for k in getattr(instance, '__private_fields__', []))
+            tracked_attributes.update(instance_as_dict)
+        session = self._get_session_from_model(instrumented_class.__tablename__)
+        listener_args = (session, 'after_attach', listener)
+        sqlalchemy.event.listen(*listener_args)
+        self.listeners.append(listener_args)
 
     def _register_set_attribute_listener(self, instrumented_attribute, attribute_type):
         def listener(target, value, *_):
@@ -125,6 +179,9 @@ class _Instrumentation(object):
         else:
             self.tracked_changes.clear()
 
+        self.new_instances.clear()
+        self._instances_to_expunge = []
+
     def restore(self):
         """Remove all listeners registered by this instrumentation"""
         for listener_args in self.listeners:
@@ -160,7 +217,7 @@ class _Value(object):
         return {'initial': self.initial, 'current': self.current}.copy()
 
 
-def apply_tracked_changes(tracked_changes, model):
+def apply_tracked_changes(tracked_changes, new_instances, model):
     """Write tracked changes back to the database using provided model storage
 
     :param tracked_changes: The ``tracked_changes`` attribute of the instrumentation context
@@ -169,6 +226,7 @@ def apply_tracked_changes(tracked_changes, model):
     """
     successfully_updated_changes = dict()
     try:
+        # handle instance updates
         for mapi_name, tracked_instances in tracked_changes.items():
             successfully_updated_changes[mapi_name] = dict()
             mapi = getattr(model, mapi_name)
@@ -177,18 +235,27 @@ def apply_tracked_changes(tracked_changes, model):
                 instance = None
                 for attribute_name, value in tracked_attributes.items():
                     if value.initial != value.current:
-                        if not instance:
-                            instance = mapi.get(instance_id)
+                        instance = instance or mapi.get(instance_id)
                         setattr(instance, attribute_name, value.current)
                 if instance:
                     _validate_version_id(instance, mapi)
                     mapi.update(instance)
                     successfully_updated_changes[mapi_name][instance_id] = [
                         v.dict for v in tracked_attributes.values()]
+
+        # Handle new instances
+        for mapi_name, new_instance in new_instances.items():
+            successfully_updated_changes[mapi_name] = dict()
+            mapi = getattr(model, mapi_name)
+            for new_instance_kwargs in new_instance.values():
+                instance = mapi.model_cls(**new_instance_kwargs)
+                mapi.put(instance)
+                successfully_updated_changes[mapi_name][instance.id] = new_instance_kwargs
     except BaseException:
         for key, value in successfully_updated_changes.items():
             if not value:
                 del successfully_updated_changes[key]
+        # TODO: if the successful has _STUB, the logging fails because it can't serialize the object
         model.logger.error(
             'Registering all the changes to the storage has failed. {0}'
             'The successful updates were: {0} '

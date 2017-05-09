@@ -25,6 +25,7 @@ except ImportError:
     _celery = None
     app = None
 
+import aria
 from aria.modeling import models
 from aria.orchestrator import events
 from aria.orchestrator.workflows.executor import (
@@ -41,12 +42,13 @@ def _get_implementation(func):
     return '{module}.{func.__name__}'.format(module=__name__, func=func)
 
 
-def test_execute(executor):
+def execute_and_assert(executor, storage=None):
     expected_value = 'value'
-    successful_task = MockTask(_get_implementation(mock_successful_task))
-    failing_task = MockTask(_get_implementation(mock_failing_task))
+    successful_task = MockTask(_get_implementation(mock_successful_task), storage=storage)
+    failing_task = MockTask(_get_implementation(mock_failing_task), storage=storage)
     task_with_inputs = MockTask(_get_implementation(mock_task_with_input),
-                                inputs={'input': models.Parameter.wrap('input', 'value')})
+                                inputs={'input': models.Parameter.wrap('input', 'value')},
+                                storage=storage)
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -60,6 +62,14 @@ def test_execute(executor):
         assert isinstance(task_with_inputs.exception, MockException)
         assert task_with_inputs.exception.message == expected_value
     assertion()
+
+
+def test_thread_execute(thread_executor):
+    execute_and_assert(thread_executor)
+
+
+def test_process_execute(process_executor, storage):
+    execute_and_assert(process_executor, storage)
 
 
 def mock_successful_task(**_):
@@ -83,17 +93,31 @@ class MockException(Exception):
     pass
 
 
+@pytest.fixture
+def storage(tmpdir):
+    return aria.application_model_storage(
+        aria.storage.sql_mapi.SQLAlchemyModelAPI,
+        initiator_kwargs=dict(base_dir=str(tmpdir))
+    )
+
+
 @pytest.fixture(params=[
     (thread.ThreadExecutor, {'pool_size': 1}),
     (thread.ThreadExecutor, {'pool_size': 2}),
     # subprocess needs to load a tests module so we explicitly add the root directory as if
     # the project has been installed in editable mode
-    (process.ProcessExecutor, {'python_path': [tests.ROOT_DIR]}),
     # (celery.CeleryExecutor, {'app': app})
 ])
-def executor(request):
+def thread_executor(request):
     executor_cls, executor_kwargs = request.param
     result = executor_cls(**executor_kwargs)
+    yield result
+    result.close()
+
+
+@pytest.fixture
+def process_executor():
+    result = process.ProcessExecutor(python_path=tests.ROOT_DIR)
     yield result
     result.close()
 

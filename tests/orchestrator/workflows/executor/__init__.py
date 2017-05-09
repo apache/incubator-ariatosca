@@ -17,6 +17,7 @@ import logging
 from collections import namedtuple
 from contextlib import contextmanager
 
+import aria
 from aria.modeling import models
 
 
@@ -24,7 +25,7 @@ class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
-    def __init__(self, implementation, inputs=None, plugin=None):
+    def __init__(self, implementation, inputs=None, plugin=None, storage=None):
         self.implementation = self.name = implementation
         self.plugin_fk = plugin.id if plugin else None
         self.plugin = plugin or None
@@ -33,7 +34,7 @@ class MockTask(object):
         self.exception = None
         self.id = str(uuid.uuid4())
         self.logger = logging.getLogger()
-        self.context = MockContext()
+        self.context = MockContext(storage)
         self.attempts_count = 1
         self.max_attempts = 1
         self.ignore_failure = False
@@ -52,14 +53,24 @@ class MockTask(object):
 
 class MockContext(object):
 
-    def __init__(self):
+    def __init__(self, storage=None):
         self.logger = logging.getLogger('mock_logger')
         self.task = type('SubprocessMockTask', (object, ), {'plugin': None})
-        self.serialization_dict = {'context_cls': self.__class__, 'context': {}}
+        self.model = storage
+
+    @property
+    def serialization_dict(self):
+        if self.model:
+            return {'context': self.model.serialization_dict, 'context_cls': self.__class__}
+        else:
+            return {'context_cls': self.__class__, 'context': {}}
 
     def __getattr__(self, item):
         return None
 
     @classmethod
     def deserialize_from_dict(cls, **kwargs):
-        return cls()
+        if kwargs:
+            return cls(storage=aria.application_model_storage(**kwargs))
+        else:
+            return cls()

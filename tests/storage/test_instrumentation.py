@@ -227,6 +227,7 @@ class TestInstrumentation(object):
 
         instrumentation.apply_tracked_changes(
             tracked_changes=instrument.tracked_changes,
+            new_instances={},
             model=storage)
 
         instance1_1, instance1_2, instance2_1, instance2_2 = get_instances()
@@ -273,8 +274,40 @@ class TestInstrumentation(object):
         instrument.clear()
         assert instrument.tracked_changes == {}
 
-    def _track_changes(self, instrumented):
-        instrument = instrumentation.track_changes(instrumented)
+    def test_new_instances(self, storage):
+        model_kwargs = dict(
+            name='name',
+            dict1={'initial': 'value'},
+            dict2={'initial': 'value'},
+            list1=['initial'],
+            list2=['initial'],
+            int1=0,
+            int2=0,
+            string2='string')
+        model_instance_1 = MockModel1(**model_kwargs)
+        model_instance_2 = MockModel2(**model_kwargs)
+
+        instrument = self._track_changes(model=storage, instrumented_new=(MockModel1,))
+        assert not instrument.tracked_changes
+
+        storage.mock_model_1.put(model_instance_1)
+        storage.mock_model_2.put(model_instance_2)
+        # Assert all models made it to storage
+        assert len(storage.mock_model_1.list()) == len(storage.mock_model_2.list()) == 1
+
+        # Assert only one model was tracked
+        assert len(instrument.new_instances) == 1
+
+        mock_model_1 = instrument.new_instances[MockModel1.__tablename__].values()[0]
+        storage_model1_instance = storage.mock_model_1.get(model_instance_1.id)
+
+        for key in model_kwargs:
+            assert mock_model_1[key] == model_kwargs[key] == getattr(storage_model1_instance, key)
+
+    def _track_changes(self, instrumented_modified=None, model=None, instrumented_new=None):
+        instrument = instrumentation.track_changes(
+            model=model,
+            instrumented={'modified': instrumented_modified or {}, 'new': instrumented_new or {}})
         instruments_holder.append(instrument)
         return instrument
 

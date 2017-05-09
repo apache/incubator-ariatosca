@@ -114,17 +114,11 @@ def create_console_log_handler(level=logging.DEBUG, formatter=None):
     return console
 
 
-def create_sqla_log_handler(session, engine, log_cls, execution_id, level=logging.DEBUG):
+def create_sqla_log_handler(model, log_cls, execution_id, level=logging.DEBUG):
 
     # This is needed since the engine and session are entirely new we need to reflect the db
     # schema of the logging model into the engine and session.
-    log_cls.__table__.create(bind=engine, checkfirst=True)
-
-    return _SQLAlchemyHandler(session=session,
-                              engine=engine,
-                              log_cls=log_cls,
-                              execution_id=execution_id,
-                              level=level)
+    return _SQLAlchemyHandler(model=model, log_cls=log_cls, execution_id=execution_id, level=level)
 
 
 class _DefaultConsoleFormat(logging.Formatter):
@@ -168,10 +162,9 @@ def create_file_log_handler(
 
 class _SQLAlchemyHandler(logging.Handler):
 
-    def __init__(self, session, engine, log_cls, execution_id, **kwargs):
+    def __init__(self, model, log_cls, execution_id, **kwargs):
         logging.Handler.__init__(self, **kwargs)
-        self._session = session
-        self._engine = engine
+        self._model = model
         self._cls = log_cls
         self._execution_id = execution_id
 
@@ -188,15 +181,7 @@ class _SQLAlchemyHandler(logging.Handler):
             # Not mandatory.
             traceback=getattr(record, 'traceback', None)
         )
-        self._session.add(log)
-
-        try:
-            self._session.commit()
-        except BaseException:
-            self._session.rollback()
-            raise
-        finally:
-            self._session.close()
+        self._model.log.put(log)
 
 
 _default_file_formatter = logging.Formatter(

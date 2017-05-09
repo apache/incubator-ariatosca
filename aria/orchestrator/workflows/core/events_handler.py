@@ -40,7 +40,7 @@ def _task_started(task, *args, **kwargs):
     with task._update():
         task.started_at = datetime.utcnow()
         task.status = task.STARTED
-        _update_node_state_if_necessary(task, is_transitional=True)
+    _update_node_state_if_necessary(task, is_transitional=True)
 
 
 @events.on_failure_task_signal.connect
@@ -74,7 +74,7 @@ def _task_succeeded(task, *args, **kwargs):
         task.ended_at = datetime.utcnow()
         task.status = task.SUCCESS
 
-        _update_node_state_if_necessary(task)
+    _update_node_state_if_necessary(task)
 
 
 @events.start_workflow_signal.connect

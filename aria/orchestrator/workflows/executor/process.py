@@ -229,6 +229,7 @@ class ProcessExecutor(base.BaseExecutor):
     def _apply_tracked_changes(task, request):
         instrumentation.apply_tracked_changes(
             tracked_changes=request['tracked_changes'],
+            new_instances=request['new_instances'],
             model=task.context.model)
 
 
@@ -277,22 +278,28 @@ class _Messenger(object):
         """Task started message"""
         self._send_message(type='started')
 
-    def succeeded(self, tracked_changes):
+    def succeeded(self, tracked_changes, new_instances):
         """Task succeeded message"""
-        self._send_message(type='succeeded', tracked_changes=tracked_changes)
+        self._send_message(
+            type='succeeded', tracked_changes=tracked_changes, new_instances=new_instances)
 
-    def failed(self, tracked_changes, exception):
+    def failed(self, tracked_changes, new_instances, exception):
         """Task failed message"""
-        self._send_message(type='failed', tracked_changes=tracked_changes, exception=exception)
+        self._send_message(type='failed',
+                           tracked_changes=tracked_changes,
+                           new_instances=new_instances,
+                           exception=exception)
 
-    def apply_tracked_changes(self, tracked_changes):
-        self._send_message(type='apply_tracked_changes', tracked_changes=tracked_changes)
+    def apply_tracked_changes(self, tracked_changes, new_instances):
+        self._send_message(type='apply_tracked_changes',
+                           tracked_changes=tracked_changes,
+                           new_instances=new_instances)
 
     def closed(self):
         """Executor closed message"""
         self._send_message(type='closed')
 
-    def _send_message(self, type, tracked_changes=None, exception=None):
+    def _send_message(self, type, tracked_changes=None, new_instances=None, exception=None):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(('localhost', self.port))
         try:
@@ -301,7 +308,8 @@ class _Messenger(object):
                 'task_id': self.task_id,
                 'exception': exceptions.wrap_if_needed(exception),
                 'traceback': exceptions.get_exception_as_string(*sys.exc_info()),
-                'tracked_changes': tracked_changes
+                'tracked_changes': tracked_changes or {},
+                'new_instances': new_instances or {}
             })
             response = _recv_message(sock)
             response_exception = response.get('exception')
@@ -311,7 +319,7 @@ class _Messenger(object):
             sock.close()
 
 
-def _patch_session(ctx, messenger, instrument):
+def _patch_ctx(ctx, messenger, instrument):
     # model will be None only in tests that test the executor component directly
     if not ctx.model:
         return
@@ -326,12 +334,13 @@ def _patch_session(ctx, messenger, instrument):
         original_refresh(target)
 
     def patched_commit():
-        messenger.apply_tracked_changes(instrument.tracked_changes)
+        messenger.apply_tracked_changes(instrument.tracked_changes, instrument.new_instances)
+        instrument.expunge_session()
         instrument.clear()
 
     def patched_rollback():
         # Rollback is performed on parent process when commit fails
-        pass
+        instrument.expunge_session()
 
     # when autoflush is set to true (the default), refreshing an object will trigger
     # an auto flush by sqlalchemy, this autoflush will attempt to commit changes made so
@@ -363,21 +372,29 @@ def _main():
     # This is required for the instrumentation work properly.
     # See docstring of `remove_mutable_association_listener` for further details
     modeling_types.remove_mutable_association_listener()
+    try:
+        ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
+    except BaseException as e:
+        messenger.failed(exception=e, tracked_changes=None, new_instances=None)
+        return
 
-    with instrumentation.track_changes() as instrument:
+    with instrumentation.track_changes(ctx.model) as instrument:
         try:
             messenger.started()
-            ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
-            _patch_session(ctx=ctx, messenger=messenger, instrument=instrument)
+            _patch_ctx(ctx=ctx, messenger=messenger, instrument=instrument)
             task_func = imports.load_attribute(implementation)
             aria.install_aria_extensions()
             for decorate in process_executor.decorate():
                 task_func = decorate(task_func)
             task_func(ctx=ctx, **operation_inputs)
-            messenger.succeeded(tracked_changes=instrument.tracked_changes)
+            messenger.succeeded(tracked_changes=instrument.tracked_changes,
+                                new_instances=instrument.new_instances)
         except BaseException as e:
-            messenger.failed(exception=e, tracked_changes=instrument.tracked_changes)
-
+            messenger.failed(exception=e,
+                             tracked_changes=instrument.tracked_changes,
+                             new_instances=instrument.new_instances)
+        finally:
+            instrument.expunge_session()
 
 if __name__ == '__main__':
     _main()

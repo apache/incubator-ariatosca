@@ -18,6 +18,7 @@ import Queue
 
 import pytest
 
+import aria
 from aria.orchestrator import events
 from aria.utils.plugin import create as create_plugin
 from aria.orchestrator.workflows.executor import process
@@ -34,8 +35,8 @@ from . import MockTask
 
 class TestProcessExecutor(object):
 
-    def test_plugin_execution(self, executor, mock_plugin):
-        task = MockTask('mock_plugin1.operation', plugin=mock_plugin)
+    def test_plugin_execution(self, executor, mock_plugin, storage):
+        task = MockTask('mock_plugin1.operation', plugin=mock_plugin, storage=storage)
 
         queue = Queue.Queue()
 
@@ -81,3 +82,11 @@ def mock_plugin(plugin_manager, tmpdir):
     source = os.path.join(tests.resources.DIR, 'plugins', 'mock-plugin1')
     plugin_path = create_plugin(source=source, destination_dir=str(tmpdir))
     return plugin_manager.install(source=plugin_path)
+
+
+@pytest.fixture
+def storage(tmpdir):
+    return aria.application_model_storage(
+        aria.storage.sql_mapi.SQLAlchemyModelAPI,
+        initiator_kwargs=dict(base_dir=str(tmpdir))
+    )
