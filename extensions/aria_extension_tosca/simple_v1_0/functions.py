@@ -176,7 +176,7 @@ class GetProperty(Function):
 
         for modelable_entity in modelable_entities:
             properties = None
-            
+
             if hasattr(modelable_entity, 'requirement_templates') \
                 and modelable_entity.requirement_templates \
                 and (req_or_cap_name in [v.name for v in modelable_entity.requirement_templates]):
@@ -185,7 +185,7 @@ class GetProperty(Function):
                         # First argument refers to a requirement
                         # TODO: should follow to matched capability in other node...
                         raise CannotEvaluateFunctionException()
-                        break
+                        # break
                 nested_property_name_or_index = self.nested_property_name_or_index[1:]
             elif hasattr(modelable_entity, 'capability_templates') \
                 and modelable_entity.capability_templates \
@@ -254,7 +254,7 @@ class GetAttribute(Function):
 # Operation
 #
 
-@dsl_specification('4.6.1', 'tosca-simple-1.0')
+@dsl_specification('4.6.1', 'tosca-simple-1.0')  # pylint: disable=abstract-method
 class GetOperationOutput(Function):
     """
     The :code:`get_operation_output` function is used to retrieve the values of variables exposed /
@@ -334,7 +334,7 @@ class GetNodesOfType(Function):
 # Artifact
 #
 
-@dsl_specification('4.8.1', 'tosca-simple-1.0')
+@dsl_specification('4.8.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
 class GetArtifact(Function):
     """
     The :code:`get_artifact` function is used to retrieve artifact location between modelable

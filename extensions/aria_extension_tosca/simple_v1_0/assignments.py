@@ -94,7 +94,7 @@ class OperationAssignment(ExtensiblePresentation):
             if operation_definition is not None:
                 if operation_definition._extensions:
                     extensions.update(operation_definition._extensions)
-    
+
         extensions = {}
         update_inherited_extensions(extensions, self._container._get_type(context))
         if self._container._extensions:

@@ -22,7 +22,7 @@ from .functions import (Concat, Token, GetInput, GetProperty, GetAttribute, GetO
 from .modeling import create_service_template_model
 from .templates import ServiceTemplate
 
-class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name
+class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstract-method
     """
     ARIA presenter for the `TOSCA Simple Profile v1.0 cos01 <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html>`__.

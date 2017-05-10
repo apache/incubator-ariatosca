@@ -16,8 +16,10 @@
 """
 Creates ARIA service template models based on the TOSCA presentation.
 
-Relies on many helper methods in the presentation classes. 
+Relies on many helper methods in the presentation classes.
 """
+
+#pylint: disable=unsubscriptable-object
 
 import os
 import re
@@ -155,7 +157,7 @@ def create_node_template_model(context, service_template, node_template):
     node_type = service_template.node_types.get_descendant(node_type._name)
     model = NodeTemplate(name=node_template._name,
                          type=node_type)
-    
+
     model.default_instances = 1
     model.min_instances = 0
 
@@ -367,7 +369,7 @@ def create_operation_template_model(context, service_template, operation):
         model.description = operation.description.value
 
     implementation = operation.implementation
-    if implementation is not None: 
+    if implementation is not None:
         primary = implementation.primary
         parse_implementation_string(context, service_template, operation, model, primary)
         relationship_edge = operation._get_extensions(context).get('relationship_edge')
@@ -376,7 +378,7 @@ def create_operation_template_model(context, service_template, operation):
                 model.relationship_edge = False
             elif relationship_edge == 'target':
                 model.relationship_edge = True
-            
+
         dependencies = implementation.dependencies
         if dependencies:
             for dependency in dependencies:
