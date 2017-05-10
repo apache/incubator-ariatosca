@@ -128,6 +128,7 @@ class TestServiceTemplatesStore(TestCliBase):
 
         monkeypatch.setattr(Core, 'create_service_template', mock_object)
         monkeypatch.setattr(service_template_utils, 'get', mock_object)
+        monkeypatch.setattr(os.path, 'dirname', mock_object)
         self.invoke('service_templates store stubpath {name}'.format(
             name=mock_models.SERVICE_TEMPLATE_NAME))
         assert 'Service template {name} stored'.format(
@@ -152,6 +153,7 @@ class TestServiceTemplatesStore(TestCliBase):
                             'create_service_template',
                             raise_exception(storage_exceptions.NotFoundError,
                                             msg='UNIQUE constraint failed'))
+        monkeypatch.setattr(os.path, 'dirname', mock_object)
 
         assert_exception_raised(
             self.invoke('service_templates store stubpath test_st'),
@@ -164,6 +166,7 @@ class TestServiceTemplatesStore(TestCliBase):
         monkeypatch.setattr(Core,
                             'create_service_template',
                             raise_exception(storage_exceptions.NotFoundError))
+        monkeypatch.setattr(os.path, 'dirname', mock_object)
 
         assert_exception_raised(
             self.invoke('service_templates store stubpath test_st'),
