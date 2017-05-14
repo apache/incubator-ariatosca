@@ -343,6 +343,74 @@ def test_relationship_operation_logging(ctx, executor):
     _assert_loggins(ctx, inputs)
 
 
+def test_attribute_consumption(ctx, executor, dataholder):
+    # region Updating node operation
+    node_int_name, node_op_name = mock.operations.NODE_OPERATIONS_INSTALL[0]
+
+    source_node = ctx.model.node.get_by_name(mock.models.DEPENDENT_NODE_NAME)
+
+    inputs = {'dict_': {'key': 'value'},
+              'set_test_dict': {'key2': 'value2'}}
+    interface = mock.models.create_interface(
+        source_node.service,
+        node_int_name,
+        node_op_name,
+        operation_kwargs=dict(
+            implementation=op_path(attribute_altering_operation, module_path=__name__),
+            inputs=inputs)
+    )
+    source_node.interfaces[interface.name] = interface
+    ctx.model.node.update(source_node)
+    # endregion
+
+    # region updating relationship operation
+    rel_int_name, rel_op_name = mock.operations.RELATIONSHIP_OPERATIONS_INSTALL[2]
+
+    relationship = ctx.model.relationship.list()[0]
+    interface = mock.models.create_interface(
+        relationship.source_node.service,
+        rel_int_name,
+        rel_op_name,
+        operation_kwargs=dict(
+            implementation=op_path(attribute_consuming_operation, module_path=__name__),
+            inputs={'holder_path': dataholder.path}
+        )
+    )
+    relationship.interfaces[interface.name] = interface
+    ctx.model.relationship.update(relationship)
+    # endregion
+
+    @workflow
+    def basic_workflow(graph, **_):
+        graph.sequence(
+            api.task.OperationTask(
+                source_node,
+                interface_name=node_int_name,
+                operation_name=node_op_name,
+                inputs=inputs
+            ),
+            api.task.OperationTask(
+                relationship,
+                interface_name=rel_int_name,
+                operation_name=rel_op_name,
+            )
+        )
+
+    execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
+    target_node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+
+    assert len(source_node.attributes) == len(target_node.attributes) == 2
+    assert source_node.attributes['key'] != target_node.attributes['key']
+    assert source_node.attributes['key'].value == \
+           target_node.attributes['key'].value == \
+           dataholder['key'] == 'value'
+
+    assert source_node.attributes['key2'] != target_node.attributes['key2']
+    assert source_node.attributes['key2'].value == \
+           target_node.attributes['key2'].value == \
+           dataholder['key2'] == 'value2'
+
+
 def _assert_loggins(ctx, inputs):
 
     # The logs should contain the following: Workflow Start, Operation Start, custom operation
@@ -377,10 +445,10 @@ def _assert_loggins(ctx, inputs):
 
 @operation
 def logged_operation(ctx, **_):
-    ctx.logger.info(ctx.task.inputs['op_start'])
+    ctx.logger.info(ctx.task.inputs['op_start'].value)
     # enables to check the relation between the created_at field properly
     time.sleep(1)
-    ctx.logger.debug(ctx.task.inputs['op_end'])
+    ctx.logger.debug(ctx.task.inputs['op_end'].value)
 
 
 @operation
@@ -422,3 +490,21 @@ def get_node_id(ctx, holder_path, **_):
 def _test_plugin_workdir(ctx, filename, content):
     with open(os.path.join(ctx.plugin_workdir, filename), 'w') as f:
         f.write(content)
+
+
+@operation
+def attribute_altering_operation(ctx, dict_, set_test_dict, **_):
+    ctx.node.attributes.update(dict_)
+
+    for key, value in set_test_dict.items():
+        ctx.node.attributes[key] = value
+
+
+@operation
+def attribute_consuming_operation(ctx, holder_path, **_):
+    holder = helpers.FilesystemDataHolder(holder_path)
+    ctx.target_node.attributes.update(ctx.source_node.attributes)
+    holder.update(**ctx.target_node.attributes)
+
+    ctx.target_node.attributes['key2'] = ctx.source_node.attributes['key2']
+    holder['key2'] = ctx.target_node.attributes['key2']

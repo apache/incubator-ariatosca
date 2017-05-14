@@ -98,7 +98,6 @@ class CtxProxy(object):
                 quiet=True,
                 server=BottleServerAdapter)
         thread = threading.Thread(target=serve)
-        thread.daemon = True
         thread.start()
         return thread
 

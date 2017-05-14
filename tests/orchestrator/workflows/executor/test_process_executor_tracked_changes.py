@@ -28,7 +28,7 @@ from tests import mock
 from tests import storage
 
 
-_TEST_RUNTIME_PROPERTIES = {
+_TEST_ATTRIBUTES = {
     'some': 'values', 'that': 'are', 'most': 'likely', 'only': 'set', 'here': 'yo'
 }
 
@@ -46,17 +46,18 @@ def test_track_changes_of_failed_operation(context, executor):
 
 def _assert_tracked_changes_are_applied(context):
     instance = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-    assert instance.runtime_properties == _TEST_RUNTIME_PROPERTIES
+    assert all(instance.attributes[key].value == value
+               for key, value in _TEST_ATTRIBUTES.items())
 
 
-def _update_runtime_properties(context):
-    context.node.runtime_properties.clear()
-    context.node.runtime_properties.update(_TEST_RUNTIME_PROPERTIES)
+def _update_attributes(context):
+    context.node.attributes.clear()
+    context.node.attributes.update(_TEST_ATTRIBUTES)
 
 
 def test_refresh_state_of_tracked_attributes(context, executor):
     out = _run_workflow(context=context, executor=executor, op_func=_mock_refreshing_operation)
-    assert out['initial'] == out['after_refresh']
+    assert out['after_refresh'] == out['after_change']
     assert out['initial'] != out['after_change']
 
 
@@ -66,22 +67,19 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
         'changed_but_refreshed': {'some': 'newer', 'properties': 'right there'}
     }
 
-    expected_initial = context.model.node.get_by_name(
-        mock.models.DEPENDENCY_NODE_NAME).runtime_properties
-
-    out = _run_workflow(context=context, executor=executor, op_func=_mock_updating_operation,
-                        inputs=inputs)
+    expected_initial = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME).attributes
+    out = _run_workflow(
+        context=context, executor=executor, op_func=_mock_updating_operation, inputs=inputs)
 
     expected_after_update = expected_initial.copy()
     expected_after_update.update(inputs['committed']) # pylint: disable=no-member
     expected_after_change = expected_after_update.copy()
     expected_after_change.update(inputs['changed_but_refreshed']) # pylint: disable=no-member
-    expected_after_refresh = expected_after_update
 
     assert out['initial'] == expected_initial
     assert out['after_update'] == expected_after_update
     assert out['after_change'] == expected_after_change
-    assert out['after_refresh'] == expected_after_refresh
+    assert out['after_refresh'] == expected_after_change
 
 
 def _run_workflow(context, executor, op_func, inputs=None):
@@ -109,42 +107,42 @@ def _run_workflow(context, executor, op_func, inputs=None):
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
-    return context.model.node.get_by_name(
-        mock.models.DEPENDENCY_NODE_NAME).runtime_properties.get('out')
+    out = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME).attributes.get('out')
+    return out.value if out else None
 
 
 @operation
 def _mock_success_operation(ctx):
-    _update_runtime_properties(ctx)
+    _update_attributes(ctx)
 
 
 @operation
 def _mock_fail_operation(ctx):
-    _update_runtime_properties(ctx)
+    _update_attributes(ctx)
     raise RuntimeError
 
 
 @operation
 def _mock_refreshing_operation(ctx):
-    out = {'initial': copy.deepcopy(ctx.node.runtime_properties)}
-    ctx.node.runtime_properties.update({'some': 'new', 'properties': 'right here'})
-    out['after_change'] = copy.deepcopy(ctx.node.runtime_properties)
+    out = {'initial': copy.deepcopy(ctx.node.attributes)}
+    ctx.node.attributes.update({'some': 'new', 'properties': 'right here'})
+    out['after_change'] = copy.deepcopy(ctx.node.attributes)
     ctx.model.node.refresh(ctx.node)
-    out['after_refresh'] = copy.deepcopy(ctx.node.runtime_properties)
-    ctx.node.runtime_properties['out'] = out
+    out['after_refresh'] = copy.deepcopy(ctx.node.attributes)
+    ctx.node.attributes['out'] = out
 
 
 @operation
 def _mock_updating_operation(ctx, committed, changed_but_refreshed):
-    out = {'initial': copy.deepcopy(ctx.node.runtime_properties)}
-    ctx.node.runtime_properties.update(committed)
+    out = {'initial': copy.deepcopy(ctx.node.attributes)}
+    ctx.node.attributes.update(committed)
     ctx.model.node.update(ctx.node)
-    out['after_update'] = copy.deepcopy(ctx.node.runtime_properties)
-    ctx.node.runtime_properties.update(changed_but_refreshed)
-    out['after_change'] = copy.deepcopy(ctx.node.runtime_properties)
+    out['after_update'] = copy.deepcopy(ctx.node.attributes)
+    ctx.node.attributes.update(changed_but_refreshed)
+    out['after_change'] = copy.deepcopy(ctx.node.attributes)
     ctx.model.node.refresh(ctx.node)
-    out['after_refresh'] = copy.deepcopy(ctx.node.runtime_properties)
-    ctx.node.runtime_properties['out'] = out
+    out['after_refresh'] = copy.deepcopy(ctx.node.attributes)
+    ctx.node.attributes['out'] = out
 
 
 def _operation_mapping(func):

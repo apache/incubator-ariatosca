@@ -43,14 +43,12 @@ import jsonpickle
 
 import aria
 from aria.orchestrator.workflows.executor import base
-from aria.storage import instrumentation
 from aria.extension import process_executor
 from aria.utils import (
     imports,
     exceptions,
     process as process_utils
 )
-from aria.modeling import types as modeling_types
 
 
 _INT_FMT = 'I'
@@ -82,7 +80,6 @@ class ProcessExecutor(base.BaseExecutor):
             'started': self._handle_task_started_request,
             'succeeded': self._handle_task_succeeded_request,
             'failed': self._handle_task_failed_request,
-            'apply_tracked_changes': self._handle_apply_tracked_changes_request
         }
 
         # Server socket used to accept task status messages from subprocesses
@@ -196,41 +193,13 @@ class ProcessExecutor(base.BaseExecutor):
     def _handle_task_started_request(self, task_id, **kwargs):
         self._task_started(self._tasks[task_id])
 
-    def _handle_task_succeeded_request(self, task_id, request, **kwargs):
+    def _handle_task_succeeded_request(self, task_id, **kwargs):
         task = self._remove_task(task_id)
-        try:
-            self._apply_tracked_changes(task, request)
-        except BaseException as e:
-            e.message += UPDATE_TRACKED_CHANGES_FAILED_STR
-            self._task_failed(task, exception=e)
-        else:
-            self._task_succeeded(task)
+        self._task_succeeded(task)
 
     def _handle_task_failed_request(self, task_id, request, **kwargs):
         task = self._remove_task(task_id)
-        try:
-            self._apply_tracked_changes(task, request)
-        except BaseException as e:
-            e.message += 'Task failed due to {0}.'.format(request['exception']) + \
-                         UPDATE_TRACKED_CHANGES_FAILED_STR
-            self._task_failed(
-                task, exception=e, traceback=exceptions.get_exception_as_string(*sys.exc_info()))
-        else:
-            self._task_failed(task, exception=request['exception'], traceback=request['traceback'])
-
-    def _handle_apply_tracked_changes_request(self, task_id, request, response):
-        task = self._tasks[task_id]
-        try:
-            self._apply_tracked_changes(task, request)
-        except BaseException as e:
-            response['exception'] = exceptions.wrap_if_needed(e)
-
-    @staticmethod
-    def _apply_tracked_changes(task, request):
-        instrumentation.apply_tracked_changes(
-            tracked_changes=request['tracked_changes'],
-            new_instances=request['new_instances'],
-            model=task.context.model)
+        self._task_failed(task, exception=request['exception'], traceback=request['traceback'])
 
 
 def _send_message(connection, message):
@@ -278,28 +247,19 @@ class _Messenger(object):
         """Task started message"""
         self._send_message(type='started')
 
-    def succeeded(self, tracked_changes, new_instances):
+    def succeeded(self):
         """Task succeeded message"""
-        self._send_message(
-            type='succeeded', tracked_changes=tracked_changes, new_instances=new_instances)
+        self._send_message(type='succeeded')
 
-    def failed(self, tracked_changes, new_instances, exception):
+    def failed(self, exception):
         """Task failed message"""
-        self._send_message(type='failed',
-                           tracked_changes=tracked_changes,
-                           new_instances=new_instances,
-                           exception=exception)
-
-    def apply_tracked_changes(self, tracked_changes, new_instances):
-        self._send_message(type='apply_tracked_changes',
-                           tracked_changes=tracked_changes,
-                           new_instances=new_instances)
+        self._send_message(type='failed', exception=exception)
 
     def closed(self):
         """Executor closed message"""
         self._send_message(type='closed')
 
-    def _send_message(self, type, tracked_changes=None, new_instances=None, exception=None):
+    def _send_message(self, type, exception=None):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(('localhost', self.port))
         try:
@@ -308,8 +268,6 @@ class _Messenger(object):
                 'task_id': self.task_id,
                 'exception': exceptions.wrap_if_needed(exception),
                 'traceback': exceptions.get_exception_as_string(*sys.exc_info()),
-                'tracked_changes': tracked_changes or {},
-                'new_instances': new_instances or {}
             })
             response = _recv_message(sock)
             response_exception = response.get('exception')
@@ -317,39 +275,6 @@ class _Messenger(object):
                 raise response_exception
         finally:
             sock.close()
-
-
-def _patch_ctx(ctx, messenger, instrument):
-    # model will be None only in tests that test the executor component directly
-    if not ctx.model:
-        return
-
-    # We arbitrarily select the ``node`` mapi to extract the session from it.
-    # could have been any other mapi just as well
-    session = ctx.model.node._session
-    original_refresh = session.refresh
-
-    def patched_refresh(target):
-        instrument.clear(target)
-        original_refresh(target)
-
-    def patched_commit():
-        messenger.apply_tracked_changes(instrument.tracked_changes, instrument.new_instances)
-        instrument.expunge_session()
-        instrument.clear()
-
-    def patched_rollback():
-        # Rollback is performed on parent process when commit fails
-        instrument.expunge_session()
-
-    # when autoflush is set to true (the default), refreshing an object will trigger
-    # an auto flush by sqlalchemy, this autoflush will attempt to commit changes made so
-    # far on the session. this is not the desired behavior in the subprocess
-    session.autoflush = False
-
-    session.commit = patched_commit
-    session.rollback = patched_rollback
-    session.refresh = patched_refresh
 
 
 def _main():
@@ -369,32 +294,24 @@ def _main():
     operation_inputs = arguments['operation_inputs']
     context_dict = arguments['context']
 
-    # This is required for the instrumentation work properly.
-    # See docstring of `remove_mutable_association_listener` for further details
-    modeling_types.remove_mutable_association_listener()
     try:
         ctx = context_dict['context_cls'].instantiate_from_dict(**context_dict['context'])
     except BaseException as e:
-        messenger.failed(exception=e, tracked_changes=None, new_instances=None)
+        messenger.failed(e)
         return
 
-    with instrumentation.track_changes(ctx.model) as instrument:
-        try:
-            messenger.started()
-            _patch_ctx(ctx=ctx, messenger=messenger, instrument=instrument)
-            task_func = imports.load_attribute(implementation)
-            aria.install_aria_extensions()
-            for decorate in process_executor.decorate():
-                task_func = decorate(task_func)
-            task_func(ctx=ctx, **operation_inputs)
-            messenger.succeeded(tracked_changes=instrument.tracked_changes,
-                                new_instances=instrument.new_instances)
-        except BaseException as e:
-            messenger.failed(exception=e,
-                             tracked_changes=instrument.tracked_changes,
-                             new_instances=instrument.new_instances)
-        finally:
-            instrument.expunge_session()
+    try:
+        messenger.started()
+        task_func = imports.load_attribute(implementation)
+        aria.install_aria_extensions()
+        for decorate in process_executor.decorate():
+            task_func = decorate(task_func)
+        task_func(ctx=ctx, **operation_inputs)
+        ctx.close()
+        messenger.succeeded()
+    except BaseException as e:
+        ctx.close()
+        messenger.failed(e)
 
 if __name__ == '__main__':
     _main()

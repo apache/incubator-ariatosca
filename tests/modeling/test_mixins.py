@@ -121,7 +121,6 @@ def test_relationship_model_ordering(context):
     new_node = modeling.models.Node(
         name='new_node',
         type=source_node.type,
-        runtime_properties={},
         service=service,
         version=None,
         node_template=new_node_template,

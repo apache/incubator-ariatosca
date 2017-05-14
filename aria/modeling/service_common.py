@@ -218,14 +218,13 @@ class ParameterBase(TemplateModelMixin, caching.HasCachedMethods):
         :type description: basestring
         """
 
-        from . import models
         type_name = canonical_type_name(value)
         if type_name is None:
             type_name = full_type_name(value)
-        return models.Parameter(name=name, # pylint: disable=unexpected-keyword-arg
-                                type_name=type_name,
-                                value=value,
-                                description=description)
+        return cls(name=name, # pylint: disable=unexpected-keyword-arg
+                   type_name=type_name,
+                   value=value,
+                   description=description)
 
 
 class TypeBase(InstanceModelMixin):

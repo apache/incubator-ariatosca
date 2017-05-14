@@ -16,6 +16,7 @@
 import pytest
 
 from aria import workflow, operation
+from aria.modeling import models
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import thread
@@ -93,7 +94,7 @@ def test_host_ip(workflow_context, executor, dataholder):
         operation_kwargs=dict(implementation=op_path(host_ip, module_path=__name__), inputs=inputs)
     )
     dependency_node.interfaces[interface.name] = interface
-    dependency_node.runtime_properties['ip'] = '1.1.1.1'
+    dependency_node.attributes['ip'] = models.Parameter.wrap('ip', '1.1.1.1')
 
     workflow_context.model.node.update(dependency_node)
 
@@ -110,7 +111,7 @@ def test_host_ip(workflow_context, executor, dataholder):
 
     execute(workflow_func=basic_workflow, workflow_context=workflow_context, executor=executor)
 
-    assert dataholder.get('host_ip') == dependency_node.runtime_properties.get('ip')
+    assert dataholder.get('host_ip') == dependency_node.attributes.get('ip').value
 
 
 def test_relationship_tool_belt(workflow_context, executor, dataholder):

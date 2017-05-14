@@ -47,9 +47,9 @@ def show(node_id, model_storage, logger):
 
     # print node attributes
     logger.info('Node attributes:')
-    if node.runtime_properties:
-        for prop_name, prop_value in node.runtime_properties.iteritems():
-            logger.info('\t{0}: {1}'.format(prop_name, prop_value))
+    if node.attributes:
+        for param_name, param in node.attributes.iteritems():
+            logger.info('\t{0}: {1}'.format(param_name, param.value))
     else:
         logger.info('\tNo attributes')
 

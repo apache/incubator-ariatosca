@@ -120,7 +120,7 @@ def create_node_with_dependencies(include_attribute=False):
     node_template.service_template.services[0] = create_service(node_template.service_template)
     node = create_node(node_template, node_template.service_template.services[0])
     if include_attribute:
-        node.runtime_properties = {'attribute1': 'value1'}
+        node.attributes['attribute1'] = models.Parameter.wrap('attribute1', 'value1')               # pylint: disable=unsubscriptable-object
     return node
 
 
@@ -184,13 +184,10 @@ def create_dependent_node_template(
     )
 
 
-def create_node(dependency_node_template, service, name=NODE_NAME, state=models.Node.INITIAL,
-                runtime_properties=None):
-    runtime_properties = runtime_properties or {}
+def create_node(dependency_node_template, service, name=NODE_NAME, state=models.Node.INITIAL):
     node = models.Node(
         name=name,
         type=dependency_node_template.type,
-        runtime_properties=runtime_properties,
         version=None,
         node_template=dependency_node_template,
         state=state,

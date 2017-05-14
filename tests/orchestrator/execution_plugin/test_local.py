@@ -43,26 +43,26 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties map.key value
+            ctx node attributes map.key value
             ''',
             windows_script='''
-            ctx node runtime-properties map.key value
+            ctx node attributes map.key value
         ''')
         props = self._run(
             executor, workflow_context,
             script_path=script_path)
-        assert props['map']['key'] == 'value'
+        assert props['map'].value['key'] == 'value'
 
     def test_process_env(self, executor, workflow_context, tmpdir):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties map.key1 $key1
-            ctx node runtime-properties map.key2 $key2
+            ctx node attributes map.key1 $key1
+            ctx node attributes map.key2 $key2
             ''',
             windows_script='''
-            ctx node runtime-properties map.key1 %key1%
-            ctx node runtime-properties map.key2 %key2%
+            ctx node attributes map.key1 %key1%
+            ctx node attributes map.key2 %key2%
         ''')
         props = self._run(
             executor, workflow_context,
@@ -73,7 +73,7 @@ class TestLocalRunScript(object):
                     'key2': 'value2'
                 }
             })
-        p_map = props['map']
+        p_map = props['map'].value
         assert p_map['key1'] == 'value1'
         assert p_map['key2'] == 'value2'
 
@@ -81,10 +81,10 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties map.cwd $PWD
+            ctx node attributes map.cwd $PWD
             ''',
             windows_script='''
-            ctx node runtime-properties map.cwd %CD%
+            ctx node attributes map.cwd %CD%
             ''')
         tmpdir = str(tmpdir)
         props = self._run(
@@ -93,11 +93,11 @@ class TestLocalRunScript(object):
             process={
                 'cwd': tmpdir
             })
-        p_map = props['map']
+        p_map = props['map'].value
         assert p_map['cwd'] == tmpdir
 
     def test_process_command_prefix(self, executor, workflow_context, tmpdir):
-        use_ctx = 'ctx node runtime-properties map.key value'
+        use_ctx = 'ctx node attributes map.key value'
         python_script = ['import subprocess',
                          'subprocess.Popen("{0}".split(' ')).communicate()[0]'.format(use_ctx)]
         python_script = '\n'.join(python_script)
@@ -114,19 +114,19 @@ class TestLocalRunScript(object):
                 'env': {'TEST_KEY': 'value'},
                 'command_prefix': 'python'
             })
-        p_map = props['map']
+        p_map = props['map'].value
         assert p_map['key'] == 'value'
 
     def test_process_args(self, executor, workflow_context, tmpdir):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties map.arg1 "$1"
-            ctx node runtime-properties map.arg2 $2
+            ctx node attributes map.arg1 "$1"
+            ctx node attributes map.arg2 $2
             ''',
             windows_script='''
-            ctx node runtime-properties map.arg1 %1
-            ctx node runtime-properties map.arg2 %2
+            ctx node attributes map.arg1 %1
+            ctx node attributes map.arg2 %2
             ''')
         props = self._run(
             executor, workflow_context,
@@ -134,8 +134,8 @@ class TestLocalRunScript(object):
             process={
                 'args': ['"arg with spaces"', 'arg2']
             })
-        assert props['map']['arg1'] == 'arg with spaces'
-        assert props['map']['arg2'] == 'arg2'
+        assert props['map'].value['arg1'] == 'arg with spaces'
+        assert props['map'].value['arg2'] == 'arg2'
 
     def test_no_script_path(self, executor, workflow_context):
         exception = self._run_and_get_task_exception(
@@ -187,7 +187,7 @@ class TestLocalRunScript(object):
         script = '''
 from aria.orchestrator.execution_plugin import ctx, inputs
 if __name__ == '__main__':
-    ctx.node.runtime_properties['key'] = inputs['key']
+    ctx.node.attributes['key'] = inputs['key']
 '''
         suffix = '.py'
         script_path = self._create_script(
@@ -200,7 +200,7 @@ if __name__ == '__main__':
             executor, workflow_context,
             script_path=script_path,
             inputs={'key': 'value'})
-        assert props['key'] == 'value'
+        assert props['key'].value == 'value'
 
     @pytest.mark.parametrize(
         'value', ['string-value', [1, 2, 3], 999, 3.14, False,
@@ -209,16 +209,17 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties key "${input_as_env_var}"
+            ctx node attributes key "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node runtime-properties key "%input_as_env_var%"
+            ctx node attributes key "%input_as_env_var%"
         ''')
         props = self._run(
             executor, workflow_context,
             script_path=script_path,
             env_var=value)
-        expected = props['key'] if isinstance(value, basestring) else json.loads(props['key'])
+        value = props['key'].value
+        expected = value if isinstance(value, basestring) else json.loads(value)
         assert expected == value
 
     @pytest.mark.parametrize('value', ['override', {'key': 'value'}])
@@ -227,10 +228,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties key "${input_as_env_var}"
+            ctx node attributes key "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node runtime-properties key "%input_as_env_var%"
+            ctx node attributes key "%input_as_env_var%"
         ''')
 
         props = self._run(
@@ -242,17 +243,18 @@ if __name__ == '__main__':
                     'input_as_env_var': value
                 }
             })
-        expected = props['key'] if isinstance(value, basestring) else json.loads(props['key'])
+        value = props['key'].value
+        expected = value if isinstance(value, basestring) else json.loads(value)
         assert expected == value
 
     def test_get_nonexistent_runtime_property(self, executor, workflow_context, tmpdir):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node runtime-properties nonexistent
+            ctx node attributes nonexistent
             ''',
             windows_script='''
-            ctx node runtime-properties nonexistent
+            ctx node attributes nonexistent
         ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -266,10 +268,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx -j instance runtime-properties nonexistent
+            ctx -j instance attributes nonexistent
             ''',
             windows_script='''
-            ctx -j instance runtime-properties nonexistent
+            ctx -j instance attributes nonexistent
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -502,7 +504,7 @@ if __name__ == '__main__':
             tasks_graph=tasks_graph)
         eng.execute()
         return workflow_context.model.node.get_by_name(
-            mock.models.DEPENDENCY_NODE_NAME).runtime_properties
+            mock.models.DEPENDENCY_NODE_NAME).attributes
 
     @pytest.fixture
     def executor(self):

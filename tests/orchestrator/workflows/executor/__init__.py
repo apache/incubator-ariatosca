@@ -74,3 +74,7 @@ class MockContext(object):
             return cls(storage=aria.application_model_storage(**kwargs))
         else:
             return cls()
+
+    @staticmethod
+    def close():
+        pass

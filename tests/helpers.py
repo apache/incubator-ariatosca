@@ -47,6 +47,9 @@ class FilesystemDataHolder(object):
         with open(self._path, 'w') as f:
             return json.dump(value, f)
 
+    def __contains__(self, item):
+        return item in self._load()
+
     def __setitem__(self, key, value):
         dict_ = self._load()
         dict_[key] = value
@@ -66,6 +69,13 @@ class FilesystemDataHolder(object):
         return_value = dict_.setdefault(key, value)
         self._dump(dict_)
         return return_value
+
+    def update(self, dict_=None, **kwargs):
+        current_dict = self._load()
+        if dict_:
+            current_dict.update(dict_)
+        current_dict.update(**kwargs)
+        self._dump(current_dict)
 
     @property
     def path(self):

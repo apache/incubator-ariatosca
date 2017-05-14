@@ -538,22 +538,20 @@ class TestNodeTemplate(object):
 
 class TestNode(object):
     @pytest.mark.parametrize(
-        'is_valid, name, runtime_properties, state, version',
+        'is_valid, name, state, version',
         [
-            (False, m_cls, {}, 'state', 1),
-            (False, 'name', m_cls, 'state', 1),
-            (False, 'name', {}, 'state', 1),
-            (False, 'name', {}, m_cls, 1),
-            (False, m_cls, {}, 'state', m_cls),
+            (False, m_cls, 'state', 1),
+            (False, 'name', 'state', 1),
+            (False, 'name', m_cls, 1),
+            (False, m_cls, 'state', m_cls),
 
-            (True, 'name', {}, 'initial', 1),
-            (True, None, {}, 'initial', 1),
-            (True, 'name', None, 'initial', 1),
-            (True, 'name', {}, 'initial', None),
+            (True, 'name', 'initial', 1),
+            (True, None, 'initial', 1),
+            (True, 'name', 'initial', 1),
+            (True, 'name', 'initial', None),
         ]
     )
-    def test_node_model_creation(self, node_template_storage, is_valid, name, runtime_properties,
-                                 state, version):
+    def test_node_model_creation(self, node_template_storage, is_valid, name, state, version):
         node = _test_model(
             is_valid=is_valid,
             storage=node_template_storage,
@@ -562,7 +560,6 @@ class TestNode(object):
                 node_template=node_template_storage.node_template.list()[0],
                 type=node_template_storage.type.list()[0],
                 name=name,
-                runtime_properties=runtime_properties,
                 state=state,
                 version=version,
                 service=node_template_storage.service.list()[0]
@@ -635,7 +632,6 @@ class TestNodeHostAddress(object):
             name='node',
             node_template=node_template,
             type=storage.type.list()[0],
-            runtime_properties={},
             state='initial',
             service=storage.service.list()[0]
         )
@@ -644,7 +640,7 @@ class TestNodeHostAddress(object):
             if host_address is not None:
                 host_address = host_address.value
         if host_address:
-            kwargs['runtime_properties']['ip'] = host_address
+            kwargs.setdefault('attributes', {})['ip'] = Parameter.wrap('ip', host_address)
         if is_host:
             kwargs['host_fk'] = 1
         elif host_fk:

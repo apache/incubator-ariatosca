@@ -53,9 +53,9 @@ _FABRIC_ENV = {
 class TestWithActualSSHServer(object):
 
     def test_run_script_basic(self):
-        expected_runtime_property_value = 'some_value'
-        props = self._execute(env={'test_value': expected_runtime_property_value})
-        assert props['test_value'] == expected_runtime_property_value
+        expected_attribute_value = 'some_value'
+        props = self._execute(env={'test_value': expected_attribute_value})
+        assert props['test_value'].value == expected_attribute_value
 
     @pytest.mark.skip(reason='sudo privileges are required')
     def test_run_script_as_sudo(self):
@@ -66,7 +66,7 @@ class TestWithActualSSHServer(object):
 
     def test_run_script_default_base_dir(self):
         props = self._execute()
-        assert props['work_dir'] == '{0}/work'.format(constants.DEFAULT_BASE_DIR)
+        assert props['work_dir'].value == '{0}/work'.format(constants.DEFAULT_BASE_DIR)
 
     @pytest.mark.skip(reason='Re-enable once output from process executor can be captured')
     @pytest.mark.parametrize('hide_groups', [[], ['everything']])
@@ -93,16 +93,16 @@ class TestWithActualSSHServer(object):
                 'cwd': expected_cwd,
                 'base_dir': expected_base_dir
             })
-        assert props['env_value'] == expected_env_value
-        assert len(props['bash_version']) > 0
-        assert props['arg1_value'] == expected_arg1_value
-        assert props['arg2_value'] == expected_arg2_value
-        assert props['cwd'] == expected_cwd
-        assert props['ctx_path'] == '{0}/ctx'.format(expected_base_dir)
+        assert props['env_value'].value == expected_env_value
+        assert len(props['bash_version'].value) > 0
+        assert props['arg1_value'].value == expected_arg1_value
+        assert props['arg2_value'].value == expected_arg2_value
+        assert props['cwd'].value == expected_cwd
+        assert props['ctx_path'].value == '{0}/ctx'.format(expected_base_dir)
 
     def test_run_script_command_prefix(self):
         props = self._execute(process={'command_prefix': 'bash -i'})
-        assert 'i' in props['dollar_dash']
+        assert 'i' in props['dollar_dash'].value
 
     def test_run_script_reuse_existing_ctx(self):
         expected_test_value_1 = 'test_value_1'
@@ -112,27 +112,27 @@ class TestWithActualSSHServer(object):
                              '{0}_2'.format(self.test_name)],
             env={'test_value1': expected_test_value_1,
                  'test_value2': expected_test_value_2})
-        assert props['test_value1'] == expected_test_value_1
-        assert props['test_value2'] == expected_test_value_2
+        assert props['test_value1'].value == expected_test_value_1
+        assert props['test_value2'].value == expected_test_value_2
 
     def test_run_script_download_resource_plain(self, tmpdir):
         resource = tmpdir.join('resource')
         resource.write('content')
         self._upload(str(resource), 'test_resource')
         props = self._execute()
-        assert props['test_value'] == 'content'
+        assert props['test_value'].value == 'content'
 
     def test_run_script_download_resource_and_render(self, tmpdir):
         resource = tmpdir.join('resource')
         resource.write('{{ctx.service.name}}')
         self._upload(str(resource), 'test_resource')
         props = self._execute()
-        assert props['test_value'] == self._workflow_context.service.name
+        assert props['test_value'].value == self._workflow_context.service.name
 
     @pytest.mark.parametrize('value', ['string-value', [1, 2, 3], {'key': 'value'}])
     def test_run_script_inputs_as_env_variables_no_override(self, value):
         props = self._execute(custom_input=value)
-        return_value = props['test_value']
+        return_value = props['test_value'].value
         expected = return_value if isinstance(value, basestring) else json.loads(return_value)
         assert value == expected
 
@@ -140,7 +140,7 @@ class TestWithActualSSHServer(object):
     def test_run_script_inputs_as_env_variables_process_env_override(self, value):
         props = self._execute(custom_input='custom-input-value',
                               env={'custom_env_var': value})
-        return_value = props['test_value']
+        return_value = props['test_value'].value
         expected = return_value if isinstance(value, basestring) else json.loads(return_value)
         assert value == expected
 
@@ -260,7 +260,7 @@ class TestWithActualSSHServer(object):
             tasks_graph=tasks_graph)
         eng.execute()
         return self._workflow_context.model.node.get_by_name(
-            mock.models.DEPENDENCY_NODE_NAME).runtime_properties
+            mock.models.DEPENDENCY_NODE_NAME).attributes
 
     def _execute_and_get_task_exception(self, *args, **kwargs):
         signal = events.on_failure_task_signal

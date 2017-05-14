@@ -333,8 +333,6 @@ class NodeBase(InstanceModelMixin):
     :vartype inbound_relationships: [:class:`Relationship`]
     :ivar host: Host node (can be self)
     :vartype host: :class:`Node`
-    :ivar runtime_properties: TODO: should be replaced with attributes
-    :vartype runtime_properties: {}
     :ivar state: The state of the node, according to to the TOSCA-defined node states
     :vartype state: string
     :ivar version: Used by `aria.storage.instrumentation`
@@ -520,7 +518,6 @@ class NodeBase(InstanceModelMixin):
     # endregion
 
     description = Column(Text)
-    runtime_properties = Column(modeling_types.Dict)
     state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
     version = Column(Integer, default=1)
 
@@ -528,8 +525,9 @@ class NodeBase(InstanceModelMixin):
 
     @property
     def host_address(self):
-        if self.host and self.host.runtime_properties:
-            return self.host.runtime_properties.get('ip')
+        if self.host and self.host.attributes:
+            attribute = self.host.attributes.get('ip')
+            return attribute.value if attribute else None
         return None
 
     def satisfy_requirements(self):

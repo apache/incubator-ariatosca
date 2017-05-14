@@ -56,7 +56,7 @@ def test_decorate_extension(context, executor):
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
     eng.execute()
-    out = get_node(context).runtime_properties['out']
+    out = get_node(context).attributes.get('out').value
     assert out['wrapper_inputs'] == inputs
     assert out['function_inputs'] == inputs
 
@@ -67,7 +67,7 @@ class MockProcessExecutorExtension(object):
     def decorate(self):
         def decorator(function):
             def wrapper(ctx, **operation_inputs):
-                ctx.node.runtime_properties['out'] = {'wrapper_inputs': operation_inputs}
+                ctx.node.attributes['out'] = {'wrapper_inputs': operation_inputs}
                 function(ctx=ctx, **operation_inputs)
             return wrapper
         return decorator
@@ -75,7 +75,7 @@ class MockProcessExecutorExtension(object):
 
 @operation
 def _mock_operation(ctx, **operation_inputs):
-    ctx.node.runtime_properties['out']['function_inputs'] = operation_inputs
+    ctx.node.attributes['out']['function_inputs'] = operation_inputs
 
 
 @pytest.fixture
