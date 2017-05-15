@@ -52,7 +52,7 @@ def _verify_deployed_service_in_storage(service_name, model_storage):
     service_templates = model_storage.service_template.list()
     assert len(service_templates) == 1
     assert len(service_templates[0].services) == 1
-    service = service_templates[0].services[0]
+    service = service_templates[0].services[service_name]
     assert service.name == service_name
     assert len(service.executions) == 1
     assert len(service.nodes) == 2

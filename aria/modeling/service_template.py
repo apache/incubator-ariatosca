@@ -208,7 +208,7 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def services(cls):
-        return relationship.one_to_many(cls, 'service')
+        return relationship.one_to_many(cls, 'service', dict_key='name')
 
     @declared_attr
     def operation_templates(cls):

@@ -65,7 +65,8 @@ class TestServiceTemplatesShow(TestCliBase):
 
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
         st = mock_models.create_service_template()
-        st.services = [mock_models.create_service(st)]
+        s = mock_models.create_service(st)
+        st.services = {s.name: s}
         monkeypatch.setattr(mock_storage.service_template, 'get_by_name',
                             mock.MagicMock(return_value=st))
 
@@ -79,7 +80,8 @@ class TestServiceTemplatesShow(TestCliBase):
 
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
         st = mock_models.create_service_template(description='test_description')
-        st.services = [mock_models.create_service(st)]
+        s = mock_models.create_service(st)
+        st.services = {s.name: s}
         monkeypatch.setattr(mock_storage.service_template, 'get_by_name',
                             mock.MagicMock(return_value=st))
 

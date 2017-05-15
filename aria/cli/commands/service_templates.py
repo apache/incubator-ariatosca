@@ -89,8 +89,8 @@ def show(service_template_name, model_storage, mode_full, mode_types, format_jso
 
         if service_template.services:
             logger.info('Existing services:')
-            for service in service_template.services:
-                logger.info('\t{0}'.format(service.name))
+            for service_name in service_template.services:
+                logger.info('\t{0}'.format(service_name))
 
 
 @service_templates.command(name='list',
