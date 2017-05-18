@@ -46,15 +46,23 @@ Quick Start
 You need Python 2.6 or 2.7. Python 3+ is not currently supported.
 
 To install, we recommend using [pip](https://pip.pypa.io/) and a
-[virtualenv](https://virtualenv.pypa.io/en/stable/). In Debian-based systems:
+[virtualenv](https://virtualenv.pypa.io/en/stable/).
+
+In Debian-based systems:
 
 	sudo apt install python-setuptools
 	sudo -H easy_install pip
 	sudo -H pip install virtualenv
+	virtualenv env
+
+Or in Archlinux-based systems:
+
+	pacman -S python2 python-setuptools python-pip
+	pip install virtualenv
+	virtualenv env -p $(type -p python2)
 
 To install the latest development snapshot of ARIA:
 
-	virtualenv env
 	. env/bin/activate
 	pip install git+http://git-wip-us.apache.org/repos/asf/incubator-ariatosca.git
 
