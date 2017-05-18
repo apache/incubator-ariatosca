@@ -53,13 +53,13 @@ In Debian-based systems:
 	sudo apt install python-setuptools
 	sudo -H easy_install pip
 	sudo -H pip install virtualenv
-	virtualenv env --no-site-packages
+	virtualenv env
 
 Or in Archlinux-based systems:
 
 	pacman -S python2 python-setuptools python-pip
 	pip install virtualenv
-	virtualenv env -p $(type -p python2) --no-site-packages
+	virtualenv env -p $(type -p python2)
 
 To install the latest development snapshot of ARIA:
 
