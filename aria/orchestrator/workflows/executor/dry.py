@@ -45,7 +45,7 @@ class DryExecutor(BaseExecutor):                                                
             logger(dry_msg.format(name=name, task=task, suffix='started...'))
             logger(dry_msg.format(name=name, task=task, suffix='successful'))
         else:
-            logger(dry_msg.format(name=name, task=task, suffix='has no function'))
+            logger(dry_msg.format(name=name, task=task, suffix='has no implementation'))
 
         # updating the task manually instead of calling self._task_succeeded(task),
         # to avoid any side effects raising that event might cause

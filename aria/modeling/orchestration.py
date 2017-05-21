@@ -39,7 +39,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..orchestrator.exceptions import (TaskAbortException, TaskRetryException)
-from .mixins import ModelMixin
+from .mixins import ModelMixin, ParameterMixin
 from . import (
     relationship,
     types as modeling_types
@@ -115,7 +115,7 @@ class ExecutionBase(ModelMixin):
 
     @declared_attr
     def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
+        return relationship.one_to_many(cls, 'input', dict_key='name')
 
     # region foreign keys
 
@@ -233,7 +233,7 @@ class TaskBase(ModelMixin):
     :ivar function: Python path to an ``@operation`` function
     :vartype function: basestring
     :ivar arguments: Arguments that can be used by this task
-    :vartype arguments: {basestring: :class:`Parameter`}
+    :vartype arguments: {basestring: :class:`Argument`}
     :ivar max_attempts: Maximum number of retries allowed in case of failure
     :vartype max_attempts: int
     :ivar retry_interval: Interval between retries (in seconds)
@@ -301,7 +301,7 @@ class TaskBase(ModelMixin):
 
     @declared_attr
     def arguments(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='arguments', dict_key='name')
+        return relationship.one_to_many(cls, 'argument', dict_key='name')
 
     function = Column(String)
     max_attempts = Column(Integer, default=1)
@@ -433,3 +433,32 @@ class LogBase(ModelMixin):
     def __repr__(self):
         name = (self.task.actor if self.task else self.execution).name
         return '{name}: {self.msg}'.format(name=name, self=self)
+
+
+class ArgumentBase(ParameterMixin):
+
+    __tablename__ = 'argument'
+
+    # region foreign keys
+
+    @declared_attr
+    def task_fk(cls):
+        return relationship.foreign_key('task', nullable=True)
+
+    @declared_attr
+    def operation_fk(cls):
+        return relationship.foreign_key('operation', nullable=True)
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def task(cls):
+        return relationship.many_to_one(cls, 'task')
+
+    @declared_attr
+    def operation(cls):
+        return relationship.many_to_one(cls, 'operation')
+
+    # endregion

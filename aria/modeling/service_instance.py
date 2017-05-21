@@ -67,9 +67,9 @@ class ServiceBase(InstanceModelMixin):
     :ivar substitution: The entire service can appear as a node
     :vartype substitution: :class:`Substitution`
     :ivar inputs: Externally provided parameters
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar outputs: These parameters are filled in after service installation
-    :vartype outputs: {basestring: :class:`Parameter`}
+    :vartype outputs: {basestring: :class:`Output`}
     :ivar workflows: Custom workflows that can be performed on the service
     :vartype workflows: {basestring: :class:`Operation`}
     :ivar plugins: Plugins used by the service
@@ -125,6 +125,14 @@ class ServiceBase(InstanceModelMixin):
     # region one_to_many relationships
 
     @declared_attr
+    def outputs(cls):
+        return relationship.one_to_many(cls, 'output', dict_key='name')
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
     def updates(cls):
         return relationship.one_to_many(cls, 'service_update')
 
@@ -168,14 +176,6 @@ class ServiceBase(InstanceModelMixin):
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
         return relationship.many_to_many(cls, 'metadata', dict_key='name')
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def outputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='outputs', dict_key='name')
 
     @declared_attr
     def plugins(cls):
@@ -324,7 +324,7 @@ class NodeBase(InstanceModelMixin):
     :ivar description: Human-readable description
     :vartype description: string
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interface`}
     :ivar artifacts: Associated files
@@ -465,6 +465,14 @@ class NodeBase(InstanceModelMixin):
         return relationship.one_to_many(cls, 'interface', dict_key='name')
 
     @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    @declared_attr
+    def attributes(cls):
+        return relationship.one_to_many(cls, 'attribute', dict_key='name')
+
+    @declared_attr
     def artifacts(cls):
         return relationship.one_to_many(cls, 'artifact', dict_key='name')
 
@@ -507,17 +515,6 @@ class NodeBase(InstanceModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def attributes(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='attributes', dict_key='name')
 
     # endregion
 
@@ -714,7 +711,7 @@ class GroupBase(InstanceModelMixin):
     :ivar nodes: Members of this group
     :vartype nodes: [:class:`Node`]
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interface`}
     :ivar service: Containing service
@@ -757,6 +754,10 @@ class GroupBase(InstanceModelMixin):
     # region one_to_many relationships
 
     @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    @declared_attr
     def interfaces(cls):
         return relationship.one_to_many(cls, 'interface', dict_key='name')
 
@@ -783,10 +784,6 @@ class GroupBase(InstanceModelMixin):
     @declared_attr
     def nodes(cls):
         return relationship.many_to_many(cls, 'node')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -842,7 +839,7 @@ class PolicyBase(InstanceModelMixin):
     :ivar groups: Policy will be enacted on all nodes in these groups
     :vartype groups: [:class:`Group`]
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar service: Containing service
     :vartype service: :class:`Service`
     """
@@ -880,6 +877,10 @@ class PolicyBase(InstanceModelMixin):
 
     # region one_to_many relationships
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -899,10 +900,6 @@ class PolicyBase(InstanceModelMixin):
     # endregion
 
     # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     @declared_attr
     def nodes(cls):
@@ -1014,10 +1011,6 @@ class SubstitutionBase(InstanceModelMixin):
 
     # endregion
 
-    # region many_to_many relationships
-
-    # endregion
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1122,10 +1115,6 @@ class SubstitutionMappingBase(InstanceModelMixin):
 
     # endregion
 
-    # region many_to_many relationships
-
-    # endregion
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1170,7 +1159,7 @@ class RelationshipBase(InstanceModelMixin):
     :ivar target_capability: Capability at the target node (optional)
     :vartype target_capability: :class:`Capability`
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interfaces: Bundles of operations
     :vartype interfaces: {basestring: :class:`Interfaces`}
     :ivar source_position: The position of the relationship in the outbound relationships.
@@ -1262,6 +1251,10 @@ class RelationshipBase(InstanceModelMixin):
     def interfaces(cls):
         return relationship.one_to_many(cls, 'interface', dict_key='name')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1287,14 +1280,6 @@ class RelationshipBase(InstanceModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -1364,7 +1349,7 @@ class CapabilityBase(InstanceModelMixin):
     :ivar occurrences: Actual number of requirement matches
     :vartype occurrences: int
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar node: Containing node
     :vartype node: :class:`Node`
     :ivar relationship: Available when we are the target of a relationship
@@ -1408,6 +1393,10 @@ class CapabilityBase(InstanceModelMixin):
 
     # region one_to_many relationships
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1423,14 +1412,6 @@ class CapabilityBase(InstanceModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -1492,8 +1473,8 @@ class InterfaceBase(InstanceModelMixin):
     :vartype type: :class:`Type`
     :ivar description: Human-readable description
     :vartype description: string
-    :ivar inputs: Parameters that can be used by all operations in the interface
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar inputs: Inputs that can be used by all operations in the interface
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar operations: Operations
     :vartype operations: {basestring: :class:`Operation`}
     :ivar node: Containing node
@@ -1552,6 +1533,10 @@ class InterfaceBase(InstanceModelMixin):
     # region one_to_many relationships
 
     @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
     def operations(cls):
         return relationship.one_to_many(cls, 'operation', dict_key='name')
 
@@ -1578,14 +1563,6 @@ class InterfaceBase(InstanceModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
     # endregion
 
@@ -1643,16 +1620,16 @@ class OperationBase(InstanceModelMixin):
     :vartype implementation: basestring
     :ivar dependencies: Dependency strings (interpreted by the plugin)
     :vartype dependencies: [basestring]
-    :ivar inputs: Parameters that can be used by this operation
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar inputs: Input that can be used by this operation
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar plugin: Associated plugin
     :vartype plugin: :class:`Plugin`
-    :ivar configuration: Configuration (interpreted by the plugin)
-    :vartype configuration: {basestring, :class:`Parameter`}
+    :ivar configurations: Configuration (interpreted by the plugin)
+    :vartype configurations: {basestring, :class:`Configuration`}
     :ivar function: Name of the operation function
     :vartype function: basestring
     :ivar arguments: Arguments to send to the operation function
-    :vartype arguments: {basestring: :class:`Parameter`}
+    :vartype arguments: {basestring: :class:`Argument`}
     :ivar executor: Name of executor to run the operation with
     :vartype executor: basestring
     :ivar max_attempts: Maximum number of attempts allowed in case of failure
@@ -1710,6 +1687,18 @@ class OperationBase(InstanceModelMixin):
 
     # region one_to_many relationships
 
+    @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
+    def configurations(cls):
+        return relationship.one_to_many(cls, 'configuration', dict_key='name')
+
+    @declared_attr
+    def arguments(cls):
+        return relationship.one_to_many(cls, 'argument', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1729,18 +1718,6 @@ class OperationBase(InstanceModelMixin):
     # endregion
 
     # region many_to_many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def configuration(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='configuration', dict_key='name')
-
-    @declared_attr
-    def arguments(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='arguments', dict_key='name')
 
     # endregion
 
@@ -1765,11 +1742,19 @@ class OperationBase(InstanceModelMixin):
             # In the future plugins may be able to add their own "configure_operation" hook that
             # can validate the configuration and otherwise create specially derived arguments. For
             # now, we just send all configuration parameters as arguments without validation.
-            utils.instantiate_dict(self, self.arguments, self.configuration)
+            configurations_as_arguments = {}
+            for configuration in self.configurations.itervalues():
+                configurations_as_arguments[configuration.name] = configuration.as_argument()
+
+            utils.instantiate_dict(self, self.arguments, configurations_as_arguments)
 
         # Send all inputs as extra arguments
         # Note that they will override existing arguments of the same names
-        utils.instantiate_dict(self, self.arguments, self.inputs)
+        inputs_as_arguments = {}
+        for input in self.inputs.itervalues():
+            inputs_as_arguments[input.name] = input.as_argument()
+
+        utils.instantiate_dict(self, self.arguments, inputs_as_arguments)
 
         # Check for reserved arguments
         from ..orchestrator.decorators import OPERATION_DECORATOR_RESERVED_ARGUMENTS
@@ -1796,12 +1781,12 @@ class OperationBase(InstanceModelMixin):
     def validate(self):
         # TODO must be associated with either interface or service
         utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.configuration)
+        utils.validate_dict_values(self.configurations)
         utils.validate_dict_values(self.arguments)
 
     def coerce_values(self, report_issues):
         utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.configuration, report_issues)
+        utils.coerce_dict_values(self.configurations, report_issues)
         utils.coerce_dict_values(self.arguments, report_issues)
 
     def dump(self):
@@ -1828,7 +1813,7 @@ class OperationBase(InstanceModelMixin):
             if self.plugin is not None:
                 console.puts('Plugin: {0}'.format(
                     context.style.literal(self.plugin.name)))
-            utils.dump_dict_values(self.configuration, 'Configuration')
+            utils.dump_dict_values(self.configurations, 'Configuration')
             if self.function is not None:
                 console.puts('Function: {0}'.format(context.style.literal(self.function)))
             utils.dump_dict_values(self.arguments, 'Arguments')
@@ -1857,7 +1842,7 @@ class ArtifactBase(InstanceModelMixin):
     :ivar repository_credential: Credentials for accessing the repository
     :vartype repository_credential: {basestring: basestring}
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar node: Containing node
     :vartype node: :class:`Node`
     """
@@ -1897,6 +1882,10 @@ class ArtifactBase(InstanceModelMixin):
 
     # region one_to_many relationships
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1911,12 +1900,6 @@ class ArtifactBase(InstanceModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-    # endregion
-
-    # region many_to_many relationships
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
     # endregion
 
     description = Column(Text)

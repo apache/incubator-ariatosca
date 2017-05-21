@@ -42,7 +42,7 @@ def configure_operation(operation):
 
     # Any remaining un-handled configuration parameters will become extra arguments, available as
     # kwargs in either "run_script_locally" or "run_script_with_ssh"
-    for key, value in operation.configuration.iteritems():
+    for key, value in operation.configurations.iteritems():
         if key not in ('process', 'ssh'):
             operation.arguments[key] = value.instantiate(None)
 
@@ -52,11 +52,11 @@ def _configure_common(operation):
     Local and remote operations.
     """
 
-    from ...modeling.models import Parameter
-    operation.arguments['script_path'] = Parameter.wrap('script_path', operation.implementation,
-                                                        'Relative path to the executable file.')
-    operation.arguments['process'] = Parameter.wrap('process', _get_process(operation),
-                                                    'Sub-process configuration.')
+    from ...modeling.models import Argument
+    operation.arguments['script_path'] = Argument.wrap('script_path', operation.implementation,
+                                                       'Relative path to the executable file.')
+    operation.arguments['process'] = Argument.wrap('process', _get_process(operation),
+                                                   'Sub-process configuration.')
 
 
 def _configure_local(operation):
@@ -74,7 +74,7 @@ def _configure_remote(operation):
     Remote SSH operation via Fabric.
     """
 
-    from ...modeling.models import Parameter
+    from ...modeling.models import Argument
     from . import operations
 
     ssh = _get_ssh(operation)
@@ -88,11 +88,11 @@ def _configure_remote(operation):
     if ('password' not in ssh) and ('key' not in ssh) and ('key_filename' not in ssh):
         ssh['password'] = default_password
 
-    operation.arguments['use_sudo'] = Parameter.wrap('use_sudo', ssh.get('use_sudo', False),
-                                                     'Whether to execute with sudo.')
+    operation.arguments['use_sudo'] = Argument.wrap('use_sudo', ssh.get('use_sudo', False),
+                                                    'Whether to execute with sudo.')
 
-    operation.arguments['hide_output'] = Parameter.wrap('hide_output', ssh.get('hide_output', []),
-                                                        'Hide output of these Fabric groups.')
+    operation.arguments['hide_output'] = Argument.wrap('hide_output', ssh.get('hide_output', []),
+                                                       'Hide output of these Fabric groups.')
 
     fabric_env = {}
     if 'warn_only' in ssh:
@@ -121,16 +121,17 @@ def _configure_remote(operation):
                                   .format(operation.implementation),
                                   level=validation.Issue.BETWEEN_TYPES)
 
-    operation.arguments['fabric_env'] = Parameter.wrap('fabric_env', fabric_env,
-                                                       'Fabric configuration.')
+    operation.arguments['fabric_env'] = Argument.wrap('fabric_env', fabric_env,
+                                                      'Fabric configuration.')
 
     operation.function = '{0}.{1}'.format(operations.__name__,
                                           operations.run_script_with_ssh.__name__)
 
 
 def _get_process(operation):
-    value = operation.configuration.get('process')._value \
-        if 'process' in operation.configuration else None
+    value = (operation.configurations.get('process')._value
+             if 'process' in operation.configurations
+             else None)
     if value is None:
         return {}
     _validate_type(value, dict, 'process')
@@ -155,8 +156,9 @@ def _get_process(operation):
 
 
 def _get_ssh(operation):
-    value = operation.configuration.get('ssh')._value \
-        if 'ssh' in operation.configuration else None
+    value = (operation.configurations.get('ssh')._value
+             if 'ssh' in operation.configurations
+             else None)
     if value is None:
         return {}
     _validate_type(value, dict, 'ssh')

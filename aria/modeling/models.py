@@ -72,7 +72,11 @@ __all__ = (
     'ServiceModification',
 
     # Common service models
-    'Parameter',
+    'Input',
+    'Configuration',
+    'Output',
+    'Property',
+    'Attribute',
     'Type',
     'Metadata',
 
@@ -80,7 +84,8 @@ __all__ = (
     'Execution',
     'Plugin',
     'Task',
-    'Log'
+    'Log',
+    'Argument'
 )
 
 
@@ -206,7 +211,24 @@ class ServiceModification(aria_declarative_base, service_changes.ServiceModifica
 
 # region common service models
 
-class Parameter(aria_declarative_base, service_common.ParameterBase):
+
+class Input(aria_declarative_base, service_common.InputBase):
+    pass
+
+
+class Configuration(aria_declarative_base, service_common.ConfigurationBase):
+    pass
+
+
+class Output(aria_declarative_base, service_common.OutputBase):
+    pass
+
+
+class Property(aria_declarative_base, service_common.PropertyBase):
+    pass
+
+
+class Attribute(aria_declarative_base, service_common.AttributeBase):
     pass
 
 
@@ -236,6 +258,11 @@ class Task(aria_declarative_base, orchestration.TaskBase):
 
 class Log(aria_declarative_base, orchestration.LogBase):
     pass
+
+
+class Argument(aria_declarative_base, orchestration.ArgumentBase):
+    pass
+
 
 # endregion
 
@@ -276,7 +303,11 @@ models_to_register = [
     ServiceModification,
 
     # Common service models
-    Parameter,
+    Input,
+    Configuration,
+    Output,
+    Property,
+    Attribute,
     Type,
     Metadata,
 
@@ -284,5 +315,6 @@ models_to_register = [
     Execution,
     Plugin,
     Task,
-    Log
+    Log,
+    Argument
 ]

@@ -36,7 +36,12 @@ from aria.modeling.models import (
     Relationship,
     NodeTemplate,
     Node,
-    Parameter,
+    Input,
+    Output,
+    Property,
+    Attribute,
+    Configuration,
+    Argument,
     Type
 )
 
@@ -622,7 +627,7 @@ class TestNodeHostAddress(object):
             service_template=storage.service_template.list()[0]
         )
         if host_address:
-            kwargs['properties'] = {'host_address': Parameter.wrap('host_address', host_address)}
+            kwargs['properties'] = {'host_address': Property.wrap('host_address', host_address)}
         node = NodeTemplate(**kwargs)
         storage.node_template.put(node)
         return node
@@ -640,7 +645,7 @@ class TestNodeHostAddress(object):
             if host_address is not None:
                 host_address = host_address.value
         if host_address:
-            kwargs.setdefault('attributes', {})['ip'] = Parameter.wrap('ip', host_address)
+            kwargs.setdefault('attributes', {})['ip'] = Attribute.wrap('ip', host_address)
         if is_host:
             kwargs['host_fk'] = 1
         elif host_fk:
@@ -839,3 +844,41 @@ class TestType(object):
 
         assert super_type.hierarchy == [super_type, additional_type]
         assert sub_type.hierarchy == [sub_type, super_type, additional_type]
+
+
+class TestParameter(object):
+
+    MODELS_DERIVED_FROM_PARAMETER = (Input, Output, Property, Attribute, Configuration, Argument)
+
+    @pytest.mark.parametrize(
+        'is_valid, name, type_name, description',
+        [
+            (False, 'name', 'int', []),
+            (False, 'name', [], 'desc'),
+            (False, [], 'type_name', 'desc'),
+            (True, 'name', 'type_name', 'desc'),
+        ]
+    )
+    def test_derived_from_parameter_model_creation(self, empty_storage, is_valid, name, type_name,
+                                                   description):
+
+        for model_cls in self.MODELS_DERIVED_FROM_PARAMETER:
+            _test_model(is_valid=is_valid,
+                        storage=empty_storage,
+                        model_cls=model_cls,
+                        model_kwargs=dict(
+                            name=name,
+                            type_name=type_name,
+                            description=description,
+                            _value={})
+                       )
+
+    def test_as_argument(self):
+
+        for model_cls in self.MODELS_DERIVED_FROM_PARAMETER:
+            model = model_cls(name='name',
+                              type_name='type_name',
+                              description='description',
+                              _value={})
+            argument = model.as_argument()
+            assert isinstance(argument, Argument)

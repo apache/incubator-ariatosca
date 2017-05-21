@@ -67,9 +67,9 @@ class ServiceTemplateBase(TemplateModelMixin):
     :ivar substitution_template: The entire service can appear as a node
     :vartype substitution_template: :class:`SubstitutionTemplate`
     :ivar inputs: Externally provided parameters
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar outputs: These parameters are filled in after service installation
-    :vartype outputs: {basestring: :class:`Parameter`}
+    :vartype outputs: {basestring: :class:`Output`}
     :ivar workflow_templates: Custom workflows that can be performed on the service
     :vartype workflow_templates: {basestring: :class:`OperationTemplate`}
     :ivar plugin_specifications: Plugins used by the service
@@ -215,6 +215,14 @@ class ServiceTemplateBase(TemplateModelMixin):
         return relationship.one_to_many(cls, 'node_template', dict_key='name')
 
     @declared_attr
+    def outputs(cls):
+        return relationship.one_to_many(cls, 'output', dict_key='name')
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
     def group_templates(cls):
         return relationship.one_to_many(cls, 'group_template', dict_key='name')
 
@@ -242,14 +250,6 @@ class ServiceTemplateBase(TemplateModelMixin):
     def meta_data(cls):
         # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
         return relationship.many_to_many(cls, 'metadata', dict_key='name')
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def outputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='outputs', dict_key='name')
 
     # endregion
 
@@ -287,7 +287,7 @@ class ServiceTemplateBase(TemplateModelMixin):
                                  service_template=self)
         context.modeling.instance = service
 
-        service.inputs = utils.merge_parameter_values(inputs, self.inputs)
+        service.inputs = utils.merge_parameter_values(inputs, self.inputs, model_cls=models.Input)
         # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 
         for plugin_specification in self.plugin_specifications.itervalues():
@@ -413,7 +413,7 @@ class NodeTemplateBase(TemplateModelMixin):
     :ivar max_instances: Maximum number nodes that will appear in the service
     :vartype max_instances: int
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interface_templates: Bundles of operations
     :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     :ivar artifact_templates: Associated files
@@ -495,6 +495,14 @@ class NodeTemplateBase(TemplateModelMixin):
     def requirement_templates(cls):
         return relationship.one_to_many(cls, 'requirement_template', child_fk='node_template_fk')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    @declared_attr
+    def attributes(cls):
+        return relationship.one_to_many(cls, 'attribute', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -506,18 +514,6 @@ class NodeTemplateBase(TemplateModelMixin):
     @declared_attr
     def service_template(cls):
         return relationship.many_to_one(cls, 'service_template')
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
-
-    @declared_attr
-    def attributes(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='attributes', dict_key='name')
 
     # endregion
 
@@ -629,7 +625,7 @@ class GroupTemplateBase(TemplateModelMixin):
     :ivar node_templates: All nodes instantiated by these templates will be members of the group
     :vartype node_templates: [:class:`NodeTemplate`]
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interface_templates: Bundles of operations
     :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     :ivar service_template: Containing service template
@@ -677,6 +673,10 @@ class GroupTemplateBase(TemplateModelMixin):
     def interface_templates(cls):
         return relationship.one_to_many(cls, 'interface_template', dict_key='name')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -696,10 +696,6 @@ class GroupTemplateBase(TemplateModelMixin):
     @declared_attr
     def node_templates(cls):
         return relationship.many_to_many(cls, 'node_template')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -765,7 +761,7 @@ class PolicyTemplateBase(TemplateModelMixin):
     :ivar group_templates: Policy will be enacted on all nodes in these groups
     :vartype group_templates: [:class:`GroupTemplate`]
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar service_template: Containing service template
     :vartype service_template: :class:`ServiceTemplate`
     :ivar policies: Instantiated policies
@@ -804,6 +800,10 @@ class PolicyTemplateBase(TemplateModelMixin):
     def policies(cls):
         return relationship.one_to_many(cls, 'policy')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -827,10 +827,6 @@ class PolicyTemplateBase(TemplateModelMixin):
     @declared_attr
     def group_templates(cls):
         return relationship.many_to_many(cls, 'group_template')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -933,10 +929,6 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     @declared_attr
     def node_type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion
 
@@ -1048,10 +1040,6 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
     @declared_attr
     def substitution_template(cls):
         return relationship.many_to_one(cls, 'substitution_template', back_populates='mappings')
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion
 
@@ -1219,10 +1207,6 @@ class RequirementTemplateBase(TemplateModelMixin):
 
     # endregion
 
-    # region many_to_many relationships
-
-    # endregion
-
     target_capability_name = Column(Text)
     target_node_template_constraints = Column(PickleType)
 
@@ -1343,7 +1327,7 @@ class RelationshipTemplateBase(TemplateModelMixin):
     :ivar description: Human-readable description
     :vartype description: basestring
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar interface_templates: Bundles of operations
     :vartype interface_templates: {basestring: :class:`InterfaceTemplate`}
     :ivar requirement_template: Containing requirement template
@@ -1383,6 +1367,10 @@ class RelationshipTemplateBase(TemplateModelMixin):
     def interface_templates(cls):
         return relationship.one_to_many(cls, 'interface_template', dict_key='name')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1390,14 +1378,6 @@ class RelationshipTemplateBase(TemplateModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -1462,7 +1442,7 @@ class CapabilityTemplateBase(TemplateModelMixin):
     :ivar max_occurrences: Maximum number of requirement matches allowed
     :vartype min_occurrences: int
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar node_template: Containing node template
     :vartype node_template: :class:`NodeTemplate`
     :ivar substitution_template_mapping: Our contribution to service substitution
@@ -1505,6 +1485,10 @@ class CapabilityTemplateBase(TemplateModelMixin):
     def capabilities(cls):
         return relationship.one_to_many(cls, 'capability')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -1524,10 +1508,6 @@ class CapabilityTemplateBase(TemplateModelMixin):
     @declared_attr
     def valid_source_node_types(cls):
         return relationship.many_to_many(cls, 'type', prefix='valid_sources')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 
@@ -1616,8 +1596,8 @@ class InterfaceTemplateBase(TemplateModelMixin):
     :vartype type: :class:`Type`
     :ivar description: Human-readable description
     :vartype description: basestring
-    :ivar inputs: Parameters that can be used by all operations in the interface
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar inputs: Inputs that can be used by all operations in the interface
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar operation_templates: Operations
     :vartype operation_templates: {basestring: :class:`OperationTemplate`}
     :ivar node_template: Containing node template
@@ -1636,7 +1616,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
                           'node_template_fk',
                           'group_template_fk',
                           'relationship_template_fk']
-
 
     # region foreign keys
 
@@ -1662,7 +1641,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
 
     # endregion
 
-
     # region association proxies
 
     # endregion
@@ -1672,6 +1650,10 @@ class InterfaceTemplateBase(TemplateModelMixin):
     # endregion
 
     # region one_to_many relationships
+
+    @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
 
     @declared_attr
     def interfaces(cls):
@@ -1700,14 +1682,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
 
     # endregion
 
@@ -1770,12 +1744,12 @@ class OperationTemplateBase(TemplateModelMixin):
     :vartype implementation: basestring
     :ivar dependencies: Dependency strings (interpreted by the plugin)
     :vartype dependencies: [basestring]
-    :ivar inputs: Parameters that can be used by this operation
-    :vartype inputs: {basestring: :class:`Parameter`}
+    :ivar inputs: Inputs that can be used by this operation
+    :vartype inputs: {basestring: :class:`Input`}
     :ivar plugin_specification: Associated plugin
     :vartype plugin_specification: :class:`PluginSpecification`
-    :ivar configuration: Configuration (interpreted by the plugin)
-    :vartype configuration: {basestring, :class:`Parameter`}
+    :ivar configurations: Configuration (interpreted by the plugin)
+    :vartype configurations: {basestring, :class:`Configuration`}
     :ivar function: Name of the operation function
     :vartype function: basestring
     :ivar executor: Name of executor to run the operation with
@@ -1833,8 +1807,16 @@ class OperationTemplateBase(TemplateModelMixin):
     # region one_to_many relationships
 
     @declared_attr
+    def inputs(cls):
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
     def operations(cls):
         return relationship.one_to_many(cls, 'operation')
+
+    @declared_attr
+    def configurations(cls):
+        return relationship.one_to_many(cls, 'configuration', dict_key='name')
 
     # endregion
 
@@ -1852,14 +1834,6 @@ class OperationTemplateBase(TemplateModelMixin):
     # endregion
 
     # region many_to_many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='inputs', dict_key='name')
-
-    @declared_attr
-    def configuration(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='configuration', dict_key='name')
 
     # endregion
 
@@ -1901,17 +1875,17 @@ class OperationTemplateBase(TemplateModelMixin):
                                      operation_template=self)
 
         utils.instantiate_dict(container, operation.inputs, self.inputs)
-        utils.instantiate_dict(container, operation.configuration, self.configuration)
+        utils.instantiate_dict(container, operation.configurations, self.configurations)
 
         return operation
 
     def validate(self):
         utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.configuration)
+        utils.validate_dict_values(self.configurations)
 
     def coerce_values(self, report_issues):
         utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.configuration, report_issues)
+        utils.coerce_dict_values(self.configurations, report_issues)
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
@@ -1936,7 +1910,7 @@ class OperationTemplateBase(TemplateModelMixin):
             if self.plugin_specification is not None:
                 console.puts('Plugin specification: {0}'.format(
                     context.style.literal(self.plugin_specification.name)))
-            utils.dump_dict_values(self.configuration, 'Configuration')
+            utils.dump_dict_values(self.configurations, 'Configuration')
             if self.function is not None:
                 console.puts('Function: {0}'.format(context.style.literal(self.function)))
 
@@ -1960,7 +1934,7 @@ class ArtifactTemplateBase(TemplateModelMixin):
     :ivar repository_credential: Credentials for accessing the repository
     :vartype repository_credential: {basestring: basestring}
     :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Parameter`}
+    :vartype properties: {basestring: :class:`Property`}
     :ivar node_template: Containing node template
     :vartype node_template: :class:`NodeTemplate`
     :ivar artifacts: Instantiated artifacts
@@ -2000,6 +1974,10 @@ class ArtifactTemplateBase(TemplateModelMixin):
     def artifacts(cls):
         return relationship.one_to_many(cls, 'artifact')
 
+    @declared_attr
+    def properties(cls):
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
     # endregion
 
     # region many_to_one relationships
@@ -2011,14 +1989,6 @@ class ArtifactTemplateBase(TemplateModelMixin):
     @declared_attr
     def type(cls):
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.many_to_many(cls, 'parameter', prefix='properties', dict_key='name')
 
     # endregion
 

@@ -36,7 +36,8 @@ from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,
                                   GroupTemplate, PolicyTemplate, SubstitutionTemplate,
                                   SubstitutionTemplateMapping, InterfaceTemplate, OperationTemplate,
-                                  ArtifactTemplate, Metadata, Parameter, PluginSpecification)
+                                  ArtifactTemplate, Metadata, Input, Output, Property,
+                                  Attribute, Configuration, PluginSpecification)
 
 from .parameters import coerce_parameter_value
 from .constraints import (Equal, GreaterThan, GreaterOrEqual, LessThan, LessOrEqual, InRange,
@@ -94,9 +95,11 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     topology_template = context.presentation.get('service_template', 'topology_template')
     if topology_template is not None:
         create_parameter_models_from_values(model.inputs,
-                                            topology_template._get_input_values(context))
+                                            topology_template._get_input_values(context),
+                                            model_cls=Input)
         create_parameter_models_from_values(model.outputs,
-                                            topology_template._get_output_values(context))
+                                            topology_template._get_output_values(context),
+                                            model_cls=Output)
 
     # Plugin specifications
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
@@ -172,9 +175,11 @@ def create_node_template_model(context, service_template, node_template):
         model.description = node_template.description.value
 
     create_parameter_models_from_values(model.properties,
-                                        node_template._get_property_values(context))
+                                        node_template._get_property_values(context),
+                                        model_cls=Property)
     create_parameter_models_from_values(model.attributes,
-                                        node_template._get_attribute_default_values(context))
+                                        node_template._get_attribute_default_values(context),
+                                        model_cls=Attribute)
     create_interface_template_models(context, service_template, model.interface_templates,
                                      node_template._get_interfaces(context))
 
@@ -219,7 +224,8 @@ def create_group_template_model(context, service_template, group):
     if group.description:
         model.description = group.description.value
 
-    create_parameter_models_from_values(model.properties, group._get_property_values(context))
+    create_parameter_models_from_values(model.properties, group._get_property_values(context),
+                                        model_cls=Property)
     create_interface_template_models(context, service_template, model.interface_templates,
                                      group._get_interfaces(context))
 
@@ -242,7 +248,8 @@ def create_policy_template_model(context, service_template, policy):
     if policy.description:
         model.description = policy.description.value
 
-    create_parameter_models_from_values(model.properties, policy._get_property_values(context))
+    create_parameter_models_from_values(model.properties, policy._get_property_values(context),
+                                        model_cls=Property)
 
     node_templates, groups = policy._get_targets(context)
     if node_templates:
@@ -311,7 +318,9 @@ def create_relationship_template_model(context, service_template, relationship):
         if relationship_template.description:
             model.description = relationship_template.description.value
 
-    create_parameter_models_from_assignments(model.properties, relationship.properties)
+    create_parameter_models_from_assignments(model.properties,
+                                             relationship.properties,
+                                             model_cls=Property)
     create_interface_template_models(context, service_template, model.interface_templates,
                                      relationship.interfaces)
 
@@ -340,7 +349,9 @@ def create_capability_template_model(context, service_template, capability):
             node_type = service_template.node_types.get_descendant(valid_source_type)
             model.valid_source_node_types.append(node_type)
 
-    create_parameter_models_from_assignments(model.properties, capability.properties)
+    create_parameter_models_from_assignments(model.properties,
+                                             capability.properties,
+                                             model_cls=Property)
 
     return model
 
@@ -357,10 +368,10 @@ def create_interface_template_model(context, service_template, interface):
     inputs = interface.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name, # pylint: disable=unexpected-keyword-arg
-                                                 type_name=the_input.value.type,
-                                                 value=the_input.value.value,
-                                                 description=the_input.value.description)
+            model.inputs[input_name] = Input(name=input_name, # pylint: disable=unexpected-keyword-arg
+                                             type_name=the_input.value.type,
+                                             value=the_input.value.value,
+                                             description=the_input.value.description)
 
     operations = interface.operations
     if operations:
@@ -417,18 +428,18 @@ def create_operation_template_model(context, service_template, operation):
                         model.dependencies = []
                     model.dependencies.append(dependency)
 
-        # Convert configuration to Parameter models
+        # Convert configuration to Configuration models
         for key, value in configuration.iteritems():
-            model.configuration[key] = Parameter.wrap(key, value,
-                                                      description='Operation configuration.')
+            model.configurations[key] = Configuration.wrap(key, value,
+                                                           description='Operation configuration.')
 
     inputs = operation.inputs
     if inputs:
         for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Parameter(name=input_name, # pylint: disable=unexpected-keyword-arg
-                                                 type_name=the_input.value.type,
-                                                 value=the_input.value.value,
-                                                 description=the_input.value.description)
+            model.inputs[input_name] = Input(name=input_name, # pylint: disable=unexpected-keyword-arg
+                                             type_name=the_input.value.type,
+                                             value=the_input.value.value,
+                                             description=the_input.value.description)
 
     return model
 
@@ -454,7 +465,8 @@ def create_artifact_template_model(context, service_template, artifact):
             for k, v in credential.iteritems():
                 model.repository_credential[k] = v
 
-    create_parameter_models_from_values(model.properties, artifact._get_property_values(context))
+    create_parameter_models_from_values(model.properties, artifact._get_property_values(context),
+                                        model_cls=Property)
 
     return model
 
@@ -519,10 +531,10 @@ def create_workflow_operation_template_model(context, service_template, policy):
         if prop_name == 'implementation':
             model.function = prop.value
         else:
-            model.inputs[prop_name] = Parameter(name=prop_name, # pylint: disable=unexpected-keyword-arg
-                                                type_name=prop.type,
-                                                value=prop.value,
-                                                description=prop.description)
+            model.inputs[prop_name] = Input(name=prop_name, # pylint: disable=unexpected-keyword-arg
+                                            type_name=prop.type,
+                                            value=prop.value,
+                                            description=prop.description)
 
     used_reserved_names = WORKFLOW_DECORATOR_RESERVED_ARGUMENTS.intersection(model.inputs.keys())
     if used_reserved_names:
@@ -570,19 +582,20 @@ def create_types(context, root, types):
                         container.children.append(model)
 
 
-def create_parameter_models_from_values(properties, source_properties):
+def create_parameter_models_from_values(properties, source_properties, model_cls):
+
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(name=property_name, # pylint: disable=unexpected-keyword-arg
+            properties[property_name] = model_cls(name=property_name,  # pylint: disable=unexpected-keyword-arg
                                                   type_name=prop.type,
                                                   value=prop.value,
                                                   description=prop.description)
 
 
-def create_parameter_models_from_assignments(properties, source_properties):
+def create_parameter_models_from_assignments(properties, source_properties, model_cls):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = Parameter(name=property_name, # pylint: disable=unexpected-keyword-arg
+            properties[property_name] = model_cls(name=property_name, # pylint: disable=unexpected-keyword-arg
                                                   type_name=prop.value.type,
                                                   value=prop.value.value,
                                                   description=prop.value.description)

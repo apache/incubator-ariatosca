@@ -94,7 +94,7 @@ def create_service_with_dependencies(include_execution=False,
         service.executions = [execution]
         execution.id = '1'
     if include_input:
-        input = create_parameter(name='input1', value='value1')
+        input = create_input(name='input1', value='value1')
         service.inputs = {'input1': input}
     if include_node:
         node_template = create_node_template(service_template=service_template)
@@ -110,7 +110,7 @@ def create_node_template_with_dependencies(include_node=False, include_property=
         service = create_service(service_template=service_template)
         create_node(dependency_node_template=node_template, service=service)
     if include_property:
-        node_template.properties = {'prop1': create_parameter(name='prop1', value='value1')}
+        node_template.properties = {'prop1': create_property(name='prop1', value='value1')}
     return node_template
 
 
@@ -120,7 +120,7 @@ def create_node_with_dependencies(include_attribute=False):
     node_template.service_template.services[0] = create_service(node_template.service_template)
     node = create_node(node_template, node_template.service_template.services[0])
     if include_attribute:
-        node.attributes['attribute1'] = models.Parameter.wrap('attribute1', 'value1')               # pylint: disable=unsubscriptable-object
+        node.attributes['attribute1'] = models.Attribute.wrap('attribute1', 'value1')               # pylint: disable=unsubscriptable-object
     return node
 
 
@@ -227,7 +227,7 @@ def create_interface(service, interface_name, operation_name, operation_kwargs=N
 
     if operation_kwargs and operation_kwargs.get('arguments'):
         operation_kwargs['arguments'] = dict(
-            (argument_name, models.Parameter.wrap(argument_name, argument_value))
+            (argument_name, models.Argument.wrap(argument_name, argument_value))
             for argument_name, argument_value in operation_kwargs['arguments'].iteritems()
             if argument_value is not None)
 
@@ -278,9 +278,16 @@ def create_plugin_specification(name='test_plugin', version='0.1'):
     )
 
 
-def create_parameter(name, value):
-    p = models.Parameter()
-    return p.wrap(name, value)
+def _create_parameter(name, value, model_cls):
+    return model_cls.wrap(name, value)
+
+
+def create_property(name, value):
+    return _create_parameter(name, value, model_cls=models.Property)
+
+
+def create_input(name, value):
+    return _create_parameter(name, value, model_cls=models.Input)
 
 
 def _dictify(item):

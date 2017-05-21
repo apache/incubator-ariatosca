@@ -94,7 +94,7 @@ def test_host_ip(workflow_context, executor, dataholder):
         operation_kwargs=dict(function=op_path(host_ip, module_path=__name__), arguments=arguments)
     )
     dependency_node.interfaces[interface.name] = interface
-    dependency_node.attributes['ip'] = models.Parameter.wrap('ip', '1.1.1.1')
+    dependency_node.attributes['ip'] = models.Attribute.wrap('ip', '1.1.1.1')
 
     workflow_context.model.node.update(dependency_node)
 

@@ -105,10 +105,6 @@ class ServiceUpdateBase(ModelMixin):
 
     # endregion
 
-    # region many_to_many relationships
-
-    # endregion
-
     def to_dict(self, suppress_error=False, **kwargs):
         dep_update_dict = super(ServiceUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
         # Taking care of the fact the DeploymentSteps are _BaseModels
@@ -177,10 +173,6 @@ class ServiceUpdateStepBase(ModelMixin):
     @declared_attr
     def service_update(cls):
         return relationship.many_to_one(cls, 'service_update', back_populates='steps')
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion
 
@@ -264,9 +256,5 @@ class ServiceModificationBase(ModelMixin):
     @declared_attr
     def service(cls):
         return relationship.many_to_one(cls, 'service', back_populates='modifications')
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion

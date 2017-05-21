@@ -84,7 +84,7 @@ class _InstrumentedCollection(object):
         :param value:
         :return:
         """
-        if isinstance(value, models.Parameter):
+        if isinstance(value, models.Attribute):
             return value.value
         return value
 
@@ -96,10 +96,10 @@ class _InstrumentedCollection(object):
         :param value:
         :return:
         """
-        if isinstance(value, models.Parameter):
+        if isinstance(value, models.Attribute):
             return value
         # If it is not wrapped
-        return models.Parameter.wrap(key, value)
+        return models.Attribute.wrap(key, value)
 
     def __setitem__(self, key, value):
         """
@@ -112,7 +112,7 @@ class _InstrumentedCollection(object):
         if self._is_top_level:
             # We are at the top level
             field = getattr(self._parent, self._field_name)
-            mapi = getattr(self._model, models.Parameter.__modelname__)
+            mapi = getattr(self._model, models.Attribute.__modelname__)
             value = self._set_field(field,
                                     key,
                                     value if key in field else self._encapsulate_value(key, value))
@@ -131,7 +131,7 @@ class _InstrumentedCollection(object):
         """
         if isinstance(value, _InstrumentedCollection):
             value = value._raw
-        if key in collection and isinstance(collection[key], models.Parameter):
+        if key in collection and isinstance(collection[key], models.Attribute):
             if isinstance(collection[key], _InstrumentedCollection):
                 self._del(collection, key)
             collection[key].value = value

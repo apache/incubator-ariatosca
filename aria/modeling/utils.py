@@ -53,7 +53,7 @@ class NodeTemplateContainerHolder(object):
         return self.container.service_template
 
 
-def merge_parameter_values(parameter_values, declared_parameters):
+def merge_parameter_values(parameter_values, declared_parameters, model_cls):
     """
     Merges parameter values according to those declared by a type.
 
@@ -73,8 +73,6 @@ def merge_parameter_values(parameter_values, declared_parameters):
     :raises aria.modeling.exceptions.ParametersOfWrongTypeException: if a value in
             ``parameter_values`` does not match its type in ``declared_parameters``
     """
-
-    from . import models
 
     parameter_values = parameter_values or {}
 
@@ -106,7 +104,7 @@ def merge_parameter_values(parameter_values, declared_parameters):
                 pass
 
             # Wrap in Parameter model
-            parameters[declared_parameter_name] = models.Parameter( # pylint: disable=unexpected-keyword-arg
+            parameters[declared_parameter_name] = model_cls( # pylint: disable=unexpected-keyword-arg
                 name=declared_parameter_name,
                 type_name=type_name,
                 description=declared_parameter.description,

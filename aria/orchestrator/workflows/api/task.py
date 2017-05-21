@@ -70,7 +70,7 @@ class OperationTask(BaseTask):
     :ivar function: path to Python function
     :vartype function: basestring
     :ivar arguments: arguments to send to Python function
-    :vartype arguments: {basestring, :class:`aria.modeling.models.Parameter`}
+    :vartype arguments: {basestring, :class:`aria.modeling.models.Argument`}
     :ivar ignore_failure: whether to ignore failures
     :vartype ignore_failure: bool
     :ivar max_attempts: maximum number of attempts allowed in case of failure
@@ -139,7 +139,9 @@ class OperationTask(BaseTask):
         operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = operation.plugin
         self.function = operation.function
-        self.arguments = modeling_utils.merge_parameter_values(arguments, operation.arguments)
+        self.arguments = modeling_utils.merge_parameter_values(arguments,
+                                                               operation.arguments,
+                                                               model_cls=models.Argument)
 
     def __repr__(self):
         return self.name

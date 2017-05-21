@@ -215,7 +215,7 @@ class TestServiceTemplatesInputs(TestCliBase):
 
     def test_inputs_existing_inputs(self, monkeypatch, mock_storage):
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
-        input = mock_models.create_parameter(name='input1', value='value1')
+        input = mock_models.create_input(name='input1', value='value1')
         st = mock_models.create_service_template(inputs={'input1': input})
         monkeypatch.setattr(mock_storage.service_template, 'get_by_name',
                             mock.MagicMock(return_value=st))

@@ -107,7 +107,11 @@ def test_application_storage_factory():
     assert storage.plugin
     assert storage.task
 
-    assert storage.parameter
+    assert storage.input
+    assert storage.output
+    assert storage.property
+    assert storage.attribute
+
     assert storage.type
     assert storage.metadata
 

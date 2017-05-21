@@ -18,218 +18,287 @@
 from sqlalchemy import (
     Column,
     Text,
-    PickleType
 )
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..parser.consumption import ConsumptionContext
-from ..utils import (collections, formatting, console, caching)
-from ..utils.type import (canonical_type_name, full_type_name)
-from .mixins import (InstanceModelMixin, TemplateModelMixin)
-from . import (
-    relationship,
-    functions
+from ..utils import (
+    collections,
+    formatting,
+    console,
 )
+from .mixins import InstanceModelMixin, TemplateModelMixin, ParameterMixin
+from . import relationship
 
 
-class ParameterBase(TemplateModelMixin, caching.HasCachedMethods):
-    """
-    Represents a typed value. The value can contain nested intrinsic functions.
+class OutputBase(ParameterMixin):
 
-    This model can be used as the ``container_holder`` argument for :func:`functions.evaluate`.
+    __tablename__ = 'output'
 
-    :ivar name: Name
-    :vartype name: basestring
-    :ivar type_name: Type name
-    :vartype type_name: basestring
-    :ivar value: Value
-    :ivar description: Description
-    :vartype description: basestring
-    """
+    # region foreign keys
 
-    __tablename__ = 'parameter'
+    @declared_attr
+    def service_template_fk(cls):
+        return relationship.foreign_key('service_template', nullable=True)
 
-    name = Column(Text)
-    type_name = Column(Text)
-    description = Column(Text)
-    _value = Column(PickleType)
+    @declared_attr
+    def service_fk(cls):
+        return relationship.foreign_key('service', nullable=True)
 
-    @property
-    def value(self):
-        value = self._value
-        if value is not None:
-            evaluation = functions.evaluate(value, self)
-            if evaluation is not None:
-                value = evaluation.value
-        return value
+    # endregion
 
-    @value.setter
-    def value(self, value):
-        self._value = value
+    # region many_to_one relationships
 
-    @property
-    @caching.cachedmethod
-    def owner(self):
-        """
-        The sole owner of this parameter, which is another model that relates to it.
+    @declared_attr
+    def service_template(cls):
+        return relationship.many_to_one(cls, 'service_template')
 
-        *All* parameters should have an owner model. In case this property method fails to find
-        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
-        """
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
 
-        # Find first non-null relationship
-        for the_relationship in self.__mapper__.relationships:
-            v = getattr(self, the_relationship.key)
-            if v:
-                return v[0] # because we are many-to-many, the back reference will be a list
-
-        raise ValueError('orphaned parameter: does not have an owner: {0}'.format(self.name))
+    # endregion
 
 
-    @property
-    @caching.cachedmethod
-    def container(self): # pylint: disable=too-many-return-statements,too-many-branches
-        """
-        The logical container for this parameter, which would be another model: service, node,
-        group, or policy (or their templates).
+class InputBase(ParameterMixin):
 
-        The logical container is equivalent to the ``SELF`` keyword used by intrinsic functions in
-        TOSCA.
+    __tablename__ = 'input'
 
-        *All* parameters should have a container model. In case this property method fails to find
-        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
-        """
+    # region foreign keys
 
-        from . import models
+    @declared_attr
+    def service_template_fk(cls):
+        return relationship.foreign_key('service_template', nullable=True)
 
-        container = self.owner
+    @declared_attr
+    def service_fk(cls):
+        return relationship.foreign_key('service', nullable=True)
 
-        # Extract interface from operation
-        if isinstance(container, models.Operation):
-            container = container.interface
-        elif isinstance(container, models.OperationTemplate):
-            container = container.interface_template
+    @declared_attr
+    def interface_fk(cls):
+        return relationship.foreign_key('interface', nullable=True)
 
-        # Extract from other models
-        if isinstance(container, models.Interface):
-            container = container.node or container.group or container.relationship
-        elif isinstance(container, models.InterfaceTemplate):
-            container = container.node_template or container.group_template \
-                or container.relationship_template
-        elif isinstance(container, models.Capability) or isinstance(container, models.Artifact):
-            container = container.node
-        elif isinstance(container, models.CapabilityTemplate) \
-            or isinstance(container, models.ArtifactTemplate):
-            container = container.node_template
-        elif isinstance(container, models.Task):
-            container = container.actor
+    @declared_attr
+    def operation_fk(cls):
+        return relationship.foreign_key('operation', nullable=True)
 
-        # Extract node from relationship
-        if isinstance(container, models.Relationship):
-            container = container.source_node
-        elif isinstance(container, models.RelationshipTemplate):
-            container = container.requirement_template.node_template
+    @declared_attr
+    def interface_template_fk(cls):
+        return relationship.foreign_key('interface_template', nullable=True)
 
-        if container is not None:
-            return container
+    @declared_attr
+    def operation_template_fk(cls):
+        return relationship.foreign_key('operation_template', nullable=True)
 
-        raise ValueError('orphaned parameter: does not have a container: {0}'.format(self.name))
+    @declared_attr
+    def execution_fk(cls):
+        return relationship.foreign_key('execution', nullable=True)
 
-    @property
-    @caching.cachedmethod
-    def service(self):
-        """
-        The :class:`Service` containing this parameter, or None if not contained in a service.
-        """
+    @declared_attr
+    def task_fk(cls):
+        return relationship.foreign_key('task', nullable=True)
 
-        from . import models
-        container = self.container
-        if isinstance(container, models.Service):
-            return container
-        elif hasattr(container, 'service'):
-            return container.service
-        return None
+    # endregion
 
-    @property
-    @caching.cachedmethod
-    def service_template(self):
-        """
-        The :class:`ServiceTemplate` containing this parameter, or None if not contained in a
-        service template.
-        """
+    # region many_to_one relationships
 
-        from . import models
-        container = self.container
-        if isinstance(container, models.ServiceTemplate):
-            return container
-        elif hasattr(container, 'service_template'):
-            return container.service_template
-        return None
+    @declared_attr
+    def service_template(cls):
+        return relationship.many_to_one(cls, 'service_template')
 
-    @property
-    def as_raw(self):
-        return collections.OrderedDict((
-            ('name', self.name),
-            ('type_name', self.type_name),
-            ('value', self.value),
-            ('description', self.description)))
+    @declared_attr
+    def service(cls):
+        return relationship.many_to_one(cls, 'service')
 
-    def instantiate(self, container):
-        from . import models
-        return models.Parameter(name=self.name, # pylint: disable=unexpected-keyword-arg
-                                type_name=self.type_name,
-                                _value=self._value,
-                                description=self.description)
+    @declared_attr
+    def interface(cls):
+        return relationship.many_to_one(cls, 'interface')
 
-    def coerce_values(self, report_issues):
-        value = self._value
-        if value is not None:
-            evaluation = functions.evaluate(value, self, report_issues)
-            if (evaluation is not None) and evaluation.final:
-                # A final evaluation can safely replace the existing value
-                self._value = evaluation.value
+    @declared_attr
+    def operation(cls):
+        return relationship.many_to_one(cls, 'operation')
 
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.type_name is not None:
-            console.puts('{0}: {1} ({2})'.format(
-                context.style.property(self.name),
-                context.style.literal(formatting.as_raw(self.value)),
-                context.style.type(self.type_name)))
-        else:
-            console.puts('{0}: {1}'.format(
-                context.style.property(self.name),
-                context.style.literal(formatting.as_raw(self.value))))
-        if self.description:
-            console.puts(context.style.meta(self.description))
+    @declared_attr
+    def interface_template(cls):
+        return relationship.many_to_one(cls, 'interface_template')
 
-    @property
-    def unwrapped(self):
-        return self.name, self.value
+    @declared_attr
+    def operation_template(cls):
+        return relationship.many_to_one(cls, 'operation_template')
 
-    @classmethod
-    def wrap(cls, name, value, description=None):
-        """
-        Wraps an arbitrary value as a parameter. The type will be guessed via introspection.
+    @declared_attr
+    def execution(cls):
+        return relationship.many_to_one(cls, 'execution')
 
-        For primitive types, we will prefer their TOSCA aliases. See the `TOSCA Simple Profile v1.0
-        cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01
-        /TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc373867862>`__
+    # endregion
 
-        :param name: Parameter name
-        :type name: basestring
-        :param value: Parameter value
-        :param description: Description (optional)
-        :type description: basestring
-        """
 
-        type_name = canonical_type_name(value)
-        if type_name is None:
-            type_name = full_type_name(value)
-        return cls(name=name, # pylint: disable=unexpected-keyword-arg
-                   type_name=type_name,
-                   value=value,
-                   description=description)
+class ConfigurationBase(ParameterMixin):
+
+    __tablename__ = 'configuration'
+
+    # region foreign keys
+
+    @declared_attr
+    def operation_template_fk(cls):
+        return relationship.foreign_key('operation_template', nullable=True)
+
+    @declared_attr
+    def operation_fk(cls):
+        return relationship.foreign_key('operation', nullable=True)
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def operation_template(cls):
+        return relationship.many_to_one(cls, 'operation_template')
+
+    @declared_attr
+    def operation(cls):
+        return relationship.many_to_one(cls, 'operation')
+
+    # endregion
+
+
+class PropertyBase(ParameterMixin):
+
+    __tablename__ = 'property'
+
+    # region foreign keys
+
+    @declared_attr
+    def node_template_fk(cls):
+        return relationship.foreign_key('node_template', nullable=True)
+
+    @declared_attr
+    def group_template_fk(cls):
+        return relationship.foreign_key('group_template', nullable=True)
+
+    @declared_attr
+    def policy_template_fk(cls):
+        return relationship.foreign_key('policy_template', nullable=True)
+
+    @declared_attr
+    def relationship_template_fk(cls):
+        return relationship.foreign_key('relationship_template', nullable=True)
+
+    @declared_attr
+    def capability_template_fk(cls):
+        return relationship.foreign_key('capability_template', nullable=True)
+
+    @declared_attr
+    def artifact_template_fk(cls):
+        return relationship.foreign_key('artifact_template', nullable=True)
+
+    @declared_attr
+    def node_fk(cls):
+        return relationship.foreign_key('node', nullable=True)
+
+    @declared_attr
+    def group_fk(cls):
+        return relationship.foreign_key('group', nullable=True)
+
+    @declared_attr
+    def policy_fk(cls):
+        return relationship.foreign_key('policy', nullable=True)
+
+    @declared_attr
+    def relationship_fk(cls):
+        return relationship.foreign_key('relationship', nullable=True)
+
+    @declared_attr
+    def capability_fk(cls):
+        return relationship.foreign_key('capability', nullable=True)
+
+    @declared_attr
+    def artifact_fk(cls):
+        return relationship.foreign_key('artifact', nullable=True)
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node_template(cls):
+        return relationship.many_to_one(cls, 'node_template')
+
+    @declared_attr
+    def group_template(cls):
+        return relationship.many_to_one(cls, 'group_template')
+
+    @declared_attr
+    def policy_template(cls):
+        return relationship.many_to_one(cls, 'policy_template')
+
+    @declared_attr
+    def relationship_template(cls):
+        return relationship.many_to_one(cls, 'relationship_template')
+
+    @declared_attr
+    def capability_template(cls):
+        return relationship.many_to_one(cls, 'capability_template')
+
+    @declared_attr
+    def artifact_template(cls):
+        return relationship.many_to_one(cls, 'artifact_template')
+
+    @declared_attr
+    def node(cls):
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def group(cls):
+        return relationship.many_to_one(cls, 'group')
+
+    @declared_attr
+    def policy(cls):
+        return relationship.many_to_one(cls, 'policy')
+
+    @declared_attr
+    def relationship(cls):
+        return relationship.many_to_one(cls, 'relationship')
+
+    @declared_attr
+    def capability(cls):
+        return relationship.many_to_one(cls, 'capability')
+
+    @declared_attr
+    def artifact(cls):
+        return relationship.many_to_one(cls, 'artifact')
+
+    # endregion
+
+
+class AttributeBase(ParameterMixin):
+
+    __tablename__ = 'attribute'
+
+    # region foreign keys
+
+    @declared_attr
+    def node_template_fk(cls):
+        """For Attribute many-to-one to NodeTemplate"""
+        return relationship.foreign_key('node_template', nullable=True)
+
+    @declared_attr
+    def node_fk(cls):
+        """For Attribute many-to-one to Node"""
+        return relationship.foreign_key('node', nullable=True)
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node_template(cls):
+        return relationship.many_to_one(cls, 'node_template')
+
+    @declared_attr
+    def node(cls):
+        return relationship.many_to_one(cls, 'node')
+
+    # endregion
 
 
 class TypeBase(InstanceModelMixin):
