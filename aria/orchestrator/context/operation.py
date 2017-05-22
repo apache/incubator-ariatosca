@@ -33,6 +33,7 @@ class BaseOperationContext(BaseContext):
         self._task_id = task_id
         self._actor_id = actor_id
         self._thread_local = threading.local()
+        self._destroy_session = kwargs.pop('destroy_session', False)
         logger_level = kwargs.pop('logger_level', None)
         super(BaseOperationContext, self).__init__(**kwargs)
         self._register_logger(task_id=self.task.id, level=logger_level)
@@ -90,13 +91,21 @@ class BaseOperationContext(BaseContext):
         }
 
     @classmethod
-    def deserialize_from_dict(cls, model_storage=None, resource_storage=None, **kwargs):
+    def instantiate_from_dict(cls, model_storage=None, resource_storage=None, **kwargs):
         if model_storage:
             model_storage = aria.application_model_storage(**model_storage)
         if resource_storage:
             resource_storage = aria.application_resource_storage(**resource_storage)
 
-        return cls(model_storage=model_storage, resource_storage=resource_storage, **kwargs)
+        return cls(model_storage=model_storage,
+                   resource_storage=resource_storage,
+                   destroy_session=True,
+                   **kwargs)
+
+    def close(self):
+        if self._destroy_session:
+            self.model.log._session.remove()
+            self.model.log._engine.dispose()
 
 
 class NodeOperationContext(BaseOperationContext):

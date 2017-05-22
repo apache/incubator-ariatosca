@@ -16,7 +16,6 @@
 """
 A common context for both workflow and operation
 """
-
 import logging
 from contextlib import contextmanager
 from functools import partial

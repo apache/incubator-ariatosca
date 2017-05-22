@@ -34,22 +34,25 @@ class _RequestError(RuntimeError):
         self.ex_traceback = ex_traceback
 
 
-def _http_request(socket_url, request, timeout):
-    response = urllib2.urlopen(
-        url=socket_url,
-        data=json.dumps(request),
-        timeout=timeout)
+def _http_request(socket_url, request, method, timeout):
+    opener = urllib2.build_opener(urllib2.HTTPHandler)
+    request = urllib2.Request(socket_url, data=json.dumps(request))
+    request.get_method = lambda: method
+    response = opener.open(request, timeout=timeout)
+
     if response.code != 200:
         raise RuntimeError('Request failed: {0}'.format(response))
     return json.loads(response.read())
 
 
-def _client_request(socket_url, args, timeout):
+def _client_request(socket_url, args, timeout, method='POST'):
     response = _http_request(
         socket_url=socket_url,
         request={'args': args},
-        timeout=timeout)
-    payload = response['payload']
+        method=method,
+        timeout=timeout
+    )
+    payload = response.get('payload')
     response_type = response.get('type')
     if response_type == 'error':
         ex_type = payload['type']
@@ -89,7 +92,7 @@ def _process_args(json_prefix, args):
 def main(args=None):
     args = _parse_args(args)
     response = _client_request(
-        socket_url=args.socket_url,
+        args.socket_url,
         args=_process_args(args.json_arg_prefix, args.args),
         timeout=args.timeout)
     if args.json_output:
@@ -99,7 +102,6 @@ def main(args=None):
             response = ''
         response = str(response)
     sys.stdout.write(response)
-
 
 if __name__ == '__main__':
     main()

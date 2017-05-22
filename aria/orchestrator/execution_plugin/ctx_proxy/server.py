@@ -42,15 +42,30 @@ class CtxProxy(object):
         self._started.get(timeout=5)
 
     def _start_server(self):
-        proxy = self
 
         class BottleServerAdapter(bottle.ServerAdapter):
+            proxy = self
+
+            def close_session(self):
+                self.proxy.ctx.model.log._session.remove()
+
             def run(self, app):
+
                 class Server(wsgiref.simple_server.WSGIServer):
                     allow_reuse_address = True
+                    bottle_server = self
 
                     def handle_error(self, request, client_address):
                         pass
+
+                    def serve_forever(self, poll_interval=0.5):
+                        try:
+                            wsgiref.simple_server.WSGIServer.serve_forever(self, poll_interval)
+                        finally:
+                            # Once shutdown is called, we need to close the session.
+                            # If the session is not closed properly, it might raise warnings,
+                            # or even lock the database.
+                            self.bottle_server.close_session()
 
                 class Handler(wsgiref.simple_server.WSGIRequestHandler):
                     def address_string(self):
@@ -66,8 +81,8 @@ class CtxProxy(object):
                     app=app,
                     server_class=Server,
                     handler_class=Handler)
-                proxy.server = server
-                proxy._started.put(True)
+                self.proxy.server = server
+                self.proxy._started.put(True)
                 server.serve_forever(poll_interval=0.1)
 
         def serve():
@@ -96,9 +111,10 @@ class CtxProxy(object):
         request = bottle.request.body.read()  # pylint: disable=no-member
         response = self._process(request)
         return bottle.LocalResponse(
-            body=response,
+            body=json.dumps(response, cls=modeling.utils.ModelJSONEncoder),
             status=200,
-            headers={'content-type': 'application/json'})
+            headers={'content-type': 'application/json'}
+        )
 
     def _process(self, request):
         try:
@@ -109,10 +125,7 @@ class CtxProxy(object):
             if isinstance(payload, exceptions.ScriptException):
                 payload = dict(message=str(payload))
                 result_type = 'stop_operation'
-            result = json.dumps({
-                'type': result_type,
-                'payload': payload
-            }, cls=modeling.utils.ModelJSONEncoder)
+            result = {'type': result_type, 'payload': payload}
         except Exception as e:
             traceback_out = StringIO.StringIO()
             traceback.print_exc(file=traceback_out)
@@ -121,10 +134,8 @@ class CtxProxy(object):
                 'message': str(e),
                 'traceback': traceback_out.getvalue()
             }
-            result = json.dumps({
-                'type': 'error',
-                'payload': payload
-            })
+            result = {'type': 'error', 'payload': payload}
+
         return result
 
     def __enter__(self):

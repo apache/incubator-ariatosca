@@ -373,7 +373,7 @@ def _main():
     # See docstring of `remove_mutable_association_listener` for further details
     modeling_types.remove_mutable_association_listener()
     try:
-        ctx = context_dict['context_cls'].deserialize_from_dict(**context_dict['context'])
+        ctx = context_dict['context_cls'].instantiate_from_dict(**context_dict['context'])
     except BaseException as e:
         messenger.failed(exception=e, tracked_changes=None, new_instances=None)
         return

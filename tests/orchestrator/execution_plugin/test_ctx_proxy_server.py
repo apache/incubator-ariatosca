@@ -136,7 +136,7 @@ class TestCtxProxy(object):
             kwargs=kwargs)
 
     @pytest.fixture
-    def ctx(self):
+    def ctx(self, mocker):
         class MockCtx(object):
             pass
         ctx = MockCtx()
@@ -160,11 +160,13 @@ class TestCtxProxy(object):
         ctx.stub_args = self.stub_args
         ctx.stub_attr = self.StubAttribute()
         ctx.node = self.NodeAttribute(properties)
+        ctx.model = mocker.MagicMock()
         return ctx
 
     @pytest.fixture
     def server(self, ctx):
         result = ctx_proxy.server.CtxProxy(ctx)
+        result._close_session = lambda *args, **kwargs: {}
         yield result
         result.close()
 

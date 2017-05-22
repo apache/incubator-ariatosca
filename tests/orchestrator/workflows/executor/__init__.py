@@ -69,7 +69,7 @@ class MockContext(object):
         return None
 
     @classmethod
-    def deserialize_from_dict(cls, **kwargs):
+    def instantiate_from_dict(cls, **kwargs):
         if kwargs:
             return cls(storage=aria.application_model_storage(**kwargs))
         else:
