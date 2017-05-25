@@ -1,2 +1,4 @@
 include requirements.txt
+include VERSION
+include LICENSE
 recursive-include examples *

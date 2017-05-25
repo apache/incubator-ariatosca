@@ -19,7 +19,8 @@ ARIA top level package
 
 import sys
 
-from .VERSION import version as __version__
+import pkg_resources
+__version__ = pkg_resources.get_distribution('aria').version
 
 from .orchestrator.decorators import workflow, operation
 from . import (
@@ -39,11 +40,6 @@ if sys.version_info < (2, 7):
 else:
     from pkgutil import iter_modules
 
-try:
-    import pkg_resources
-except ImportError:
-    pkg_resources = None
-
 __all__ = (
     '__version__',
     'workflow',
@@ -60,9 +56,8 @@ def install_aria_extensions():
     for loader, module_name, _ in iter_modules():
         if module_name.startswith('aria_extension_'):
             loader.find_module(module_name).load_module(module_name)
-    if pkg_resources:
-        for entry_point in pkg_resources.iter_entry_points(group='aria_extension'):
-            entry_point.load()
+    for entry_point in pkg_resources.iter_entry_points(group='aria_extension'):
+        entry_point.load()
     extension.init()
 
 

@@ -21,6 +21,7 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 
+
 _PACKAGE_NAME = 'aria'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
 _EXTENSION_DIR = 'extensions'
@@ -35,9 +36,8 @@ if (sys.version_info[0], sys.version_info[1]) not in _PYTHON_SUPPORTED_VERSIONS:
 
 root_dir = os.path.dirname(__file__)
 
-version = '0.1.0'
-execfile(os.path.join(root_dir, _PACKAGE_NAME, 'VERSION.py'))
-
+with open(os.path.join(root_dir, 'VERSION')) as version_file:
+    __version__ = version_file.read().strip()
 
 install_requires = []
 extras_require = {}
@@ -104,9 +104,9 @@ class DevelopCommand(develop):
 
 setup(
     name=_PACKAGE_NAME,
-    version=version,
+    version=__version__,
     description='ARIA',
-    license='Apache License Version 2.0',
+    license='Apache License 2.0',
     author='aria',
     author_email='dev@ariatosca.incubator.apache.org',
     url='http://ariatosca.org',
@@ -119,6 +119,9 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
         'Topic :: System :: Systems Administration'],
@@ -136,6 +139,7 @@ setup(
             'profiles/aria-1.0/**'
         ]
     },
+    platforms=['any'],
     zip_safe=False,
     install_requires=install_requires,
     extras_require=extras_require,

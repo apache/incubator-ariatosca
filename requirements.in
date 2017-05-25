@@ -28,8 +28,9 @@ SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
 wagon==0.6.0
 bottle>=0.12.0, <0.13
 Fabric>=1.13.0, <1.14
+setuptools>=35.0.0, <36.0.0
 click>=4.1, < 5.0
-colorama>=0.3.7, <= 0.3.9
+colorama>=0.3.7, <=0.3.9
 PrettyTable>=0.7,<0.8
 click_didyoumean==0.0.3
 backports.shutil_get_terminal_size==1.0.0

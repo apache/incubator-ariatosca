@@ -14,7 +14,7 @@ import os
 
 from jinja2 import Template
 
-from ...VERSION import version
+from ... import __version__ as version
 from ..loading import LiteralLocation, LiteralLoader
 from .reader import Reader
 from .exceptions import ReaderSyntaxError
