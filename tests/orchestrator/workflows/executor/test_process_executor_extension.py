@@ -66,7 +66,8 @@ class MockProcessExecutorExtension(object):
     def decorate(self):
         def decorator(function):
             def wrapper(ctx, **operation_arguments):
-                ctx.node.attributes['out'] = {'wrapper_arguments': operation_arguments}
+                with ctx.model.instrument(ctx.model.node.model_cls.attributes):
+                    ctx.node.attributes['out'] = {'wrapper_arguments': operation_arguments}
                 function(ctx=ctx, **operation_arguments)
             return wrapper
         return decorator

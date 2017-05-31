@@ -13,24 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
-
-from aria.modeling import models
+from . import exceptions
 
 
 class _InstrumentedCollection(object):
 
     def __init__(self,
-                 model,
+                 mapi,
                  parent,
                  field_name,
+                 field_cls,
                  seq=None,
                  is_top_level=True,
                  **kwargs):
-        self._model = model
+        self._mapi = mapi
         self._parent = parent
         self._field_name = field_name
         self._is_top_level = is_top_level
+        self._field_cls = field_cls
         self._load(seq, **kwargs)
 
     @property
@@ -75,31 +75,29 @@ class _InstrumentedCollection(object):
         else:
             return value
 
-        return instrumentation_cls(self._model, self, key, value, False)
+        return instrumentation_cls(self._mapi, self, key, self._field_cls, value, False)
 
-    @staticmethod
-    def _raw_value(value):
+    def _raw_value(self, value):
         """
         Get the raw value.
         :param value:
         :return:
         """
-        if isinstance(value, models.Attribute):
+        if isinstance(value, self._field_cls):
             return value.value
         return value
 
-    @staticmethod
-    def _encapsulate_value(key, value):
+    def _encapsulate_value(self, key, value):
         """
         Create a new item cls if needed.
         :param key:
         :param value:
         :return:
         """
-        if isinstance(value, models.Attribute):
+        if isinstance(value, self._field_cls):
             return value
         # If it is not wrapped
-        return models.Attribute.wrap(key, value)
+        return self._field_cls.wrap(key, value)
 
     def __setitem__(self, key, value):
         """
@@ -112,11 +110,9 @@ class _InstrumentedCollection(object):
         if self._is_top_level:
             # We are at the top level
             field = getattr(self._parent, self._field_name)
-            mapi = getattr(self._model, models.Attribute.__modelname__)
-            value = self._set_field(field,
-                                    key,
-                                    value if key in field else self._encapsulate_value(key, value))
-            mapi.update(value)
+            self._set_field(
+                field, key, value if key in field else self._encapsulate_value(key, value))
+            self._mapi.update(self._parent)
         else:
             # We are not at the top level
             self._set_field(self._parent, self._field_name, self)
@@ -131,7 +127,7 @@ class _InstrumentedCollection(object):
         """
         if isinstance(value, _InstrumentedCollection):
             value = value._raw
-        if key in collection and isinstance(collection[key], models.Attribute):
+        if key in collection and isinstance(collection[key], self._field_cls):
             if isinstance(collection[key], _InstrumentedCollection):
                 self._del(collection, key)
             collection[key].value = value
@@ -204,39 +200,107 @@ class _InstrumentedList(_InstrumentedCollection, list):
 
 class _InstrumentedModel(object):
 
-    def __init__(self, field_name, original_model, model_storage):
+    def __init__(self, original_model, mapi, instrumentation):
+        """
+        The original model
+        :param original_model: the model to be instrumented
+        :param mapi: the mapi for that model
+        """
         super(_InstrumentedModel, self).__init__()
-        self._field_name = field_name
-        self._model_storage = model_storage
         self._original_model = original_model
+        self._mapi = mapi
+        self._instrumentation = instrumentation
         self._apply_instrumentation()
 
     def __getattr__(self, item):
-        return getattr(self._original_model, item)
+        return_value = getattr(self._original_model, item)
+        if isinstance(return_value, self._original_model.__class__):
+            return _create_instrumented_model(return_value, self._mapi, self._instrumentation)
+        if isinstance(return_value, (list, dict)):
+            return _create_wrapped_model(return_value, self._mapi, self._instrumentation)
+        return return_value
 
     def _apply_instrumentation(self):
+        for field in self._instrumentation:
+            field_name = field.key
+            field_cls = field.mapper.class_
+            field = getattr(self._original_model, field_name)
 
-        field = getattr(self._original_model, self._field_name)
+            # Preserve the original value. e.g. original attributes would be located under
+            # _attributes
+            setattr(self, '_{0}'.format(field_name), field)
 
-        # Preserve the original value. e.g. original attributes would be located under
-        # _attributes
-        setattr(self, '_{0}'.format(self._field_name), field)
+            # set instrumented value
+            if isinstance(field, dict):
+                instrumentation_cls = _InstrumentedDict
+            elif isinstance(field, list):
+                instrumentation_cls = _InstrumentedList
+            else:
+                # TODO: raise proper error
+                raise exceptions.StorageError(
+                    "ARIA supports instrumentation for dict and list. Field {field} of the "
+                    "class {model} is of {type} type.".format(
+                        field=field,
+                        model=self._original_model,
+                        type=type(field)))
 
-        # set instrumented value
-        setattr(self, self._field_name, _InstrumentedDict(self._model_storage,
-                                                          self._original_model,
-                                                          self._field_name,
-                                                          field))
+            instrumented_class = instrumentation_cls(seq=field,
+                                                     parent=self._original_model,
+                                                     mapi=self._mapi,
+                                                     field_name=field_name,
+                                                     field_cls=field_cls)
+            setattr(self, field_name, instrumented_class)
 
 
-def instrument_collection(field_name, func=None):
-    if func is None:
-        return partial(instrument_collection, field_name)
+class _WrappedModel(object):
 
-    def _wrapper(*args, **kwargs):
-        original_model = func(*args, **kwargs)
-        return type('Instrumented{0}'.format(original_model.__class__.__name__),
-                    (_InstrumentedModel, ),
-                    {})(field_name, original_model, args[0].model)
+    def __init__(self, wrapped, instrumentation, **kwargs):
+        """
 
-    return _wrapper
+        :param instrumented_cls: The class to be instrumented
+        :param instrumentation_cls: the instrumentation cls
+        :param wrapped: the currently wrapped instance
+        :param kwargs: and kwargs to the passed to the instrumented class.
+        """
+        self._kwargs = kwargs
+        self._instrumentation = instrumentation
+        self._wrapped = wrapped
+
+    def _wrap(self, value):
+        if value.__class__ in (class_.class_ for class_ in self._instrumentation):
+            return _create_instrumented_model(
+                value, instrumentation=self._instrumentation, **self._kwargs)
+        elif hasattr(value, 'metadata') or isinstance(value, (dict, list)):
+            # Basically checks that the value is indeed an sqlmodel (it should have metadata)
+            return _create_wrapped_model(
+                value, instrumentation=self._instrumentation, **self._kwargs)
+        return value
+
+    def __getattr__(self, item):
+        if hasattr(self, '_wrapped'):
+            return self._wrap(getattr(self._wrapped, item))
+        else:
+            super(_WrappedModel, self).__getattribute__(item)
+
+    def __getitem__(self, item):
+        return self._wrap(self._wrapped[item])
+
+
+def _create_instrumented_model(original_model, mapi, instrumentation, **kwargs):
+    return type('Instrumented{0}'.format(original_model.__class__.__name__),
+                (_InstrumentedModel,),
+                {})(original_model, mapi, instrumentation, **kwargs)
+
+
+def _create_wrapped_model(original_model, mapi, instrumentation, **kwargs):
+    return type('Wrapped{0}'.format(original_model.__class__.__name__),
+                (_WrappedModel, ),
+                {})(original_model, instrumentation, mapi=mapi, **kwargs)
+
+
+def instrument(instrumentation, original_model, mapi):
+    for instrumented_field in instrumentation:
+        if isinstance(original_model, instrumented_field.class_):
+            return _create_instrumented_model(original_model, mapi, instrumentation)
+
+    return _create_wrapped_model(original_model, mapi, instrumentation)

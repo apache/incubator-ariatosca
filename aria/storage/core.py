@@ -37,6 +37,8 @@ API:
     * drivers - module, a pool of ARIA standard drivers.
     * StorageDriver - class, abstract model implementation.
 """
+import copy
+from contextlib import contextmanager
 
 from aria.logger import LoggerMixin
 from . import sql_mapi
@@ -165,3 +167,16 @@ class ModelStorage(Storage):
         """
         for mapi in self.registered.values():
             mapi.drop()
+
+    @contextmanager
+    def instrument(self, *instrumentation):
+        original_instrumentation = {}
+
+        try:
+            for mapi in self.registered.values():
+                original_instrumentation[mapi] = copy.copy(mapi._instrumentation)
+                mapi._instrumentation.extend(instrumentation)
+            yield self
+        finally:
+            for mapi in self.registered.values():
+                mapi._instrumentation[:] = original_instrumentation[mapi]

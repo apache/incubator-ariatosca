@@ -29,6 +29,7 @@ from aria.utils.collections import OrderedDict
 from . import (
     api,
     exceptions,
+    collection_instrumentation
 )
 
 _predicates = {'ge': '__ge__',
@@ -63,7 +64,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
                 'Requested `{0}` with ID `{1}` was not found'
                 .format(self.model_cls.__name__, entry_id)
             )
-        return result
+        return self._instrument(result)
 
     def get_by_name(self, entry_name, include=None, **kwargs):
         assert hasattr(self.model_cls, 'name')
@@ -93,7 +94,7 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
         return ListResult(
             dict(total=total, size=size, offset=offset),
-            results
+            [self._instrument(result) for result in results]
         )
 
     def iter(self,
@@ -103,7 +104,8 @@ class SQLAlchemyModelAPI(api.ModelAPI):
              **kwargs):
         """Return a (possibly empty) list of `model_class` results
         """
-        return iter(self._get_query(include, filters, sort))
+        for result in self._get_query(include, filters, sort):
+            yield self._instrument(result)
 
     def put(self, entry, **kwargs):
         """Create a `model_class` instance from a serializable `model` object
@@ -377,6 +379,12 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         """
         for rel in instance.__mapper__.relationships:
             getattr(instance, rel.key)
+
+    def _instrument(self, model):
+        if self._instrumentation:
+            return collection_instrumentation.instrument(self._instrumentation, model, self)
+        else:
+            return model
 
 
 def init_storage(base_dir, filename='db.sqlite'):

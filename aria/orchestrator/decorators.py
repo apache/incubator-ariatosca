@@ -68,11 +68,13 @@ def operation(func=None, toolbelt=False, suffix_template='', logging_handlers=No
 
     @wraps(func)
     def _wrapper(**func_kwargs):
+        ctx = func_kwargs['ctx']
         if toolbelt:
-            operation_toolbelt = context.toolbelt(func_kwargs['ctx'])
+            operation_toolbelt = context.toolbelt(ctx)
             func_kwargs.setdefault('toolbelt', operation_toolbelt)
         validate_function_arguments(func, func_kwargs)
-        return func(**func_kwargs)
+        with ctx.model.instrument(*ctx.INSTRUMENTATION_FIELDS):
+            return func(**func_kwargs)
     return _wrapper
 
 

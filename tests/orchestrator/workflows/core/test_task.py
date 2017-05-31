@@ -100,7 +100,7 @@ class TestOperationTask(object):
         storage_task = ctx.model.task.get_by_name(core_task.name)
         assert storage_task.plugin is storage_plugin
         assert storage_task.execution_name == ctx.execution.name
-        assert storage_task.actor == core_task.context.node._original_model
+        assert storage_task.actor == core_task.context.node
         assert core_task.model_task == storage_task
         assert core_task.name == api_task.name
         assert core_task.function == api_task.function

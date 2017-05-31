@@ -117,14 +117,15 @@ class CtxProxy(object):
 
     def _process(self, request):
         try:
-            typed_request = json.loads(request)
-            args = typed_request['args']
-            payload = _process_ctx_request(self.ctx, args)
-            result_type = 'result'
-            if isinstance(payload, exceptions.ScriptException):
-                payload = dict(message=str(payload))
-                result_type = 'stop_operation'
-            result = {'type': result_type, 'payload': payload}
+            with self.ctx.model.instrument(*self.ctx.INSTRUMENTATION_FIELDS):
+                typed_request = json.loads(request)
+                args = typed_request['args']
+                payload = _process_ctx_request(self.ctx, args)
+                result_type = 'result'
+                if isinstance(payload, exceptions.ScriptException):
+                    payload = dict(message=str(payload))
+                    result_type = 'stop_operation'
+                result = {'type': result_type, 'payload': payload}
         except Exception as e:
             traceback_out = StringIO.StringIO()
             traceback.print_exc(file=traceback_out)

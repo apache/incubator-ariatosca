@@ -15,6 +15,7 @@
 """
 General storage API
 """
+import threading
 
 
 class StorageAPI(object):
@@ -45,6 +46,15 @@ class ModelAPI(StorageAPI):
         super(ModelAPI, self).__init__(**kwargs)
         self._model_cls = model_cls
         self._name = name or model_cls.__modelname__
+        self._thread_local = threading.local()
+        self._thread_local._instrumentation = []
+
+    @property
+    def _instrumentation(self):
+        if not hasattr(self._thread_local, '_instrumentation'):
+            self._thread_local._instrumentation = []
+        return self._thread_local._instrumentation
+
 
     @property
     def name(self):

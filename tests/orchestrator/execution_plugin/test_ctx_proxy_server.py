@@ -138,7 +138,7 @@ class TestCtxProxy(object):
     @pytest.fixture
     def ctx(self, mocker):
         class MockCtx(object):
-            pass
+            INSTRUMENTATION_FIELDS = ()
         ctx = MockCtx()
         properties = {
             'prop1': 'value1',

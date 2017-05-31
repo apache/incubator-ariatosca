@@ -21,16 +21,20 @@ import threading
 
 import aria
 from aria.utils import file
-from . import (
-    common,
-    collection_instrumentation
-)
+from . import common
 
 
 class BaseOperationContext(common.BaseContext):
     """
     Context object used during operation creation and execution
     """
+
+    INSTRUMENTATION_FIELDS = (
+        aria.modeling.models.Node.attributes,
+        aria.modeling.models.Node.properties,
+        aria.modeling.models.NodeTemplate.attributes,
+        aria.modeling.models.NodeTemplate.properties
+    )
 
     def __init__(self, task_id, actor_id, **kwargs):
         self._task_id = task_id
@@ -76,7 +80,6 @@ class BaseOperationContext(common.BaseContext):
 
     @property
     def serialization_dict(self):
-        context_cls = self.__class__
         context_dict = {
             'name': self.name,
             'service_id': self._service_id,
@@ -89,7 +92,7 @@ class BaseOperationContext(common.BaseContext):
             'logger_level': self.logger.level
         }
         return {
-            'context_cls': context_cls,
+            'context_cls': self.__class__,
             'context': context_dict
         }
 
@@ -117,7 +120,6 @@ class NodeOperationContext(BaseOperationContext):
     """
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def node_template(self):
         """
         the node of the current operation
@@ -126,7 +128,6 @@ class NodeOperationContext(BaseOperationContext):
         return self.node.node_template
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def node(self):
         """
         The node instance of the current operation
@@ -141,7 +142,6 @@ class RelationshipOperationContext(BaseOperationContext):
     """
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def source_node_template(self):
         """
         The source node
@@ -150,7 +150,6 @@ class RelationshipOperationContext(BaseOperationContext):
         return self.source_node.node_template
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def source_node(self):
         """
         The source node instance
@@ -159,7 +158,6 @@ class RelationshipOperationContext(BaseOperationContext):
         return self.relationship.source_node
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def target_node_template(self):
         """
         The target node
@@ -168,7 +166,6 @@ class RelationshipOperationContext(BaseOperationContext):
         return self.target_node.node_template
 
     @property
-    @collection_instrumentation.instrument_collection('attributes')
     def target_node(self):
         """
         The target node instance

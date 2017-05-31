@@ -422,15 +422,24 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
             raise RuntimeError
 
     class _Ctx(object):
+        INSTRUMENTATION_FIELDS = ()
+
         class Task(object):
             @staticmethod
             def abort(message=None):
                 models.Task.abort(message)
             actor = None
+
         class Actor(object):
             host = None
+
+        class Model(object):
+            @contextlib.contextmanager
+            def instrument(self, *args, **kwargs):
+                yield
         task = Task
         task.actor = Actor
+        model = Model()
         logger = logging.getLogger()
 
     @staticmethod
@@ -438,7 +447,6 @@ class TestFabricEnvHideGroupsAndRunCommands(object):
     def _mock_self_logging(*args, **kwargs):
         yield
     _Ctx.logging_handlers = _mock_self_logging
-
 
     @pytest.fixture(autouse=True)
     def _setup(self, mocker):

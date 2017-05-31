@@ -17,8 +17,8 @@
 Utility methods for dynamically loading python code
 """
 
-import importlib
 import pkgutil
+import importlib
 
 
 def import_fullname(name, paths=None):
