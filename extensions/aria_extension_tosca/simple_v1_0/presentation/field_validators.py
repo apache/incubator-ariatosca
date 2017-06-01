@@ -24,6 +24,7 @@ from ..modeling.data_types import (get_primitive_data_type, get_data_type_name, 
                                    get_container_data_type)
 from .types import get_type_by_full_or_shorthand_name, convert_shorthand_to_full_type_name
 
+
 #
 # NodeTemplate, RelationshipTemplate
 #
@@ -55,6 +56,7 @@ def copy_validator(template_type_name, templates_dict_name):
                         locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
     return validator_fn
+
 
 #
 # PropertyDefinition, AttributeDefinition, ParameterDefinition, EntrySchema
@@ -96,6 +98,7 @@ def data_type_validator(type_name='data type'):
         return False
 
     return validator
+
 
 #
 # PropertyDefinition, AttributeDefinition
@@ -141,6 +144,7 @@ def entry_schema_validator(field, presentation, context):
                 % (get_data_type_name(the_type), presentation._container._fullname),
                 locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
+
 def data_value_validator(field, presentation, context):
     """
     Makes sure that the field contains a valid value according to data type and constraints.
@@ -160,6 +164,7 @@ def data_value_validator(field, presentation, context):
             if hasattr(presentation, '_get_constraints') else None
         coerce_value(context, presentation, the_type, entry_schema, constraints, value, field.name)
 
+
 #
 # DataType
 #
@@ -167,6 +172,7 @@ def data_value_validator(field, presentation, context):
 _data_type_validator = data_type_validator()
 _data_type_derived_from_validator = derived_from_validator(convert_shorthand_to_full_type_name,
                                                            'data_types')
+
 
 def data_type_derived_from_validator(field, presentation, context):
     """
@@ -180,6 +186,7 @@ def data_type_derived_from_validator(field, presentation, context):
         # Validate derivation only if a complex data type (primitive types have no derivation
         # hierarchy)
         _data_type_derived_from_validator(field, presentation, context)
+
 
 def data_type_constraints_validator(field, presentation, context):
     """
@@ -196,6 +203,7 @@ def data_type_constraints_validator(field, presentation, context):
                 'data type "%s" defines constraints but does not have a primitive ancestor'
                 % presentation._fullname,
                 locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_TYPES)
+
 
 def data_type_properties_validator(field, presentation, context):
     """
@@ -214,6 +222,7 @@ def data_type_properties_validator(field, presentation, context):
                 'data type "%s" defines properties even though it has a primitive ancestor'
                 % presentation._fullname,
                 locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_TYPES)
+
 
 #
 # ConstraintClause
@@ -234,6 +243,7 @@ def constraint_clause_field_validator(field, presentation, context):
         constraints = the_type._get_constraints(context) \
             if hasattr(the_type, '_get_constraints') else None
         coerce_value(context, presentation, the_type, None, constraints, value, field.name)
+
 
 def constraint_clause_in_range_validator(field, presentation, context):
     """
@@ -274,6 +284,7 @@ def constraint_clause_in_range_validator(field, presentation, context):
                 % (field.name, presentation._fullname),
                 locator=presentation._get_child_locator(field.name), level=Issue.FIELD)
 
+
 def constraint_clause_valid_values_validator(field, presentation, context):
     """
     Makes sure that the value is a list of valid values for the container type.
@@ -289,6 +300,7 @@ def constraint_clause_valid_values_validator(field, presentation, context):
         the_type = presentation._get_type(context)
         for value in values:
             coerce_value(context, presentation, the_type, None, None, value, field.name)
+
 
 def constraint_clause_pattern_validator(field, presentation, context):
     """
@@ -316,6 +328,7 @@ def constraint_clause_pattern_validator(field, presentation, context):
                 % (field.name, presentation._fullname),
                 locator=presentation._get_child_locator(field.name), level=Issue.FIELD, exception=e)
 
+
 #
 # RequirementAssignment
 #
@@ -339,6 +352,7 @@ def node_template_or_type_validator(field, presentation, context):
             (get_type_by_full_or_shorthand_name(context, value, 'node_types') is None):
             report_issue_for_unknown_type(context, presentation, 'node template or node type',
                                           field.name)
+
 
 def capability_definition_or_type_validator(field, presentation, context):
     """
@@ -381,6 +395,7 @@ def capability_definition_or_type_validator(field, presentation, context):
                 % (presentation._name, presentation._container._fullname, safe_repr(value)),
                 locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_TYPES)
 
+
 def node_filter_validator(field, presentation, context):
     """
     Makes sure that the field has a value only if "node" refers to a node type.
@@ -400,6 +415,7 @@ def node_filter_validator(field, presentation, context):
                 ' type in "%s"'
                 % (presentation._fullname, presentation._container._fullname),
                 locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
+
 
 #
 # RelationshipAssignment
@@ -426,6 +442,7 @@ def relationship_template_or_type_validator(field, presentation, context):
             report_issue_for_unknown_type(context, presentation,
                                           'relationship template or relationship type', field.name)
 
+
 #
 # PolicyType
 #
@@ -448,6 +465,7 @@ def list_node_type_or_group_type_validator(field, presentation, context):
                 (get_type_by_full_or_shorthand_name(context, value, 'group_types') is None):
                 report_issue_for_unknown_type(context, presentation, 'node type or group type',
                                               field.name, value)
+
 
 #
 # PolicyTemplate
@@ -506,6 +524,7 @@ def policy_targets_validator(field, presentation, context):
                     % (presentation._name, safe_repr(value)),
                     locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
+
 #
 # NodeFilter
 #
@@ -531,6 +550,7 @@ def node_filter_properties_validator(field, presentation, context):
                         'node filter refers to an unknown property definition in "%s": %s'
                         % (node_type._name, name),
                         locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+
 
 def node_filter_capabilities_validator(field, presentation, context):
     """

@@ -16,6 +16,7 @@
 from aria.utils.caching import cachedmethod
 from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
 
+
 @has_fields
 class ExtensiblePresentation(Presentation):
     """

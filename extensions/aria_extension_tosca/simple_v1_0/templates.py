@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import FrozenDict, FrozenList
+from aria.utils.collections import (FrozenDict, FrozenList)
 from aria.utils.caching import cachedmethod
 from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, primitive_field, primitive_list_field,
@@ -39,6 +39,7 @@ from .presentation.types import (convert_shorthand_to_full_type_name,
                                  get_type_by_full_or_shorthand_name)
 from .types import (ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType,
                     NodeType, GroupType, PolicyType)
+
 
 @has_fields
 @implements_specification('3.7.3', 'tosca-simple-1.0')
@@ -201,6 +202,7 @@ class NodeTemplate(ExtensiblePresentation):
             'node_filter',
             'copy'))
 
+
 @has_fields
 @implements_specification('3.7.4', 'tosca-simple-1.0')
 class RelationshipTemplate(ExtensiblePresentation):
@@ -300,6 +302,7 @@ class RelationshipTemplate(ExtensiblePresentation):
             'interfaces',
             'copy'))
 
+
 @has_fields
 @implements_specification('3.7.5', 'tosca-simple-1.0')
 class GroupTemplate(ExtensiblePresentation):
@@ -373,6 +376,7 @@ class GroupTemplate(ExtensiblePresentation):
         self._get_property_values(context)
         self._get_interfaces(context)
 
+
 @has_fields
 @implements_specification('3.7.6', 'tosca-simple-1.0')
 class PolicyTemplate(ExtensiblePresentation):
@@ -436,6 +440,7 @@ class PolicyTemplate(ExtensiblePresentation):
     def _validate(self, context):
         super(PolicyTemplate, self)._validate(context)
         self._get_property_values(context)
+
 
 @has_fields
 @implements_specification('3.8', 'tosca-simple-1.0')
@@ -546,6 +551,7 @@ class TopologyTemplate(ExtensiblePresentation):
             'policies',
             'outputs',
             'substitution_mappings'))
+
 
 @has_fields
 @implements_specification('3.9', 'tosca-simple-1.0')

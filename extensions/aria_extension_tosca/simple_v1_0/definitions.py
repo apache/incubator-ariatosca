@@ -34,6 +34,7 @@ from .modeling.data_types import get_data_type, get_property_constraints
 from .modeling.interfaces import (get_and_override_input_definitions_from_type,
                                   get_and_override_operation_definitions_from_type)
 
+
 @has_fields
 @implements_specification('3.5.8', 'tosca-simple-1.0')
 class PropertyDefinition(ExtensiblePresentation):
@@ -120,6 +121,7 @@ class PropertyDefinition(ExtensiblePresentation):
     def _get_constraints(self, context):
         return get_property_constraints(context, self)
 
+
 @has_fields
 @implements_specification('3.5.10', 'tosca-simple-1.0')
 class AttributeDefinition(ExtensiblePresentation):
@@ -189,6 +191,7 @@ class AttributeDefinition(ExtensiblePresentation):
     def _get_type(self, context):
         return get_data_type(context, self, 'type')
 
+
 @has_fields
 @implements_specification('3.5.12', 'tosca-simple-1.0')
 class ParameterDefinition(PropertyDefinition):
@@ -222,6 +225,7 @@ class ParameterDefinition(PropertyDefinition):
         The type-compatible value to assign to the named parameter. Parameter values may be provided
         as the result from the evaluation of an expression or a function.
         """
+
 
 @short_form_field('implementation')
 @has_fields
@@ -263,6 +267,7 @@ class OperationDefinition(ExtensiblePresentation):
 
         :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
+
 
 @allow_unknown_fields
 @has_fields
@@ -322,6 +327,7 @@ class InterfaceDefinition(ExtensiblePresentation):
             for operation in self.operations.itervalues(): # pylint: disable=no-member
                 operation._validate(context)
 
+
 @short_form_field('type')
 @has_fields
 class RelationshipDefinition(ExtensiblePresentation):
@@ -353,6 +359,7 @@ class RelationshipDefinition(ExtensiblePresentation):
     @cachedmethod
     def _get_type(self, context):
         return get_type_by_full_or_shorthand_name(context, self.type, 'relationship_types')
+
 
 @short_form_field('capability')
 @has_fields
@@ -419,6 +426,7 @@ class RequirementDefinition(ExtensiblePresentation):
     @cachedmethod
     def _get_node_type(self, context):
         return context.presentation.get_from_dict('service_template', 'node_types', self.node)
+
 
 @short_form_field('type')
 @has_fields

@@ -110,7 +110,7 @@ class Core(object):
                 'Active execution ID: {1}'.format(service.name, active_executions[0].id))
 
         if not force:
-            available_nodes = [str(n.id) for n in service.nodes.values() if n.is_available()]
+            available_nodes = [str(n.id) for n in service.nodes.itervalues() if n.is_available()]
             if available_nodes:
                 raise exceptions.DependentAvailableNodesError(
                     'Can\'t delete service `{0}` - there are available nodes for this service. '

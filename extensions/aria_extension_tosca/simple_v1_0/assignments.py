@@ -32,6 +32,7 @@ from .presentation.field_validators import (node_template_or_type_validator,
 from .presentation.types import (convert_shorthand_to_full_type_name,
                                  get_type_by_full_or_shorthand_name)
 
+
 @implements_specification('3.5.9', 'tosca-simple-1.0')
 class PropertyAssignment(AsIsPresentation):
     """
@@ -42,6 +43,7 @@ class PropertyAssignment(AsIsPresentation):
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_PROPERTY_VALUE_ASSIGNMENT>`__
     """
+
 
 @short_form_field('implementation')
 @has_fields
@@ -103,6 +105,7 @@ class OperationAssignment(ExtensiblePresentation):
             extensions.update(self._extensions)
         return extensions
 
+
 @allow_unknown_fields
 @has_fields
 @implements_specification('3.5.14-2', 'tosca-simple-1.0')
@@ -154,6 +157,7 @@ class InterfaceAssignment(ExtensiblePresentation):
             for operation in self.operations.itervalues(): # pylint: disable=no-member
                 operation._validate(context)
 
+
 @short_form_field('type')
 @has_fields
 class RelationshipAssignment(ExtensiblePresentation):
@@ -201,6 +205,7 @@ class RelationshipAssignment(ExtensiblePresentation):
             if the_type is not None:
                 return the_type, 'relationship_type'
         return None, None
+
 
 @short_form_field('node')
 @has_fields
@@ -301,6 +306,7 @@ class RequirementAssignment(ExtensiblePresentation):
 
         return None, None
 
+
 @implements_specification('3.5.11', 'tosca-simple-1.0')
 class AttributeAssignment(AsIsPresentation):
     """
@@ -311,6 +317,7 @@ class AttributeAssignment(AsIsPresentation):
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_ATTRIBUTE_VALUE_ASSIGNMENT>`__
     """
+
 
 @has_fields
 @implements_specification('3.7.1', 'tosca-simple-1.0')
@@ -353,6 +360,7 @@ class CapabilityAssignment(ExtensiblePresentation):
         capability_definition = self._get_definition(context)
         return capability_definition._get_type(context) \
             if capability_definition is not None else None
+
 
 @has_fields
 @implements_specification('3.5.6', 'tosca-simple-1.0')

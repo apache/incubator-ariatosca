@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def convert_shorthand_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
     """
     Converts a shorthand type name to its full type name, or else returns it unchanged.
@@ -30,6 +31,7 @@ def convert_shorthand_to_full_type_name(context, name, types_dict): # pylint: di
                 and (the_type._extensions.get('shorthand_name') == name):
                 return full_name
     return name
+
 
 def get_type_by_full_or_shorthand_name(context, name, *types_dict_names):
     """

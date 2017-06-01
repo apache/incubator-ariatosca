@@ -33,11 +33,14 @@ def get_inherited_parameter_definitions(context, presentation, field_name, for_p
     Allows overriding all aspects of parent properties except data type.
     """
 
+    if for_presentation is None:
+        for_presentation = presentation
+
     # Get definitions from parent
     # If we inherit from a primitive, it does not have a parent:
     parent = presentation._get_parent(context) if hasattr(presentation, '_get_parent') else None
     definitions = get_inherited_parameter_definitions(context, parent, field_name,
-                                                      for_presentation=presentation) \
+                                                      for_presentation) \
                                                       if parent is not None else OrderedDict()
 
     # Add/merge our definitions

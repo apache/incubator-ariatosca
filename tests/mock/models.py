@@ -133,10 +133,7 @@ def create_node_template(service_template,
                          type=models.Type(variant='node', name='test_node_type'),
                          capability_templates=None,
                          requirement_templates=None,
-                         interface_templates=None,
-                         default_instances=1,
-                         min_instances=1,
-                         max_instances=1):
+                         interface_templates=None):
     capability_templates = capability_templates or {}
     requirement_templates = requirement_templates or []
     interface_templates = interface_templates or {}
@@ -146,9 +143,6 @@ def create_node_template(service_template,
         capability_templates=capability_templates,
         requirement_templates=requirement_templates,
         interface_templates=interface_templates,
-        default_instances=default_instances,
-        min_instances=min_instances,
-        max_instances=max_instances,
         service_template=service_template)
 
     service_template.node_templates[node_template.name] = node_template

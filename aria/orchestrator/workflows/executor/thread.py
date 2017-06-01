@@ -63,7 +63,7 @@ class ThreadExecutor(BaseExecutor):
                 self._task_started(ctx)
                 try:
                     task_func = imports.load_attribute(ctx.task.function)
-                    arguments = dict(arg.unwrapped for arg in ctx.task.arguments.values())
+                    arguments = dict(arg.unwrapped for arg in ctx.task.arguments.itervalues())
                     task_func(ctx=ctx, **arguments)
                     self._task_succeeded(ctx)
                 except BaseException as e:

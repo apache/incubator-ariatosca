@@ -21,6 +21,8 @@ from aria.utils.collections import OrderedDict
 #
 
 def get_inherited_artifact_definitions(context, presentation, for_presentation=None):
+    if for_presentation is None:
+        for_presentation = presentation
 
     if hasattr(presentation, '_get_type'):
         # In NodeTemplate
@@ -30,7 +32,7 @@ def get_inherited_artifact_definitions(context, presentation, for_presentation=N
         parent = presentation._get_parent(context)
 
     # Get artifact definitions from parent
-    artifacts = get_inherited_artifact_definitions(context, parent, for_presentation=presentation) \
+    artifacts = get_inherited_artifact_definitions(context, parent, for_presentation) \
         if parent is not None else OrderedDict()
 
     # Add/override our artifact definitions

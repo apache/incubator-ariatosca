@@ -34,6 +34,14 @@ class Value(object):
         self.value = deepcopy_with_locators(value)
         self.description = deepcopy_with_locators(description)
 
+    def _dump(self, context):
+        if self.type is not None:
+            puts(context.style.type(self.type))
+        if self.value is not None:
+            puts(context.style.literal(self.value))
+        if self.description is not None:
+            puts(context.style.meta(self.description))
+
 
 class PresentationBase(HasCachedMethods):
     """
@@ -230,6 +238,8 @@ class AsIsPresentation(PresentationBase):
 
     def _dump(self, context):
         if hasattr(self._raw, '_dump'):
-            self._raw._dump(context)
+            puts(context.style.node(self._name))
+            with context.style.indent:
+                self._raw._dump(context)
         else:
             super(AsIsPresentation, self)._dump(context)

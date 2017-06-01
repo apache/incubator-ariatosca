@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import FrozenDict, FrozenList
+from aria.utils.collections import (FrozenDict, FrozenList)
 from aria.utils.caching import cachedmethod
 from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, allow_unknown_fields, primitive_field,
@@ -44,6 +44,7 @@ from .presentation.field_validators import (data_type_derived_from_validator,
                                             data_type_properties_validator,
                                             list_node_type_or_group_type_validator)
 from .presentation.types import convert_shorthand_to_full_type_name
+
 
 @has_fields
 @implements_specification('3.6.3', 'tosca-simple-1.0')
@@ -129,6 +130,7 @@ class ArtifactType(ExtensiblePresentation):
             'mime_type',
             'file_ext',
             'properties'))
+
 
 @has_fields
 @implements_specification('3.6.5', 'tosca-simple-1.0')
@@ -223,6 +225,7 @@ class DataType(ExtensiblePresentation):
             'derived_from',
             'constraints',
             'properties'))
+
 
 @has_fields
 @implements_specification('3.6.6', 'tosca-simple-1.0')
@@ -326,6 +329,7 @@ class CapabilityType(ExtensiblePresentation):
             'properties',
             'attributes'))
 
+
 @allow_unknown_fields
 @has_fields
 @implements_specification('3.6.4', 'tosca-simple-1.0')
@@ -404,6 +408,7 @@ class InterfaceType(ExtensiblePresentation):
             'derived_from',
             'inputs',
             'operations'))
+
 
 @has_fields
 @implements_specification('3.6.9', 'tosca-simple-1.0')
@@ -518,6 +523,7 @@ class RelationshipType(ExtensiblePresentation):
             'properties',
             'attributes',
             'interfaces'))
+
 
 @has_fields
 @implements_specification('3.6.8', 'tosca-simple-1.0')
@@ -667,6 +673,7 @@ class NodeType(ExtensiblePresentation):
             'requirements',
             'capabilities'))
 
+
 @has_fields
 @implements_specification('3.6.10', 'tosca-simple-1.0')
 class GroupType(ExtensiblePresentation):
@@ -779,6 +786,7 @@ class GroupType(ExtensiblePresentation):
             'members',
             'properties',
             'interfaces'))
+
 
 @has_fields
 @implements_specification('3.6.11', 'tosca-simple-1.0')
