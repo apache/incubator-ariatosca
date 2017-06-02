@@ -54,8 +54,20 @@ interface_types:
 
   Maintenance:
     derived_from: tosca.interfaces.Root
-    enable: {}
-    disable: {}
+    inputs:
+      mode:
+        type: string
+        default: immediate
+        constraints:
+          - valid_values: [ immediate, eventual ]
+        description: >-
+          The mode in which maintenance mode is enabled/disabled.
+    enable:
+      description: >-
+        Enable maintenance mode.
+    disable:
+      description: >-
+        Disable maintenance mode.
 
 node_types:
 
@@ -102,8 +114,10 @@ topology_template:
               #token: { token: [ 'zero.one|two-three', '.|-', 3 ] }
       interfaces:
         Maintenance:
-          enable: juju > charm.maintenance_on
-          disable: juju > charm.maintenance_off
+          inputs:
+            mode: eventual
+          enable: maintenance_node_cellar.sh
+          disable: maintenance_node_cellar.sh
         Standard:
           create:
             implementation:

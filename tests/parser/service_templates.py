@@ -16,9 +16,21 @@
 import os
 
 from aria.utils.caching import cachedmethod
+from aria.parser.loading import LiteralLocation
 
 from .utils import (create_context, create_consumer)
 from ..helpers import (get_example_uri, get_service_template_uri)
+
+
+def consume_literal(literal, consumer_class_name='instance', cache=True, no_issues=True):
+    cachedmethod.ENABLED = cache
+    context = create_context(LiteralLocation(literal))
+    consumer, dumper = create_consumer(context, consumer_class_name)
+    consumer.consume()
+    if no_issues:
+        context.validation.dump_issues()
+        assert not context.validation.has_issues
+    return context, dumper
 
 
 def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
