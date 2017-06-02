@@ -86,6 +86,7 @@ def create_service(service_template, name=SERVICE_NAME, inputs=None):
 
 def create_service_with_dependencies(include_execution=False,
                                      include_input=False,
+                                     include_output=False,
                                      include_node=False):
     service_template = create_service_template()
     service = create_service(service_template=service_template)
@@ -96,6 +97,9 @@ def create_service_with_dependencies(include_execution=False,
     if include_input:
         input = create_input(name='input1', value='value1')
         service.inputs = {'input1': input}
+    if include_output:
+        output = create_output(name='output1', value='value1')
+        service.outputs = {'output1': output}
     if include_node:
         node_template = create_node_template(service_template=service_template)
         node = create_node(node_template, service, state=models.Node.STARTED)
@@ -290,6 +294,10 @@ def create_input(name, value):
     return _create_parameter(name, value, model_cls=models.Input)
 
 
+def create_output(name, value):
+    return _create_parameter(name, value, model_cls=models.Output)
+
+
 def _dictify(item):
     return dict(((item.name, item),))
 
@@ -300,8 +308,8 @@ def get_standard_interface_template(service_template):
     op_templates = dict(
         (op_name, models.OperationTemplate(
             name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
-        for op_name in [NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
-                        NORMATIVE_STOP, NORMATIVE_DELETE]
+        for op_name in (NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
+                        NORMATIVE_STOP, NORMATIVE_DELETE)
     )
     return models.InterfaceTemplate(name=NORMATIVE_STANDARD_INTERFACE,
                                     operation_templates=op_templates,
@@ -314,8 +322,8 @@ def get_standard_interface(service):
     ops = dict(
         (op_name, models.Operation(
             name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
-        for op_name in [NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
-                        NORMATIVE_STOP, NORMATIVE_DELETE]
+        for op_name in (NORMATIVE_CREATE, NORMATIVE_CONFIGURE, NORMATIVE_START,
+                        NORMATIVE_STOP, NORMATIVE_DELETE)
     )
     return {
         NORMATIVE_STANDARD_INTERFACE:
@@ -329,7 +337,7 @@ def get_configure_interfaces(service):
     operations = dict(
         (op_name, models.Operation(
             name=op_name, implementation='{0}.{1}'.format(__file__, mock_operation.__name__)))
-        for op_name in [NORMATIVE_PRE_CONFIGURE_SOURCE,
+        for op_name in (NORMATIVE_PRE_CONFIGURE_SOURCE,
                         NORMATIVE_POST_CONFIGURE_SOURCE,
                         NORMATIVE_ADD_SOURCE,
                         NORMATIVE_REMOVE_SOURCE,
@@ -337,8 +345,7 @@ def get_configure_interfaces(service):
                         NORMATIVE_PRE_CONFIGURE_TARGET,
                         NORMATIVE_POST_CONFIGURE_TARGET,
                         NORMATIVE_ADD_TARGET,
-                        NORMATIVE_REMOVE_TARGET
-                       ]
+                        NORMATIVE_REMOVE_TARGET)
     )
     interface = {
         NORMATIVE_CONFIGURE_INTERFACE: models.Interface(

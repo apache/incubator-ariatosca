@@ -144,6 +144,10 @@ topology_template:
       type: nodejs.Server
       requirements:
         - host: application_host
+      capabilities:
+        data_endpoint:
+          properties:
+            url_path: /app
       node_filter: # cannot be validated
         properties:
           #- flavor_name: { valid_values: [ {concat:[m1,.,small]} ] } # won't work because not validated :/
@@ -301,6 +305,14 @@ topology_template:
       host: [ node_cellar, host ] # doesn't really make sense; just for testing
     capabilities:
       app_endpoint: [ loadbalancer, client ]
+
+  outputs:
+
+    endpoint:
+      description: >-
+        The application endpoint.
+      type: string
+      value: { get_property: [ nodejs, data_endpoint, url_path ] }
 
 policy_types:
 

@@ -268,7 +268,7 @@ class Argument(aria_declarative_base, orchestration.ArgumentBase):
 
 
 # See also __all__ at the top of this file
-models_to_register = [
+models_to_register = (
     # Service template models
     ServiceTemplate,
     NodeTemplate,
@@ -317,4 +317,4 @@ models_to_register = [
     Task,
     Log,
     Argument
-]
+)

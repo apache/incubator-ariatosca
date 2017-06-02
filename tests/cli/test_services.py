@@ -174,7 +174,30 @@ class TestServicesDelete(TestCliBase):
 
 
 class TestServicesOutputs(TestCliBase):
-    pass
+
+    def test_header_string(self, monkeypatch, mock_storage):
+        monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
+        self.invoke('services outputs test_s')
+        assert 'Showing outputs for service test_s...' in self.logger_output_string
+
+    def test_outputs_no_outputs(self, monkeypatch, mock_storage):
+        monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
+        self.invoke('services outputs service_with_no_outputs')
+
+        assert 'No outputs' in self.logger_output_string
+        assert 'output1' not in self.logger_output_string
+        assert 'value1' not in self.logger_output_string
+
+    def test_outputs_one_output(self, monkeypatch, mock_storage):
+        monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
+        s = mock_models.create_service_with_dependencies(include_output=True)
+        monkeypatch.setattr(mock_storage.service, 'get_by_name', mock.MagicMock(return_value=s))
+
+        self.invoke('services outputs test_s')
+
+        assert 'output1' in self.logger_output_string
+        assert 'value1' in self.logger_output_string
+        assert 'No outputs' not in self.logger_output_string
 
 
 class TestServicesInputs(TestCliBase):
@@ -193,7 +216,6 @@ class TestServicesInputs(TestCliBase):
         assert 'value1' not in self.logger_output_string
 
     def test_inputs_one_input(self, monkeypatch, mock_storage):
-
         monkeypatch.setattr(_Environment, 'model_storage', mock_storage)
         s = mock_models.create_service_with_dependencies(include_input=True)
         monkeypatch.setattr(mock_storage.service, 'get_by_name', mock.MagicMock(return_value=s))

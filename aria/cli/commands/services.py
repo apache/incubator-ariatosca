@@ -192,17 +192,16 @@ def outputs(service_name, model_storage, logger):
     """
     logger.info('Showing outputs for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
-    #TODO fix this section..
-    outputs_def = service.outputs
-    response = model_storage.service.outputs.get(service_name)
-    outputs_ = StringIO()
-    for output_name, output in response.outputs.iteritems():
-        outputs_.write(' - "{0}":{1}'.format(output_name, os.linesep))
-        description = outputs_def[output_name].get('description', '')
-        outputs_.write('     Description: {0}{1}'.format(description,
-                                                         os.linesep))
-        outputs_.write('     Value: {0}{1}'.format(output, os.linesep))
-    logger.info(outputs_.getvalue())
+
+    if service.outputs:
+        outputs_string = StringIO()
+        for output_name, output in service.outputs.iteritems():
+            outputs_string.write(' - "{0}":{1}'.format(output_name, os.linesep))
+            outputs_string.write('     Description: {0}{1}'.format(output.description, os.linesep))
+            outputs_string.write('     Value: {0}{1}'.format(output.value, os.linesep))
+        logger.info(outputs_string.getvalue())
+    else:
+        logger.info('\tNo outputs')
 
 
 @services.command(name='inputs',
@@ -218,10 +217,12 @@ def inputs(service_name, model_storage, logger):
     """
     logger.info('Showing inputs for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
+
     if service.inputs:
         inputs_string = StringIO()
         for input_name, input_ in service.inputs.iteritems():
             inputs_string.write(' - "{0}":{1}'.format(input_name, os.linesep))
+            inputs_string.write('     Description: {0}{1}'.format(input_.description, os.linesep))
             inputs_string.write('     Value: {0}{1}'.format(input_.value, os.linesep))
         logger.info(inputs_string.getvalue())
     else:
