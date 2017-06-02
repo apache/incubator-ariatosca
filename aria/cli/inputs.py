@@ -15,7 +15,7 @@
 
 import os
 import glob
-import yaml
+from ruamel import yaml
 
 from .env import logger
 from .exceptions import AriaCliError

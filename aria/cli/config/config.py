@@ -15,8 +15,8 @@
 
 
 import os
-import yaml
 import pkg_resources
+from ruamel import yaml
 
 from jinja2.environment import Template
 
