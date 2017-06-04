@@ -17,7 +17,7 @@ relationship_types:
 
   tosca.relationships.Root:
     _extensions:
-      shorthand_name: Root # ARIA NOTE: ommitted in the spec
+      shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
       specification_section: 5.6.1

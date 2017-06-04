@@ -14,8 +14,8 @@
 # limitations under the License.
 
 imports:
+  - artifacts.yaml
   - capabilities.yaml
   - data.yaml
-  - groups.yaml
   - nodes.yaml
   - relationships.yaml

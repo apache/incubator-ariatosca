@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+artifact_types:
+
+  tosca.artifacts.nfv.SwImage:
+    _extensions:
+      shorthand_name: SwImage
+      type_qualified_name: tosca:SwImage
+      specification: tosca-simple-nfv-1.0
+      specification_section: 5.4.1
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html#_Toc482896067'
+    derived_from: tosca.artifacts.Deployment.Image
+    properties:
+      name:
+        description: >-
+          Name of this software image.
+        type: string
+        required: true
+      version:
+        description: >-
+          Version of this software image.
+        type: string
+        required: true
+      checksum:
+        description: >-
+          Checksum of the software image file.
+        type: string
+      container_format:
+        description: >-
+          The container format describes the container file format in which software image is
+          provided.
+        type: string
+        required: true
+      disk_format:
+        description: >-
+          The disk format of a software image is the format of the underlying disk image.
+        type: string
+        required: true
+      min_disk:
+        description: >-
+          The minimal disk size requirement for this software image.
+        type: scalar-unit.size
+        required: true
+      min_ram:
+        description: >-
+          The minimal disk size requirement for this software image.
+        type: scalar-unit.size
+        required: false
+      size: # ARIA NOTE: section [5.4.1.1 Properties] calls this field 'Size'
+        description: >-
+          The size of this software image
+        type: scalar-unit.size
+        required: true
+      sw_image:
+        description: >-
+          A reference to the actual software image within VNF Package, or url.
+        type: string
+        required: true
+      operating_system:
+        description: >-
+          Identifies the operating system used in the software image.
+        type: string
+        required: false
+      supported _virtualization_enviroment:
+        description: >-
+          Identifies the virtualization environments (e.g. hypervisor) compatible with this software
+          image.
+        type: list
+        entry_schema:
+          type: string
+        required: false

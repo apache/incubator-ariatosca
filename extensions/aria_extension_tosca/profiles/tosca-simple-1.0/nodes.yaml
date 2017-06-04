@@ -214,7 +214,7 @@ node_types:
   
   tosca.nodes.DBMS:
     _extensions:
-      shorthand_name: DBMS # ARIA NOTE: ommitted in the spec
+      shorthand_name: DBMS # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:DBMS
       specification: tosca-simple-1.0
       specification_section: 5.8.6
