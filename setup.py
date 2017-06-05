@@ -39,6 +39,9 @@ root_dir = os.path.dirname(__file__)
 with open(os.path.join(root_dir, 'VERSION')) as version_file:
     __version__ = version_file.read().strip()
 
+with open(os.path.join(root_dir, 'README.rst')) as readme:
+    long_description = readme.read()
+
 install_requires = []
 extras_require = {}
 
@@ -106,10 +109,13 @@ setup(
     name=_PACKAGE_NAME,
     version=__version__,
     description='ARIA',
+    long_description=long_description,
     license='Apache License 2.0',
     author='aria',
     author_email='dev@ariatosca.incubator.apache.org',
-    url='http://ariatosca.org',
+    url='http://ariatosca.incubator.apache.org/',
+    download_url=(
+        'https://dist.apache.org/repos/dist/release/incubator/ariatosca/' + __version__),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

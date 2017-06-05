@@ -13,34 +13,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-EXTENSIONS=extensions
-DOCS=docs
-HTML=docs/html
+EXTENSIONS = ./extensions
+DIST = ./dist
+DOCS = ./docs
+HTML = ./docs/html
+EASY_INSTALL_PTH = $(VIRTUAL_ENV)/lib/python2.7/site-packages/easy-install.pth
+PYTHON_VERSION = $$(python -V 2>&1 | cut -f2 -d' ' | cut -f1,2 -d'.' --output-delimiter='')
 
-.PHONY: clean aria-requirements docs-requirements docs
-.DEFAULT_GOAL = test
+.DEFAULT_GOAL = install
+.PHONY: clean install install-virtual docs test dist deploy
 
 clean:
-	rm -rf "$(HTML)" .tox .coverage*
+	rm -rf "$(DIST)" "$(HTML)" .tox .coverage*
 	-find . -type f -name '.coverage' -delete
 	-find . -type d -name '.coverage' -exec rm -rf {} \; 2>/dev/null
 	-find . -type d -name '*.egg-info' -exec rm -rf {} \; 2>/dev/null
 
 install:
-	pip install --upgrade .
+	pip install .
 
-requirements:
-	pip install --upgrade --requirement requirements.txt
+install-virtual:
+	pip install --editable .
+	
+	# "pip install --editable" will not add our extensions to the path, so we will patch the virtualenv
+	EXTENSIONS_PATH="$$(head -n 1 "$(EASY_INSTALL_PTH)")/extensions" && \
+	if ! grep -Fxq "$$EXTENSIONS_PATH" "$(EASY_INSTALL_PTH)"; then \
+		echo "$$EXTENSIONS_PATH" >> "$(EASY_INSTALL_PTH)"; \
+	fi
 
-docs-requirements:
-	pip install --upgrade --requirement "$(DOCS)/requirements.txt"
-
-test-requirements:
-	pip install tox==2.5.0
-
-docs: docs-requirements requirements
+docs:
+	pip install --requirement "$(DOCS)/requirements.txt"
 	rm -rf "$(HTML)"
 	sphinx-build -b html "$(DOCS)" "$(HTML)"
 
-test: test-requirements requirements
-	PYTHONPATH="$(EXTENSIONS):$(PYTHONPATH)" tox
+test:
+	pip install --upgrade "tox>=2.7.0"
+	tox -e pylint_code
+	tox -e pylint_tests
+	tox -e py$(PYTHON_VERSION)
+	tox -e py$(PYTHON_VERSION)e2e
+
+dist: docs
+	python ./setup.py sdist bdist_wheel
+
+deploy:
+	pip install --upgrade "twine>=1.9.1"
+	gpg --detach-sign -a "$(DIST)"/*
+	twine upload "$(DIST)"/*
+
+./requirements.txt: ./requirements.in
+	pip install --upgrade "pip-tools>=1.9.0"
+	pip-compile --output-file ./requirements.txt ./requirements.in

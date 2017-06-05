@@ -36,7 +36,8 @@ import sys
 sys.path.append(os.path.abspath('../aria'))
 sys.path.append(os.path.abspath('../extensions'))
 
-execfile(os.path.join('../aria', 'VERSION.py'))
+with open('../VERSION') as f:
+    version = f.readline()
 
 # -- General configuration ------------------------------------------------
 

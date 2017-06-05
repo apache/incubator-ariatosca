@@ -1,4 +1,10 @@
-include requirements.txt
-include VERSION
+include CONTRIBUTING
 include LICENSE
+include NOTICE
+include VERSION
+include CHANGELOG.rst
+include README.rst
+include requirements.txt
+recursive-include docs/html *
 recursive-include examples *
+prune docs/html/.doctrees
