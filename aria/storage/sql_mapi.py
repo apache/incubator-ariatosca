@@ -405,7 +405,8 @@ def init_storage(base_dir, filename='db.sqlite'):
 
         path=os.path.join(base_dir, filename))
 
-    engine = create_engine(uri)
+    engine = create_engine(uri, connect_args=dict(timeout=15))
+
     session_factory = orm.sessionmaker(bind=engine)
     session = orm.scoped_session(session_factory=session_factory)
 
