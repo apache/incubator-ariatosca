@@ -198,23 +198,28 @@ class _InstrumentedList(_InstrumentedCollection, list):
         return list(self)
 
 
-class _InstrumentedModel(object):
+class _WrappedBase(object):
 
-    def __init__(self, original_model, mapi, instrumentation):
+    def __init__(self, wrapped, instrumentation):
+        self._wrapped = wrapped
+        self._instrumentation = instrumentation
+
+
+class _InstrumentedModel(_WrappedBase):
+
+    def __init__(self, mapi, *args, **kwargs):
         """
         The original model
-        :param original_model: the model to be instrumented
+        :param wrapped: the model to be instrumented
         :param mapi: the mapi for that model
         """
-        super(_InstrumentedModel, self).__init__()
-        self._original_model = original_model
+        super(_InstrumentedModel, self).__init__(*args, **kwargs)
         self._mapi = mapi
-        self._instrumentation = instrumentation
         self._apply_instrumentation()
 
     def __getattr__(self, item):
-        return_value = getattr(self._original_model, item)
-        if isinstance(return_value, self._original_model.__class__):
+        return_value = getattr(self._wrapped, item)
+        if isinstance(return_value, self._wrapped.__class__):
             return _create_instrumented_model(return_value, self._mapi, self._instrumentation)
         if isinstance(return_value, (list, dict)):
             return _create_wrapped_model(return_value, self._mapi, self._instrumentation)
@@ -224,7 +229,7 @@ class _InstrumentedModel(object):
         for field in self._instrumentation:
             field_name = field.key
             field_cls = field.mapper.class_
-            field = getattr(self._original_model, field_name)
+            field = getattr(self._wrapped, field_name)
 
             # Preserve the original value. e.g. original attributes would be located under
             # _attributes
@@ -241,20 +246,20 @@ class _InstrumentedModel(object):
                     "ARIA supports instrumentation for dict and list. Field {field} of the "
                     "class {model} is of {type} type.".format(
                         field=field,
-                        model=self._original_model,
+                        model=self._wrapped,
                         type=type(field)))
 
             instrumented_class = instrumentation_cls(seq=field,
-                                                     parent=self._original_model,
+                                                     parent=self._wrapped,
                                                      mapi=self._mapi,
                                                      field_name=field_name,
                                                      field_cls=field_cls)
             setattr(self, field_name, instrumented_class)
 
 
-class _WrappedModel(object):
+class _WrappedModel(_WrappedBase):
 
-    def __init__(self, wrapped, instrumentation, **kwargs):
+    def __init__(self, instrumentation_kwargs, *args, **kwargs):
         """
 
         :param instrumented_cls: The class to be instrumented
@@ -262,9 +267,8 @@ class _WrappedModel(object):
         :param wrapped: the currently wrapped instance
         :param kwargs: and kwargs to the passed to the instrumented class.
         """
-        self._kwargs = kwargs
-        self._instrumentation = instrumentation
-        self._wrapped = wrapped
+        super(_WrappedModel, self).__init__(*args, **kwargs)
+        self._kwargs = instrumentation_kwargs
 
     def _wrap(self, value):
         if value.__class__ in (class_.class_ for class_ in self._instrumentation):
@@ -286,16 +290,18 @@ class _WrappedModel(object):
         return self._wrap(self._wrapped[item])
 
 
-def _create_instrumented_model(original_model, mapi, instrumentation, **kwargs):
+def _create_instrumented_model(original_model, mapi, instrumentation):
     return type('Instrumented{0}'.format(original_model.__class__.__name__),
                 (_InstrumentedModel,),
-                {})(original_model, mapi, instrumentation, **kwargs)
+                {})(wrapped=original_model, instrumentation=instrumentation, mapi=mapi)
 
 
-def _create_wrapped_model(original_model, mapi, instrumentation, **kwargs):
+def _create_wrapped_model(original_model, mapi, instrumentation):
     return type('Wrapped{0}'.format(original_model.__class__.__name__),
                 (_WrappedModel, ),
-                {})(original_model, instrumentation, mapi=mapi, **kwargs)
+                {})(wrapped=original_model,
+                    instrumentation=instrumentation,
+                    instrumentation_kwargs=dict(mapi=mapi))
 
 
 def instrument(instrumentation, original_model, mapi):

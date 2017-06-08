@@ -83,20 +83,22 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
 
 
 def _run_workflow(context, executor, op_func, arguments=None):
+    node = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    interface_name = 'test_interface'
+    operation_name = 'operation'
+    wf_arguments = arguments or {}
+    interface = mock.models.create_interface(
+        context.service,
+        interface_name,
+        operation_name,
+        operation_kwargs=dict(function=_operation_mapping(op_func),
+                              arguments=wf_arguments)
+    )
+    node.interfaces[interface.name] = interface
+    context.model.node.update(node)
+
     @workflow
     def mock_workflow(ctx, graph):
-        node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-        interface_name = 'test_interface'
-        operation_name = 'operation'
-        wf_arguments = arguments or {}
-        interface = mock.models.create_interface(
-            ctx.service,
-            interface_name,
-            operation_name,
-            operation_kwargs=dict(function=_operation_mapping(op_func),
-                                  arguments=wf_arguments)
-        )
-        node.interfaces[interface.name] = interface
         task = api.task.OperationTask(
             node,
             interface_name=interface_name,

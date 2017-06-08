@@ -36,6 +36,13 @@ class BaseContext(object):
     Base context object for workflow and operation
     """
 
+    INSTRUMENTATION_FIELDS = (
+        modeling.models.Node.attributes,
+        modeling.models.Node.properties,
+        modeling.models.NodeTemplate.attributes,
+        modeling.models.NodeTemplate.properties
+    )
+
     class PrefixedLogger(object):
         def __init__(self, base_logger, task_id=None):
             self._logger = base_logger

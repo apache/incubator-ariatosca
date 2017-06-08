@@ -108,8 +108,6 @@ class OperationTask(BaseTask):
                 ``interface_name`` and ``operation_name`` to not refer to an operation on the actor
         """
 
-        assert isinstance(actor, (models.Node, models.Relationship))
-
         # Creating OperationTask directly should raise an error when there is no
         # interface/operation.
         if not has_operation(actor, interface_name, operation_name):

@@ -477,20 +477,22 @@ if __name__ == '__main__':
             'input_as_env_var': env_var
         })
 
+        node = workflow_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+        interface = mock.models.create_interface(
+            node.service,
+            'test',
+            'op',
+            operation_kwargs=dict(
+                function='{0}.{1}'.format(
+                    operations.__name__,
+                    operations.run_script_locally.__name__),
+                arguments=arguments)
+        )
+        node.interfaces[interface.name] = interface
+        workflow_context.model.node.update(node)
+
         @workflow
         def mock_workflow(ctx, graph):
-            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-            interface = mock.models.create_interface(
-                node.service,
-                'test',
-                'op',
-                operation_kwargs=dict(
-                    function='{0}.{1}'.format(
-                        operations.__name__,
-                        operations.run_script_locally.__name__),
-                    arguments=arguments)
-            )
-            node.interfaces[interface.name] = interface
             graph.add_tasks(api.task.OperationTask(
                 node,
                 interface_name='test',

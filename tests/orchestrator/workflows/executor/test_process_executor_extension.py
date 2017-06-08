@@ -32,19 +32,23 @@ def test_decorate_extension(context, executor):
     def get_node(ctx):
         return ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
 
+    node = get_node(context)
+    interface_name = 'test_interface'
+    operation_name = 'operation'
+    interface = mock.models.create_interface(
+        context.service,
+        interface_name,
+        operation_name,
+        operation_kwargs=dict(function='{0}.{1}'.format(__name__, _mock_operation.__name__),
+                              arguments=arguments)
+    )
+    node.interfaces[interface.name] = interface
+    context.model.node.update(node)
+
+
     @workflow
     def mock_workflow(ctx, graph):
         node = get_node(ctx)
-        interface_name = 'test_interface'
-        operation_name = 'operation'
-        interface = mock.models.create_interface(
-            ctx.service,
-            interface_name,
-            operation_name,
-            operation_kwargs=dict(function='{0}.{1}'.format(__name__, _mock_operation.__name__),
-                                  arguments=arguments)
-        )
-        node.interfaces[interface.name] = interface
         task = api.task.OperationTask(
             node,
             interface_name=interface_name,
