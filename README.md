@@ -1,201 +1,120 @@
 ARIA
 ====
 
-[![Build Status](https://travis-ci.org/apache/incubator-ariatosca.svg?branch=master)](https://travis-ci.org/apache/incubator-ariatosca)
-[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/ltv89jk63ahiu306?svg=true)](https://ci.appveyor.com/project/ApacheSoftwareFoundation/incubator-ariatosca/history)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Build Status](https://img.shields.io/travis/apache/incubator-ariatosca/master.svg)](https://travis-ci.org/apache/incubator-ariatosca)
+[![Appveyor Build Status](https://img.shields.io/appveyor/ci/ApacheSoftwareFoundation/incubator-ariatosca/master.svg)](https://ci.appveyor.com/project/ApacheSoftwareFoundation/incubator-ariatosca/history)
+[![License](https://img.shields.io/github/license/apache/incubator-ariatosca.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![PyPI release](https://img.shields.io/pypi/v/ariatosca.svg)](https://pypi.python.org/pypi/ariatosca)
+![Python Versions](https://img.shields.io/pypi/pyversions/ariatosca.svg)
+![Wheel](https://img.shields.io/pypi/wheel/ariatosca.svg)
+![Contributors](https://img.shields.io/github/contributors/apache/incubator-ariatosca.svg)
+[![Open Pull Requests](https://img.shields.io/github/issues-pr/apache/incubator-ariatosca.svg)](https://github.com/apache/incubator-ariatosca/pulls)
+[![Closed Pull Requests](https://img.shields.io/github/issues-pr-closed-raw/apache/incubator-ariatosca.svg)](https://github.com/apache/incubator-ariatosca/pulls?q=is%3Apr+is%3Aclosed)
 
 
-[ARIA](http://ariatosca.org/) is a minimal TOSCA orchestrator, as well as a platform for building
-TOSCA-based products. Its features can be accessed via a well-documented Python API.
+What is ARIA?
+----------------
 
-On its own, ARIA provides built-in tools for blueprint validation and for creating ready-to-run
-service instances. 
+[ARIA](http://ariatosca.incubator.apache.org/) is a an open-source, [TOSCA](https://www.oasis-open.org/committees/tosca/)-based, lightweight library and CLI for orchestration and for consumption by projects building TOSCA-based solutions for resources and services orchestration.
 
-ARIA adheres strictly and meticulously to the
-[TOSCA Simple Profile v1.0 cos01 specification](http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html),
-providing state-of-the-art validation at seven different levels:
+ARIA can be utilized by any organization that wants to implement TOSCA-based orchestration in its solutions, whether a multi-cloud enterprise application, or an NFV or SDN solution for multiple virtual infrastructure managers.
 
-<ol start="0">
-<li>Platform errors. E.g. network, hardware, or even an internal bug in ARIA (let us know,
-	please!).</li>
-<li>Syntax and format errors. E.g. non-compliant YAML, XML, JSON.</li>
-<li>Field validation. E.g. assigning a string where an integer is expected, using a list instead of
-	a dict.</li>
-<li>Relationships between fields within a type. This is "grammar" as it applies to rules for
-    setting the values of fields in relation to each other.</li>
-<li>Relationships between types. E.g. referring to an unknown type, causing a type inheritance
-    loop.</li>
-<li>Topology. These errors happen if requirements and capabilities cannot be matched in order to
-	assemble a valid topology.</li>
-<li>External dependencies. These errors happen if requirement/capability matching fails due to
-    external resources missing, e.g. the lack of a valid virtual machine, API credentials, etc.
-    </li> 
-</ol>
+With ARIA, you can utilize TOSCA's cloud portability out-of-the-box, to develop, test and run your applications, from template to deployment.
 
-Validation errors include a plain English message and when relevant the exact location (file, row,
-column) of the data the caused the error.
-
-The ARIA API documentation always links to the relevant section of the specification, and likewise
-we provide an annotated version of the specification that links back to the API documentation.
+ARIA is an incubation project under the [Apache Software Foundation](https://www.apache.org/).
 
 
-Quick Start
------------
+Installation
+----------------
 
-You need Python 2.6 or 2.7. Python 3+ is not currently supported.
+ARIA is [available on PyPI](https://pypi.python.org/pypi/ariatosca).    
 
-To install, we recommend using [pip](https://pip.pypa.io/) and a
-[virtualenv](https://virtualenv.pypa.io/en/stable/).
+To install ARIA directly from PyPI (using a `wheel`), use:
 
-In Debian-based systems:
+    pip install aria
 
-	sudo apt install python-setuptools
-	sudo -H easy_install pip
-	sudo -H pip install virtualenv
-	virtualenv env
 
-Or in Archlinux-based systems:
+To install ARIA from source, download the source tarball from [PyPI](https://pypi.python.org/pypi/ariatosca),
+extract it, and then when inside the extracted directory, use:
 
-	pacman -S python2 python-setuptools python-pip
-	pip install virtualenv
-	virtualenv env -p $(type -p python2)
+    pip install .
 
-To install the latest development snapshot of ARIA:
+The source package comes along with relevant examples, documentation,
+`requirements.txt` (for installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
 
-	. env/bin/activate
-	pip install git+http://git-wip-us.apache.org/repos/asf/incubator-ariatosca.git
+<br>
+Note that for the `pip install` commands mentioned above, you must use a privileged user, or use virtualenv.
+<br><br><br>
 
-To test it, let's create a service instance from a TOSCA blueprint:
+ARIA itself is in a `wheel` format compatible with all platforms. 
+Some dependencies, however, might require compilation (based on a given platform), and therefore possibly some system dependencies are required as well.
 
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml
+On Ubuntu or other Debian-based systems:
+
+	sudo apt install python-setuptools python-dev build-essential libssl-dev libffi-dev
+
+On Archlinux:
+
+	sudo pacman -S python-setuptools
+
+
+ARIA requires Python 2.6/2.7. Python 3+ is currently not supported.
+
+
+Getting Started
+---------------
+
+This section will describe how to run a simple "Hello World" example.
+
+First, provide ARIA with the ARIA "hello world" service-template and name it (e.g. `my-service-template`):
+
+	aria service-templates store examples/hello-world/helloworld.yaml my-service-template
 	
-You can also get it in JSON or YAML formats:
-
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml --json
-
-Or get an overview of the relationship graph:
-
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml --graph
-
-You can provide inputs as JSON, overriding default values provided in the blueprint
-
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml --inputs='{"openstack_credential": {"user": "username"}}'
-
-Instead of providing them explicitly, you can also provide them in a file or URL, in either JSON or
-YAML. If you do so, the value must end in ".json" or ".yaml":
-
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml --inputs=blueprints/tosca/node-cellar/inputs.yaml
-
-
-CLI
----
-
-Though ARIA is fully exposed as an API, it also comes with a CLI tool to allow you to work from the
-shell:
-
-	aria parse blueprints/tosca/node-cellar/node-cellar.yaml instance
-
-The `parse` command supports the following directives to create variations of the default consumer
-chain:
-
-* `presentation`: emits a colorized textual representation of the Python presentation classes
-   wrapping the blueprint.
-* `model`: emits a colorized textual representation of the complete service model derived from the
-   validated blueprint. This includes all the node templates, with their requirements satisfied at
-   the level of relating to other node templates.
-* `types`: emits a colorized textual representation of the type hierarchies.
-* `instance`: **this is the default command**; emits a colorized textual representation of a
-   service instance instantiated from the service model. Here the node templates are each used to
-   create one or more nodes, with the appropriate relationships between them. Note that every time
-   you run this consumer, you will get a different set of node IDs. Use `--graph` to see just the
-   node relationship graph.
-   
-For all these commands, you can also use `--json` or `--yaml` flags to emit in those formats.
-
-Additionally, The CLI tool lets you specify the complete classname of your own custom consumer to
-chain at the end of the default consumer chain, after `instance`.
-
-Your custom consumer can be an entry point into a powerful TOSCA-based tool or application, such as
-an orchestrator, a graphical modeling tool, etc.
-
-
-Development
------------
-
-Instead of installing with `pip`, it would be easier to work directly with the source files:
-
-	pip install virtualenv
-	virtualenv env
-	. env/bin/activate
-	git clone http://git-wip-us.apache.org/repos/asf/incubator-ariatosca.git ariatosca
-	cd ariatosca
-	pip install -e .
-
-To run tests:
-
-	pip install tox
-	tox
-
-Here's a quick example of using the API to parse YAML text into a service instance:
-
-	from aria import install_aria_extensions
-	from aria.parser.consumption import ConsumptionContext, ConsumerChain, Read, Validate, Model, Instance
-	from aria.parser.loading import LiteralLocation
+Now create a service based on this service-template and name it (e.g. `my-service`):
 	
-	def parse_text(payload, file_search_paths=[]):
-	    context = ConsumptionContext()
-	    context.presentation.location = LiteralLocation(payload)
-	    context.loading.file_search_paths += file_search_paths
-	    ConsumerChain(context, (Read, Validate, Model, Instance)).consume()
-	    if not context.validation.dump_issues():
-	        return context.modeling.instance
-	    return None
+	aria services create my-service -t my-service-template
 	
-	install_aria_extensions()
+Finally, start an `install` workflow execution on `my-service` like so:
 
-	print parse_text("""
-	tosca_definitions_version: tosca_simple_yaml_1_0
-	topology_template:
-	  node_templates:
-	    MyNode:
-	      type: tosca.nodes.Compute 
-	""")
+	aria executions start install -s my-service
+
+<br>
+You should now have a simple web-server running on your local machine.
+You can try visiting http://localhost:9090 to view your deployed application.
+
+To uninstall and clean your environment, follow these steps:
+
+    aria executions start uninstall -s my-service
+    aria services delete my-service
+    aria service-templates delete my-service-template
 
 
-Parser API Architecture
------------------------
+Contribution
+------------
 
-ARIA's parsing engine comprises individual "consumers" (in the `aria.parser.consumption` package)
-that do things with blueprints. When chained together, each performs a different task, adds its own
-validations, and can provide its own output.
+You are welcome and encouraged to participate and contribute to the ARIA project.
 
-Parsing happens in five phases, represented in five packages:
+Please see our guide to [Contributing to ARIA](https://cwiki.apache.org/confluence/display/ARIATOSCA/Contributing+to+ARIA).
 
-* `aria.parser.loading`: Loaders are used to read the TOSCA data, usually as text. For example
-  UriTextLoader will load text from URIs (including files).
-* `aria.parser.reading`: Readers convert data from the loaders into agnostic raw data. For
-  example, `YamlReader` converts YAML text into Python dicts, lists, and primitives.
-* `aria.parser.presentation`: Presenters wrap the agnostic raw data in a nice
-  Python facade (a "presentation") that makes it much easier to work with the data, including
-  utilities for validation, querying, etc. Note that presenters are _wrappers_: the agnostic raw
-  data is always maintained intact, and can always be accessed directly or written back to files.
-* `aria.parser.modeling.model`: Here the topology is normalized into a coherent structure of
-  node templates, requirements, and capabilities. Types are inherited and properties are assigned.
-  The service model is a _new_ structure, which is not mapped to the YAML. In fact, it is possible
-  to generate the model programmatically, or from a DSL parser other than TOSCA.
-* `aria.parser.modeling.instance`: The service instance is an instantiated service model. Node
-  templates turn into node instances (with unique IDs), and requirements are satisfied by matching
-  them to capabilities. This is where level 5 validation errors are detected (see above).
+Feel free to also provide feedback on the mailing lists (see [Resources](#user-content-resources) section).
 
-The phases do not have to be used in order. Indeed, consumers do not have to be used at all: ARIA
-can be used to _produce_ blueprints. For example, it is possible to fill in the
-`aria.parser.presentation` classes programmatically, in Python, and then write the presentation
-to a YAML file as compliant TOSCA. The same technique can be used to convert from one DSL (consume
-it) to another (write it).
 
-The term "agnostic raw data" (ARD?) appears often in the documentation. It denotes data structures
-comprising _only_ Python dicts, lists, and primitives, such that they can always be converted to and
-from language-agnostic formats such as YAML, JSON, and XML. A considerable effort has been made to
-conserve the agnostic raw data at all times. Thus, though ARIA makes good use of the dynamic power
-of Python, you will _always_ be able to use ARIA with other systems.
+Resources
+---------
+
+* [ARIA homepage](http://ariatosca.incubator.apache.org/)
+* [ARIA wiki](https://cwiki.apache.org/confluence/display/AriaTosca)
+* [Issue tracker](https://issues.apache.org/jira/browse/ARIA)
+
+* Dev mailing list: dev@ariatosca.incubator.apache.org
+* User mailing list: user@ariatosca.incubator.apache.org
+
+Subscribe by sending a mail to `<group>-subscribe@ariatosca.incubator.apache.org` (e.g. `dev-subscribe@ariatosca.incubator.apache.org`).
+See information on how to subscribe to mailing list [here](https://www.apache.org/foundation/mailinglists.html).
+
+For past correspondence, see the [dev mailing list archive](http://mail-archives.apache.org/mod_mbox/incubator-ariatosca-dev/).
+
+
+License
+-------
+ARIA is licensed under the [Apache License 2.0](https://github.com/apache/incubator-ariatosca/blob/master/LICENSE).
