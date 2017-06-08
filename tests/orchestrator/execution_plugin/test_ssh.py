@@ -214,33 +214,33 @@ class TestWithActualSSHServer(object):
         else:
             operation = operations.run_script_with_ssh
 
+        node = self._workflow_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+        arguments = {
+            'script_path': script_path,
+            'fabric_env': _FABRIC_ENV,
+            'process': process,
+            'use_sudo': use_sudo,
+            'custom_env_var': custom_input,
+            'test_operation': '',
+        }
+        if hide_output:
+            arguments['hide_output'] = hide_output
+        if commands:
+            arguments['commands'] = commands
+        interface = mock.models.create_interface(
+            node.service,
+            'test',
+            'op',
+            operation_kwargs=dict(
+                function='{0}.{1}'.format(
+                    operations.__name__,
+                    operation.__name__),
+                arguments=arguments)
+        )
+        node.interfaces[interface.name] = interface
+
         @workflow
         def mock_workflow(ctx, graph):
-            node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
-            arguments = {
-                'script_path': script_path,
-                'fabric_env': _FABRIC_ENV,
-                'process': process,
-                'use_sudo': use_sudo,
-                'custom_env_var': custom_input,
-                'test_operation': '',
-            }
-            if hide_output:
-                arguments['hide_output'] = hide_output
-            if commands:
-                arguments['commands'] = commands
-            interface = mock.models.create_interface(
-                node.service,
-                'test',
-                'op',
-                operation_kwargs=dict(
-                    function='{0}.{1}'.format(
-                        operations.__name__,
-                        operation.__name__),
-                    arguments=arguments)
-            )
-            node.interfaces[interface.name] = interface
-
             ops = []
             for test_operation in test_operations:
                 op_arguments = arguments.copy()

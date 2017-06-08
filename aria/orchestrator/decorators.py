@@ -49,8 +49,9 @@ def workflow(func=None, suffix_template=''):
         workflow_parameters.setdefault('ctx', ctx)
         workflow_parameters.setdefault('graph', task_graph.TaskGraph(workflow_name))
         validate_function_arguments(func, workflow_parameters)
-        with context.workflow.current.push(ctx):
-            func(**workflow_parameters)
+        with ctx.model.instrument(*ctx.INSTRUMENTATION_FIELDS):
+            with context.workflow.current.push(ctx):
+                func(**workflow_parameters)
         return workflow_parameters['graph']
     return _wrapper
 

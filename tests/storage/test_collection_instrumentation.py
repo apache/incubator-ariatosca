@@ -17,12 +17,6 @@ import pytest
 
 from aria.modeling import models
 from aria.storage import collection_instrumentation
-from aria.orchestrator.context import operation
-
-from tests import (
-    mock,
-    storage
-)
 
 
 class MockActor(object):
@@ -261,65 +255,3 @@ class TestDictList(CollectionInstrumentation):
         assert len(actor.dict_) == 1
         assert isinstance(actor.dict_['key'], models.Attribute)
         assert actor.dict_['key'].value[0] == 'value'
-
-
-class TestModelInstrumentation(object):
-
-    @pytest.fixture
-    def workflow_ctx(self, tmpdir):
-        context = mock.context.simple(str(tmpdir), inmemory=True)
-        yield context
-        storage.release_sqlite_storage(context.model)
-
-    def test_attributes_access(self, workflow_ctx):
-        node = workflow_ctx.model.node.list()[0]
-        task = models.Task(node=node)
-        workflow_ctx.model.task.put(task)
-
-        ctx = operation.NodeOperationContext(
-            task.id, node.id, name='', service_id=workflow_ctx.model.service.list()[0].id,
-            model_storage=workflow_ctx.model, resource_storage=workflow_ctx.resource,
-            execution_id=1)
-
-        def _run_assertions(is_under_ctx):
-            def ctx_assert(expr):
-                if is_under_ctx:
-                    assert expr
-                else:
-                    assert not expr
-
-            ctx_assert(isinstance(ctx.node.attributes,
-                                  collection_instrumentation._InstrumentedDict))
-            assert not isinstance(ctx.node.properties,
-                                  collection_instrumentation._InstrumentedCollection)
-
-            for rel in ctx.node.inbound_relationships:
-                ctx_assert(isinstance(rel, collection_instrumentation._WrappedModel))
-                ctx_assert(isinstance(rel.source_node.attributes,
-                                      collection_instrumentation._InstrumentedDict))
-                ctx_assert(isinstance(rel.target_node.attributes,
-                                      collection_instrumentation._InstrumentedDict))
-
-            for node in ctx.model.node:
-                ctx_assert(isinstance(node.attributes,
-                                      collection_instrumentation._InstrumentedDict))
-                assert not isinstance(node.properties,
-                                      collection_instrumentation._InstrumentedCollection)
-
-            for rel in ctx.model.relationship:
-                ctx_assert(isinstance(rel, collection_instrumentation._WrappedModel))
-
-                ctx_assert(isinstance(rel.source_node.attributes,
-                                      collection_instrumentation._InstrumentedDict))
-                ctx_assert(isinstance(rel.target_node.attributes,
-                                      collection_instrumentation._InstrumentedDict))
-
-                assert not isinstance(rel.source_node.properties,
-                                      collection_instrumentation._InstrumentedCollection)
-                assert not isinstance(rel.target_node.properties,
-                                      collection_instrumentation._InstrumentedCollection)
-
-        with ctx.model.instrument(models.Node.attributes):
-            _run_assertions(True)
-
-        _run_assertions(False)

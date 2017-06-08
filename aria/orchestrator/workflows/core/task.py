@@ -124,20 +124,22 @@ class OperationTask(BaseTask):
         self.operation_name = api_task.operation_name
         model_storage = api_task._workflow_context.model
 
+        actor = getattr(api_task.actor, '_wrapped', api_task.actor)
+
         base_task_model = model_storage.task.model_cls
-        if isinstance(api_task.actor, models.Node):
+        if isinstance(actor, models.Node):
             context_cls = operation_context.NodeOperationContext
             create_task_model = base_task_model.for_node
-        elif isinstance(api_task.actor, models.Relationship):
+        elif isinstance(actor, models.Relationship):
             context_cls = operation_context.RelationshipOperationContext
             create_task_model = base_task_model.for_relationship
         else:
             raise RuntimeError('No operation context could be created for {actor.model_cls}'
-                               .format(actor=api_task.actor))
+                               .format(actor=actor))
 
         task_model = create_task_model(
             name=api_task.name,
-            actor=api_task.actor,
+            actor=actor,
             status=base_task_model.PENDING,
             max_attempts=api_task.max_attempts,
             retry_interval=api_task.retry_interval,
@@ -156,7 +158,7 @@ class OperationTask(BaseTask):
                                 resource_storage=self._workflow_context.resource,
                                 service_id=self._workflow_context._service_id,
                                 task_id=task_model.id,
-                                actor_id=api_task.actor.id,
+                                actor_id=actor.id,
                                 execution_id=self._workflow_context._execution_id,
                                 workdir=self._workflow_context._workdir)
         self._task_id = task_model.id

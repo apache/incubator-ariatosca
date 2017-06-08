@@ -56,12 +56,9 @@ def test_execute_operation(ctx):
     )
 
     assert len(execute_tasks) == 1
-    assert execute_tasks[0].name == task.OperationTask.NAME_FORMAT.format(
-        type='node',
-        name=node.name,
-        interface=interface_name,
-        operation=operation_name
-    )
+    assert getattr(execute_tasks[0].actor, '_wrapped', execute_tasks[0].actor) == node
+    assert execute_tasks[0].operation_name == operation_name
+    assert execute_tasks[0].interface_name == interface_name
 
 
 # TODO: add more scenarios

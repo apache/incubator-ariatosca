@@ -29,13 +29,6 @@ class BaseOperationContext(common.BaseContext):
     Context object used during operation creation and execution
     """
 
-    INSTRUMENTATION_FIELDS = (
-        aria.modeling.models.Node.attributes,
-        aria.modeling.models.Node.properties,
-        aria.modeling.models.NodeTemplate.attributes,
-        aria.modeling.models.NodeTemplate.properties
-    )
-
     def __init__(self, task_id, actor_id, **kwargs):
         self._task_id = task_id
         self._actor_id = actor_id

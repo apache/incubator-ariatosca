@@ -33,16 +33,10 @@ def test_serialize_operation_context(context, executor, tmpdir):
     test_file.write(TEST_FILE_CONTENT)
     resource = context.resource
     resource.service_template.upload(TEST_FILE_ENTRY_ID, str(test_file))
-    graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
-    eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
-    eng.execute()
 
-
-@workflow
-def _mock_workflow(ctx, graph):
-    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    node = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     plugin = mock.models.create_plugin()
-    ctx.model.plugin.put(plugin)
+    context.model.plugin.put(plugin)
     interface = mock.models.create_interface(
         node.service,
         'test',
@@ -51,6 +45,16 @@ def _mock_workflow(ctx, graph):
                               plugin=plugin)
     )
     node.interfaces[interface.name] = interface
+    context.model.node.update(node)
+
+    graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
+    eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
+    eng.execute()
+
+
+@workflow
+def _mock_workflow(ctx, graph):
+    node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     task = api.task.OperationTask(node, interface_name='test', operation_name='op')
     graph.add_tasks(task)
     return graph
