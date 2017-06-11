@@ -17,7 +17,7 @@ import pytest
 
 from aria import extension
 from aria.orchestrator.workflows import api
-from aria.orchestrator.workflows.core import engine
+from aria.orchestrator.workflows.core import engine, compile
 from aria.orchestrator.workflows.executor import process
 from aria.orchestrator import workflow, operation
 
@@ -57,8 +57,9 @@ def test_decorate_extension(context, executor):
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
-    eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
-    eng.execute()
+    compile.create_execution_tasks(context, graph, executor.__class__)
+    eng = engine.Engine({executor.__class__: executor})
+    eng.execute(context)
     out = get_node(context).attributes.get('out').value
     assert out['wrapper_arguments'] == arguments
     assert out['function_arguments'] == arguments

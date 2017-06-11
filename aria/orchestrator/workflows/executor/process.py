@@ -113,17 +113,17 @@ class ProcessExecutor(base.BaseExecutor):
         self._server_socket.close()
         self._listener_thread.join(timeout=60)
 
-    def _execute(self, task):
+    def _execute(self, ctx):
         self._check_closed()
-        self._tasks[task.id] = task
+        self._tasks[ctx.task.id] = ctx
 
         # Temporary file used to pass arguments to the started subprocess
         file_descriptor, arguments_json_path = tempfile.mkstemp(prefix='executor-', suffix='.json')
         os.close(file_descriptor)
         with open(arguments_json_path, 'wb') as f:
-            f.write(pickle.dumps(self._create_arguments_dict(task)))
+            f.write(pickle.dumps(self._create_arguments_dict(ctx)))
 
-        env = self._construct_subprocess_env(task=task)
+        env = self._construct_subprocess_env(task=ctx.task)
         # Asynchronously start the operation in a subprocess
         subprocess.Popen(
             '{0} {1} {2}'.format(sys.executable, __file__, arguments_json_path),
@@ -137,13 +137,13 @@ class ProcessExecutor(base.BaseExecutor):
         if self._stopped:
             raise RuntimeError('Executor closed')
 
-    def _create_arguments_dict(self, task):
+    def _create_arguments_dict(self, ctx):
         return {
-            'task_id': task.id,
-            'function': task.function,
-            'operation_arguments': dict(arg.unwrapped for arg in task.arguments.values()),
+            'task_id': ctx.task.id,
+            'function': ctx.task.function,
+            'operation_arguments': dict(arg.unwrapped for arg in ctx.task.arguments.values()),
             'port': self._server_port,
-            'context': task.context.serialization_dict,
+            'context': ctx.serialization_dict,
         }
 
     def _construct_subprocess_env(self, task):

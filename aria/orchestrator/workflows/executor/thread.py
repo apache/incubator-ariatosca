@@ -46,8 +46,8 @@ class ThreadExecutor(BaseExecutor):
             thread.start()
             self._pool.append(thread)
 
-    def _execute(self, task):
-        self._queue.put(task)
+    def _execute(self, ctx):
+        self._queue.put(ctx)
 
     def close(self):
         self._stopped = True
@@ -57,15 +57,15 @@ class ThreadExecutor(BaseExecutor):
     def _processor(self):
         while not self._stopped:
             try:
-                task = self._queue.get(timeout=1)
-                self._task_started(task)
+                ctx = self._queue.get(timeout=1)
+                self._task_started(ctx)
                 try:
-                    task_func = imports.load_attribute(task.function)
-                    arguments = dict(arg.unwrapped for arg in task.arguments.values())
-                    task_func(ctx=task.context, **arguments)
-                    self._task_succeeded(task)
+                    task_func = imports.load_attribute(ctx.task.function)
+                    arguments = dict(arg.unwrapped for arg in ctx.task.arguments.values())
+                    task_func(ctx=ctx, **arguments)
+                    self._task_succeeded(ctx)
                 except BaseException as e:
-                    self._task_failed(task,
+                    self._task_failed(ctx,
                                       exception=e,
                                       traceback=exceptions.get_exception_as_string(*sys.exc_info()))
             # Daemon threads

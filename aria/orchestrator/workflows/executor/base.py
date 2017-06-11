@@ -28,19 +28,19 @@ class BaseExecutor(logger.LoggerMixin):
     def _execute(self, task):
         raise NotImplementedError
 
-    def execute(self, task):
+    def execute(self, ctx):
         """
         Execute a task
         :param task: task to execute
         """
-        if task.function:
-            self._execute(task)
+        if ctx.task.function:
+            self._execute(ctx)
         else:
             # In this case the task is missing a function. This task still gets to an
-            # executor, but since there is nothing to run, we by default simply skip the execution
-            # itself.
-            self._task_started(task)
-            self._task_succeeded(task)
+            # executor, but since there is nothing to run, we by default simply skip the
+            # execution itself.
+            self._task_started(ctx)
+            self._task_succeeded(ctx)
 
     def close(self):
         """
@@ -49,18 +49,19 @@ class BaseExecutor(logger.LoggerMixin):
         pass
 
     @staticmethod
-    def _task_started(task):
-        events.start_task_signal.send(task)
+    def _task_started(ctx):
+        events.start_task_signal.send(ctx)
 
     @staticmethod
-    def _task_failed(task, exception, traceback=None):
-        events.on_failure_task_signal.send(task, exception=exception, traceback=traceback)
+    def _task_failed(ctx, exception, traceback=None):
+        events.on_failure_task_signal.send(ctx, exception=exception, traceback=traceback)
 
     @staticmethod
-    def _task_succeeded(task):
-        events.on_success_task_signal.send(task)
+    def _task_succeeded(ctx):
+        events.on_success_task_signal.send(ctx)
 
 
 class StubTaskExecutor(BaseExecutor):                                                               # pylint: disable=abstract-method
-    def execute(self, task):
-        task.status = task.SUCCESS
+    def execute(self, ctx, *args, **kwargs):
+        with ctx.persist_changes:
+            ctx.task.status = ctx.task.SUCCESS

@@ -21,7 +21,6 @@ classes:
 """
 
 # pylint: disable=no-self-argument, no-member, abstract-method
-
 from datetime import datetime
 
 from sqlalchemy import (
@@ -34,19 +33,19 @@ from sqlalchemy import (
     String,
     Float,
     orm,
-)
+    PickleType)
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from ..orchestrator.exceptions import (TaskAbortException, TaskRetryException)
-from .mixins import ModelMixin, ParameterMixin
+from . import mixins
 from . import (
     relationship,
     types as modeling_types
 )
 
 
-class ExecutionBase(ModelMixin):
+class ExecutionBase(mixins.ModelMixin):
     """
     Execution model representation.
     """
@@ -152,7 +151,7 @@ class ExecutionBase(ModelMixin):
         )
 
 
-class PluginBase(ModelMixin):
+class PluginBase(mixins.ModelMixin):
     """
     An installed plugin.
 
@@ -213,7 +212,7 @@ class PluginBase(ModelMixin):
     uploaded_at = Column(DateTime, nullable=False, index=True)
 
 
-class TaskBase(ModelMixin):
+class TaskBase(mixins.ModelMixin):
     """
     Represents the smallest unit of stateful execution in ARIA. The task state includes inputs,
     outputs, as well as an atomic status, ensuring that the task can only be running once at any
@@ -257,10 +256,24 @@ class TaskBase(ModelMixin):
 
     __tablename__ = 'task'
 
-    __private_fields__ = ['node_fk',
-                          'relationship_fk',
-                          'plugin_fk',
-                          'execution_fk']
+    __private_fields__ = ['dependency_operation_task_fk', 'dependency_stub_task_fk', 'node_fk',
+                          'relationship_fk', 'plugin_fk', 'execution_fk']
+
+    START_WORKFLOW = 'start_workflow'
+    END_WORKFLOW = 'end_workflow'
+    START_SUBWROFKLOW = 'start_subworkflow'
+    END_SUBWORKFLOW = 'end_subworkflow'
+    STUB = 'stub'
+    CONDITIONAL = 'conditional'
+
+    STUB_TYPES = (
+        START_WORKFLOW,
+        START_SUBWROFKLOW,
+        END_WORKFLOW,
+        END_SUBWORKFLOW,
+        STUB,
+        CONDITIONAL,
+    )
 
     PENDING = 'pending'
     RETRYING = 'retrying'
@@ -276,8 +289,26 @@ class TaskBase(ModelMixin):
         SUCCESS,
         FAILED,
     )
-
     INFINITE_RETRIES = -1
+
+    @declared_attr
+    def execution(cls):
+        return relationship.many_to_one(cls, 'execution')
+
+    @declared_attr
+    def execution_fk(cls):
+        return relationship.foreign_key('execution', nullable=True)
+
+    status = Column(Enum(*STATES, name='status'), default=PENDING)
+    due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
+    started_at = Column(DateTime, default=None)
+    ended_at = Column(DateTime, default=None)
+    attempts_count = Column(Integer, default=1)
+
+    _api_id = Column(String)
+    _executor = Column(PickleType)
+    _context_cls = Column(PickleType)
+    _stub_type = Column(Enum(*STUB_TYPES))
 
     @declared_attr
     def logs(cls):
@@ -296,10 +327,6 @@ class TaskBase(ModelMixin):
         return relationship.many_to_one(cls, 'plugin')
 
     @declared_attr
-    def execution(cls):
-        return relationship.many_to_one(cls, 'execution')
-
-    @declared_attr
     def arguments(cls):
         return relationship.one_to_many(cls, 'argument', dict_key='name')
 
@@ -307,19 +334,8 @@ class TaskBase(ModelMixin):
     max_attempts = Column(Integer, default=1)
     retry_interval = Column(Float, default=0)
     ignore_failure = Column(Boolean, default=False)
-
-    # State
-    status = Column(Enum(*STATES, name='status'), default=PENDING)
-    due_at = Column(DateTime, nullable=False, index=True, default=datetime.utcnow())
-    started_at = Column(DateTime, default=None)
-    ended_at = Column(DateTime, default=None)
-    attempts_count = Column(Integer, default=1)
-
-    def has_ended(self):
-        return self.status in (self.SUCCESS, self.FAILED)
-
-    def is_waiting(self):
-        return self.status in (self.PENDING, self.RETRYING)
+    interface_name = Column(String)
+    operation_name = Column(String)
 
     @property
     def actor(self):
@@ -351,10 +367,6 @@ class TaskBase(ModelMixin):
     def plugin_fk(cls):
         return relationship.foreign_key('plugin', nullable=True)
 
-    @declared_attr
-    def execution_fk(cls):
-        return relationship.foreign_key('execution', nullable=True)
-
     # endregion
 
     # region association proxies
@@ -376,14 +388,6 @@ class TaskBase(ModelMixin):
 
     # endregion
 
-    @classmethod
-    def for_node(cls, actor, **kwargs):
-        return cls(node=actor, **kwargs)
-
-    @classmethod
-    def for_relationship(cls, actor, **kwargs):
-        return cls(relationship=actor, **kwargs)
-
     @staticmethod
     def abort(message=None):
         raise TaskAbortException(message)
@@ -392,8 +396,63 @@ class TaskBase(ModelMixin):
     def retry(message=None, retry_interval=None):
         raise TaskRetryException(message, retry_interval=retry_interval)
 
+    @declared_attr
+    def dependency_fk(self):
+        return relationship.foreign_key('task', nullable=True)
 
-class LogBase(ModelMixin):
+    @declared_attr
+    def dependencies(cls):
+        # symmetric relationship causes funky graphs
+        return relationship.one_to_many_self(cls, 'dependency_fk')
+
+    def has_ended(self):
+        return self.status in (self.SUCCESS, self.FAILED)
+
+    def is_waiting(self):
+        if self._stub_type:
+            return not self.has_ended()
+        else:
+            return self.status in (self.PENDING, self.RETRYING)
+
+    @classmethod
+    def from_api_task(cls, api_task, executor, **kwargs):
+        instantiation_kwargs = {}
+
+        if hasattr(api_task.actor, 'outbound_relationships'):
+            instantiation_kwargs['node'] = api_task.actor
+        elif hasattr(api_task.actor, 'source_node'):
+            instantiation_kwargs['relationship'] = api_task.actor
+        else:
+            raise RuntimeError('No operation context could be created for {actor.model_cls}'
+                               .format(actor=api_task.actor))
+
+        instantiation_kwargs.update(
+            {
+                'name': api_task.name,
+                'status': cls.PENDING,
+                'max_attempts': api_task.max_attempts,
+                'retry_interval': api_task.retry_interval,
+                'ignore_failure': api_task.ignore_failure,
+                'execution': api_task._workflow_context.execution,
+                'interface_name': api_task.interface_name,
+                'operation_name': api_task.operation_name,
+
+                # Only non-stub tasks have these fields
+                'plugin': api_task.plugin,
+                'function': api_task.function,
+                'arguments': api_task.arguments,
+                '_api_id': api_task.id,
+                '_context_cls': api_task._context_cls,
+                '_executor': executor,
+            }
+        )
+
+        instantiation_kwargs.update(**kwargs)
+
+        return cls(**instantiation_kwargs)
+
+
+class LogBase(mixins.ModelMixin):
 
     __tablename__ = 'log'
 
@@ -435,7 +494,7 @@ class LogBase(ModelMixin):
         return '{name}: {self.msg}'.format(name=name, self=self)
 
 
-class ArgumentBase(ParameterMixin):
+class ArgumentBase(mixins.ParameterMixin):
 
     __tablename__ = 'argument'
 

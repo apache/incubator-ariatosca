@@ -96,20 +96,20 @@ def test_default_executor(request):
     # validates the ProcessExecutor is used by the workflow runner by default
     mock_workflow = _setup_mock_workflow_in_service(request)
 
-    with mock.patch('aria.orchestrator.workflow_runner.Engine') as mock_engine_cls:
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine') as mock_engine_cls:
         _create_workflow_runner(request, mock_workflow)
         _, engine_kwargs = mock_engine_cls.call_args
-        assert isinstance(engine_kwargs.get('executor'), ProcessExecutor)
+        assert isinstance(engine_kwargs.get('executors').values()[0], ProcessExecutor)
 
 
 def test_custom_executor(request):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
     custom_executor = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.Engine') as mock_engine_cls:
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine') as mock_engine_cls:
         _create_workflow_runner(request, mock_workflow, executor=custom_executor)
         _, engine_kwargs = mock_engine_cls.call_args
-        assert engine_kwargs.get('executor') == custom_executor
+        assert engine_kwargs.get('executors').values()[0] == custom_executor
 
 
 def test_task_configuration_parameters(request):
@@ -117,48 +117,47 @@ def test_task_configuration_parameters(request):
 
     task_max_attempts = 5
     task_retry_interval = 7
-    with mock.patch('aria.orchestrator.workflow_runner.Engine') as mock_engine_cls:
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine.execute') as \
+            mock_engine_execute:
         _create_workflow_runner(request, mock_workflow, task_max_attempts=task_max_attempts,
-                                task_retry_interval=task_retry_interval)
-        _, engine_kwargs = mock_engine_cls.call_args
-        assert engine_kwargs['workflow_context']._task_max_attempts == task_max_attempts
-        assert engine_kwargs['workflow_context']._task_retry_interval == task_retry_interval
+                                task_retry_interval=task_retry_interval).execute()
+        _, engine_kwargs = mock_engine_execute.call_args
+        assert engine_kwargs['ctx']._task_max_attempts == task_max_attempts
+        assert engine_kwargs['ctx']._task_retry_interval == task_retry_interval
 
 
 def test_execute(request, service):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
     mock_engine = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.Engine', return_value=mock_engine) \
-            as mock_engine_cls:
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine.execute',
+                    return_value=mock_engine) as mock_engine_execute:
         workflow_runner = _create_workflow_runner(request, mock_workflow)
-
-        _, engine_kwargs = mock_engine_cls.call_args
-        assert engine_kwargs['workflow_context'].service.id == service.id
-        assert engine_kwargs['workflow_context'].execution.workflow_name == 'test_workflow'
-
         workflow_runner.execute()
-        mock_engine.execute.assert_called_once_with()
+
+        _, engine_kwargs = mock_engine_execute.call_args
+        assert engine_kwargs['ctx'].service.id == service.id
+        assert engine_kwargs['ctx'].execution.workflow_name == 'test_workflow'
+
+        mock_engine_execute.assert_called_once_with(ctx=workflow_runner._workflow_context)
 
 
 def test_cancel_execution(request):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
     mock_engine = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.Engine', return_value=mock_engine):
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine', return_value=mock_engine):
         workflow_runner = _create_workflow_runner(request, mock_workflow)
         workflow_runner.cancel()
-        mock_engine.cancel_execution.assert_called_once_with()
+        mock_engine.cancel_execution.assert_called_once_with(ctx=workflow_runner._workflow_context)
 
 
 def test_execution_model_creation(request, service, model):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
-    with mock.patch('aria.orchestrator.workflow_runner.Engine') as mock_engine_cls:
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine'):
         workflow_runner = _create_workflow_runner(request, mock_workflow)
 
-        _, engine_kwargs = mock_engine_cls.call_args
-        assert engine_kwargs['workflow_context'].execution == workflow_runner.execution
         assert model.execution.get(workflow_runner.execution.id) == workflow_runner.execution
         assert workflow_runner.execution.service.id == service.id
         assert workflow_runner.execution.workflow_name == mock_workflow
@@ -173,7 +172,7 @@ def test_execution_inputs_override_workflow_inputs(request):
         inputs=dict((name, models.Input.wrap(name, val)) for name, val
                     in wf_inputs.iteritems()))
 
-    with mock.patch('aria.orchestrator.workflow_runner.Engine'):
+    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine'):
         workflow_runner = _create_workflow_runner(
             request, mock_workflow, inputs={'input2': 'overriding-value2', 'input3': 7})
 

@@ -20,15 +20,13 @@ The workflow engine. Executes workflows
 import time
 from datetime import datetime
 
-import networkx
-
 from aria import logger
 from aria.modeling import models
 from aria.orchestrator import events
+from aria.orchestrator.context import operation
 
 from .. import exceptions
-from . import task as engine_task
-from . import translation
+from ..executor.base import StubTaskExecutor
 # Import required so all signals are registered
 from . import events_handler  # pylint: disable=unused-import
 
@@ -38,84 +36,105 @@ class Engine(logger.LoggerMixin):
     The workflow engine. Executes workflows
     """
 
-    def __init__(self, executor, workflow_context, tasks_graph, **kwargs):
+    def __init__(self, executors, **kwargs):
         super(Engine, self).__init__(**kwargs)
-        self._workflow_context = workflow_context
-        self._execution_graph = networkx.DiGraph()
-        translation.build_execution_graph(task_graph=tasks_graph,
-                                          execution_graph=self._execution_graph,
-                                          default_executor=executor)
+        self._executors = executors.copy()
+        self._executors.setdefault(StubTaskExecutor, StubTaskExecutor())
 
-    def execute(self):
+    def execute(self, ctx):
         """
         execute the workflow
         """
+        executing_tasks = []
         try:
-            events.start_workflow_signal.send(self._workflow_context)
+            events.start_workflow_signal.send(ctx)
             while True:
-                cancel = self._is_cancel()
+                cancel = self._is_cancel(ctx)
                 if cancel:
                     break
-                for task in self._ended_tasks():
-                    self._handle_ended_tasks(task)
-                for task in self._executable_tasks():
-                    self._handle_executable_task(task)
-                if self._all_tasks_consumed():
+                for task in self._ended_tasks(ctx, executing_tasks):
+                    self._handle_ended_tasks(ctx, task, executing_tasks)
+                for task in self._executable_tasks(ctx):
+                    self._handle_executable_task(ctx, task, executing_tasks)
+                if self._all_tasks_consumed(ctx):
                     break
                 else:
                     time.sleep(0.1)
             if cancel:
-                events.on_cancelled_workflow_signal.send(self._workflow_context)
+                events.on_cancelled_workflow_signal.send(ctx)
             else:
-                events.on_success_workflow_signal.send(self._workflow_context)
+                events.on_success_workflow_signal.send(ctx)
         except BaseException as e:
-            events.on_failure_workflow_signal.send(self._workflow_context, exception=e)
+            events.on_failure_workflow_signal.send(ctx, exception=e)
             raise
 
-    def cancel_execution(self):
+    @staticmethod
+    def cancel_execution(ctx):
         """
         Send a cancel request to the engine. If execution already started, execution status
         will be modified to 'cancelling' status. If execution is in pending mode, execution status
         will be modified to 'cancelled' directly.
         """
-        events.on_cancelling_workflow_signal.send(self._workflow_context)
-
-    def _is_cancel(self):
-        return self._workflow_context.execution.status in (models.Execution.CANCELLING,
-                                                           models.Execution.CANCELLED)
-
-    def _executable_tasks(self):
-        now = datetime.utcnow()
-        return (task for task in self._tasks_iter()
-                if task.is_waiting() and
-                task.due_at <= now and
-                not self._task_has_dependencies(task))
-
-    def _ended_tasks(self):
-        return (task for task in self._tasks_iter() if task.has_ended())
-
-    def _task_has_dependencies(self, task):
-        return len(self._execution_graph.pred.get(task.id, {})) > 0
-
-    def _all_tasks_consumed(self):
-        return len(self._execution_graph.node) == 0
-
-    def _tasks_iter(self):
-        for _, data in self._execution_graph.nodes_iter(data=True):
-            task = data['task']
-            if isinstance(task, engine_task.OperationTask):
-                if not task.model_task.has_ended():
-                    self._workflow_context.model.task.refresh(task.model_task)
-            yield task
+        events.on_cancelling_workflow_signal.send(ctx)
 
     @staticmethod
-    def _handle_executable_task(task):
-        if isinstance(task, engine_task.OperationTask):
-            events.sent_task_signal.send(task)
-        task.execute()
+    def _is_cancel(ctx):
+        execution = ctx.model.execution.refresh(ctx.execution)
+        return execution.status in (models.Execution.CANCELLING, models.Execution.CANCELLED)
 
-    def _handle_ended_tasks(self, task):
+    def _executable_tasks(self, ctx):
+        now = datetime.utcnow()
+        return (
+            task for task in self._tasks_iter(ctx)
+            if task.is_waiting() and task.due_at <= now and \
+            not self._task_has_dependencies(ctx, task)
+        )
+
+    @staticmethod
+    def _ended_tasks(ctx, executing_tasks):
+        for task in executing_tasks:
+            if task.has_ended() and task in ctx._graph:
+                yield task
+
+    @staticmethod
+    def _task_has_dependencies(ctx, task):
+        return len(ctx._graph.pred.get(task, [])) > 0
+
+    @staticmethod
+    def _all_tasks_consumed(ctx):
+        return len(ctx._graph.node) == 0
+
+    @staticmethod
+    def _tasks_iter(ctx):
+        for task in ctx.execution.tasks:
+            yield ctx.model.task.refresh(task)
+
+    def _handle_executable_task(self, ctx, task, executing_tasks):
+        task_executor = self._executors[task._executor]
+
+        # If the task is a stub, a default context is provided, else it should hold the context cls
+        context_cls = operation.BaseOperationContext if task._stub_type else task._context_cls
+        op_ctx = context_cls(
+            model_storage=ctx.model,
+            resource_storage=ctx.resource,
+            workdir=ctx._workdir,
+            task_id=task.id,
+            actor_id=task.actor.id if task.actor else None,
+            service_id=task.execution.service.id,
+            execution_id=task.execution.id,
+            name=task.name
+        )
+
+        executing_tasks.append(task)
+
+        if not task._stub_type:
+            events.sent_task_signal.send(op_ctx)
+        task_executor.execute(op_ctx)
+
+    @staticmethod
+    def _handle_ended_tasks(ctx, task, executing_tasks):
+        executing_tasks.remove(task)
         if task.status == models.Task.FAILED and not task.ignore_failure:
             raise exceptions.ExecutorException('Workflow failed')
         else:
-            self._execution_graph.remove_node(task.id)
+            ctx._graph.remove_node(task)

@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from networkx import topological_sort, DiGraph
+from networkx import topological_sort
 
+from aria.modeling import models
 from aria.orchestrator import context
-from aria.orchestrator.workflows import api, core
+from aria.orchestrator.workflows import api
+from aria.orchestrator.workflows.core import compile
 from aria.orchestrator.workflows.executor import base
-
 from tests import mock
 from tests import storage
 
@@ -26,8 +27,8 @@ from tests import storage
 def test_task_graph_into_execution_graph(tmpdir):
     interface_name = 'Standard'
     operation_name = 'create'
-    task_context = mock.context.simple(str(tmpdir))
-    node = task_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
+    workflow_context = mock.context.simple(str(tmpdir))
+    node = workflow_context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         node.service,
         interface_name,
@@ -35,12 +36,12 @@ def test_task_graph_into_execution_graph(tmpdir):
         operation_kwargs=dict(function='test')
     )
     node.interfaces[interface.name] = interface
-    task_context.model.node.update(node)
+    workflow_context.model.node.update(node)
 
     def sub_workflow(name, **_):
         return api.task_graph.TaskGraph(name)
 
-    with context.workflow.current.push(task_context):
+    with context.workflow.current.push(workflow_context):
         test_task_graph = api.task.WorkflowTask(sub_workflow, name='test_task_graph')
         simple_before_task = api.task.OperationTask(
             node,
@@ -64,12 +65,9 @@ def test_task_graph_into_execution_graph(tmpdir):
     test_task_graph.add_dependency(inner_task_graph, simple_before_task)
     test_task_graph.add_dependency(simple_after_task, inner_task_graph)
 
-    # Direct check
-    execution_graph = DiGraph()
-    core.translation.build_execution_graph(task_graph=test_task_graph,
-                                           execution_graph=execution_graph,
-                                           default_executor=base.StubTaskExecutor())
-    execution_tasks = topological_sort(execution_graph)
+    compile.create_execution_tasks(workflow_context, test_task_graph, base.StubTaskExecutor)
+
+    execution_tasks = topological_sort(workflow_context._graph)
 
     assert len(execution_tasks) == 7
 
@@ -83,30 +81,23 @@ def test_task_graph_into_execution_graph(tmpdir):
         '{0}-End'.format(test_task_graph.id)
     ]
 
-    assert expected_tasks_names == execution_tasks
+    assert expected_tasks_names == [t._api_id for t in execution_tasks]
+    assert all(isinstance(task, models.Task) for task in execution_tasks)
+    execution_tasks = iter(execution_tasks)
 
-    assert isinstance(_get_task_by_name(execution_tasks[0], execution_graph),
-                      core.task.StartWorkflowTask)
+    assert next(execution_tasks)._stub_type == models.Task.START_WORKFLOW
+    _assert_execution_is_api_task(next(execution_tasks), simple_before_task)
+    assert next(execution_tasks)._stub_type == models.Task.START_SUBWROFKLOW
+    _assert_execution_is_api_task(next(execution_tasks), inner_task)
+    assert next(execution_tasks)._stub_type == models.Task.END_SUBWORKFLOW
+    _assert_execution_is_api_task(next(execution_tasks), simple_after_task)
+    assert next(execution_tasks)._stub_type == models.Task.END_WORKFLOW
 
-    _assert_execution_is_api_task(_get_task_by_name(execution_tasks[1], execution_graph),
-                                  simple_before_task)
-    assert isinstance(_get_task_by_name(execution_tasks[2], execution_graph),
-                      core.task.StartSubWorkflowTask)
-
-    _assert_execution_is_api_task(_get_task_by_name(execution_tasks[3], execution_graph),
-                                  inner_task)
-    assert isinstance(_get_task_by_name(execution_tasks[4], execution_graph),
-                      core.task.EndSubWorkflowTask)
-
-    _assert_execution_is_api_task(_get_task_by_name(execution_tasks[5], execution_graph),
-                                  simple_after_task)
-    assert isinstance(_get_task_by_name(execution_tasks[6], execution_graph),
-                      core.task.EndWorkflowTask)
-    storage.release_sqlite_storage(task_context.model)
+    storage.release_sqlite_storage(workflow_context.model)
 
 
 def _assert_execution_is_api_task(execution_task, api_task):
-    assert execution_task.id == api_task.id
+    assert execution_task._api_id == api_task.id
     assert execution_task.name == api_task.name
     assert execution_task.function == api_task.function
     assert execution_task.actor == api_task.actor

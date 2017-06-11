@@ -24,7 +24,7 @@ from datetime import datetime
 from . import exceptions
 from .context.workflow import WorkflowContext
 from .workflows import builtin
-from .workflows.core.engine import Engine
+from .workflows.core import engine, compile
 from .workflows.executor.process import ProcessExecutor
 from ..modeling import models
 from ..modeling import utils as modeling_utils
@@ -70,7 +70,7 @@ class WorkflowRunner(object):
         execution = self._create_execution_model(inputs)
         self._execution_id = execution.id
 
-        workflow_context = WorkflowContext(
+        self._workflow_context = WorkflowContext(
             name=self.__class__.__name__,
             model_storage=self._model_storage,
             resource_storage=resource_storage,
@@ -80,15 +80,17 @@ class WorkflowRunner(object):
             task_max_attempts=task_max_attempts,
             task_retry_interval=task_retry_interval)
 
+        # Set default executor and kwargs
+        executor = executor or ProcessExecutor(plugin_manager=plugin_manager)
+
         # transforming the execution inputs to dict, to pass them to the workflow function
         execution_inputs_dict = dict(inp.unwrapped for inp in self.execution.inputs.values())
-        self._tasks_graph = workflow_fn(ctx=workflow_context, **execution_inputs_dict)
 
-        executor = executor or ProcessExecutor(plugin_manager=plugin_manager)
-        self._engine = Engine(
-            executor=executor,
-            workflow_context=workflow_context,
-            tasks_graph=self._tasks_graph)
+        self._tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
+        compile.create_execution_tasks(
+            self._workflow_context, self._tasks_graph, executor.__class__)
+
+        self._engine = engine.Engine(executors={executor.__class__: executor})
 
     @property
     def execution_id(self):
@@ -103,10 +105,10 @@ class WorkflowRunner(object):
         return self._model_storage.service.get(self._service_id)
 
     def execute(self):
-        self._engine.execute()
+        self._engine.execute(ctx=self._workflow_context)
 
     def cancel(self):
-        self._engine.cancel_execution()
+        self._engine.cancel_execution(ctx=self._workflow_context)
 
     def _create_execution_model(self, inputs):
         execution = models.Execution(

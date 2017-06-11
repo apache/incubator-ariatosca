@@ -50,21 +50,12 @@ def ctx(tmpdir):
 
 
 @pytest.fixture
-def process_executor():
-    ex = process.ProcessExecutor(**dict(python_path=tests.ROOT_DIR))
-    try:
-        yield ex
-    finally:
-        ex.close()
-
-
-@pytest.fixture
 def thread_executor():
-    ex = thread.ThreadExecutor()
+    result = thread.ThreadExecutor()
     try:
-        yield ex
+        yield result
     finally:
-        ex.close()
+        result.close()
 
 
 @pytest.fixture
@@ -266,12 +257,12 @@ def test_plugin_workdir(ctx, thread_executor, tmpdir):
     (process.ProcessExecutor, {'python_path': [tests.ROOT_DIR]}),
 ])
 def executor(request):
-    executor_cls, executor_kwargs = request.param
-    result = executor_cls(**executor_kwargs)
+    ex_cls, kwargs = request.param
+    ex = ex_cls(**kwargs)
     try:
-        yield result
+        yield ex
     finally:
-        result.close()
+        ex.close()
 
 
 def test_node_operation_logging(ctx, executor):
@@ -304,7 +295,6 @@ def test_node_operation_logging(ctx, executor):
                 arguments=arguments
             )
         )
-
     execute(workflow_func=basic_workflow, workflow_context=ctx, executor=executor)
     _assert_loggins(ctx, arguments)
 
@@ -418,7 +408,7 @@ def _assert_loggins(ctx, arguments):
     assert len(executions) == 1
     execution = executions[0]
 
-    tasks = ctx.model.task.list()
+    tasks = ctx.model.task.list(filters={'_stub_type': None})
     assert len(tasks) == 1
     task = tasks[0]
     assert len(task.logs) == 4

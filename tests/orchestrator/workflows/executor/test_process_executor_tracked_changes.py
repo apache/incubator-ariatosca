@@ -18,7 +18,7 @@ import copy
 import pytest
 
 from aria.orchestrator.workflows import api
-from aria.orchestrator.workflows.core import engine
+from aria.orchestrator.workflows.core import engine, compile
 from aria.orchestrator.workflows.executor import process
 from aria.orchestrator import workflow, operation
 from aria.orchestrator.workflows import exceptions
@@ -107,8 +107,9 @@ def _run_workflow(context, executor, op_func, arguments=None):
         graph.add_tasks(task)
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
-    eng = engine.Engine(executor=executor, workflow_context=context, tasks_graph=graph)
-    eng.execute()
+    compile.create_execution_tasks(context, graph, executor.__class__)
+    eng = engine.Engine({executor.__class__: executor})
+    eng.execute(context)
     out = context.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME).attributes.get('out')
     return out.value if out else None
 

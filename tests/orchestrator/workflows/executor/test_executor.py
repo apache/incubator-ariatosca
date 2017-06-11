@@ -35,7 +35,7 @@ from aria.orchestrator.workflows.executor import (
 )
 
 import tests
-from . import MockTask
+from . import MockContext
 
 
 def _get_function(func):
@@ -44,11 +44,17 @@ def _get_function(func):
 
 def execute_and_assert(executor, storage=None):
     expected_value = 'value'
-    successful_task = MockTask(_get_function(mock_successful_task), storage=storage)
-    failing_task = MockTask(_get_function(mock_failing_task), storage=storage)
-    task_with_inputs = MockTask(_get_function(mock_task_with_input),
-                                arguments={'input': models.Argument.wrap('input', 'value')},
-                                storage=storage)
+    successful_task = MockContext(
+        storage, task_kwargs=dict(function=_get_function(mock_successful_task))
+    )
+    failing_task = MockContext(
+        storage, task_kwargs=dict(function=_get_function(mock_failing_task))
+    )
+    task_with_inputs = MockContext(
+        storage,
+        task_kwargs=dict(function=_get_function(mock_task_with_input),
+                         arguments={'input': models.Argument.wrap('input', 'value')})
+    )
 
     for task in [successful_task, failing_task, task_with_inputs]:
         executor.execute(task)
@@ -95,10 +101,10 @@ class MockException(Exception):
 
 @pytest.fixture
 def storage(tmpdir):
-    return aria.application_model_storage(
-        aria.storage.sql_mapi.SQLAlchemyModelAPI,
-        initiator_kwargs=dict(base_dir=str(tmpdir))
-    )
+    _storage = aria.application_model_storage(aria.storage.sql_mapi.SQLAlchemyModelAPI,
+                                              initiator_kwargs=dict(base_dir=str(tmpdir)))
+    yield _storage
+    tests.storage.release_sqlite_storage(_storage)
 
 
 @pytest.fixture(params=[

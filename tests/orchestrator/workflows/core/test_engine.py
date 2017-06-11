@@ -28,7 +28,7 @@ from aria.orchestrator.workflows import (
     api,
     exceptions,
 )
-from aria.orchestrator.workflows.core import engine
+from aria.orchestrator.workflows.core import engine, compile
 from aria.orchestrator.workflows.executor import thread
 
 from tests import mock, storage
@@ -44,15 +44,15 @@ class BaseTest(object):
         eng = cls._engine(workflow_func=workflow_func,
                           workflow_context=workflow_context,
                           executor=executor)
-        eng.execute()
+        eng.execute(ctx=workflow_context)
         return eng
 
     @staticmethod
     def _engine(workflow_func, workflow_context, executor):
         graph = workflow_func(ctx=workflow_context)
-        return engine.Engine(executor=executor,
-                             workflow_context=workflow_context,
-                             tasks_graph=graph)
+        compile.create_execution_tasks(workflow_context, graph, executor.__class__)
+
+        return engine.Engine(executors={executor.__class__: executor})
 
     @staticmethod
     def _create_interface(ctx, func, arguments=None):
@@ -98,9 +98,10 @@ class BaseTest(object):
 
     @pytest.fixture(autouse=True)
     def signals_registration(self, ):
-        def sent_task_handler(*args, **kwargs):
-            calls = global_test_holder.setdefault('sent_task_signal_calls', 0)
-            global_test_holder['sent_task_signal_calls'] = calls + 1
+        def sent_task_handler(ctx, *args, **kwargs):
+            if ctx.task._stub_type is None:
+                calls = global_test_holder.setdefault('sent_task_signal_calls', 0)
+                global_test_holder['sent_task_signal_calls'] = calls + 1
 
         def start_workflow_handler(workflow_context, *args, **kwargs):
             workflow_context.states.append('start')
@@ -255,10 +256,10 @@ class TestCancel(BaseTest):
         eng = self._engine(workflow_func=mock_workflow,
                            workflow_context=workflow_context,
                            executor=executor)
-        t = threading.Thread(target=eng.execute)
+        t = threading.Thread(target=eng.execute, kwargs=dict(ctx=workflow_context))
         t.start()
         time.sleep(10)
-        eng.cancel_execution()
+        eng.cancel_execution(workflow_context)
         t.join(timeout=60) # we need to give this a *lot* of time because Travis can be *very* slow
         assert not t.is_alive() # if join is timed out it will not raise an exception
         assert workflow_context.states == ['start', 'cancel']
@@ -277,7 +278,7 @@ class TestCancel(BaseTest):
         eng = self._engine(workflow_func=mock_workflow,
                            workflow_context=workflow_context,
                            executor=executor)
-        eng.cancel_execution()
+        eng.cancel_execution(workflow_context)
         execution = workflow_context.execution
         assert execution.status == models.Execution.CANCELLED
 

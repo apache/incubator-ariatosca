@@ -28,15 +28,17 @@ import tests.resources
 from tests.fixtures import (  # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
-    fs_model as model
 )
-from . import MockTask
+from . import MockContext
 
 
 class TestProcessExecutor(object):
 
-    def test_plugin_execution(self, executor, mock_plugin, storage):
-        task = MockTask('mock_plugin1.operation', plugin=mock_plugin, storage=storage)
+    def test_plugin_execution(self, executor, mock_plugin, model):
+        ctx = MockContext(
+            model,
+            task_kwargs=dict(function='mock_plugin1.operation', plugin_fk=mock_plugin.id)
+        )
 
         queue = Queue.Queue()
 
@@ -46,7 +48,7 @@ class TestProcessExecutor(object):
         events.on_success_task_signal.connect(handler)
         events.on_failure_task_signal.connect(handler)
         try:
-            executor.execute(task)
+            executor.execute(ctx)
             error = queue.get(timeout=60)
             # tests/resources/plugins/mock-plugin1 is the plugin installed
             # during this tests setup. The module mock_plugin1 contains a single
@@ -63,10 +65,10 @@ class TestProcessExecutor(object):
             events.on_success_task_signal.disconnect(handler)
             events.on_failure_task_signal.disconnect(handler)
 
-    def test_closed(self, executor):
+    def test_closed(self, executor, model):
         executor.close()
         with pytest.raises(RuntimeError) as exc_info:
-            executor.execute(task=MockTask(function='some.function'))
+            executor.execute(MockContext(model, task_kwargs=dict(function='some.function')))
         assert 'closed' in exc_info.value.message
 
 
@@ -85,8 +87,8 @@ def mock_plugin(plugin_manager, tmpdir):
 
 
 @pytest.fixture
-def storage(tmpdir):
-    return aria.application_model_storage(
-        aria.storage.sql_mapi.SQLAlchemyModelAPI,
-        initiator_kwargs=dict(base_dir=str(tmpdir))
-    )
+def model(tmpdir):
+    _storage = aria.application_model_storage(aria.storage.sql_mapi.SQLAlchemyModelAPI,
+                                              initiator_kwargs=dict(base_dir=str(tmpdir)))
+    yield _storage
+    tests.storage.release_sqlite_storage(_storage)

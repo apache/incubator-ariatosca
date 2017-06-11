@@ -34,31 +34,32 @@ def _get_task_name(task):
 
 
 @events.start_task_signal.connect
-def _start_task_handler(task, **kwargs):
+def _start_task_handler(ctx, **kwargs):
     # If the task has no function this is an empty task.
-    if task.function:
+    if ctx.task.function:
         suffix = 'started...'
-        logger = task.context.logger.info
+        logger = ctx.logger.info
     else:
         suffix = 'has no implementation'
-        logger = task.context.logger.debug
+        logger = ctx.logger.debug
 
     logger('{name} {task.interface_name}.{task.operation_name} {suffix}'.format(
-        name=_get_task_name(task), task=task, suffix=suffix))
+        name=_get_task_name(ctx.task), task=ctx.task, suffix=suffix))
+
 
 @events.on_success_task_signal.connect
-def _success_task_handler(task, **kwargs):
-    if not task.function:
+def _success_task_handler(ctx, **kwargs):
+    if not ctx.task.function:
         return
-    task.context.logger.info('{name} {task.interface_name}.{task.operation_name} successful'
-                             .format(name=_get_task_name(task), task=task))
+    ctx.logger.info('{name} {task.interface_name}.{task.operation_name} successful'
+                    .format(name=_get_task_name(ctx.task), task=ctx.task))
 
 
 @events.on_failure_task_signal.connect
-def _failure_operation_handler(task, traceback, **kwargs):
-    task.context.logger.error(
+def _failure_operation_handler(ctx, traceback, **kwargs):
+    ctx.logger.error(
         '{name} {task.interface_name}.{task.operation_name} failed'
-        .format(name=_get_task_name(task), task=task), extra=dict(traceback=traceback)
+        .format(name=_get_task_name(ctx.task), task=ctx.task), extra=dict(traceback=traceback)
     )
 
 

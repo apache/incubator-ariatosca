@@ -20,6 +20,8 @@ Workflow and operation contexts
 import threading
 from contextlib import contextmanager
 
+from networkx import DiGraph
+
 from .exceptions import ContextException
 from .common import BaseContext
 
@@ -41,6 +43,7 @@ class WorkflowContext(BaseContext):
         self._task_max_attempts = task_max_attempts
         self._task_retry_interval = task_retry_interval
         self._task_ignore_failure = task_ignore_failure
+        self._execution_graph = None
         self._register_logger()
 
     def __repr__(self):
@@ -91,6 +94,24 @@ class WorkflowContext(BaseContext):
                 key: getattr(self.service, self.service.name_column_name())
             }
         )
+
+    @property
+    def _graph(self):
+        if self._execution_graph is None:
+            graph = DiGraph()
+            for task in self.execution.tasks:
+                for dependency in task.dependencies:
+                    graph.add_edge(dependency, task)
+
+            self._execution_graph = graph
+
+        return self._execution_graph
+
+    @property
+    @contextmanager
+    def persist_changes(self):
+        yield
+        self._model.execution.update(self.execution)
 
 
 class _CurrentContext(threading.local):

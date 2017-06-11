@@ -12,69 +12,80 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import uuid
 import logging
-from collections import namedtuple
+import uuid
 from contextlib import contextmanager
 
 import aria
 from aria.modeling import models
 
 
+class MockContext(object):
+
+    def __init__(self, storage, task_kwargs=None):
+        self.logger = logging.getLogger('mock_logger')
+        self._task_kwargs = task_kwargs or {}
+        self._storage = storage
+        self.task = MockTask(storage, **task_kwargs)
+        self.states = []
+        self.exception = None
+
+    @property
+    def serialization_dict(self):
+        return {
+            'context_cls': self.__class__,
+            'context': {
+                'storage_kwargs': self._storage.serialization_dict,
+                'task_kwargs': self._task_kwargs
+            }
+        }
+
+    def __getattr__(self, item):
+        return None
+
+    def close(self):
+        pass
+
+    @classmethod
+    def instantiate_from_dict(cls, storage_kwargs=None, task_kwargs=None):
+        return cls(storage=aria.application_model_storage(**(storage_kwargs or {})),
+                   task_kwargs=(task_kwargs or {}))
+
+    @property
+    @contextmanager
+    def persist_changes(self):
+        yield
+
+
+class MockActor(object):
+    def __init__(self):
+        self.name = 'actor_name'
+
+
 class MockTask(object):
 
     INFINITE_RETRIES = models.Task.INFINITE_RETRIES
 
-    def __init__(self, function, arguments=None, plugin=None, storage=None):
+    def __init__(self, model, function, arguments=None, plugin_fk=None):
         self.function = self.name = function
-        self.plugin_fk = plugin.id if plugin else None
-        self.plugin = plugin or None
+        self.plugin_fk = plugin_fk
         self.arguments = arguments or {}
         self.states = []
         self.exception = None
         self.id = str(uuid.uuid4())
         self.logger = logging.getLogger()
-        self.context = MockContext(storage)
         self.attempts_count = 1
         self.max_attempts = 1
         self.ignore_failure = False
         self.interface_name = 'interface_name'
         self.operation_name = 'operation_name'
-        self.actor = namedtuple('actor', 'name')(name='actor_name')
-        self.model_task = None
+        self.actor = MockActor()
+        self.node = self.actor
+        self.model = model
 
         for state in models.Task.STATES:
             setattr(self, state.upper(), state)
 
-    @contextmanager
-    def _update(self):
-        yield self
-
-
-class MockContext(object):
-
-    def __init__(self, storage=None):
-        self.logger = logging.getLogger('mock_logger')
-        self.task = type('SubprocessMockTask', (object, ), {'plugin': None})
-        self.model = storage
-
     @property
-    def serialization_dict(self):
-        if self.model:
-            return {'context': self.model.serialization_dict, 'context_cls': self.__class__}
-        else:
-            return {'context_cls': self.__class__, 'context': {}}
-
-    def __getattr__(self, item):
-        return None
-
-    @classmethod
-    def instantiate_from_dict(cls, **kwargs):
-        if kwargs:
-            return cls(storage=aria.application_model_storage(**kwargs))
-        else:
-            return cls()
-
-    @staticmethod
-    def close():
-        pass
+    def plugin(self):
+        return self.model.plugin.get(self.plugin_fk) if self.plugin_fk else None

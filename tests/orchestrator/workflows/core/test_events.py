@@ -15,12 +15,13 @@
 
 import pytest
 
-from tests import mock, storage
-from aria.modeling.service_instance import NodeBase
 from aria.orchestrator.decorators import operation, workflow
-from aria.orchestrator.workflows.core import engine
+from aria.orchestrator.workflows.core import engine, compile
 from aria.orchestrator.workflows.executor.thread import ThreadExecutor
 from aria.orchestrator.workflows import api
+from aria.modeling.service_instance import NodeBase
+
+from tests import mock, storage
 
 global_test_dict = {}  # used to capture transitional node state changes
 
@@ -112,14 +113,13 @@ def run_operation_on_node(ctx, op_name, interface_name):
         operation_name=op_name,
         operation_kwargs=dict(function='{name}.{func.__name__}'.format(name=__name__, func=func)))
     node.interfaces[interface.name] = interface
+    compile.create_execution_tasks(
+        ctx,
+        single_operation_workflow(ctx, node=node, interface_name=interface_name, op_name=op_name),
+        ThreadExecutor)
 
-    eng = engine.Engine(executor=ThreadExecutor(),
-                        workflow_context=ctx,
-                        tasks_graph=single_operation_workflow(ctx=ctx,  # pylint: disable=no-value-for-parameter
-                                                              node=node,
-                                                              interface_name=interface_name,
-                                                              op_name=op_name))
-    eng.execute()
+    eng = engine.Engine(executors={ThreadExecutor: ThreadExecutor()})
+    eng.execute(ctx)
     return node
 
 
