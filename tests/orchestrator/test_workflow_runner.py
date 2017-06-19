@@ -14,27 +14,47 @@
 # limitations under the License.
 
 import json
+from threading import Thread, Event
 from datetime import datetime
 
-import pytest
 import mock
+import pytest
 
 from aria.modeling import exceptions as modeling_exceptions
 from aria.modeling import models
 from aria.orchestrator import exceptions
+from aria.orchestrator.events import on_cancelled_workflow_signal
 from aria.orchestrator.workflow_runner import WorkflowRunner
 from aria.orchestrator.workflows.executor.process import ProcessExecutor
-
-from ..mock import (
-    topology,
-    workflow as workflow_mocks
+from aria.orchestrator.workflows import api
+from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.executor import thread
+from aria.orchestrator import (
+    workflow,
+    operation,
 )
+
+from tests import (
+    mock as tests_mock,
+    storage
+)
+
 from ..fixtures import (  # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
     fs_model as model,
     resource_storage as resource
 )
+
+events = {
+    'is_resumed': Event(),
+    'is_active': Event(),
+    'execution_ended': Event()
+}
+
+
+class TimeoutError(BaseException):
+    pass
 
 
 def test_undeclared_workflow(request):
@@ -59,8 +79,8 @@ def test_builtin_workflow_instantiation(request):
     # validates the workflow runner instantiates properly when provided with a builtin workflow
     # (expecting no errors to be raised on undeclared workflow or missing workflow implementation)
     workflow_runner = _create_workflow_runner(request, 'install')
-    tasks = list(workflow_runner._tasks_graph.tasks)
-    assert len(tasks) == 2  # expecting two WorkflowTasks
+    tasks = list(workflow_runner.execution.tasks)
+    assert len(tasks) == 18  # expecting 18 tasks for 2 node topology
 
 
 def test_custom_workflow_instantiation(request):
@@ -68,8 +88,8 @@ def test_custom_workflow_instantiation(request):
     # (expecting no errors to be raised on undeclared workflow or missing workflow implementation)
     mock_workflow = _setup_mock_workflow_in_service(request)
     workflow_runner = _create_workflow_runner(request, mock_workflow)
-    tasks = list(workflow_runner._tasks_graph.tasks)
-    assert len(tasks) == 0  # mock workflow creates no tasks
+    tasks = list(workflow_runner.execution.tasks)
+    assert len(tasks) == 2  # mock workflow creates only start workflow and end workflow task
 
 
 def test_existing_active_executions(request, service, model):
@@ -139,7 +159,8 @@ def test_execute(request, service):
         assert engine_kwargs['ctx'].service.id == service.id
         assert engine_kwargs['ctx'].execution.workflow_name == 'test_workflow'
 
-        mock_engine_execute.assert_called_once_with(ctx=workflow_runner._workflow_context)
+        mock_engine_execute.assert_called_once_with(ctx=workflow_runner._workflow_context,
+                                                    resuming=False)
 
 
 def test_cancel_execution(request):
@@ -240,7 +261,7 @@ def test_workflow_function_parameters(request, tmpdir):
 @pytest.fixture
 def service(model):
     # sets up a service in the storage
-    service_id = topology.create_simple_topology_two_nodes(model)
+    service_id = tests_mock.topology.create_simple_topology_two_nodes(model)
     service = model.service.get(service_id)
     return service
 
@@ -251,7 +272,7 @@ def _setup_mock_workflow_in_service(request, inputs=None):
     service = request.getfuncargvalue('service')
     resource = request.getfuncargvalue('resource')
 
-    source = workflow_mocks.__file__
+    source = tests_mock.workflow.__file__
     resource.service_template.upload(str(service.service_template.id), source)
     mock_workflow_name = 'test_workflow'
     arguments = {}
@@ -293,3 +314,135 @@ def _create_workflow_runner(request, workflow_name, inputs=None, executor=None,
         resource_storage=resource,
         plugin_manager=plugin_manager,
         **task_configuration_kwargs)
+
+
+class TestResumableWorkflows(object):
+
+    def test_resume_workflow(self, workflow_context, executor):
+        node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
+        node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
+        self._create_interface(workflow_context, node, mock_resuming_task)
+
+        service = workflow_context.service
+        service.workflows['custom_workflow'] = tests_mock.models.create_operation(
+            'custom_workflow',
+            operation_kwargs={'function': '{0}.{1}'.format(__name__, mock_workflow.__name__)}
+        )
+        workflow_context.model.service.update(service)
+
+        wf_runner = WorkflowRunner(
+            service_id=workflow_context.service.id,
+            inputs={},
+            model_storage=workflow_context.model,
+            resource_storage=workflow_context.resource,
+            plugin_manager=None,
+            workflow_name='custom_workflow',
+            executor=executor)
+        wf_thread = Thread(target=wf_runner.execute)
+        wf_thread.daemon = True
+        wf_thread.start()
+
+        # Wait for the execution to start
+        if events['is_active'].wait(5) is False:
+            raise TimeoutError("is_active wasn't set to True")
+        wf_runner.cancel()
+
+        if events['execution_ended'].wait(60) is False:
+            raise TimeoutError("Execution did not end")
+
+        first_task, second_task = workflow_context.model.task.list(filters={'_stub_type': None})
+        assert first_task.status == first_task.SUCCESS
+        assert second_task.status in (second_task.FAILED, second_task.RETRYING)
+        events['is_resumed'].set()
+        assert second_task.status in (second_task.FAILED, second_task.RETRYING)
+
+        # Create a new workflow runner, with an existing execution id. This would cause
+        # the old execution to restart.
+        new_wf_runner = WorkflowRunner(
+            service_id=wf_runner.service.id,
+            inputs={},
+            model_storage=workflow_context.model,
+            resource_storage=workflow_context.resource,
+            plugin_manager=None,
+            execution_id=wf_runner.execution.id,
+            executor=executor)
+
+        new_wf_runner.execute()
+
+        # Wait for it to finish and assert changes.
+        assert second_task.status == second_task.SUCCESS
+        assert node.attributes['invocations'].value == 3
+        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+
+    @staticmethod
+    @pytest.fixture
+    def executor():
+        result = thread.ThreadExecutor()
+        try:
+            yield result
+        finally:
+            result.close()
+
+    @staticmethod
+    @pytest.fixture
+    def workflow_context(tmpdir):
+        workflow_context = tests_mock.context.simple(str(tmpdir))
+        yield workflow_context
+        storage.release_sqlite_storage(workflow_context.model)
+
+    @staticmethod
+    def _create_interface(ctx, node, func, arguments=None):
+        interface_name = 'aria.interfaces.lifecycle'
+        operation_kwargs = dict(function='{name}.{func.__name__}'.format(
+            name=__name__, func=func))
+        if arguments:
+            # the operation has to declare the arguments before those may be passed
+            operation_kwargs['arguments'] = arguments
+        operation_name = 'create'
+        interface = tests_mock.models.create_interface(node.service, interface_name, operation_name,
+                                                       operation_kwargs=operation_kwargs)
+        node.interfaces[interface.name] = interface
+        ctx.model.node.update(node)
+
+        return node, interface_name, operation_name
+
+    @staticmethod
+    def _engine(workflow_func, workflow_context, executor):
+        graph = workflow_func(ctx=workflow_context)
+        execution = workflow_context.execution
+        compile.create_execution_tasks(execution, graph, executor.__class__)
+        workflow_context.execution = execution
+
+        return engine.Engine(executors={executor.__class__: executor})
+
+    @pytest.fixture(autouse=True)
+    def register_to_events(self):
+        def execution_ended(*args, **kwargs):
+            events['execution_ended'].set()
+
+        on_cancelled_workflow_signal.connect(execution_ended)
+        yield
+        on_cancelled_workflow_signal.disconnect(execution_ended)
+
+
+@workflow
+def mock_workflow(ctx, graph):
+    node = ctx.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
+    graph.add_tasks(
+        api.task.OperationTask(
+            node, interface_name='aria.interfaces.lifecycle', operation_name='create'),
+        api.task.OperationTask(
+            node, interface_name='aria.interfaces.lifecycle', operation_name='create')
+    )
+
+
+@operation
+def mock_resuming_task(ctx):
+    ctx.node.attributes['invocations'] += 1
+
+    if ctx.node.attributes['invocations'] != 1:
+        events['is_active'].set()
+        if not events['is_resumed'].isSet():
+            # if resume was called, increase by one. o/w fail the execution - second task should
+            # fail as long it was not a part of resuming the workflow
+            raise BaseException("wasn't resumed yet")

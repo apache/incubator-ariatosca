@@ -225,20 +225,24 @@ def create_interface_template(service_template, interface_name, operation_name,
     )
 
 
-def create_interface(service, interface_name, operation_name, operation_kwargs=None,
-                     interface_kwargs=None):
-    the_type = service.service_template.interface_types.get_descendant('test_interface_type')
-
+def create_operation(operation_name, operation_kwargs=None):
     if operation_kwargs and operation_kwargs.get('arguments'):
         operation_kwargs['arguments'] = dict(
             (argument_name, models.Argument.wrap(argument_name, argument_value))
             for argument_name, argument_value in operation_kwargs['arguments'].iteritems()
             if argument_value is not None)
 
-    operation = models.Operation(
+    return models.Operation(
         name=operation_name,
         **(operation_kwargs or {})
     )
+
+
+def create_interface(service, interface_name, operation_name, operation_kwargs=None,
+                     interface_kwargs=None):
+    the_type = service.service_template.interface_types.get_descendant('test_interface_type')
+    operation = create_operation(operation_name, operation_kwargs)
+
     return models.Interface(
         type=the_type,
         operations=_dictify(operation),

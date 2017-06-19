@@ -74,3 +74,10 @@ class WorkflowImplementationNotFoundError(AriaError):
     Raised when attempting to import a workflow's code but the implementation is not found
     """
     pass
+
+
+class InvalidWorkflowRunnerParams(AriaError):
+    """
+    Raised when invalid combination of arguments is passed to the workflow runner
+    """
+    pass

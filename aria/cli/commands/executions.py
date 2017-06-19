@@ -134,18 +134,63 @@ def start(workflow_name,
     executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
 
     workflow_runner = \
-        WorkflowRunner(workflow_name, service.id, inputs,
-                       model_storage, resource_storage, plugin_manager,
-                       executor, task_max_attempts, task_retry_interval)
+        WorkflowRunner(
+            model_storage, resource_storage, plugin_manager,
+            service_id=service.id, workflow_name=workflow_name, inputs=inputs, executor=executor,
+            task_max_attempts=task_max_attempts, task_retry_interval=task_retry_interval
+        )
+    logger.info('Starting {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
 
-    execution_thread_name = '{0}_{1}'.format(service_name, workflow_name)
+    _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern)
+
+
+@executions.command(name='resume',
+                    short_help='Resume a workflow')
+@aria.argument('execution-id')
+@aria.options.inputs(help=helptexts.EXECUTION_INPUTS)
+@aria.options.dry_execution
+@aria.options.task_max_attempts()
+@aria.options.task_retry_interval()
+@aria.options.mark_pattern()
+@aria.options.verbose()
+@aria.pass_model_storage
+@aria.pass_resource_storage
+@aria.pass_plugin_manager
+@aria.pass_logger
+def resume(execution_id,
+           dry,
+           task_max_attempts,
+           task_retry_interval,
+           mark_pattern,
+           model_storage,
+           resource_storage,
+           plugin_manager,
+           logger):
+    executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
+
+    workflow_runner = \
+        WorkflowRunner(
+            model_storage, resource_storage, plugin_manager,
+            execution_id=execution_id, executor=executor,
+            task_max_attempts=task_max_attempts, task_retry_interval=task_retry_interval
+        )
+
+    logger.info('Resuming {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
+    _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern)
+
+
+def _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern):
+    execution_thread_name = '{0}_{1}'.format(workflow_runner.service.name,
+                                             workflow_runner.execution.workflow_name)
     execution_thread = threading.ExceptionThread(target=workflow_runner.execute,
                                                  name=execution_thread_name)
 
-    logger.info('Starting {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
     execution_thread.start()
 
-    log_iterator = cli_logger.ModelLogIterator(model_storage, workflow_runner.execution_id)
+    last_task_id = workflow_runner.execution.logs[-1].id if workflow_runner.execution.logs else 0
+    log_iterator = cli_logger.ModelLogIterator(model_storage,
+                                               workflow_runner.execution_id,
+                                               offset=last_task_id)
     try:
         while execution_thread.is_alive():
             execution_logging.log_list(log_iterator, mark_pattern=mark_pattern)

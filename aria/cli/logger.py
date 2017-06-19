@@ -115,8 +115,8 @@ class Logging(object):
 
 class ModelLogIterator(object):
 
-    def __init__(self, model_storage, execution_id, filters=None, sort=None):
-        self._last_visited_id = 0
+    def __init__(self, model_storage, execution_id, filters=None, sort=None, offset=0):
+        self._last_visited_id = offset
         self._model_storage = model_storage
         self._execution_id = execution_id
         self._additional_filters = filters or {}

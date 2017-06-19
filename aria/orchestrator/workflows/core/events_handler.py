@@ -121,6 +121,13 @@ def _workflow_cancelled(workflow_context, *args, **kwargs):
             execution.ended_at = datetime.utcnow()
 
 
+@events.on_resume_workflow_signal.connect
+def _workflow_resume(workflow_context, *args, **kwargs):
+    with workflow_context.persist_changes:
+        execution = workflow_context.execution
+        execution.status = execution.PENDING
+
+
 @events.on_cancelling_workflow_signal.connect
 def _workflow_cancelling(workflow_context, *args, **kwargs):
     with workflow_context.persist_changes:

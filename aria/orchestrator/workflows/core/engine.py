@@ -41,11 +41,15 @@ class Engine(logger.LoggerMixin):
         self._executors = executors.copy()
         self._executors.setdefault(StubTaskExecutor, StubTaskExecutor())
 
-    def execute(self, ctx):
+    def execute(self, ctx, resuming=False):
         """
         execute the workflow
         """
         executing_tasks = []
+
+        if resuming:
+            events.on_resume_workflow_signal.send(ctx)
+
         try:
             events.start_workflow_signal.send(ctx)
             while True:

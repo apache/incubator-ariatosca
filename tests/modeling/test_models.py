@@ -314,7 +314,7 @@ class TestExecution(object):
                                    Execution.CANCELLING],
             Execution.FAILED: [Execution.FAILED],
             Execution.SUCCEEDED: [Execution.SUCCEEDED],
-            Execution.CANCELLED: [Execution.CANCELLED]
+            Execution.CANCELLED: [Execution.CANCELLED, Execution.PENDING]
         }
 
         invalid_transitions = {
@@ -334,8 +334,7 @@ class TestExecution(object):
                                   Execution.FAILED,
                                   Execution.CANCELLED,
                                   Execution.CANCELLING],
-            Execution.CANCELLED: [Execution.PENDING,
-                                  Execution.STARTED,
+            Execution.CANCELLED: [Execution.STARTED,
                                   Execution.FAILED,
                                   Execution.SUCCEEDED,
                                   Execution.CANCELLING],

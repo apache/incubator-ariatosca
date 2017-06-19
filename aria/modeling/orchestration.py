@@ -68,7 +68,8 @@ class ExecutionBase(mixins.ModelMixin):
     VALID_TRANSITIONS = {
         PENDING: (STARTED, CANCELLED),
         STARTED: END_STATES + (CANCELLING,),
-        CANCELLING: END_STATES
+        CANCELLING: END_STATES,
+        CANCELLED: PENDING
     }
 
     @orm.validates('status')

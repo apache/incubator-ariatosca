@@ -37,9 +37,9 @@ DEFAULT_TASK_RETRY_INTERVAL = 30
 
 class WorkflowRunner(object):
 
-    def __init__(self, workflow_name, service_id, inputs,
-                 model_storage, resource_storage, plugin_manager,
-                 executor=None, task_max_attempts=DEFAULT_TASK_MAX_ATTEMPTS,
+    def __init__(self, model_storage, resource_storage, plugin_manager,
+                 execution_id=None, service_id=None, workflow_name=None, inputs=None, executor=None,
+                 task_max_attempts=DEFAULT_TASK_MAX_ATTEMPTS,
                  task_retry_interval=DEFAULT_TASK_RETRY_INTERVAL):
         """
         Manages a single workflow execution on a given service.
@@ -55,28 +55,36 @@ class WorkflowRunner(object):
         :param task_retry_interval: Retry interval in between retry attempts of a failing task
         """
 
+        if not (execution_id or (workflow_name and service_id)):
+            exceptions.InvalidWorkflowRunnerParams(
+                "Either provide execution id in order to resume a workflow or workflow name "
+                "and service id with inputs")
+
+        self._is_resume = execution_id is not None
+
         self._model_storage = model_storage
         self._resource_storage = resource_storage
-        self._workflow_name = workflow_name
 
         # the IDs are stored rather than the models themselves, so this module could be used
         # by several threads without raising errors on model objects shared between threads
-        self._service_id = service_id
 
-        self._validate_workflow_exists_for_service()
-
-        workflow_fn = self._get_workflow_fn()
-
-        execution = self._create_execution_model(inputs)
-        self._execution_id = execution.id
+        if self._is_resume:
+            self._execution_id = execution_id
+            self._service_id = self.execution.service.id
+            self._workflow_name = model_storage.execution.get(self._execution_id).workflow_name
+        else:
+            self._service_id = service_id
+            self._workflow_name = workflow_name
+            self._validate_workflow_exists_for_service()
+            self._execution_id = self._create_execution_model(inputs).id
 
         self._workflow_context = WorkflowContext(
             name=self.__class__.__name__,
             model_storage=self._model_storage,
             resource_storage=resource_storage,
             service_id=service_id,
-            execution_id=execution.id,
-            workflow_name=workflow_name,
+            execution_id=self._execution_id,
+            workflow_name=self._workflow_name,
             task_max_attempts=task_max_attempts,
             task_retry_interval=task_retry_interval)
 
@@ -86,9 +94,10 @@ class WorkflowRunner(object):
         # transforming the execution inputs to dict, to pass them to the workflow function
         execution_inputs_dict = dict(inp.unwrapped for inp in self.execution.inputs.values())
 
-        self._tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
-        compile.create_execution_tasks(
-            self._workflow_context, self._tasks_graph, executor.__class__)
+        if not self._is_resume:
+            workflow_fn = self._get_workflow_fn()
+            tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
+            compile.create_execution_tasks(self._workflow_context, tasks_graph, executor.__class__)
 
         self._engine = engine.Engine(executors={executor.__class__: executor})
 
@@ -105,7 +114,7 @@ class WorkflowRunner(object):
         return self._model_storage.service.get(self._service_id)
 
     def execute(self):
-        self._engine.execute(ctx=self._workflow_context)
+        self._engine.execute(ctx=self._workflow_context, resuming=self._is_resume)
 
     def cancel(self):
         self._engine.cancel_execution(ctx=self._workflow_context)
