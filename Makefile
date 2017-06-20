@@ -20,8 +20,11 @@ HTML = ./docs/html
 EASY_INSTALL_PTH = $(VIRTUAL_ENV)/lib/python2.7/site-packages/easy-install.pth
 PYTHON_VERSION = $$(python -V 2>&1 | cut -f2 -d' ' | cut -f1,2 -d'.' --output-delimiter='')
 
-.DEFAULT_GOAL = install
+.DEFAULT_GOAL = default
 .PHONY: clean install install-virtual docs test dist deploy
+
+default:
+	@echo "Please choose one of the following targets: clean, install, install-virtual, docs, test, dist, deploy, requirements.txt"
 
 clean:
 	rm -rf "$(DIST)" "$(HTML)" .tox .coverage*
