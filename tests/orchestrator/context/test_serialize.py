@@ -16,7 +16,7 @@
 import pytest
 
 from aria.orchestrator.workflows import api
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.executor import process
 from aria.orchestrator import workflow, operation
 import tests
@@ -48,7 +48,7 @@ def test_serialize_operation_context(context, executor, tmpdir):
     context.model.node.update(node)
 
     graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
-    compile.create_execution_tasks(context, graph, executor.__class__)
+    graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
     eng = engine.Engine({executor.__class__: executor})
     eng.execute(context)
 

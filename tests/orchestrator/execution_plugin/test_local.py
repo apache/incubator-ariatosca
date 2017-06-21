@@ -28,7 +28,7 @@ from aria.orchestrator.execution_plugin.exceptions import ProcessException
 from aria.orchestrator.execution_plugin import local
 from aria.orchestrator.execution_plugin import constants
 from aria.orchestrator.workflows.executor import process
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 
 from tests import mock
 from tests import storage
@@ -500,7 +500,7 @@ if __name__ == '__main__':
                 arguments=arguments))
             return graph
         tasks_graph = mock_workflow(ctx=workflow_context)  # pylint: disable=no-value-for-parameter
-        compile.create_execution_tasks(workflow_context, tasks_graph, executor.__class__)
+        graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(tasks_graph)
         eng = engine.Engine({executor.__class__: executor})
         eng.execute(workflow_context)
         return workflow_context.model.node.get_by_name(

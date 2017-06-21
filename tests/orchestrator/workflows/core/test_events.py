@@ -16,7 +16,7 @@
 import pytest
 
 from aria.orchestrator.decorators import operation, workflow
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.executor.thread import ThreadExecutor
 from aria.orchestrator.workflows import api
 from aria.modeling.service_instance import NodeBase
@@ -113,10 +113,9 @@ def run_operation_on_node(ctx, op_name, interface_name):
         operation_name=op_name,
         operation_kwargs=dict(function='{name}.{func.__name__}'.format(name=__name__, func=func)))
     node.interfaces[interface.name] = interface
-    compile.create_execution_tasks(
-        ctx,
-        single_operation_workflow(ctx, node=node, interface_name=interface_name, op_name=op_name),
-        ThreadExecutor)
+    graph_compiler.GraphCompiler(ctx, ThreadExecutor).compile(
+        single_operation_workflow(ctx, node=node, interface_name=interface_name, op_name=op_name)
+    )
 
     eng = engine.Engine(executors={ThreadExecutor: ThreadExecutor()})
     eng.execute(ctx)

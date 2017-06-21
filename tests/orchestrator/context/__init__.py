@@ -15,7 +15,7 @@
 
 import sys
 
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 
 
 def op_path(func, module_path=None):
@@ -26,7 +26,7 @@ def op_path(func, module_path=None):
 def execute(workflow_func, workflow_context, executor):
     graph = workflow_func(ctx=workflow_context)
 
-    compile.create_execution_tasks(workflow_context, graph, executor.__class__)
+    graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
     eng = engine.Engine(executors={executor.__class__: executor})
 
     eng.execute(workflow_context)

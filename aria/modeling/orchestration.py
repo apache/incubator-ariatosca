@@ -306,7 +306,6 @@ class TaskBase(mixins.ModelMixin):
     ended_at = Column(DateTime, default=None)
     attempts_count = Column(Integer, default=1)
 
-    _api_id = Column(String)
     _executor = Column(PickleType)
     _context_cls = Column(PickleType)
     _stub_type = Column(Enum(*STUB_TYPES))
@@ -442,7 +441,6 @@ class TaskBase(mixins.ModelMixin):
                 'plugin': api_task.plugin,
                 'function': api_task.function,
                 'arguments': api_task.arguments,
-                '_api_id': api_task.id,
                 '_context_cls': api_task._context_cls,
                 '_executor': executor,
             }

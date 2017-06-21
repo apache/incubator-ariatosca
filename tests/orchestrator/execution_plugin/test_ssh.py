@@ -29,7 +29,7 @@ from aria.orchestrator import events
 from aria.orchestrator import workflow
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import process
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.exceptions import ExecutorException
 from aria.orchestrator.exceptions import TaskAbortException, TaskRetryException
 from aria.orchestrator.execution_plugin import operations
@@ -254,8 +254,8 @@ class TestWithActualSSHServer(object):
             graph.sequence(*ops)
             return graph
         tasks_graph = mock_workflow(ctx=self._workflow_context)  # pylint: disable=no-value-for-parameter
-        compile.create_execution_tasks(
-            self._workflow_context, tasks_graph, self._executor.__class__)
+        graph_compiler.GraphCompiler(
+            self._workflow_context, self._executor.__class__).compile(tasks_graph)
         eng = engine.Engine({self._executor.__class__: self._executor})
         eng.execute(self._workflow_context)
         return self._workflow_context.model.node.get_by_name(

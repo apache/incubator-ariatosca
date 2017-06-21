@@ -28,7 +28,7 @@ from aria.orchestrator.workflows import (
     api,
     exceptions,
 )
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.executor import thread
 
 from tests import mock, storage
@@ -50,7 +50,7 @@ class BaseTest(object):
     @staticmethod
     def _engine(workflow_func, workflow_context, executor):
         graph = workflow_func(ctx=workflow_context)
-        compile.create_execution_tasks(workflow_context, graph, executor.__class__)
+        graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
 
         return engine.Engine(executors={executor.__class__: executor})
 

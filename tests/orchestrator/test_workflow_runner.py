@@ -27,7 +27,7 @@ from aria.orchestrator.events import on_cancelled_workflow_signal
 from aria.orchestrator.workflow_runner import WorkflowRunner
 from aria.orchestrator.workflows.executor.process import ProcessExecutor
 from aria.orchestrator.workflows import api
-from aria.orchestrator.workflows.core import engine, compile
+from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.executor import thread
 from aria.orchestrator import (
     workflow,
@@ -410,7 +410,7 @@ class TestResumableWorkflows(object):
     def _engine(workflow_func, workflow_context, executor):
         graph = workflow_func(ctx=workflow_context)
         execution = workflow_context.execution
-        compile.create_execution_tasks(execution, graph, executor.__class__)
+        graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
         workflow_context.execution = execution
 
         return engine.Engine(executors={executor.__class__: executor})

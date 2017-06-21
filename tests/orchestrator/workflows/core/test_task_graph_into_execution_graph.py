@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from networkx import topological_sort
+from networkx import topological_sort, DiGraph
 
 from aria.modeling import models
 from aria.orchestrator import context
 from aria.orchestrator.workflows import api
-from aria.orchestrator.workflows.core import compile
+from aria.orchestrator.workflows.core import graph_compiler
 from aria.orchestrator.workflows.executor import base
 from tests import mock
 from tests import storage
@@ -65,9 +65,10 @@ def test_task_graph_into_execution_graph(tmpdir):
     test_task_graph.add_dependency(inner_task_graph, simple_before_task)
     test_task_graph.add_dependency(simple_after_task, inner_task_graph)
 
-    compile.create_execution_tasks(workflow_context, test_task_graph, base.StubTaskExecutor)
+    compiler = graph_compiler.GraphCompiler(workflow_context, base.StubTaskExecutor)
+    compiler.compile(test_task_graph)
 
-    execution_tasks = topological_sort(workflow_context._graph)
+    execution_tasks = topological_sort(_graph(workflow_context.execution.tasks))
 
     assert len(execution_tasks) == 7
 
@@ -81,7 +82,7 @@ def test_task_graph_into_execution_graph(tmpdir):
         '{0}-End'.format(test_task_graph.id)
     ]
 
-    assert expected_tasks_names == [t._api_id for t in execution_tasks]
+    assert expected_tasks_names == [compiler._model_to_api_id[t.id] for t in execution_tasks]
     assert all(isinstance(task, models.Task) for task in execution_tasks)
     execution_tasks = iter(execution_tasks)
 
@@ -97,7 +98,6 @@ def test_task_graph_into_execution_graph(tmpdir):
 
 
 def _assert_execution_is_api_task(execution_task, api_task):
-    assert execution_task._api_id == api_task.id
     assert execution_task.name == api_task.name
     assert execution_task.function == api_task.function
     assert execution_task.actor == api_task.actor
@@ -106,3 +106,12 @@ def _assert_execution_is_api_task(execution_task, api_task):
 
 def _get_task_by_name(task_name, graph):
     return graph.node[task_name]['task']
+
+
+def _graph(tasks):
+    graph = DiGraph()
+    for task in tasks:
+        for dependency in task.dependencies:
+            graph.add_edge(dependency, task)
+
+    return graph

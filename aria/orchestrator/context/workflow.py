@@ -20,8 +20,6 @@ Workflow and operation contexts
 import threading
 from contextlib import contextmanager
 
-from networkx import DiGraph
-
 from .exceptions import ContextException
 from .common import BaseContext
 
@@ -94,23 +92,6 @@ class WorkflowContext(BaseContext):
                 key: getattr(self.service, self.service.name_column_name())
             }
         )
-
-    @property
-    def _graph(self):
-        # Constructing a graph with only not ended nodes
-        if self._execution_graph is None:
-            graph = DiGraph()
-            for task in self.execution.tasks:
-                if task.has_ended():
-                    continue
-                for dependency in task.dependencies:
-                    if dependency.has_ended():
-                        continue
-                    graph.add_edge(dependency, task)
-
-            self._execution_graph = graph
-
-        return self._execution_graph
 
     @property
     @contextmanager

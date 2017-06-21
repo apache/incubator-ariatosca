@@ -24,7 +24,7 @@ from datetime import datetime
 from . import exceptions
 from .context.workflow import WorkflowContext
 from .workflows import builtin
-from .workflows.core import engine, compile
+from .workflows.core import engine, graph_compiler
 from .workflows.executor.process import ProcessExecutor
 from ..modeling import models
 from ..modeling import utils as modeling_utils
@@ -96,8 +96,9 @@ class WorkflowRunner(object):
 
         if not self._is_resume:
             workflow_fn = self._get_workflow_fn()
-            tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
-            compile.create_execution_tasks(self._workflow_context, tasks_graph, executor.__class__)
+            self._tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
+            graph_compiler.GraphCompiler(self._workflow_context, executor.__class__).compile(
+                self._tasks_graph)
 
         self._engine = engine.Engine(executors={executor.__class__: executor})
 
