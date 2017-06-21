@@ -15,7 +15,6 @@
 
 from aria.orchestrator import operation
 from . import local as local_operations
-from .ssh import operations as ssh_operations
 
 
 @operation
@@ -38,7 +37,7 @@ def run_script_with_ssh(ctx,
                         use_sudo=False,
                         hide_output=None,
                         **kwargs):
-    return ssh_operations.run_script(
+    return _try_import_ssh().run_script(
         ctx=ctx,
         script_path=script_path,
         fabric_env=fabric_env,
@@ -55,9 +54,17 @@ def run_commands_with_ssh(ctx,
                           use_sudo=False,
                           hide_output=None,
                           **_):
-    return ssh_operations.run_commands(
+    return _try_import_ssh().run_commands(
         ctx=ctx,
         commands=commands,
         fabric_env=fabric_env,
         use_sudo=use_sudo,
         hide_output=hide_output)
+
+
+def _try_import_ssh():
+    try:
+        from .ssh import operations as ssh_operations
+        return ssh_operations
+    except Exception:
+        raise RuntimeError('Failed to import SSH modules; Have you installed the ARIA SSH extra?')

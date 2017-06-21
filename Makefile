@@ -33,10 +33,10 @@ clean:
 	-find . -type d -name '*.egg-info' -exec rm -rf {} \; 2>/dev/null
 
 install:
-	pip install .
+	pip install .[ssh]
 
 install-virtual:
-	pip install --editable .
+	pip install --editable .[ssh]
 	
 	# "pip install --editable" will not add our extensions to the path, so we will patch the virtualenv
 	EXTENSIONS_PATH="$$(head -n 1 "$(EASY_INSTALL_PTH)")/extensions" && \
@@ -55,6 +55,7 @@ test:
 	tox -e pylint_tests
 	tox -e py$(PYTHON_VERSION)
 	tox -e py$(PYTHON_VERSION)e2e
+	tox -e py$(PYTHON_VERSION)ssh
 
 dist: docs
 	python ./setup.py sdist bdist_wheel

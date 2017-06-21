@@ -4,6 +4,7 @@ include NOTICE
 include VERSION
 include CHANGELOG.rst
 include README.rst
+include requirements.in
 include requirements.txt
 recursive-include docs/html *
 recursive-include examples *

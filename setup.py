@@ -43,26 +43,21 @@ with open(os.path.join(root_dir, 'README.rst')) as readme:
     long_description = readme.read()
 
 install_requires = []
-extras_require = {}
 
-# We need to parse the requirements for the conditional dependencies to work for wheels and
-# standard installation
-try:
-    with open(os.path.join(root_dir, 'requirements.in')) as requirements:
-        for requirement in requirements.readlines():
-            install_requires.append(requirement.strip())
-        # We are using the install_requires mechanism in order to specify
-        # conditional dependencies since reading them from a file in their
-        # standard ';' from does silently nothing.
-        extras_require = {":python_version<'2.7'": ['importlib',
-                                                    'ordereddict',
-                                                     'total-ordering',
-                                                     ],
-                          ":sys_platform=='win32'": 'pypiwin32'}
-except IOError:
-    install_requires = []
-    extras_require = {}
+# We need to parse the requirements for the conditional dependencies to work for wheels creation
+# as well as source dist installation
+with open(os.path.join(root_dir, 'requirements.in')) as requirements:
+    for requirement in requirements.readlines():
+        install_requires.append(requirement.strip())
 
+ssh_requires = [
+    'Fabric>=1.13.0, <1.14',
+    "pypiwin32==219 ; sys_platform == 'win32'"
+]
+
+extras_require = {
+    'ssh': ssh_requires
+}
 
 console_scripts = ['aria = aria.cli.main:main']
 
