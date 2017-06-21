@@ -26,37 +26,61 @@ ARIA is an incubation project under the `Apache Software Foundation <https://www
 Installation
 ------------
 
-ARIA is `available on PyPI <https://pypi.python.org/pypi/ariatosca>`__.
+ARIA is `available on PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__.
+
+ARIA requires Python 2.6/2.7. Python 3 is currently not supported.
 
 To install ARIA directly from PyPI (using a ``wheel``), use::
 
-    pip install aria
+    pip install --upgrade pip setuptools
+    pip install apache-ariatosca
 
 To install ARIA from source, download the source tarball from
-`PyPI <https://pypi.python.org/pypi/ariatosca>`__, extract it, and then when inside the extracted
-directory, use::
+`PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__, extract it, and run::
 
-    pip install .
+    pip install --upgrade pip setuptools
+    pip install incubator-ariatosca
 
-The source package comes along with relevant examples, documentation, ``requirements.txt`` (for
-installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
+| The source package comes along with relevant examples, documentation, ``requirements.txt`` (for installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
+|
+|
+| ARIA has additional optional dependencies. These are required for running operations over SSH.
+| Below are instructions on how to install these dependencies, including required system dependencies per OS.
+|
+| Note: These dependencies may have varying licenses which may not be compatible with Apache license 2.0.
+|
 
-Note that for the ``pip install`` commands mentioned above, you must use a privileged user, or use
-virtualenv.
+**Ubuntu/Debian** (tested on Ubuntu14.04, Ubuntu16.04)::
 
-ARIA itself is in a ``wheel`` format compatible with all platforms. Some dependencies, however,
-might require compilation (based on a given platform), and therefore possibly some system
-dependencies are required as well.
+    apt-get install -y python-dev gcc libffi-dev libssl-dev
+    pip install aria[ssh]
 
-On Ubuntu or other Debian-based systems::
+**Centos** (tested on Centos6.6, Centos7)::
 
-    sudo apt install python-setuptools python-dev build-essential libssl-dev libffi-dev
+    yum install -y python-devel gcc libffi-devel openssl-devel
+    pip install aria[ssh]
 
-On Archlinux::
+**Archlinux**::
 
-    sudo pacman -S python-setuptools
+    pacman -Syu --noconfirm python2 gcc libffi openssl
+    pip2 install aria[ssh]
 
-ARIA requires Python 2.6/2.7. Python 3+ is currently not supported.
+**Windows** (tested on Win10)::
+
+    # no additional system requirements are needed
+    pip install aria[ssh]
+
+**MacOS**::
+
+    # TODO
+
+
+
+To install ``pip``, either use your distro's package management system, or run::
+
+    wget http://bootstrap.pypa.io/get-pip.py
+    python get-pip.py
+
 
 
 Getting Started
@@ -129,10 +153,10 @@ ARIA is licensed under the
    :target: https://ci.appveyor.com/project/ApacheSoftwareFoundation/incubator-ariatosca/history
 .. |License| image:: https://img.shields.io/github/license/apache/incubator-ariatosca.svg
    :target: http://www.apache.org/licenses/LICENSE-2.0
-.. |PyPI release| image:: https://img.shields.io/pypi/v/ariatosca.svg
-   :target: https://pypi.python.org/pypi/ariatosca
-.. |Python Versions| image:: https://img.shields.io/pypi/pyversions/ariatosca.svg
-.. |Wheel| image:: https://img.shields.io/pypi/wheel/ariatosca.svg
+.. |PyPI release| image:: https://img.shields.io/pypi/v/apache-ariatosca.svg
+   :target: https://pypi.python.org/pypi/apache-ariatosca
+.. |Python Versions| image:: https://img.shields.io/pypi/pyversions/apache-ariatosca.svg
+.. |Wheel| image:: https://img.shields.io/pypi/wheel/apache-ariatosca.svg
 .. |Contributors| image:: https://img.shields.io/github/contributors/apache/incubator-ariatosca.svg
 .. |Open Pull Requests| image:: https://img.shields.io/github/issues-pr/apache/incubator-ariatosca.svg
    :target: https://github.com/apache/incubator-ariatosca/pulls
