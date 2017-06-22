@@ -13,11 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import os
 import sys
 import difflib
-import StringIO
 import traceback
 import inspect
 from functools import wraps
@@ -32,6 +30,7 @@ from .. import defaults
 from .. import helptexts
 from ..inputs import inputs_to_dict
 from ... import __version__
+from ... import aria_package_name
 from ...utils.exceptions import get_exception_as_string
 
 
@@ -94,31 +93,11 @@ def mutually_exclusive_option(*param_decls, **attrs):
     return decorator
 
 
-def _format_version_data(version,
-                         prefix=None,
-                         suffix=None,
-                         infix=None):
-    all_data = dict(version=version)
-    all_data['prefix'] = prefix or ''
-    all_data['suffix'] = suffix or ''
-    all_data['infix'] = infix or ''
-    output = StringIO.StringIO()
-    output.write('{prefix}{version}'.format(**all_data))
-    output.write('{suffix}'.format(**all_data))
-    return output.getvalue()
-
-
 def show_version(ctx, param, value):
     if not value:
         return
 
-    cli_version = _format_version_data(
-        __version__,
-        prefix='ARIA CLI ',
-        infix=' ' * 5,
-        suffix='')
-
-    logger.info(cli_version)
+    logger.info('{0} {1}'.format(aria_package_name, __version__))
     ctx.exit()
 
 

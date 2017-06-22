@@ -36,10 +36,10 @@ To install ARIA directly from PyPI (using a ``wheel``), use::
     pip install apache-ariatosca
 
 To install ARIA from source, download the source tarball from
-`PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__, extract it, and run::
+`PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__, extract and ``cd`` into the extract dir, and run::
 
     pip install --upgrade pip setuptools
-    pip install incubator-ariatosca
+    pip install .
 
 | The source package comes along with relevant examples, documentation, ``requirements.txt`` (for installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
 |

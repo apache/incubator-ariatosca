@@ -20,10 +20,11 @@ ARIA top level package
 import sys
 
 import pkg_resources
-__version__ = pkg_resources.get_distribution('aria').version
+aria_package_name = 'apache-ariatosca'
+__version__ = pkg_resources.get_distribution(aria_package_name).version
 
-from .orchestrator.decorators import workflow, operation
-from . import (
+from .orchestrator.decorators import workflow, operation  # pylint: disable=wrong-import-position
+from . import (  # pylint: disable=wrong-import-position
     extension,
     utils,
     parser,

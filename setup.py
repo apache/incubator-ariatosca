@@ -22,7 +22,7 @@ from setuptools.command.install import install
 from setuptools.command.develop import develop
 
 
-_PACKAGE_NAME = 'aria'
+_PACKAGE_NAME = 'apache-ariatosca'
 _PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
 _EXTENSION_DIR = 'extensions'
 _EXTENSION_NAMES = [
@@ -38,6 +38,7 @@ root_dir = os.path.dirname(__file__)
 
 with open(os.path.join(root_dir, 'VERSION')) as version_file:
     __version__ = version_file.read().strip()
+    incubating_version = '{0}-incubating'.format(__version__)
 
 with open(os.path.join(root_dir, 'README.rst')) as readme:
     long_description = readme.read()
@@ -106,11 +107,11 @@ setup(
     description='ARIA',
     long_description=long_description,
     license='Apache License 2.0',
-    author='aria',
+    author='ARIA',
     author_email='dev@ariatosca.incubator.apache.org',
     url='http://ariatosca.incubator.apache.org/',
     download_url=(
-        'https://dist.apache.org/repos/dist/release/incubator/ariatosca/' + __version__),
+        'https://dist.apache.org/repos/dist/release/incubator/ariatosca/' + incubating_version),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
