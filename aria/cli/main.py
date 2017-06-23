@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Executable entry point into the CLI.
+"""
+
 from aria import install_aria_extensions
 from aria.cli import commands
 from aria.cli.core import aria
@@ -22,12 +26,15 @@ from aria.cli.core import aria
 @aria.options.verbose()
 @aria.options.version
 def _aria():
-    """ARIA's Command Line Interface
+    """
+    ARIA's Command Line Interface.
 
-    To activate bash-completion. Run: `eval "$(_ARIA_COMPLETE=source aria)"`
+    To activate bash-completion run::
 
-    ARIA's working directory resides by default in ~/.aria. To change it, set
-    the environment variable `ARIA_WORKDIR` to something else (e.g. /tmp/).
+        eval "$(_ARIA_COMPLETE=source aria)"
+
+    ARIA's working directory resides by default in "~/.aria". To change it, set the environment
+    variable ARIA_WORKDIR to something else (e.g. "/tmp/").
     """
     aria.set_cli_except_hook()
 

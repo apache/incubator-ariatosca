@@ -19,16 +19,24 @@ from .source import DefaultPresenterSource
 
 class PresentationContext(object):
     """
-    Properties:
+    Presentation context.
 
-    * :code:`presenter`: The generated presenter instance
-    * :code:`location`: From where we will generate the presenter
-    * :code:`presenter_source`: For finding presenter classes
-    * :code:`presenter_class`: Overrides :code:`presenter_source` with a specific class
-    * :code:`import_profile`: Whether to import the profile by default (defaults to true)
-    * :code:`threads`: Number of threads to use when reading data
-    * :code:`timeout`: Timeout in seconds for loading data
-    * :code:`print_exceptions`: Whether to print exceptions while reading data
+    :ivar presenter: the generated presenter instance
+    :vartype presenter: ~aria.parser.presentation.Presenter
+    :ivar location: from where we will generate the presenter
+    :vartype location: ~aria.parser.loading.Location
+    :ivar presenter_source: for finding presenter classes
+    :vartype presenter_source: ~aria.parser.presentation.PresenterSource
+    :ivar presenter_class: overrides ``presenter_source`` with a specific class
+    :vartype presenter_class: type
+    :ivar import_profile: whether to import the profile by default (defaults to ``True``)
+    :vartype import_profile: bool
+    :ivar threads: number of threads to use when reading data
+    :vartype threads: int
+    :ivar timeout: timeout in seconds for loading data
+    :vartype timeout: float
+    :ivar print_exceptions: whether to print exceptions while reading data
+    :vartype print_exceptions: bool
     """
 
     def __init__(self):

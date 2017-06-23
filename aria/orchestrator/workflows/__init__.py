@@ -13,5 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Workflows package.
+"""
+
 # Import required so that logging signals are registered
 from . import events_logging

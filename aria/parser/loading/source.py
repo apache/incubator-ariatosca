@@ -32,7 +32,7 @@ class LoaderSource(object):
 class DefaultLoaderSource(LoaderSource):
     """
     The default ARIA loader source will generate a :class:`UriTextLoader` for
-    :class:`UriLocation' and a :class:`LiteralLoader` for a :class:`LiteralLocation`.
+    :class:`UriLocation` and a :class:`LiteralLoader` for a :class:`LiteralLocation`.
     """
 
     def get_loader(self, context, location, origin_location):

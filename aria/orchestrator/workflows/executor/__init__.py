@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Executors for task execution
+Task executors.
 """
 
 

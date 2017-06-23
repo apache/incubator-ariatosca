@@ -23,8 +23,8 @@ class Location(object):
     """
     Base class for ARIA locations.
 
-    Locations are used by :class:`aria.loading.LoaderSource` to delegate to
-    an appropriate :class:`aria.loading.Loader`.
+    Locations are used by :class:`~aria.parser.loading.LoaderSource` to delegate to
+    an appropriate :class:`~aria.parser.loading.Loader`.
     """
 
     def is_equivalent(self, location):
@@ -41,7 +41,7 @@ class UriLocation(Location):
 
     If no scheme is included, it should be treated as a filesystem path.
 
-    See :class:`aria.loading.UriTextLoader`.
+    See :class:`~aria.parser.loading.UriTextLoader`.
     """
 
     def __init__(self, uri):
@@ -68,7 +68,7 @@ class LiteralLocation(Location):
     """
     A location that embeds content.
 
-    See :class:`aria.loading.LiteralLoader`.
+    See :class:`~aria.parser.loading.LiteralLoader`.
     """
 
     def __init__(self, content, name='literal'):

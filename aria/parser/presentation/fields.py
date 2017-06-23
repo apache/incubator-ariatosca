@@ -39,19 +39,16 @@ def has_fields(cls):
     """
     Class decorator for validated field support.
 
-    1. Adds a :code:`FIELDS` class property that is a dict of all the fields.
-       Will inherit and merge :code:`FIELDS` properties from base classes if
-       they have them.
+    1. Adds a ``FIELDS`` class property that is a dict of all the fields. Will inherit and merge
+       ``FIELDS`` properties from base classes if they have them.
 
-    2. Generates automatic :code:`@property` implementations for the fields
-       with the help of a set of special function decorators.
+    2. Generates automatic ``@property`` implementations for the fields with the help of a set of
+       special function decorators.
 
-    The class also works with the Python dict protocol, so that
-    fields can be accessed via dict semantics. The functionality is
-    identical to that of using attribute access.
+    The class also works with the Python dict protocol, so that fields can be accessed via dict
+    semantics. The functionality is identical to that of using attribute access.
 
-    The class will also gain two utility methods, :code:`_iter_field_names`
-    and :code:`_iter_fields`.
+    The class will also gain two utility methods, ``_iter_field_names`` and ``_iter_fields``.
     """
 
     # Make sure we have FIELDS
@@ -267,8 +264,8 @@ def field_getter(getter_func):
     """
     Method decorator for overriding the getter function of a field.
 
-    The signature of the getter function must be: :code:`f(field, presentation, context)`.
-    The default getter can be accessed as :code:`field.default_get(presentation, context)`.
+    The signature of the getter function must be: ``f(field, presentation, context)``.
+    The default getter can be accessed as ```field.default_get(presentation, context)``.
 
     The function must already be decorated with a field decorator.
     """
@@ -286,8 +283,8 @@ def field_setter(setter_func):
     """
     Method decorator for overriding the setter function of a field.
 
-    The signature of the setter function must be: :code:`f(field, presentation, context, value)`.
-    The default setter can be accessed as :code:`field.default_set(presentation, context, value)`.
+    The signature of the setter function must be: ``f(field, presentation, context, value)``.
+    The default setter can be accessed as ``field.default_set(presentation, context, value)``.
 
     The function must already be decorated with a field decorator.
     """
@@ -305,8 +302,8 @@ def field_validator(validator_fn):
     """
     Method decorator for overriding the validator function of a field.
 
-    The signature of the validator function must be: :code:f(field, presentation, context)`.
-    The default validator can be accessed as :code:`field.default_validate(presentation, context)`.
+    The signature of the validator function must be: ``f(field, presentation, context)``.
+    The default validator can be accessed as ``field.default_validate(presentation, context)``.
 
     The function must already be decorated with a field decorator.
     """
@@ -373,7 +370,7 @@ def has_fields_contains(self, key):
 
 class Field(object):
     """
-    Field handler used by :code:`@has_fields` decorator.
+    Field handler used by ``@has_fields`` decorator.
     """
 
     def __init__(self, field_variant, func, cls=None, default=None, allowed=None, required=False):

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-General-purpose version string handling
+Verion string utilities.
 """
 
 import re
@@ -55,8 +55,9 @@ class VersionString(unicode):
     Any value that does not conform to this format will be treated as a zero version, which would
     be lesser than any non-zero version.
 
-    For efficient list sorts use the ``key`` property, e.g.:
-    ``sorted(versions, key=lambda x: x.key)``
+    For efficient list sorts use the ``key`` property, e.g.::
+
+        sorted(versions, key=lambda x: x.key)
     """
 
     NULL = None # initialized below
@@ -84,9 +85,9 @@ def parse_version_string(version): # pylint: disable=too-many-branches
     """
     Parses a version string.
 
-    :param version: The version string
-    :returns: The primary tuple and qualifier float
-    :rtype: ((int), float)
+    :param version: version string
+    :returns: primary tuple and qualifier float
+    :rtype: ((:obj:`int`), :obj:`float`)
     """
 
     if version is None:

@@ -32,7 +32,7 @@ class PresenterSource(object):
 
 class DefaultPresenterSource(PresenterSource):
     """
-    The default ARIA presenter source supports TOSCA Simple Profile.
+    The default ARIA presenter source.
     """
 
     def __init__(self, classes=None):

@@ -14,10 +14,7 @@
 # limitations under the License.
 
 """
-ARIA's events Sub-Package
-Path: aria.events
-
-Events package provides events mechanism for different executions in aria.
+Orchestrator events.
 """
 
 from blinker import signal

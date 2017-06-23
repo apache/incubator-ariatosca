@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Instantiation of :class:`~aria.modeling.models.Operation` models.
+"""
+
 # TODO: this module will eventually be moved to a new "aria.instantiation" package
 
 from ...utils.type import full_type_name

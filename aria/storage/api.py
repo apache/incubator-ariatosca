@@ -12,15 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-General storage API
+Storage APIs.
 """
+
 import threading
 
 
 class StorageAPI(object):
     """
-    General storage Base API
+    Base class for storage APIs.
     """
     def create(self, **kwargs):
         """
@@ -33,15 +35,12 @@ class StorageAPI(object):
 
 class ModelAPI(StorageAPI):
     """
-    A Base object for the model.
+    Base class for model APIs ("MAPI").
     """
     def __init__(self, model_cls, name=None, **kwargs):
         """
-        Base model API
-
-        :param model_cls: the representing class of the model
-        :param str name: the name of the model
-        :param kwargs:
+        :param model_cls: representing class of the model
+        :param name: name of the model
         """
         super(ModelAPI, self).__init__(**kwargs)
         self._model_cls = model_cls
@@ -59,46 +58,42 @@ class ModelAPI(StorageAPI):
     @property
     def name(self):
         """
-        The name of the class
-        :return: name of the class
+        Name of the class.
+
+        :type: :obj:`basestring`
         """
         return self._name
 
     @property
     def model_cls(self):
         """
-        The class represting the model
-        :return:
+        Class representing the model
+
+        :type: :obj:`Type`
         """
         return self._model_cls
 
     def get(self, entry_id, filters=None, **kwargs):
         """
-        Get entry from storage.
+        Gets a model from storage.
 
         :param entry_id:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract get method')
 
     def put(self, entry, **kwargs):
         """
-        Store entry in storage
+        Puts a model in storage.
 
         :param entry:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract store method')
 
     def delete(self, entry_id, **kwargs):
         """
-        Delete entry from storage.
+        Deletes a model from storage.
 
         :param entry_id:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract delete method')
 
@@ -107,32 +102,27 @@ class ModelAPI(StorageAPI):
 
     def iter(self, **kwargs):
         """
-        Iter over the entries in storage.
-
-        :param kwargs:
-        :return:
+        Iterate over all models in storage.
         """
         raise NotImplementedError('Subclass must implement abstract iter method')
 
     def update(self, entry, **kwargs):
         """
-        Update entry in storage.
+        Update a model in storage.
 
         :param entry:
         :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract update method')
 
 
 class ResourceAPI(StorageAPI):
     """
-    A Base object for the resource.
+    Base class for resource APIs ("RAPI").
     """
     def __init__(self, name, **kwargs):
         """
-        Base resource API
-        :param str name: the resource type
+        :param name: resource type
         """
         super(ResourceAPI, self).__init__(**kwargs)
         self._name = name
@@ -140,63 +130,57 @@ class ResourceAPI(StorageAPI):
     @property
     def name(self):
         """
-        The name of the resource
-        :return:
+        Name of resource.
+
+        :type: :obj:`basestring`
         """
         return self._name
 
     def read(self, entry_id, path, **kwargs):
         """
-        Get a bytesteam from the storage.
+        Get a bytesteam for a resource from storage.
 
         :param entry_id:
         :param path:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract read method')
 
     def delete(self, entry_id, path, **kwargs):
         """
-        Delete a resource from the storage.
+        Delete a resource from storage.
 
         :param entry_id:
         :param path:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract delete method')
 
     def download(self, entry_id, destination, path=None, **kwargs):
         """
-        Download a resource from the storage.
+        Download a resource from storage.
 
         :param entry_id:
         :param destination:
         :param path:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract download method')
 
     def upload(self, entry_id, source, path=None, **kwargs):
         """
-        Upload a resource to the storage.
+        Upload a resource to storage.
 
         :param entry_id:
         :param source:
         :param path:
-        :param kwargs:
-        :return:
         """
         raise NotImplementedError('Subclass must implement abstract upload method')
 
 
 def generate_lower_name(model_cls):
     """
-    Generates the name of the class from the class object. e.g. SomeClass -> some_class
-    :param model_cls: the class to evaluate.
-    :return: lower name
+    Generates the name of the class from the class object, e.g. ``SomeClass`` -> ``some_class``
+
+    :param model_cls: class to evaluate
+    :return: lowercase name
     :rtype: basestring
     """
     return getattr(model_cls, '__mapiname__', model_cls.__tablename__)

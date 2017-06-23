@@ -52,18 +52,17 @@ class PresentationBase(HasCachedMethods):
 
     def _validate(self, context):
         """
-        Validates the presentation while reporting errors in the validation context but
-        *not* raising exceptions.
+        Validates the presentation while reporting errors in the validation context but *not*
+        raising exceptions.
 
-        The base class does not thing, but subclasses may override this for specialized
-        validation.
+        The base class does not thing, but subclasses may override this for specialized validation.
         """
 
     @property
     def _fullname(self):
         """
-        Always returns a usable full name of the presentation, whether it itself is named,
-        or recursing to its container, and finally defaulting to the class name.
+        Always returns a usable full name of the presentation, whether it itself is named, or
+        recursing to its container, and finally defaulting to the class name.
         """
 
         if self._name is not None:
@@ -75,10 +74,10 @@ class PresentationBase(HasCachedMethods):
     @property
     def _locator(self):
         """
-        Attempts to return the most relevant locator, whether we have one, or recursing
-        to our container.
+        Attempts to return the most relevant locator, whether we have one, or recursing to our
+        container.
 
-        :rtype: :class:`aria.reading.Locator`
+        :rtype: :class:`aria.parser.reading.Locator`
         """
 
         return get_locator(self._raw, self._container)
@@ -98,8 +97,8 @@ class PresentationBase(HasCachedMethods):
 
     def _get_from_dict(self, *names):
         """
-        Gets attributes recursively, except for the last name which is used
-        to get a value from the last dict.
+        Gets attributes recursively, except for the last name which is used to get a value from the
+        last dict.
         """
 
         if names:
@@ -110,10 +109,10 @@ class PresentationBase(HasCachedMethods):
 
     def _get_child_locator(self, *names):
         """
-        Attempts to return the locator of one our children. Will default to our locator
-        if not found.
+        Attempts to return the locator of one our children. Will default to our locator if not
+        found.
 
-        :rtype: :class:`aria.reading.Locator`
+        :rtype: :class:`aria.parser.reading.Locator`
         """
 
         if hasattr(self._raw, '_locator'):
@@ -126,9 +125,8 @@ class PresentationBase(HasCachedMethods):
         """
         Emits a colorized representation.
 
-        The base class will emit a sensible default representation of the fields,
-        (by calling :code:`_dump_content`), but subclasses may override this for specialized
-        dumping.
+        The base class will emit a sensible default representation of the fields, (by calling
+        ``_dump_content``), but subclasses may override this for specialized dumping.
         """
 
         if self._name:
@@ -142,8 +140,8 @@ class PresentationBase(HasCachedMethods):
         """
         Emits a colorized representation of the contents.
 
-        The base class will call :code:`_dump_field` on all the fields, but subclasses may
-        override this for specialized dumping.
+        The base class will call ``_dump_field`` on all the fields, but subclasses may override
+        this for specialized dumping.
         """
 
         if field_names:
@@ -159,8 +157,8 @@ class PresentationBase(HasCachedMethods):
         """
         Emits a colorized representation of the field.
 
-        According to the field type, this may trigger nested recursion. The nested
-        types will delegate to their :code:`_dump` methods.
+        According to the field type, this may trigger nested recursion. The nested types will
+        delegate to their ``_dump`` methods.
         """
 
         field = self.FIELDS[field_name]  # pylint: disable=no-member
@@ -179,16 +177,14 @@ class PresentationBase(HasCachedMethods):
 
 class Presentation(PresentationBase):
     """
-    Base class for ARIA presentations. A presentation is a Pythonic wrapper around
-    agnostic raw data, adding the ability to read and modify the data with proper
-    validation.
+    Base class for ARIA presentations. A presentation is a Pythonic wrapper around agnostic raw
+    data, adding the ability to read and modify the data with proper validation.
 
-    ARIA presentation classes will often be decorated with @has_fields, as that
-    mechanism automates a lot of field-specific validation. However, that is not a
-    requirement.
+    ARIA presentation classes will often be decorated with :func:`has_fields`, as that mechanism
+    automates a lot of field-specific validation. However, that is not a requirement.
 
-    Make sure that your utility property and method names begin with a "_", because
-    those names without a "_" prefix are normally reserved for fields.
+    Make sure that your utility property and method names begin with a ``_``, because those names
+    without a ``_`` prefix are normally reserved for fields.
     """
 
     def _validate(self, context):

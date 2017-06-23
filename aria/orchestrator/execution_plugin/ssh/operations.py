@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utilities for running commands remotely over SSH.
+"""
+
 import os
 import random
 import string

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Provides API for building tasks
+Workflow API.
 """
 
 from . import task, task_graph

@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""
+CLI ``logs`` sub-commands.
+"""
+
 from .. import execution_logging
 from ..logger import ModelLogIterator
 from ..core import aria
@@ -20,20 +25,24 @@ from ..core import aria
 @aria.group(name='logs')
 @aria.options.verbose()
 def logs():
-    """Show logs from workflow executions
+    """
+    Manage logs of workflow executions
     """
     pass
 
 
 @logs.command(name='list',
-              short_help='List execution logs')
+              short_help='List logs for an execution')
 @aria.argument('execution-id')
 @aria.options.verbose()
 @aria.options.mark_pattern()
 @aria.pass_model_storage
 @aria.pass_logger
 def list(execution_id, mark_pattern, model_storage, logger):
-    """Display logs for an execution
+    """
+    List logs for an execution
+
+    EXECUTION_ID is the unique ID of the execution.
     """
     logger.info('Listing logs for execution id {0}'.format(execution_id))
     log_iterator = ModelLogIterator(model_storage, execution_id)
@@ -45,15 +54,16 @@ def list(execution_id, mark_pattern, model_storage, logger):
 
 
 @logs.command(name='delete',
-              short_help='Delete execution logs')
+              short_help='Delete logs of an execution')
 @aria.argument('execution-id')
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def delete(execution_id, model_storage, logger):
-    """Delete logs of an execution
+    """
+    Delete logs of an execution
 
-    `EXECUTION_ID` is the execution logs to delete.
+    EXECUTION_ID is the unique ID of the execution.
     """
     logger.info('Deleting logs for execution id {0}'.format(execution_id))
     logs_list = model_storage.log.list(filters=dict(execution_fk=execution_id))

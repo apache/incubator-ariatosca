@@ -15,42 +15,7 @@
    limitations under the License.
 
 
-`aria.parser` Package
-#####################
-
-This is the core parser API.
-
-:mod:`aria.parser`
-******************
-
-.. automodule:: aria
-
-:mod:`aria.parser.consumption`
-******************************
-
-.. automodule:: aria.parser.consumption
-
-:mod:`aria.parser.modeling`
-***************************
-
-.. automodule:: aria.parser.modeling
-
 :mod:`aria.parser.loading`
-**************************
+==========================
 
 .. automodule:: aria.parser.loading
-
-:mod:`aria.parser.presentation`
-*******************************
-
-.. automodule:: aria.parser.presentation
-
-:mod:`aria.parser.reading`
-**************************
-
-.. automodule:: aria.parser.reading
-
-:mod:`aria.parser.validation`
-*****************************
-
-.. automodule:: aria.parser.validation

@@ -23,13 +23,16 @@ from ...utils.formatting import as_raw
 
 class ValidationContext(object):
     """
-    Properties:
+    Validation context.
 
-    * :code:`allow_unknown_fields`: When False (the default) will report an issue
-            if an unknown field is used
-    * :code:`allow_primitive_coersion`: When False (the default) will not attempt to
-            coerce primitive field types
-    * :code:`max_level`: Maximum validation level to report (default is all)
+    :ivar allow_unknown_fields: when ``False`` (the default) will report an issue if an unknown
+     field is used
+    :vartype allow_unknown_fields: bool
+    :ivar allow_primitive_coersion`: when ``False`` (the default) will not attempt to coerce
+     primitive field types
+    :vartype allow_primitive_coersion: bool
+    :ivar max_level: maximum validation level to report (default is all)
+    :vartype max_level: int
     """
 
     def __init__(self):

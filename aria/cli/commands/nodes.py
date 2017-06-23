@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``nodes`` sub-commands.
+"""
+
 from .. import table
 from .. import utils
 from ..core import aria
@@ -24,21 +28,23 @@ NODE_COLUMNS = ['id', 'name', 'service_name', 'node_template_name', 'state']
 @aria.group(name='nodes')
 @aria.options.verbose()
 def nodes():
-    """Handle a service's nodes
+    """
+    Manage services' nodes
     """
     pass
 
 
 @nodes.command(name='show',
-               short_help='Show node information')
+               short_help='Show information for a node')
 @aria.argument('node_id')
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def show(node_id, model_storage, logger):
-    """Showing information for a specific node
+    """
+    Show information for a node
 
-    `NODE_ID` is the id of the node to get information on.
+    NODE_ID is the unique node ID.
     """
     logger.info('Showing node {0}'.format(node_id))
     node = model_storage.node.get(node_id)
@@ -55,7 +61,7 @@ def show(node_id, model_storage, logger):
 
 
 @nodes.command(name='list',
-               short_help='List node for a service')
+               short_help='List node')
 @aria.options.service_name(required=False)
 @aria.options.sort_by('service_name')
 @aria.options.descending
@@ -67,10 +73,11 @@ def list(service_name,
          descending,
          model_storage,
          logger):
-    """List nodes
+    """
+    List nodes
 
-    If `SERVICE_NAME` is provided, list nodes for that service.
-    Otherwise, list nodes for all services.
+    If SERVICE_NAME is provided, list nodes for that service. Otherwise, list nodes for all
+    services.
     """
     if service_name:
         logger.info('Listing nodes for service {0}...'.format(service_name))

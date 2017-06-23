@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Builtin stop workflow
+Built-in stop workflow.
 """
 
 from .workflows import stop_node
@@ -24,5 +24,8 @@ from ... import workflow
 
 @workflow
 def stop(ctx, graph):
+    """
+    Built-in stop workflow.
+    """
     for node in ctx.model.node.iter():
         graph.add_tasks(api_task.WorkflowTask(stop_node, node=node))

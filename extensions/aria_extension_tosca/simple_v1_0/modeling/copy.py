@@ -19,7 +19,7 @@
 
 def get_default_raw_from_copy(presentation, field_name):
     """
-    Used for the :code:`_get_default_raw` field hook.
+    Used for the ``_get_default_raw`` field hook.
     """
 
     copy = presentation._raw.get('copy')

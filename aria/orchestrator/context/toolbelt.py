@@ -12,8 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-Provides with different tools for operations.
+Tools for operations.
 """
 
 from . import operation
@@ -21,7 +22,7 @@ from . import operation
 
 class NodeToolBelt(object):
     """
-    Node operation related tool belt
+    Node operation tool belt.
     """
     def __init__(self, operation_context):
         self._op_context = operation_context
@@ -38,7 +39,7 @@ class NodeToolBelt(object):
 
 class RelationshipToolBelt(object):
     """
-    Relationship operation related tool belt
+    Relationship operation tool belt.
     """
     def __init__(self, operation_context):
         self._op_context = operation_context
@@ -46,9 +47,9 @@ class RelationshipToolBelt(object):
 
 def toolbelt(operation_context):
     """
-    Get a toolbelt according to the current operation executor
+    Get a toolbelt from to the current operation executor.
+
     :param operation_context:
-    :return:
     """
     if isinstance(operation_context, operation.NodeOperationContext):
         return NodeToolBelt(operation_context)

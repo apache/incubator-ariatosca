@@ -25,9 +25,9 @@ def type_validator(type_name, *types_dict_names):
     Makes sure that the field refers to an existing type defined in the root presenter.
 
     The arguments from the second onwards are used to locate a nested field under
-    :code:`service_template` under the root presenter. The first of these can optionally
-    be a function, in which case it will be called to convert type names. This can be used
-    to support shorthand type names, aliases, etc.
+    ``service_template`` under the root presenter. The first of these can optionally be a function,
+    in which case it will be called to convert type names. This can be used to support shorthand
+    type names, aliases, etc.
 
     Can be used with the :func:`field_validator` decorator.
     """
@@ -58,9 +58,9 @@ def list_type_validator(type_name, *types_dict_names):
     Assumes that the field is a list.
 
     The arguments from the second onwards are used to locate a nested field under
-    :code:`service_template` under the root presenter. The first of these can optionally
-    be a function, in which case it will be called to convert type names. This can be used
-    to support shorthand type names, aliases, etc.
+    ``service_template`` under the root presenter. The first of these can optionally be a function,
+    in which case it will be called to convert type names. This can be used to support shorthand
+    type names, aliases, etc.
 
     Can be used with the :func:`field_validator` decorator.
     """
@@ -115,10 +115,9 @@ def derived_from_validator(*types_dict_names):
 
     Checks that we do not derive from ourselves and that we do not cause a circular hierarchy.
 
-    The arguments are used to locate a nested field under
-    :code:`service_template` under the root presenter.
-    The first of these can optionally be a function, in which case it will be called to convert type
-    names. This can be used to support shorthand type names, aliases, etc.
+    The arguments are used to locate a nested field under ``service_template`` under the root
+    presenter. The first of these can optionally be a function, in which case it will be called to
+    convert type names. This can be used to support shorthand type names, aliases, etc.
 
     Can be used with the :func:`field_validator` decorator.
     """

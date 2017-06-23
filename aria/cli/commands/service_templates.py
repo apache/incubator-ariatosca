@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``service-templates`` sub-commands.
+"""
 
 import os
 
@@ -35,13 +38,14 @@ SERVICE_TEMPLATE_COLUMNS = \
 @aria.group(name='service-templates')
 @aria.options.verbose()
 def service_templates():
-    """Handle service templates on the manager
+    """
+    Manage service templates
     """
     pass
 
 
 @service_templates.command(name='show',
-                           short_help='Show service template information')
+                           short_help='Show information for a stored service template')
 @aria.argument('service-template-name')
 @aria.options.verbose()
 @aria.pass_model_storage
@@ -52,9 +56,10 @@ def service_templates():
 @aria.pass_logger
 def show(service_template_name, model_storage, mode_full, mode_types, format_json, format_yaml,
          logger):
-    """Show information for a specific service template
+    """
+    Show information for a stored service template
 
-    `SERVICE_TEMPLATE_NAME` is the name of the service template to show information on.
+    SERVICE_TEMPLATE_NAME is the unique name of the stored service template.
     """
     service_template = model_storage.service_template.get_by_name(service_template_name)
 
@@ -94,14 +99,15 @@ def show(service_template_name, model_storage, mode_full, mode_types, format_jso
 
 
 @service_templates.command(name='list',
-                           short_help='List service templates')
+                           short_help='List all stored service templates')
 @aria.options.sort_by()
 @aria.options.descending
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def list(sort_by, descending, model_storage, logger):
-    """List all service templates
+    """
+    List all stored service templates
     """
 
     logger.info('Listing all service templates...')
@@ -115,7 +121,7 @@ def list(sort_by, descending, model_storage, logger):
 
 
 @service_templates.command(name='store',
-                           short_help='Store a service template')
+                           short_help='Parse and store a service template archive')
 @aria.argument('service-template-path')
 @aria.argument('service-template-name')
 @aria.options.service_template_filename
@@ -126,11 +132,12 @@ def list(sort_by, descending, model_storage, logger):
 @aria.pass_logger
 def store(service_template_path, service_template_name, service_template_filename,
           model_storage, resource_storage, plugin_manager, logger):
-    """Store a service template
+    """
+    Parse and store a service template archive
 
-    `SERVICE_TEMPLATE_PATH` is the path of the service template to store.
+    SERVICE_TEMPLATE_PATH is the path to the service template archive.
 
-    `SERVICE_TEMPLATE_NAME` is the name of the service template to store.
+    SERVICE_TEMPLATE_NAME is the unique name to give to the service template in storage.
     """
     logger.info('Storing service template {0}...'.format(service_template_name))
 
@@ -148,7 +155,7 @@ def store(service_template_path, service_template_name, service_template_filenam
 
 
 @service_templates.command(name='delete',
-                           short_help='Delete a service template')
+                           short_help='Delete a stored service template')
 @aria.argument('service-template-name')
 @aria.options.verbose()
 @aria.pass_model_storage
@@ -156,9 +163,10 @@ def store(service_template_path, service_template_name, service_template_filenam
 @aria.pass_plugin_manager
 @aria.pass_logger
 def delete(service_template_name, model_storage, resource_storage, plugin_manager, logger):
-    """Delete a service template
+    """
+    Delete a stored service template
 
-    `SERVICE_TEMPLATE_NAME` is the name of the service template to delete.
+    SERVICE_TEMPLATE_NAME is the unique name of the stored service template.
     """
     logger.info('Deleting service template {0}...'.format(service_template_name))
     service_template = model_storage.service_template.get_by_name(service_template_name)
@@ -168,22 +176,23 @@ def delete(service_template_name, model_storage, resource_storage, plugin_manage
 
 
 @service_templates.command(name='inputs',
-                           short_help='Show service template inputs')
+                           short_help='Show stored service template inputs')
 @aria.argument('service-template-name')
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def inputs(service_template_name, model_storage, logger):
-    """Show inputs for a specific service template
+    """
+    Show stored service template inputs
 
-    `SERVICE_TEMPLATE_NAME` is the name of the service template to show inputs for.
+    SERVICE_TEMPLATE_NAME is the unique name of the stored service template.
     """
     logger.info('Showing inputs for service template {0}...'.format(service_template_name))
     print_service_template_inputs(model_storage, service_template_name, logger)
 
 
 @service_templates.command(name='validate',
-                           short_help='Validate a service template')
+                           short_help='Validate a service template archive')
 @aria.argument('service-template')
 @aria.options.service_template_filename
 @aria.options.verbose()
@@ -193,9 +202,10 @@ def inputs(service_template_name, model_storage, logger):
 @aria.pass_logger
 def validate(service_template, service_template_filename,
              model_storage, resource_storage, plugin_manager, logger):
-    """Validate a service template
+    """
+    Validate a service template archive
 
-    `SERVICE_TEMPLATE` is the path or URL of the service template or archive to validate.
+    SERVICE_TEMPLATE_PATH is the path to the service template archive.
     """
     logger.info('Validating service template: {0}'.format(service_template))
     service_template_path = service_template_utils.get(service_template, service_template_filename)
@@ -205,16 +215,18 @@ def validate(service_template, service_template_filename,
 
 
 @service_templates.command(name='create-archive',
-                           short_help='Create a CSAR archive')
+                           short_help='Create a CSAR archive from a service template source')
 @aria.argument('service-template-path')
 @aria.argument('destination')
 @aria.options.verbose()
 @aria.pass_logger
 def create_archive(service_template_path, destination, logger):
-    """Create a CSAR archive
+    """
+    Create a CSAR archive from a service template source
 
-    `service_template_path` is the path of the service template to create the archive from
-    `destination` is the path of the output CSAR archive
+    SERVICE_TEMPLATE_PATH is the path to the service template source.
+
+    DESTINATION is the path to the created CSAR archive.
     """
     logger.info('Creating a CSAR archive')
     if not destination.endswith(csar.CSAR_FILE_EXTENSION):

@@ -15,22 +15,7 @@
    limitations under the License.
 
 
-`aria_extension_tosca` Package
-##############################
+:mod:`aria.parser.modeling`
+===========================
 
-This is the ARIA TOSCA extension.
-
-:mod:`aria_extension_tosca`
-***************************
-
-.. automodule:: aria_extension_tosca
-
-:mod:`aria_extension_tosca.simple_v1_0`
-***************************************
-
-.. automodule:: aria_extension_tosca.simple_v1_0
-
-:mod:`aria_extension_tosca.simple_nfv_v1_0`
-*******************************************
-
-.. automodule:: aria_extension_tosca.simple_nfv_v1_0
+.. automodule:: aria.parser.modeling

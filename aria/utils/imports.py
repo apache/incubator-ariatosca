@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Utility methods for dynamically loading python code
+Utilities for dynamically loading Python code.
 """
 
 import pkgutil
@@ -50,8 +50,8 @@ def import_fullname(name, paths=None):
 
 def import_modules(name):
     """
-    Imports a module and all its sub-modules, recursively.
-    Relies on modules defining a 'MODULES' attribute listing their sub-module names.
+    Imports a module and all its sub-modules, recursively. Relies on modules defining a ``MODULES``
+    attribute listing their sub-module names.
     """
 
     module = __import__(name, fromlist=['MODULES'], level=0)
@@ -63,9 +63,9 @@ def import_modules(name):
 # TODO merge with import_fullname
 def load_attribute(attribute_path):
     """
-    Dynamically load an attribute based on the path to it.
-    e.g. some_package.some_module.some_attribute, will load the some_attribute from the
-    some_package.some_module module
+    Dynamically load an attribute based on the path to it. E.g.
+    ``some_package.some_module.some_attribute``, will load ``some_attribute`` from the
+    ``some_package.some_module`` module.
     """
     module_name, attribute_name = attribute_path.rsplit('.', 1)
     try:

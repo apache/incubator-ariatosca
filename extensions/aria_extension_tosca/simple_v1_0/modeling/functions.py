@@ -34,7 +34,7 @@ from aria.modeling.functions import (Function, Evaluation)
 @implements_specification('4.3.1', 'tosca-simple-1.0')
 class Concat(Function):
     """
-    The :code:`concat` function is used to concatenate two or more string values within a TOSCA
+    The ``concat`` function is used to concatenate two or more string values within a TOSCA
     service template.
     """
 
@@ -76,7 +76,7 @@ class Concat(Function):
 @implements_specification('4.3.2', 'tosca-simple-1.0')
 class Token(Function):
     """
-    The :code:`token` function is used within a TOSCA service template on a string to parse out
+    The ``token`` function is used within a TOSCA service template on a string to parse out
     (tokenize) substrings separated by one or more token characters within a larger string.
     """
 
@@ -127,7 +127,7 @@ class Token(Function):
 @implements_specification('4.4.1', 'tosca-simple-1.0')
 class GetInput(Function):
     """
-    The :code:`get_input` function is used to retrieve the values of properties declared within the
+    The ``get_input`` function is used to retrieve the values of properties declared within the
     inputs section of a TOSCA Service Template.
     """
 
@@ -170,7 +170,7 @@ class GetInput(Function):
 @implements_specification('4.4.2', 'tosca-simple-1.0')
 class GetProperty(Function):
     """
-    The :code:`get_property` function is used to retrieve property values between modelable entities
+    The ``get_property`` function is used to retrieve property values between modelable entities
     defined in the same service template.
     """
 
@@ -238,7 +238,7 @@ class GetProperty(Function):
 @implements_specification('4.5.1', 'tosca-simple-1.0')
 class GetAttribute(Function):
     """
-    The :code:`get_attribute` function is used to retrieve the values of named attributes declared
+    The ``get_attribute`` function is used to retrieve the values of named attributes declared
     by the referenced node or relationship template name.
     """
 
@@ -285,7 +285,7 @@ class GetAttribute(Function):
 @implements_specification('4.6.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
 class GetOperationOutput(Function):
     """
-    The :code:`get_operation_output` function is used to retrieve the values of variables exposed /
+    The ``get_operation_output`` function is used to retrieve the values of variables exposed /
     exported from an interface operation.
     """
 
@@ -331,7 +331,7 @@ class GetOperationOutput(Function):
 @implements_specification('4.7.1', 'tosca-simple-1.0')
 class GetNodesOfType(Function):
     """
-    The :code:`get_nodes_of_type` function can be used to retrieve a list of all known instances of
+    The ``get_nodes_of_type`` function can be used to retrieve a list of all known instances of
     nodes of the declared Node Type.
     """
 
@@ -367,7 +367,7 @@ class GetNodesOfType(Function):
 @implements_specification('4.8.1', 'tosca-simple-1.0') # pylint: disable=abstract-method
 class GetArtifact(Function):
     """
-    The :code:`get_artifact` function is used to retrieve artifact location between modelable
+    The ``get_artifact`` function is used to retrieve artifact location between modelable
     entities defined in the same service template.
     """
 
@@ -574,7 +574,7 @@ def get_hosts(container_holder, name, locator):
     using this reference (i.e., as identified by its HostedOn relationship).
 
     Specifically, TOSCA orchestrators that encounter this keyword when evaluating the get_attribute
-    or :code:`get_property` functions SHALL search each node along the "HostedOn" relationship chain
+    or ``get_property`` functions SHALL search each node along the "HostedOn" relationship chain
     starting at the immediate node that hosts the node where the function was evaluated (and then
     that node's host node, and so forth) until a match is found or the "HostedOn" relationship chain
     ends.

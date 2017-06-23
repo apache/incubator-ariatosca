@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Base executor module
+Base class for task executors.
 """
 
 from aria import logger
@@ -23,14 +23,15 @@ from aria.orchestrator import events
 
 class BaseExecutor(logger.LoggerMixin):
     """
-    Base class for executors for running tasks
+    Base class for task executors.
     """
     def _execute(self, ctx):
         raise NotImplementedError
 
     def execute(self, ctx):
         """
-        Execute a task
+        Executes a task.
+
         :param task: task to execute
         """
         if ctx.task.function:
@@ -44,7 +45,7 @@ class BaseExecutor(logger.LoggerMixin):
 
     def close(self):
         """
-        Close the executor
+        Closes the executor.
         """
         pass
 

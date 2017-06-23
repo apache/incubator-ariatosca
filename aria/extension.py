@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Mechanism for registering and loading ARIA extensions.
+"""
+
 # pylint: disable=no-self-use
 
 from .utils import collections
@@ -49,7 +53,9 @@ def _registrar(function):
 
 
 class _ExtensionRegistration(object):
-    """Base class for extension class decorators"""
+    """
+    Base class for extension class decorators.
+    """
 
     def __init__(self):
         self._registrars = {}
@@ -70,7 +76,7 @@ class _ExtensionRegistration(object):
 
     def init(self):
         """
-        Initialize all registrars by calling all registered functions
+        Initialize all registrars by calling all registered functions.
         """
         registered_instances = [cls() for cls in self._registered_classes]
         for name, registrar in self._registrars.items():
@@ -81,13 +87,16 @@ class _ExtensionRegistration(object):
 
 
 class _ParserExtensionRegistration(_ExtensionRegistration):
-    """Parser extensions class decorator"""
+    """
+    Parser extensions class decorator.
+    """
 
     @_registrar
     def presenter_class(self):
         """
         Presentation class registration.
-        Implementing functions can return a single class or a list/tuple of classes
+
+        Implementing functions can return a single class or a list/tuple of classes.
         """
         return []
 
@@ -95,7 +104,8 @@ class _ParserExtensionRegistration(_ExtensionRegistration):
     def specification_package(self):
         """
         Specification package registration.
-        Implementing functions can return a package name or a list/tuple of names
+
+        Implementing functions can return a package name or a list/tuple of names.
         """
         return []
 
@@ -103,7 +113,8 @@ class _ParserExtensionRegistration(_ExtensionRegistration):
     def specification_url(self):
         """
         Specification URL registration.
-        Implementing functions should return a dictionary from names to URLs
+
+        Implementing functions should return a dictionary from names to URLs.
         """
         return {}
 
@@ -111,7 +122,8 @@ class _ParserExtensionRegistration(_ExtensionRegistration):
     def uri_loader_prefix(self):
         """
         URI loader prefix registration.
-        Implementing functions can return a single prefix or a list/tuple of prefixes
+
+        Implementing functions can return a single prefix or a list/tuple of prefixes.
         """
         return collections.StrictList(value_class=basestring)
 
@@ -119,13 +131,15 @@ parser = _ParserExtensionRegistration()
 
 
 class _ProcessExecutorExtensionRegistration(_ExtensionRegistration):
-    """Process executor extension class decorator"""
+    """
+    Process executor extension class decorator.
+    """
 
     @_registrar
     def decorate(self):
         """
         The operation function executed by the process executor will be decorated with the function
-        returned from decorate().
+        returned from ``decorate()``.
         """
         return []
 
@@ -134,7 +148,7 @@ process_executor = _ProcessExecutorExtensionRegistration()
 
 def init():
     """
-    Initialize all registrars by calling all registered functions
+    Initialize all registrars by calling all registered functions.
     """
     parser.init()
     process_executor.init()

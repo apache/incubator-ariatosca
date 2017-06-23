@@ -19,7 +19,7 @@ from aria.parser.presentation import (Presentation, has_fields, primitive_dict_f
 @has_fields
 class ExtensiblePresentation(Presentation):
     """
-    A presentation that supports an optional :code:`_extensions` dict field.
+    A presentation that supports an optional ``_extensions`` dict field.
     """
 
     @primitive_dict_field()

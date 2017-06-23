@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utilities for extracting and formatting Python exceptions.
+"""
+
 import sys
 import linecache
 import StringIO

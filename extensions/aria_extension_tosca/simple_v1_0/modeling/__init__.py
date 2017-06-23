@@ -484,7 +484,6 @@ def create_substitution_template_model(context, service_template, substitution_m
                 node_template_model.capability_templates[capability.capability]
             model.mappings[name] = \
                 SubstitutionTemplateMapping(name=name,
-                                            node_template=node_template_model,
                                             capability_template=capability_template_model)
 
     requirements = substitution_mappings.requirements
@@ -499,7 +498,6 @@ def create_substitution_template_model(context, service_template, substitution_m
                     break
             model.mappings[name] = \
                 SubstitutionTemplateMapping(name=name,
-                                            node_template=node_template_model,
                                             requirement_template=requirement_template_model)
 
     return model

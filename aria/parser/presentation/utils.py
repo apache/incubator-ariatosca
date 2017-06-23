@@ -25,7 +25,7 @@ def get_locator(*values):
     """
     Gets the first available locator.
 
-    :rtype: :class:`aria.reading.Locator`
+    :rtype: :class:`aria.parser.reading.Locator`
     """
 
     for v in values:
@@ -53,7 +53,7 @@ def validate_primitive(value, cls, coerce=False):
     Checks if the value is of the primitive type, optionally attempting to coerce it
     if it is not.
 
-    Raises a :code:`ValueError` if it isn't or if coercion failed.
+    :raises ValueError: if not a primitive type or if coercion failed.
     """
 
     if (cls is not None) and (value is not None) and (value is not NULL):
@@ -112,14 +112,14 @@ def validate_known_fields(context, presentation):
 
 def get_parent_presentation(context, presentation, *types_dict_names):
     """
-    Returns the parent presentation according to the :code:`derived_from` field, or None if invalid.
+    Returns the parent presentation according to the ``derived_from`` field, or ``None`` if invalid.
 
     Checks that we do not derive from ourselves and that we do not cause a circular hierarchy.
 
     The arguments from the third onwards are used to locate a nested field under
-    :code:`service_template` under the root presenter. The first of these can optionally
-    be a function, in which case it will be called to convert type names. This can be used
-    to support shorthand type names, aliases, etc.
+    ``service_template`` under the root presenter. The first of these can optionally be a function,
+    in which case it will be called to convert type names. This can be used to support shorthand
+    type names, aliases, etc.
     """
 
     type_name = presentation.derived_from

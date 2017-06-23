@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Celery based executor
+Celery task executor.
 """
 
 import threading
@@ -25,7 +25,7 @@ from aria.orchestrator.workflows.executor import BaseExecutor
 
 class CeleryExecutor(BaseExecutor):
     """
-    Executor which runs tasks using aria_celery
+    Celery task executor.
     """
 
     def __init__(self, app, *args, **kwargs):

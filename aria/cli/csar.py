@@ -13,6 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Support for the CSAR (Cloud Service ARchive) packaging specification.
+
+See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
+/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc461787381>`__
+"""
+
 import os
 import logging
 import pprint

@@ -60,7 +60,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         The required name of the Node Type the Node Template is based upon.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -68,7 +68,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional description for the Node Template.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_list_field(str)
@@ -77,7 +77,7 @@ class NodeTemplate(ExtensiblePresentation):
         An optional list of directive values to provide processing instructions to orchestrators and
         tooling.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @object_dict_field(PropertyAssignment)
@@ -85,7 +85,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional list of property value assignments for the Node Template.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @object_dict_field(AttributeAssignment)
@@ -93,7 +93,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional list of attribute value assignments for the Node Template.
 
-        :rtype: dict of str, :class:`AttributeAssignment`
+        :type: {:obj:`basestring`: :class:`AttributeAssignment`}
         """
 
     @object_sequenced_list_field(RequirementAssignment)
@@ -101,7 +101,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional sequenced list of requirement assignments for the Node Template.
 
-        :rtype: list of (str, :class:`RequirementAssignment`)
+        :type: list of (str, :class:`RequirementAssignment`)
         """
 
     @object_dict_field(CapabilityAssignment)
@@ -109,7 +109,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional list of capability assignments for the Node Template.
 
-        :rtype: dict of str, :class:`CapabilityAssignment`
+        :type: {:obj:`basestring`: :class:`CapabilityAssignment`}
         """
 
     @object_dict_field(InterfaceAssignment)
@@ -117,7 +117,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional list of named interface definitions for the Node Template.
 
-        :rtype: dict of str, :class:`InterfaceAssignment`
+        :type: {:obj:`basestring`: :class:`InterfaceAssignment`}
         """
 
     @object_dict_field(ArtifactAssignment)
@@ -125,7 +125,7 @@ class NodeTemplate(ExtensiblePresentation):
         """
         An optional list of named artifact definitions for the Node Template.
 
-        :rtype: dict of str, :class:`ArtifactAssignment`
+        :type: {:obj:`basestring`: :class:`ArtifactAssignment`}
         """
 
     @object_field(NodeFilter)
@@ -134,7 +134,7 @@ class NodeTemplate(ExtensiblePresentation):
         The optional filter definition that TOSCA orchestrators would use to select the correct
         target node. This keyname is only valid if the directive has the value of "selectable" set.
 
-        :rtype: :class:`NodeFilter`
+        :type: :class:`NodeFilter`
         """
 
     @field_validator(copy_validator('node template', 'node_templates'))
@@ -144,7 +144,7 @@ class NodeTemplate(ExtensiblePresentation):
         The optional (symbolic) name of another node template to copy into (all keynames and values)
         and use as a basis for this node template.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @cachedmethod
@@ -223,7 +223,7 @@ class RelationshipTemplate(ExtensiblePresentation):
         """
         The required name of the Relationship Type the Relationship Template is based upon.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -231,7 +231,7 @@ class RelationshipTemplate(ExtensiblePresentation):
         """
         An optional description for the Relationship Template.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -239,7 +239,7 @@ class RelationshipTemplate(ExtensiblePresentation):
         """
         An optional list of property assignments for the Relationship Template.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @object_dict_field(AttributeAssignment)
@@ -247,7 +247,7 @@ class RelationshipTemplate(ExtensiblePresentation):
         """
         An optional list of attribute assignments for the Relationship Template.
 
-        :rtype: dict of str, :class:`AttributeAssignment`
+        :type: {:obj:`basestring`: :class:`AttributeAssignment`}
         """
 
     @object_dict_field(InterfaceAssignment)
@@ -257,7 +257,7 @@ class RelationshipTemplate(ExtensiblePresentation):
 
         ARIA NOTE: Spec is wrong here, should be Relationship Template.
 
-        :rtype: dict of str, :class:`InterfaceAssignment`
+        :type: {:obj:`basestring`: :class:`InterfaceAssignment`}
         """
 
     @field_validator(copy_validator('relationship template', 'relationship_templates'))
@@ -267,7 +267,7 @@ class RelationshipTemplate(ExtensiblePresentation):
         The optional (symbolic) name of another relationship template to copy into (all keynames and
         values) and use as a basis for this relationship template.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @cachedmethod
@@ -319,7 +319,7 @@ class GroupTemplate(ExtensiblePresentation):
         """
         The required name of the group type the group definition is based upon.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -327,7 +327,7 @@ class GroupTemplate(ExtensiblePresentation):
         """
         The optional description for the group definition.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -335,7 +335,7 @@ class GroupTemplate(ExtensiblePresentation):
         """
         An optional list of property value assignments for the group definition.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @field_validator(list_type_validator('node template', 'topology_template', 'node_templates'))
@@ -345,7 +345,7 @@ class GroupTemplate(ExtensiblePresentation):
         The optional list of one or more node template names that are members of this group
         definition.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @object_dict_field(InterfaceAssignment)
@@ -353,7 +353,7 @@ class GroupTemplate(ExtensiblePresentation):
         """
         An optional list of named interface definitions for the group definition.
 
-        :rtype: dict of str, :class:`InterfaceDefinition`
+        :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
     @cachedmethod
@@ -392,7 +392,7 @@ class PolicyTemplate(ExtensiblePresentation):
         """
         The required name of the policy type the policy definition is based upon.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -400,7 +400,7 @@ class PolicyTemplate(ExtensiblePresentation):
         """
         The optional description for the policy definition.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -408,7 +408,7 @@ class PolicyTemplate(ExtensiblePresentation):
         """
         An optional list of property value assignments for the policy definition.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`
         """
 
     @field_validator(policy_targets_validator)
@@ -417,7 +417,7 @@ class PolicyTemplate(ExtensiblePresentation):
         """
         An optional list of valid Node Templates or Groups the Policy can be applied to.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @cachedmethod
@@ -444,7 +444,7 @@ class TopologyTemplate(ExtensiblePresentation):
     This section defines the topology template of a cloud application. The main ingredients of the
     topology template are node templates representing components of the application and relationship
     templates representing links between the components. These elements are defined in the nested
-    :code:`node_templates` section and the nested relationship_templates sections, respectively.
+    ``node_templates`` section and the nested relationship_templates sections, respectively.
     Furthermore, a topology template allows for defining input parameters, output parameters as well
     as grouping of node templates.
 
@@ -458,7 +458,7 @@ class TopologyTemplate(ExtensiblePresentation):
         """
         The optional description for the Topology Template.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(ParameterDefinition)
@@ -467,7 +467,7 @@ class TopologyTemplate(ExtensiblePresentation):
         An optional list of input parameters (i.e., as parameter definitions) for the Topology
         Template.
 
-        :rtype: dict of str, :class:`ParameterDefinition`
+        :type: {:obj:`basestring`: :class:`ParameterDefinition`}
         """
 
     @object_dict_field(NodeTemplate)
@@ -475,7 +475,7 @@ class TopologyTemplate(ExtensiblePresentation):
         """
         An optional list of node template definitions for the Topology Template.
 
-        :rtype: dict of str, :class:`NodeTemplate`
+        :type: {:obj:`basestring`: :class:`NodeTemplate`}
         """
 
     @object_dict_field(RelationshipTemplate)
@@ -483,7 +483,7 @@ class TopologyTemplate(ExtensiblePresentation):
         """
         An optional list of relationship templates for the Topology Template.
 
-        :rtype: dict of str, :class:`RelationshipTemplate`
+        :type: {:obj:`basestring`: :class:`RelationshipTemplate`}
         """
 
     @object_dict_field(GroupTemplate)
@@ -500,7 +500,7 @@ class TopologyTemplate(ExtensiblePresentation):
         """
         An optional list of Policy definitions for the Topology Template.
 
-        :rtype: dict of str, :class:`PolicyTemplate`
+        :type: {:obj:`basestring`: :class:`PolicyTemplate`}
         """
 
     @object_dict_field(ParameterDefinition)
@@ -509,7 +509,7 @@ class TopologyTemplate(ExtensiblePresentation):
         An optional list of output parameters (i.e., as parameter definitions) for the Topology
         Template.
 
-        :rtype: dict of str, :class:`ParameterDefinition`
+        :type: {:obj:`basestring`: :class:`ParameterDefinition`}
         """
 
     @object_field(SubstitutionMappings)
@@ -551,6 +551,8 @@ class TopologyTemplate(ExtensiblePresentation):
 @implements_specification('3.9', 'tosca-simple-1.0')
 class ServiceTemplate(ExtensiblePresentation):
     """
+    Servicate template.
+
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_SERVICE_TEMPLATE>`__.
@@ -567,7 +569,7 @@ class ServiceTemplate(ExtensiblePresentation):
         /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
         #_Toc379455047>`__
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(MetaData)
@@ -580,7 +582,7 @@ class ServiceTemplate(ExtensiblePresentation):
         /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
         #_Toc379455048>`__
 
-        :rtype: :class:`MetaData`
+        :type: :class:`MetaData`
         """
 
     @object_field(Description)
@@ -589,7 +591,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
         Declares a description for this Service Template and its contents.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_field()
@@ -613,7 +615,7 @@ class ServiceTemplate(ExtensiblePresentation):
         the service template along with their addresses and necessary credential information used to
         connect to them in order to retrieve the artifacts.
 
-        :rtype: dict of str, :class:`Repository`
+        :type: {:obj:`basestring`: :class:`Repository`}
         """
 
     @object_list_field(Import)
@@ -623,7 +625,7 @@ class ServiceTemplate(ExtensiblePresentation):
         Declares import statements external TOSCA Definitions documents. For example, these may be
         file location or URIs relative to the service template file within the same TOSCA CSAR file.
 
-        :rtype: list of :class:`Import`
+        :type: list of :class:`Import`
         """
 
     @object_dict_field(ArtifactType)
@@ -633,7 +635,7 @@ class ServiceTemplate(ExtensiblePresentation):
         This section contains an optional list of artifact type definitions for use in the service
         template.
 
-        :rtype: dict of str, :class:`ArtifactType`
+        :type: {:obj:`basestring`: :class:`ArtifactType`}
         """
 
     @object_dict_field(DataType)
@@ -642,7 +644,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
         Declares a list of optional TOSCA Data Type definitions.
 
-        :rtype: dict of str, :class:`DataType`
+        :type: {:obj:`basestring`: :class:`DataType`}
         """
 
     @object_dict_field(CapabilityType)
@@ -652,7 +654,7 @@ class ServiceTemplate(ExtensiblePresentation):
         This section contains an optional list of capability type definitions for use in the service
         template.
 
-        :rtype: dict of str, :class:`CapabilityType`
+        :type: {:obj:`basestring`: :class:`CapabilityType`}
         """
 
     @object_dict_field(InterfaceType)
@@ -662,7 +664,7 @@ class ServiceTemplate(ExtensiblePresentation):
         This section contains an optional list of interface type definitions for use in the service
         template.
 
-        :rtype: dict of str, :class:`InterfaceType`
+        :type: {:obj:`basestring`: :class:`InterfaceType`}
         """
 
     @object_dict_field(RelationshipType)
@@ -672,7 +674,7 @@ class ServiceTemplate(ExtensiblePresentation):
         This section contains a set of relationship type definitions for use in the service
         template.
 
-        :rtype: dict of str, :class:`RelationshipType`
+        :type: {:obj:`basestring`: :class:`RelationshipType`}
         """
 
     @object_dict_field(NodeType)
@@ -681,7 +683,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
         This section contains a set of node type definitions for use in the service template.
 
-        :rtype: dict of str, :class:`NodeType`
+        :type: {:obj:`basestring`: :class:`NodeType`}
         """
 
     @object_dict_field(GroupType)
@@ -690,7 +692,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
         This section contains a list of group type definitions for use in the service template.
 
-        :rtype: dict of str, :class:`GroupType`
+        :type: {:obj:`basestring`: :class:`GroupType`}
         """
 
     @object_dict_field(PolicyType)
@@ -699,7 +701,7 @@ class ServiceTemplate(ExtensiblePresentation):
         """
         This section contains a list of policy type definitions for use in the service template.
 
-        :rtype: dict of str, :class:`PolicyType`
+        :type: {:obj:`basestring`: :class:`PolicyType`}
         """
 
     @object_field(TopologyTemplate)
@@ -709,7 +711,7 @@ class ServiceTemplate(ExtensiblePresentation):
         that represent the application's or service's components, as well as relationship templates
         representing relations between the components.
 
-        :rtype: :class:`TopologyTemplate`
+        :type: :class:`TopologyTemplate`
         """
 
     def _dump(self, context):

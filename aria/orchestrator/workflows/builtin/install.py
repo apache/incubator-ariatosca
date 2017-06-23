@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Builtin install workflow
+Built-in install workflow.
 """
 
 from ... import workflow
@@ -24,6 +24,9 @@ from . import workflows
 
 @workflow
 def install(ctx, graph):
+    """
+    Built-in install workflow.
+    """
     tasks_and_nodes = []
     for node in ctx.nodes:
         tasks_and_nodes.append((api_task.WorkflowTask(workflows.install_node, node=node), node))

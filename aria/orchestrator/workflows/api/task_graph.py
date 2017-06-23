@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Task graph. Used by users to build workflows
+Task graph.
 """
 
 from collections import Iterable
@@ -27,7 +27,7 @@ from . import task as api_task
 
 class TaskNotInGraphError(Exception):
     """
-    An error representing a scenario where a given task is not in the graph as expected
+    An error representing a scenario where a given task is not in the graph as expected.
     """
     pass
 
@@ -43,8 +43,7 @@ def _filter_out_empty_tasks(func=None):
 
 class TaskGraph(object):
     """
-    A tasks graph builder.
-    Build an operations flow graph
+    Task graph builder.
     """
 
     def __init__(self, name):
@@ -59,8 +58,7 @@ class TaskGraph(object):
     @property
     def id(self):
         """
-        Represents the id of the graph
-        :return: graph id
+        ID of the graph
         """
         return self._id
 
@@ -69,27 +67,28 @@ class TaskGraph(object):
     @property
     def tasks(self):
         """
-        An iterator on tasks added to the graph
-        :yields: Iterator over all tasks in the graph
+        Iterator over tasks in the graph.
         """
         for _, data in self._graph.nodes_iter(data=True):
             yield data['task']
 
     def topological_order(self, reverse=False):
         """
-        Returns topological sort on the graph
+        Topological sort of the graph.
+
         :param reverse: whether to reverse the sort
-        :return: a list which represents the topological sort
+        :return: list which represents the topological sort
         """
         for task_id in topological_sort(self._graph, reverse=reverse):
             yield self.get_task(task_id)
 
     def get_dependencies(self, dependent_task):
         """
-        Iterates over the task's dependencies
-        :param BaseTask dependent_task: The task whose dependencies are requested
-        :yields: Iterator over all tasks which dependency_task depends on
-        :raise: TaskNotInGraphError if dependent_task is not in the graph
+        Iterates over the task's dependencies.
+
+        :param dependent_task: task whose dependencies are requested
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if
+         ``dependent_task`` is not in the graph
         """
         if not self.has_tasks(dependent_task):
             raise TaskNotInGraphError('Task id: {0}'.format(dependent_task.id))
@@ -98,10 +97,11 @@ class TaskGraph(object):
 
     def get_dependents(self, dependency_task):
         """
-        Iterates over the task's dependents
-        :param BaseTask dependency_task: The task whose dependents are requested
-        :yields: Iterator over all tasks which depend on dependency_task
-        :raise: TaskNotInGraphError if dependency_task is not in the graph
+        Iterates over the task's dependents.
+
+        :param dependency_task: task whose dependents are requested
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if
+         ``dependency_task`` is not in the graph
         """
         if not self.has_tasks(dependency_task):
             raise TaskNotInGraphError('Task id: {0}'.format(dependency_task.id))
@@ -112,11 +112,11 @@ class TaskGraph(object):
 
     def get_task(self, task_id):
         """
-        Get a task instance that's been inserted to the graph by the task's id
-        :param basestring task_id: The task's id
-        :return: Requested task
-        :rtype: BaseTask
-        :raise: TaskNotInGraphError if no task found in the graph with the given id
+        Get a task instance that's been inserted to the graph by the task's ID.
+
+        :param basestring task_id: task ID
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if no task found in
+         the graph with the given ID
         """
         if not self._graph.has_node(task_id):
             raise TaskNotInGraphError('Task id: {0}'.format(task_id))
@@ -126,9 +126,10 @@ class TaskGraph(object):
     @_filter_out_empty_tasks
     def add_tasks(self, *tasks):
         """
-        Add a task to the graph
-        :param BaseTask task: The task
-        :return: A list of added tasks
+        Adds a task to the graph.
+
+        :param task: task
+        :return: list of added tasks
         :rtype: list
         """
         assert all([isinstance(task, (api_task.BaseTask, Iterable)) for task in tasks])
@@ -146,9 +147,10 @@ class TaskGraph(object):
     @_filter_out_empty_tasks
     def remove_tasks(self, *tasks):
         """
-        Remove the provided task from the graph
-        :param BaseTask task: The task
-        :return: A list of removed tasks
+        Removes the provided task from the graph.
+
+        :param task: task
+        :return: list of removed tasks
         :rtype: list
         """
         return_tasks = []
@@ -165,9 +167,10 @@ class TaskGraph(object):
     @_filter_out_empty_tasks
     def has_tasks(self, *tasks):
         """
-        Check whether a task is in the graph or not
-        :param BaseTask task: The task
-        :return: True if all tasks are in the graph, otherwise True
+        Checks whether a task is in the graph.
+
+        :param task: task
+        :return: ``True`` if all tasks are in the graph, otherwise ``False``
         :rtype: list
         """
         assert all(isinstance(t, (api_task.BaseTask, Iterable)) for t in tasks)
@@ -183,16 +186,18 @@ class TaskGraph(object):
 
     def add_dependency(self, dependent, dependency):
         """
-        Add a dependency for one item (task, sequence or parallel) on another
-        The dependent will only be executed after the dependency terminates
-        If either of the items is either a sequence or a parallel,
-         multiple dependencies may be added
-        :param BaseTask|_TasksArrangement dependent: The dependent (task, sequence or parallel)
-        :param BaseTask|_TasksArrangement dependency: The dependency (task, sequence or parallel)
-        :return: True if the dependency between the two hadn't already existed, otherwise False
+        Adds a dependency for one item (task, sequence or parallel) on another.
+
+        The dependent will only be executed after the dependency terminates. If either of the items
+        is either a sequence or a parallel, multiple dependencies may be added.
+
+        :param dependent: dependent (task, sequence or parallel)
+        :param dependency: dependency (task, sequence or parallel)
+        :return: ``True`` if the dependency between the two hadn't already existed, otherwise
+         ``False``
         :rtype: bool
-        :raise TaskNotInGraphError if either the dependent or dependency are tasks which
-         are not in the graph
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if either the
+         dependent or dependency are tasks which are not in the graph
         """
         if not (self.has_tasks(dependent) and self.has_tasks(dependency)):
             raise TaskNotInGraphError()
@@ -212,18 +217,17 @@ class TaskGraph(object):
 
     def has_dependency(self, dependent, dependency):
         """
-        Check whether one item (task, sequence or parallel) depends on another
+        Checks whether one item (task, sequence or parallel) depends on another.
 
-        Note that if either of the items is either a sequence or a parallel,
-        and some of the dependencies exist in the graph but not all of them,
-        this method will return False
+        Note that if either of the items is either a sequence or a parallel, and some of the
+        dependencies exist in the graph but not all of them, this method will return ``False``.
 
-        :param BaseTask|_TasksArrangement dependent: The dependent (task, sequence or parallel)
-        :param BaseTask|_TasksArrangement dependency: The dependency (task, sequence or parallel)
-        :return: True if the dependency between the two exists, otherwise False
+        :param dependent: dependent (task, sequence or parallel)
+        :param dependency: dependency (task, sequence or parallel)
+        :return: ``True`` if the dependency between the two exists, otherwise ``False``
         :rtype: bool
-        :raise TaskNotInGraphError if either the dependent or dependency are tasks
-         which are not in the graph
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if either the
+         dependent or dependency are tasks which are not in the graph
         """
         if not (dependent and dependency):
             return False
@@ -246,18 +250,18 @@ class TaskGraph(object):
 
     def remove_dependency(self, dependent, dependency):
         """
-        Remove a dependency for one item (task, sequence or parallel) on another
+        Removes a dependency for one item (task, sequence or parallel) on another.
 
-        Note that if either of the items is either a sequence or a parallel, and some of
-        the dependencies exist in the graph but not all of them, this method will not remove
-        any of the dependencies and return False
+        Note that if either of the items is either a sequence or a parallel, and some of the
+        dependencies exist in the graph but not all of them, this method will not remove any of the
+        dependencies and return ``False``.
 
-        :param BaseTask|_TasksArrangement dependent: The dependent (task, sequence or parallel)
-        :param BaseTask|_TasksArrangement dependency: The dependency (task, sequence or parallel)
-        :return: False if the dependency between the two hadn't existed, otherwise True
+        :param dependent: dependent (task, sequence or parallel)
+        :param dependency: dependency (task, sequence or parallel)
+        :return: ``False`` if the dependency between the two hadn't existed, otherwise ``True``
         :rtype: bool
-        :raise TaskNotInGraphError if either the dependent or dependency are tasks
-         which are not in the graph
+        :raises ~aria.orchestrator.workflows.api.task_graph.TaskNotInGraphError: if either the
+         dependent or dependency are tasks which are not in the graph
         """
         if not (self.has_tasks(dependent) and self.has_tasks(dependency)):
             raise TaskNotInGraphError()
@@ -277,9 +281,10 @@ class TaskGraph(object):
     @_filter_out_empty_tasks
     def sequence(self, *tasks):
         """
-        Create and insert a sequence into the graph, effectively each task i depends on i-1
-        :param tasks: an iterable of dependencies
-        :return: the provided tasks
+        Creates and inserts a sequence into the graph, effectively each task i depends on i-1.
+
+        :param tasks: iterable of dependencies
+        :return: provided tasks
         """
         if tasks:
             self.add_tasks(*tasks)

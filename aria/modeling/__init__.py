@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+This package provides an API for modeling ARIA's state and serializing it to storage.
+"""
+
 from collections import namedtuple
 
 from . import (

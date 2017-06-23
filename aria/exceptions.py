@@ -14,9 +14,7 @@
 # limitations under the License.
 
 """
-ARIA exceptions module
-Every sub-package in ARIA has a module with its exceptions.
-aria.exceptions module conveniently collects all these exceptions for easier imports.
+Base exception classes and other common exceptions used throughout ARIA.
 """
 
 import sys
@@ -48,21 +46,21 @@ class AriaException(Exception):
 
 class DependentServicesError(AriaError):
     """
-    Raised when attempting to delete a service template which has existing services
+    Raised when attempting to delete a service template which has existing services.
     """
     pass
 
 
 class DependentActiveExecutionsError(AriaError):
     """
-    Raised when attempting to delete a service which has active executions
+    Raised when attempting to delete a service which has active executions.
     """
     pass
 
 
 class DependentAvailableNodesError(AriaError):
     """
-    Raised when attempting to delete a service which has available nodes
+    Raised when attempting to delete a service which has available nodes.
     """
     pass
 

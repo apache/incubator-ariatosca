@@ -13,9 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Execution plugin exceptions.
+"""
 
 class ProcessException(Exception):
-    """Raised when local scripts and remote ssh commands fail"""
+    """
+    Raised when local scripts and remote SSH commands fail.
+    """
 
     def __init__(self, stderr=None, stdout=None, command=None, exit_code=None):
         super(ProcessException, self).__init__(stderr)
@@ -26,11 +31,15 @@ class ProcessException(Exception):
 
 
 class TaskException(Exception):
-    """Raised when remote ssh scripts fail"""
+    """
+    Raised when remote ssh scripts fail.
+    """
 
 
 class ScriptException(Exception):
-    """Used by the ctx proxy server when task.retry or task.abort are called by scripts"""
+    """
+    Used by the ``ctx`` proxy server when task.retry or task.abort are called by scripts.
+    """
 
     def __init__(self, message=None, retry=None, retry_interval=None):
         super(ScriptException, self).__init__(message)

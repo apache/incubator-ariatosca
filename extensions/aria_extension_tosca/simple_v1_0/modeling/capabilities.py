@@ -26,8 +26,8 @@ from .parameters import (convert_parameter_definitions_to_values, merge_raw_para
 
 def get_inherited_valid_source_types(context, presentation):
     """
-    If we haven't set the :code:`valid_source_types` fields, uses that value from our parent, if
-    we have one (recursively).
+    If we haven't set the ``valid_source_types`` fields, uses that value from our parent, if we have
+    one (recursively).
     """
 
     valid_source_types = presentation.valid_source_types

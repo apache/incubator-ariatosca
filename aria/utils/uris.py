@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+URI utilities.
+"""
+
 import os
 import urlparse
 
@@ -22,8 +26,8 @@ _IS_WINDOWS = (os.name == 'nt')
 
 def as_file(uri):
     """
-    If the URI is a file (either the :code:`file` scheme or no scheme), then returns the normalized
-    path. Otherwise, returns None.
+    If the URI is a file (either the ``file`` scheme or no scheme), then returns the normalized
+    path. Otherwise, returns ``None``.
     """
 
     if _IS_WINDOWS:

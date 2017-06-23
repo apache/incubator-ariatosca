@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-The workflow engine. Executes workflows
+Workflow execution.
 """
 
 import time
@@ -33,7 +33,7 @@ from . import events_handler  # pylint: disable=unused-import
 
 class Engine(logger.LoggerMixin):
     """
-    The workflow engine. Executes workflows
+    Executes workflows.
     """
 
     def __init__(self, executors, **kwargs):
@@ -43,7 +43,7 @@ class Engine(logger.LoggerMixin):
 
     def execute(self, ctx, resuming=False):
         """
-        execute the workflow
+        Executes the workflow.
         """
         if resuming:
             events.on_resume_workflow_signal.send(ctx)
@@ -87,8 +87,8 @@ class Engine(logger.LoggerMixin):
     def cancel_execution(ctx):
         """
         Send a cancel request to the engine. If execution already started, execution status
-        will be modified to 'cancelling' status. If execution is in pending mode, execution status
-        will be modified to 'cancelled' directly.
+        will be modified to ``cancelling`` status. If execution is in pending mode, execution status
+        will be modified to ``cancelled`` directly.
         """
         events.on_cancelling_workflow_signal.send(ctx)
 

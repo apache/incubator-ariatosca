@@ -14,8 +14,9 @@
 # limitations under the License.
 
 """
-Dry executor
+Dry task executor.
 """
+
 from datetime import datetime
 
 from . import base
@@ -23,7 +24,7 @@ from . import base
 
 class DryExecutor(base.BaseExecutor):                                                                    # pylint: disable=abstract-method
     """
-    Executor which dry runs tasks - prints task information without causing any side effects
+    Dry task executor: prints task information without causing any side effects.
     """
     def execute(self, ctx):
         with ctx.persist_changes:

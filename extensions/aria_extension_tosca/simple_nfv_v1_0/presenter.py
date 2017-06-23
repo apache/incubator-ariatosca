@@ -21,12 +21,12 @@ from ..simple_v1_0 import ToscaSimplePresenter1_0
 
 class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0): # pylint: disable=invalid-name,abstract-method
     """
-    ARIA presenter for the `TOSCA Simple Profile for NFV v1.0 csd03 <http://docs.oasis-open.org
-    /tosca/tosca-nfv/v1.0/csd03/tosca-nfv-v1.0-csd03.html>`__.
+    ARIA presenter for the `TOSCA Simple Profile for NFV v1.0 csd04 <http://docs.oasis-open.org
+    /tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html>`__.
 
-    Supported :code:`tosca_definitions_version` values:
+    Supported ``tosca_definitions_version`` values:
 
-    * :code:`tosca_simple_profile_for_nfv_1_0`
+    * ``tosca_simple_profile_for_nfv_1_0``
     """
 
     DSL_VERSIONS = ('tosca_simple_profile_for_nfv_1_0',)

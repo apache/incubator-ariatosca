@@ -42,7 +42,7 @@ class PropertyDefinition(ExtensiblePresentation):
     an entity defined in this specification (e.g., Node Types, Relationship Types, Capability Types,
     etc.). Properties are used by template authors to provide input values to TOSCA entities which
     indicate their "desired state" when they are instantiated. The value of a property can be
-    retrieved using the :code:`get_property` function within TOSCA Service Templates.
+    retrieved using the ``get_property`` function within TOSCA Service Templates.
 
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
@@ -55,7 +55,7 @@ class PropertyDefinition(ExtensiblePresentation):
         """
         The required data type for the property.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -63,7 +63,7 @@ class PropertyDefinition(ExtensiblePresentation):
         """
         The optional description for the property.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_field(bool, default=True)
@@ -71,7 +71,7 @@ class PropertyDefinition(ExtensiblePresentation):
         """
         An optional key that declares a property as required (true) or not (false).
 
-        :rtype: bool
+        :type: bool
         """
 
     @field_validator(data_value_validator)
@@ -81,7 +81,7 @@ class PropertyDefinition(ExtensiblePresentation):
         An optional key that may provide a value to be used as a default if not provided by another
         means.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str, default='supported', allowed=('supported', 'unsupported', 'experimental',
@@ -91,7 +91,7 @@ class PropertyDefinition(ExtensiblePresentation):
         """
         The optional status of the property relative to the specification or implementation.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_list_field(ConstraintClause)
@@ -99,7 +99,7 @@ class PropertyDefinition(ExtensiblePresentation):
         """
         The optional list of sequenced constraint clauses for the property.
 
-        :rtype: list of (str, :class:`ConstraintClause`)
+        :type: list of (str, :class:`ConstraintClause`)
         """
 
     @field_validator(entry_schema_validator)
@@ -109,7 +109,7 @@ class PropertyDefinition(ExtensiblePresentation):
         The optional key that is used to declare the name of the Datatype definition for entries of
         set types such as the TOSCA list or map.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @cachedmethod
@@ -128,7 +128,7 @@ class AttributeDefinition(ExtensiblePresentation):
     defined in this specification (e.g., a Node, Relationship or Capability Type). Specifically, it
     is used to expose the "actual state" of some property of a TOSCA entity after it has been
     deployed and instantiated (as set by the TOSCA orchestrator). Attribute values can be retrieved
-    via the :code:`get_attribute` function from the instance model and used as values to other
+    via the ``get_attribute`` function from the instance model and used as values to other
     entities within TOSCA Service Templates.
 
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
@@ -142,7 +142,7 @@ class AttributeDefinition(ExtensiblePresentation):
         """
         The required data type for the attribute.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -150,7 +150,7 @@ class AttributeDefinition(ExtensiblePresentation):
         """
         The optional description for the attribute.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @field_validator(data_value_validator)
@@ -163,7 +163,7 @@ class AttributeDefinition(ExtensiblePresentation):
         This value SHALL be type compatible with the type declared by the property definition's type
         keyname.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str, default='supported', allowed=('supported', 'unsupported', 'experimental',
@@ -172,7 +172,7 @@ class AttributeDefinition(ExtensiblePresentation):
         """
         The optional status of the attribute relative to the specification or implementation.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_validator(entry_schema_validator)
@@ -182,7 +182,7 @@ class AttributeDefinition(ExtensiblePresentation):
         The optional key that is used to declare the name of the Datatype definition for entries of
         set types such as the TOSCA list or map.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @cachedmethod
@@ -212,7 +212,7 @@ class ParameterDefinition(PropertyDefinition):
         Note: This keyname is required for a TOSCA Property definition, but is not for a TOSCA
         Parameter definition.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_validator(data_value_validator)
@@ -241,7 +241,7 @@ class OperationDefinition(ExtensiblePresentation):
         """
         The optional description string for the associated named operation.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_field(OperationImplementation)
@@ -250,7 +250,7 @@ class OperationDefinition(ExtensiblePresentation):
         The optional implementation artifact name (e.g., a script file name within a TOSCA CSAR
         file).
 
-        :rtype: :class:`OperationImplementation`
+        :type: :class:`OperationImplementation`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -261,7 +261,7 @@ class OperationDefinition(ExtensiblePresentation):
         includes when interface definitions are included as part of a Requirement definition in a
         Node Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
 @allow_unknown_fields
@@ -284,7 +284,7 @@ class InterfaceDefinition(ExtensiblePresentation):
         """
         ARIA NOTE: This field is not mentioned in the spec, but is implied.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -295,13 +295,13 @@ class InterfaceDefinition(ExtensiblePresentation):
         includes when interface definitions are included as part of a Requirement definition in a
         Node Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_unknown_fields(OperationDefinition)
     def operations(self):
         """
-        :rtype: dict of str, :class:`OperationDefinition`
+        :type: {:obj:`basestring`: :class:`OperationDefinition`}
         """
 
     @cachedmethod
@@ -325,6 +325,10 @@ class InterfaceDefinition(ExtensiblePresentation):
 @short_form_field('type')
 @has_fields
 class RelationshipDefinition(ExtensiblePresentation):
+    """
+    Relationship definition.
+    """
+
     @field_validator(type_validator('relationship type', convert_shorthand_to_full_type_name,
                                     'relationship_types'))
     @primitive_field(str, required=True)
@@ -333,7 +337,7 @@ class RelationshipDefinition(ExtensiblePresentation):
         The optional reserved keyname used to provide the name of the Relationship Type for the
         requirement definition's relationship keyname.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_dict_field(InterfaceDefinition)
@@ -343,7 +347,7 @@ class RelationshipDefinition(ExtensiblePresentation):
         the corresponding Relationship Type in order to declare additional Property definitions for
         these interfaces or operations of these interfaces.
 
-        :rtype: list of :class:`InterfaceDefinition`
+        :type: list of :class:`InterfaceDefinition`
         """
 
     @cachedmethod
@@ -375,7 +379,7 @@ class RequirementDefinition(ExtensiblePresentation):
         The required reserved keyname used that can be used to provide the name of a valid
         Capability Type that can fulfill the requirement.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_validator(type_validator('node type', convert_shorthand_to_full_type_name, 'node_types'))
@@ -385,7 +389,7 @@ class RequirementDefinition(ExtensiblePresentation):
         The optional reserved keyname used to provide the name of a valid Node Type that contains
         the capability definition that can be used to fulfill the requirement.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(RelationshipDefinition)
@@ -394,7 +398,7 @@ class RequirementDefinition(ExtensiblePresentation):
         The optional reserved keyname used to provide the name of a valid Relationship Type to
         construct when fulfilling the requirement.
 
-        :rtype: :class:`RelationshipDefinition`
+        :type: :class:`RelationshipDefinition`
         """
 
     @field_getter(data_type_class_getter(Range))
@@ -405,7 +409,7 @@ class RequirementDefinition(ExtensiblePresentation):
 
         Note: the keyword UNBOUNDED is also supported to represent any positive integer.
 
-        :rtype: :class:`Range`
+        :type: :class:`Range`
         """
 
     @cachedmethod
@@ -437,7 +441,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         """
         The required name of the Capability Type the capability definition is based upon.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -445,7 +449,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         """
         The optional description of the Capability definition.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -453,7 +457,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         """
         An optional list of property definitions for the Capability definition.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_field(AttributeDefinition)
@@ -461,7 +465,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         """
         An optional list of attribute definitions for the Capability definition.
 
-        :rtype: dict of str, :class:`AttributeDefinition`
+        :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
     @field_validator(list_type_validator('node type', convert_shorthand_to_full_type_name,
@@ -472,7 +476,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         An optional list of one or more valid names of Node Types that are supported as valid
         sources of any relationship established to the declared Capability Type.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @field_getter(data_type_class_getter(Range))
@@ -481,14 +485,15 @@ class CapabilityDefinition(ExtensiblePresentation):
         """
         The optional minimum and maximum occurrences for the capability. By default, an exported
         Capability should allow at least one relationship to be formed with it with a maximum of
-        :code:`UNBOUNDED` relationships.
+        ``UNBOUNDED`` relationships.
 
-        Note: the keyword :code:`UNBOUNDED` is also supported to represent any positive integer.
+        Note: the keyword ``UNBOUNDED`` is also supported to represent any positive integer.
 
-        ARIA NOTE: The spec seems wrong here: the implied default should be [0,UNBOUNDED], not
-        [1,UNBOUNDED], otherwise it would imply that at 1 least one relationship *must* be formed.
+        ARIA NOTE: The spec seems wrong here: the implied default should be ``[0,UNBOUNDED]``, not
+        ``[1,UNBOUNDED]``, otherwise it would imply that at 1 least one relationship *must* be
+        formed.
 
-        :rtype: :class:`Range`
+        :type: :class:`Range`
         """
 
     @cachedmethod

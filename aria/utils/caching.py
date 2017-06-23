@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Caching utilities.
+"""
+
 from __future__ import absolute_import  # so we can import standard 'collections' and 'threading'
 
 from threading import Lock
@@ -27,8 +31,8 @@ class cachedmethod(object):  # pylint: disable=invalid-name
 
     The implementation is thread-safe.
 
-    Supports :code:`cache_info` to be compatible with Python 3's :code:`functools.lru_cache`.
-    Note that the statistics are combined for all instances of the class.
+    Supports ``cache_info`` to be compatible with Python 3's ``functools.lru_cache``. Note that the
+    statistics are combined for all instances of the class.
 
     Won't use the cache if not called when bound to an object, allowing you to override the cache.
 
@@ -39,6 +43,7 @@ class cachedmethod(object):  # pylint: disable=invalid-name
     ENABLED = True
 
     def __init__(self, func):
+        self.__doc__ = func.__doc__
         self.func = func
         self.hits = 0
         self.misses = 0

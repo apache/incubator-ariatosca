@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Additional collection classes and collection utilities.
+"""
+
 from __future__ import absolute_import  # so we can import standard 'collections'
 
 from copy import deepcopy
@@ -32,8 +36,8 @@ class FrozenList(list):
     """
     An immutable list.
 
-    After initialization it will raise :class:`TypeError` exceptions if modification
-    is attempted.
+    After initialization it will raise :class:`~exceptions.TypeError` exceptions if modification is
+    attempted.
 
     Note that objects stored in the list may not be immutable.
     """
@@ -78,12 +82,13 @@ class FrozenList(list):
 
 EMPTY_READ_ONLY_LIST = FrozenList()
 
+
 class FrozenDict(OrderedDict):
     """
     An immutable ordered dict.
 
-    After initialization it will raise :class:`TypeError` exceptions if modification
-    is attempted.
+    After initialization it will raise :class:`~exceptions.TypeError` exceptions if modification is
+    attempted.
 
     Note that objects stored in the dict may not be immutable.
     """
@@ -109,9 +114,11 @@ class FrozenDict(OrderedDict):
 
 EMPTY_READ_ONLY_DICT = FrozenDict()
 
+
 class StrictList(list):
     """
-    A list that raises :class:`TypeError` exceptions when objects of the wrong type are inserted.
+    A list that raises :class:`~exceptions.TypeError` exceptions when objects of the wrong type are
+    inserted.
     """
 
     def __init__(self,
@@ -168,10 +175,11 @@ class StrictList(list):
         value = self._wrap(value)
         return super(StrictList, self).insert(index, value)
 
+
 class StrictDict(OrderedDict):
     """
-    An ordered dict that raises :class:`TypeError` exceptions
-    when keys or values of the wrong type are used.
+    An ordered dict that raises :class:`~exceptions.TypeError` exceptions when keys or values of the
+    wrong type are used.
     """
 
     def __init__(self,
@@ -211,6 +219,7 @@ class StrictDict(OrderedDict):
             value = self.wrapper_function(value)
         return super(StrictDict, self).__setitem__(key, value)
 
+
 def merge(dict_a, dict_b, path=None, strict=False):
     """
     Merges dicts, recursively.
@@ -234,12 +243,14 @@ def merge(dict_a, dict_b, path=None, strict=False):
             dict_a[key] = value_b
     return dict_a
 
+
 def is_removable(_container, _key, v):
     return (v is None) or ((isinstance(v, dict) or isinstance(v, list)) and (len(v) == 0))
 
+
 def prune(value, is_removable_function=is_removable):
     """
-    Deletes :code:`None` and empty lists and dicts, recursively.
+    Deletes ``None`` and empty lists and dicts, recursively.
     """
 
     if isinstance(value, list):
@@ -258,10 +269,11 @@ def prune(value, is_removable_function=is_removable):
     return value
 
 
-# TODO (left for tal): Move following two methods to some place parser specific
+# TODO: Move following two methods to some place parser specific
+
 def deepcopy_with_locators(value):
     """
-    Like :code:`deepcopy`, but also copies over locators.
+    Like :func:`~copy.deepcopy`, but also copies over locators.
     """
 
     res = deepcopy(value)
@@ -271,7 +283,7 @@ def deepcopy_with_locators(value):
 
 def copy_locators(target, source):
     """
-    Copies over :code:`_locator` for all elements, recursively.
+    Copies over ``_locator`` for all elements, recursively.
 
     Assumes that target and source have exactly the same list/dict structure.
     """

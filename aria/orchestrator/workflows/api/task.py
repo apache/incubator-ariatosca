@@ -26,7 +26,7 @@ from .. import exceptions
 
 class BaseTask(object):
     """
-    Abstract task graph task
+    Base class for tasks.
     """
 
     def __init__(self, ctx=None, **kwargs):
@@ -39,44 +39,43 @@ class BaseTask(object):
     @property
     def id(self):
         """
-        uuid4 generated id
-        :return:
+        UUID4 ID.
         """
         return self._id
 
     @property
     def workflow_context(self):
         """
-        the context of the current workflow
-        :return:
+        Context of the current workflow.
         """
         return self._workflow_context
 
 
 class OperationTask(BaseTask):
     """
-    Represents an operation task in the task graph.
+    Executes an operation.
 
     :ivar name: formatted name (includes actor type, actor name, and interface/operation names)
     :vartype name: basestring
     :ivar actor: node or relationship
-    :vartype actor: :class:`aria.modeling.models.Node`|:class:`aria.modeling.models.Relationship`
+    :vartype actor: :class:`~aria.modeling.models.Node` or
+     :class:`~aria.modeling.models.Relationship`
     :ivar interface_name: interface name on actor
     :vartype interface_name: basestring
     :ivar operation_name: operation name on interface
     :vartype operation_name: basestring
     :ivar plugin: plugin (or None for default plugin)
-    :vartype plugin: :class:`aria.modeling.models.Plugin`
+    :vartype plugin: :class:`~aria.modeling.models.Plugin`
     :ivar function: path to Python function
     :vartype function: basestring
     :ivar arguments: arguments to send to Python function
-    :vartype arguments: {basestring, :class:`aria.modeling.models.Argument`}
+    :vartype arguments: {:obj:`basestring`: :class:`~aria.modeling.models.Argument`}
     :ivar ignore_failure: whether to ignore failures
     :vartype ignore_failure: bool
     :ivar max_attempts: maximum number of attempts allowed in case of failure
     :vartype max_attempts: int
     :ivar retry_interval: interval between retries (in seconds)
-    :vartype retry_interval: int
+    :vartype retry_interval: float
     """
 
     NAME_FORMAT = '{interface}:{operation}@{type}:{name}'
@@ -91,21 +90,22 @@ class OperationTask(BaseTask):
                  retry_interval=None):
         """
         :param actor: node or relationship
-        :type actor: :class:`aria.modeling.models.Node`|:class:`aria.modeling.models.Relationship`
+        :type actor: :class:`~aria.modeling.models.Node` or
+         :class:`~aria.modeling.models.Relationship`
         :param interface_name: interface name on actor
         :type interface_name: basestring
         :param operation_name: operation name on interface
         :type operation_name: basestring
         :param arguments: override argument values
-        :type arguments: {basestring, object}
+        :type arguments: {:obj:`basestring`: object}
         :param ignore_failure: override whether to ignore failures
         :type ignore_failure: bool
         :param max_attempts: override maximum number of attempts allowed in case of failure
         :type max_attempts: int
         :param retry_interval: override interval between retries (in seconds)
-        :type retry_interval: int
-        :raises aria.orchestrator.workflows.exceptions.OperationNotFoundException: if
-                ``interface_name`` and ``operation_name`` to not refer to an operation on the actor
+        :type retry_interval: float
+        :raises ~aria.orchestrator.workflows.exceptions.OperationNotFoundException: if
+         ``interface_name`` and ``operation_name`` do not refer to an operation on the actor
         """
 
         # Creating OperationTask directly should raise an error when there is no
@@ -160,14 +160,13 @@ class StubTask(BaseTask):
 
 class WorkflowTask(BaseTask):
     """
-    Represents a workflow task in the task graph
+    Executes a complete workflow.
     """
 
     def __init__(self, workflow_func, **kwargs):
         """
-        Creates a workflow based task using the workflow_func provided, and its kwargs
-        :param workflow_func: the function to run
-        :param kwargs: the kwargs that would be passed to the workflow_func
+        :param workflow_func: function to run
+        :param kwargs: kwargs that would be passed to the workflow_func
         """
         super(WorkflowTask, self).__init__(**kwargs)
         kwargs['ctx'] = self.workflow_context
@@ -176,8 +175,7 @@ class WorkflowTask(BaseTask):
     @property
     def graph(self):
         """
-        The graph constructed by the sub workflow
-        :return:
+        Graph constructed by the sub workflow.
         """
         return self._graph
 
@@ -190,13 +188,14 @@ class WorkflowTask(BaseTask):
 
 def create_task(actor, interface_name, operation_name, **kwargs):
     """
-    This helper function enables safe creation of OperationTask, if the supplied interface or
-    operation do not exist, None is returned.
-    :param actor: the actor for this task
-    :param interface_name: the name of the interface
-    :param operation_name: the name of the operation
-    :param kwargs: any additional kwargs to be passed to the task OperationTask
-    :return: and OperationTask or None (if the interface/operation does not exists)
+    Helper function that enables safe creation of :class:`OperationTask`. If the supplied interface
+    or operation do not exist, ``None`` is returned.
+
+    :param actor: actor for this task
+    :param interface_name: name of the interface
+    :param operation_name: name of the operation
+    :param kwargs: any additional kwargs to be passed to the OperationTask
+    :return: OperationTask or None (if the interface/operation does not exists)
     """
     try:
         return OperationTask(
@@ -212,13 +211,13 @@ def create_task(actor, interface_name, operation_name, **kwargs):
 def create_relationships_tasks(
         node, interface_name, source_operation_name=None, target_operation_name=None, **kwargs):
     """
-    Creates a relationship task (source and target) for all of a node_instance relationships.
-    :param basestring source_operation_name: the relationship operation name.
-    :param basestring interface_name: the name of the interface.
+    Creates a relationship task (source and target) for all of a node relationships.
+
+    :param basestring source_operation_name: relationship operation name
+    :param basestring interface_name: name of the interface
     :param source_operation_name:
     :param target_operation_name:
-    :param NodeInstance node: the source_node
-    :return:
+    :param node: source node
     """
     sub_tasks = []
     for relationship in node.outbound_relationships:
@@ -235,12 +234,11 @@ def create_relationships_tasks(
 def create_relationship_tasks(relationship, interface_name, source_operation_name=None,
                               target_operation_name=None, **kwargs):
     """
-    Creates a relationship task source and target.
-    :param Relationship relationship: the relationship instance itself
+    Creates a relationship task (source and target).
+
+    :param relationship: relationship instance itself
     :param source_operation_name:
     :param target_operation_name:
-
-    :return:
     """
     operations = []
     if source_operation_name:

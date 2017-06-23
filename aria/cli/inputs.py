@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Helpers for validating and coercing service template inputs.
+"""
+
 import os
 import glob
 from ruamel import yaml
@@ -22,15 +26,17 @@ from .exceptions import AriaCliError
 
 
 def inputs_to_dict(resources):
-    """Returns a dictionary of inputs
+    """
+    Returns a dictionary of inputs
 
-    `resources` can be:
-    - A list of files.
-    - A single file
-    - A directory containing multiple input files
-    - A key1=value1;key2=value2 pairs string.
-    - A string formatted as JSON/YAML.
-    - Wildcard based string (e.g. *-inputs.yaml)
+    :param resources: can be:
+
+     * list of files
+     * single file
+     * directory containing multiple input files
+     * ``key1=value1;key2=value2`` pairs string.
+     * string formatted as JSON/YAML
+     * wildcard based string (e.g. ``*-inputs.yaml``)
     """
     if not resources:
         return dict()

@@ -15,10 +15,7 @@
 
 
 """
-ARIA's events Sub-Package
-Path: aria.events.storage_event_handler
-
-Implementation of logger handlers for workflow and operation events.
+Workflow event logging.
 """
 
 from .. import events

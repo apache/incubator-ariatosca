@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Miscellaneous CLI utilities.
+"""
+
 import os
 import sys
 from StringIO import StringIO
@@ -44,8 +48,8 @@ def get_parameter_templates_as_string(parameter_templates):
 
 def check_overriding_storage_exceptions(e, model_class, name):
     """
-    This method checks whether the storage exception is a known type where we'd like to override
-     the exception message; If so, it raises a new error. Otherwise it simply returns.
+    Checks whether the storage exception is a known type where we'd like to override the exception
+    message; If so, it raises a new error. Otherwise it simply returns.
     """
     assert isinstance(e, BaseException)
     if 'UNIQUE constraint failed' in e.message:
@@ -68,15 +72,16 @@ def download_file(url):
 
 
 def generate_progress_handler(file_path, action='', max_bar_length=80):
-    """Returns a function that prints a progress bar in the terminal
-
-    :param file_path: The name of the file being transferred
-    :param action: Uploading/Downloading
-    :param max_bar_length: Maximum allowed length of the bar. Default: 80
-    :return: The configured print_progress function
     """
-    # We want to limit the maximum line length to 80, but allow for a smaller
-    # terminal size. We also include the action string, and some extra chars
+    Returns a function that prints a progress bar in the terminal.
+
+    :param file_path: the name of the file being transferred
+    :param action: uploading/downloading
+    :param max_bar_length: maximum allowed length of the bar
+    :return: configured ``print_progress`` function
+    """
+    # We want to limit the maximum line length to 80, but allow for a smaller terminal size. We also
+    # include the action string, and some extra chars
     terminal_width = get_terminal_size().columns
 
     # This takes care of the case where there is no terminal (e.g. unittest)
@@ -91,24 +96,21 @@ def generate_progress_handler(file_path, action='', max_bar_length=80):
     bar_length -= len(file_name)
 
     def print_progress(read_bytes, total_bytes):
-        """Print upload/download progress on a single line
+        """
+        Print upload/download progress on a single line.
 
-        Call this function in a loop to create a progress bar in the terminal
+        Call this function in a loop to create a progress bar in the terminal.
 
-        :param read_bytes: Number of bytes already processed
-        :param total_bytes: Total number of bytes in the file
+        :param read_bytes: number of bytes already processed
+        :param total_bytes: total number of bytes in the file
         """
 
-        filled_length = min(bar_length, int(round(bar_length * read_bytes /
-                                                  float(total_bytes))))
-        percents = min(100.00, round(
-            100.00 * (read_bytes / float(total_bytes)), 2))
+        filled_length = min(bar_length, int(round(bar_length * read_bytes / float(total_bytes))))
+        percents = min(100.00, round(100.00 * (read_bytes / float(total_bytes)), 2))
         bar = '#' * filled_length + '-' * (bar_length - filled_length)  # pylint: disable=blacklisted-name
 
-        # The \r caret makes sure the cursor moves back to the beginning of
-        # the line
-        sys.stdout.write('\r{0} {1} |{2}| {3}%'.format(
-            action, file_name, bar, percents))
+        # The \r caret makes sure the cursor moves back to the beginning of the line
+        sys.stdout.write('\r{0} {1} |{2}| {3}%'.format(action, file_name, bar, percents))
         if read_bytes >= total_bytes:
             sys.stdout.write(os.linesep)
 

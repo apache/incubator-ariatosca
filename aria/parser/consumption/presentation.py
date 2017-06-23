@@ -26,11 +26,12 @@ class Read(Consumer):
     """
     Reads the presentation, handling imports recursively.
 
-    It works by consuming a data source via appropriate :class:`aria.loader.Loader`,
-    :class:`aria.reader.Reader`, and :class:`aria.presenter.Presenter` instances.
+    It works by consuming a data source via appropriate :class:`~aria.parser.loading.Loader`,
+    :class:`~aria.parser.reading.Reader`, and :class:`~aria.parser.presentation.Presenter`
+    instances.
 
     It supports agnostic raw data composition for presenters that have
-    :code:`_get_import_locations` and :code:`_merge_import`.
+    ``_get_import_locations`` and ``_merge_import``.
 
     To improve performance, loaders are called asynchronously on separate threads.
 

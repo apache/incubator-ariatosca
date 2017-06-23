@@ -14,8 +14,9 @@
 # limitations under the License.
 
 """
-A common context for both workflow and operation
+Common code for contexts.
 """
+
 import logging
 from contextlib import contextmanager
 from functools import partial
@@ -33,7 +34,7 @@ from ...utils.uuid import generate_uuid
 
 class BaseContext(object):
     """
-    Base context object for workflow and operation
+    Base class for contexts.
     """
 
     INSTRUMENTATION_FIELDS = (
@@ -109,52 +110,48 @@ class BaseContext(object):
     @property
     def model(self):
         """
-        Access to the model storage
-        :return:
+        Storage model API ("MAPI").
         """
         return self._model
 
     @property
     def resource(self):
         """
-        Access to the resource storage
-        :return:
+        Storage resource API ("RAPI").
         """
         return self._resource
 
     @property
     def service_template(self):
         """
-        The blueprint model
+        Service template model.
         """
         return self.service.service_template
 
     @property
     def service(self):
         """
-        The deployment model
+        Service instance model.
         """
         return self.model.service.get(self._service_id)
 
     @property
     def name(self):
         """
-        The operation name
-        :return:
+        Operation name.
         """
         return self._name
 
     @property
     def id(self):
         """
-        The operation id
-        :return:
+        Operation ID.
         """
         return self._id
 
     def download_resource(self, destination, path=None):
         """
-        Download a blueprint resource from the resource storage
+        Download a service template resource from the storage resource API ("RAPI").
         """
         try:
             self.resource.service.download(entry_id=str(self.service.id),
@@ -167,9 +164,9 @@ class BaseContext(object):
 
     def download_resource_and_render(self, destination, path=None, variables=None):
         """
-        Download a blueprint resource from the resource storage render its content as a jinja
-        template using the provided variables. ctx is available to the template without providing it
-        explicitly.
+        Downloads a service template resource from the resource storage and renders its content as a
+        Jinja template using the provided variables. ``ctx`` is available to the template without
+        providing it explicitly.
         """
         resource_content = self.get_resource(path=path)
         resource_content = self._render_resource(resource_content=resource_content,
@@ -179,7 +176,7 @@ class BaseContext(object):
 
     def get_resource(self, path=None):
         """
-        Read a deployment resource as string from the resource storage
+        Reads a service instance resource as string from the resource storage.
         """
         try:
             return self.resource.service.read(entry_id=str(self.service.id), path=path)
@@ -189,9 +186,9 @@ class BaseContext(object):
 
     def get_resource_and_render(self, path=None, variables=None):
         """
-        Read a deployment resource as string from the resource storage and render it as a jinja
-        template using the provided variables. ctx is available to the template without providing it
-        explicitly.
+        Reads a service instance resource as string from the resource storage and renders it as a
+        Jinja template using the provided variables. ``ctx`` is available to the template without
+        providing it explicitly.
         """
         resource_content = self.get_resource(path=path)
         return self._render_resource(resource_content=resource_content, variables=variables)

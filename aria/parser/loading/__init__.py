@@ -13,6 +13,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Loading package.
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.loading.LoadingContext
+   aria.parser.loading.LoaderException
+   aria.parser.loading.LoaderNotFoundError
+   aria.parser.loading.DocumentNotFoundException
+   aria.parser.loading.LoaderSource
+   aria.parser.loading.DefaultLoaderSource
+
+Loaders
+-------
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.loading.Loader
+   aria.parser.loading.FileTextLoader
+   aria.parser.loading.LiteralLoader
+   aria.parser.loading.RequestLoader
+   aria.parser.loading.RequestTextLoader
+   aria.parser.loading.UriTextLoader
+
+Locations
+---------
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.loading.Location
+   aria.parser.loading.UriLocation
+"""
 
 from .exceptions import LoaderException, LoaderNotFoundError, DocumentNotFoundException
 from .context import LoadingContext

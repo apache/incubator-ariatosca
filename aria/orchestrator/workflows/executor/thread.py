@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Thread based executor
+Thread task executor.
 """
 
 import Queue
@@ -29,9 +29,11 @@ from .base import BaseExecutor
 
 class ThreadExecutor(BaseExecutor):
     """
-    Executor which runs tasks in a separate thread. It's easier writing tests
-    using this executor rather than the full blown subprocess executor.
-    Note: This executor is not capable of running plugin operations.
+    Thread task executor.
+
+    It's easier writing tests using this executor rather than the full-blown sub-process executor.
+
+    Note: This executor is incapable of running plugin operations.
     """
 
     def __init__(self, pool_size=1, *args, **kwargs):

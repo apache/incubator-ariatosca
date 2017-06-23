@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utilities for cross-referencing code with specification documents.
+"""
+
 from .collections import OrderedDict
 
 

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Contains validation related utilities
+Validation utilities.
 """
 
 from .formatting import string_list_as_string
@@ -22,7 +22,7 @@ from .formatting import string_list_as_string
 
 class ValidatorMixin(object):
     """
-    A mixin that should be added to classes that require validating user input
+    A mix0in that should be added to classes that require validating user input.
     """
 
     _ARGUMENT_TYPE_MESSAGE = '{name} argument must be {type} based, got {arg!r}'
@@ -68,7 +68,7 @@ class ValidatorMixin(object):
 def validate_function_arguments(func, func_kwargs):
     """
     Validates all required arguments are supplied to ``func`` and that no additional arguments are
-    supplied
+    supplied.
     """
 
     _kwargs_flags = 8

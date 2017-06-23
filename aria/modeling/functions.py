@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Mechanism for evaluating intrinsic functions.
+"""
+
 from ..parser.consumption import ConsumptionContext
 from ..parser.exceptions import InvalidValueError
 from ..utils.collections import OrderedDict
@@ -34,10 +38,11 @@ class Function(object):
 
     def __evaluate__(self, container_holder):
         """
-        Evaluates the function if possible. If impossible, raises
-        :class:`CannotEvaluateFunctionException` (do not just return None).
+        Evaluates the function if possible.
 
-        :rtype: Evaluation (or any object with ``value`` and ``final`` properties)
+        :rtype: :class:`Evaluation` (or any object with ``value`` and ``final`` properties)
+        :raises CannotEvaluateFunctionException: if cannot be evaluated at this time (do *not* just
+         return ``None``)
         """
 
         raise NotImplementedError
@@ -50,6 +55,10 @@ class Function(object):
 class Evaluation(object):
     """
     An evaluated :class:`Function` return value.
+
+    :ivar value: evaluated value
+    :ivar final: whether the value is final
+    :vartype final: boolean
     """
 
     def __init__(self, value, final=False):
@@ -60,13 +69,13 @@ class Evaluation(object):
 def evaluate(value, container_holder, report_issues=False): # pylint: disable=too-many-branches
     """
     Recursively attempts to call ``__evaluate__``. If an evaluation occurred will return an
-    :class:`Evaluation`, otherwise it will be None. If any evaluation is non-final, then the entire
-    evaluation will also be non-final.
+    :class:`Evaluation`, otherwise it will be ``None``. If any evaluation is non-final, then the
+    entire evaluation will also be non-final.
 
     The ``container_holder`` argument should have three properties: ``container`` should return
     the model that contains the value, ``service`` should return the containing
-    :class:`aria.modeling.models.Service` model or None, and ``service_template`` should return the
-    containing :class:`aria.modeling.models.ServiceTemplate` model or None.
+    :class:`~aria.modeling.models.Service` model or None, and ``service_template`` should return the
+    containing :class:`~aria.modeling.models.ServiceTemplate` model or ``None``.
     """
 
     evaluated = False

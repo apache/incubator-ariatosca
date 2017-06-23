@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Abstraction API above terminal color libraries.
+"""
+
 from clint.textui.core import STDOUT
 from clint.textui import puts as _puts
 from clint.textui.colored import ColoredString as _ColoredString

@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utilities for instrumenting collections of models in storage.
+"""
+
 from . import exceptions
 
 
@@ -42,17 +46,15 @@ class _InstrumentedCollection(object):
         Instantiates the object from existing seq.
 
         :param seq: the original sequence to load from
-        :return:
         """
         raise NotImplementedError
 
     def _set(self, key, value):
         """
-        set the changes for the current object (not in the db)
+        Sets the changes for the current object (not in the database).
 
         :param key:
         :param value:
-        :return:
         """
         raise NotImplementedError
 
@@ -61,10 +63,10 @@ class _InstrumentedCollection(object):
 
     def _instrument(self, key, value):
         """
-        Instruments any collection to track changes (and ease of access)
+        Instruments any collection to track changes (and ease of access).
+
         :param key:
         :param value:
-        :return:
         """
         if isinstance(value, _InstrumentedCollection):
             return value
@@ -79,9 +81,9 @@ class _InstrumentedCollection(object):
 
     def _raw_value(self, value):
         """
-        Get the raw value.
+        Gets the raw value.
+
         :param value:
-        :return:
         """
         if isinstance(value, self._field_cls):
             return value.value
@@ -89,10 +91,10 @@ class _InstrumentedCollection(object):
 
     def _encapsulate_value(self, key, value):
         """
-        Create a new item cls if needed.
+        Creates a new item class if needed.
+
         :param key:
         :param value:
-        :return:
         """
         if isinstance(value, self._field_cls):
             return value
@@ -101,10 +103,10 @@ class _InstrumentedCollection(object):
 
     def __setitem__(self, key, value):
         """
-        Update the values in both the local and the db locations.
+        Updates the values in both the local and the database locations.
+
         :param key:
         :param value:
-        :return:
         """
         self._set(key, value)
         if self._is_top_level:
@@ -119,11 +121,11 @@ class _InstrumentedCollection(object):
 
     def _set_field(self, collection, key, value):
         """
-        enables updating the current change in the ancestors
-        :param collection: the collection to change
-        :param key: the key for the specific field
-        :param value: the new value
-        :return:
+        Enables updating the current change in the ancestors.
+
+        :param collection: collection to change
+        :param key: key for the specific field
+        :param value: new value
         """
         if isinstance(value, _InstrumentedCollection):
             value = value._raw
@@ -209,9 +211,10 @@ class _InstrumentedModel(_WrappedBase):
 
     def __init__(self, mapi, *args, **kwargs):
         """
-        The original model
-        :param wrapped: the model to be instrumented
-        :param mapi: the mapi for that model
+        The original model.
+
+        :param wrapped: model to be instrumented
+        :param mapi: MAPI for the wrapped model
         """
         super(_InstrumentedModel, self).__init__(*args, **kwargs)
         self._mapi = mapi
@@ -261,11 +264,10 @@ class _WrappedModel(_WrappedBase):
 
     def __init__(self, instrumentation_kwargs, *args, **kwargs):
         """
-
-        :param instrumented_cls: The class to be instrumented
-        :param instrumentation_cls: the instrumentation cls
-        :param wrapped: the currently wrapped instance
-        :param kwargs: and kwargs to the passed to the instrumented class.
+        :param instrumented_cls: class to be instrumented
+        :param instrumentation_cls: instrumentation cls
+        :param wrapped: currently wrapped instance
+        :param kwargs: passed to the instrumented class
         """
         super(_WrappedModel, self).__init__(*args, **kwargs)
         self._kwargs = instrumentation_kwargs

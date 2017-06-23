@@ -55,7 +55,7 @@ def get_inherited_constraints(context, presentation):
 def coerce_data_type_value(context, presentation, data_type, entry_schema, constraints, value, # pylint: disable=unused-argument
                            aspect):
     """
-    Handles the :code:`_coerce_data()` hook for complex data types.
+    Handles the ``_coerce_data()`` hook for complex data types.
 
     There are two kinds of handling:
 
@@ -383,7 +383,7 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
 
     Supports both complex data types and primitives.
 
-    Data types can use the :code:`coerce_value` extension to hook their own specialized function.
+    Data types can use the ``coerce_value`` extension to hook their own specialized function.
     If the extension is present, we will delegate to that hook.
     """
 
@@ -454,10 +454,10 @@ def coerce_to_data_type_class(context, presentation, cls, entry_schema, constrai
     Returns the value after it's coerced to a data type class, reporting validation errors if it
     cannot be coerced. Constraints will be applied after coersion.
 
-    Will either call a :code:`_create` static function in the class, or instantiate it using a
-    constructor if :code:`_create` is not available.
+    Will either call a ``_create`` static function in the class, or instantiate it using a
+    constructor if ``_create`` is not available.
 
-    This will usually be called by a :code:`coerce_value` extension hook in a :class:`DataType`.
+    This will usually be called by a ``coerce_value`` extension hook in a :class:`DataType`.
     """
 
     try:

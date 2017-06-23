@@ -24,6 +24,10 @@ from .presentation.field_validators import (node_filter_properties_validator,
 
 @has_fields
 class CapabilityFilter(ExtensiblePresentation):
+    """
+    Capability filter.
+    """
+
     @object_sequenced_list_field(ConstraintClause)
     def properties(self):
         pass
@@ -69,7 +73,7 @@ class NodeFilter(ExtensiblePresentation):
         /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
         #DEFN_ELEMENT_PROPERTY_FILTER_DEFN>`__
 
-        :rtype: list of (str, :class:`ConstraintClause`)
+        :type: list of (str, :class:`ConstraintClause`)
         """
 
     @field_validator(node_filter_capabilities_validator)
@@ -80,7 +84,7 @@ class NodeFilter(ExtensiblePresentation):
         matching TOSCA entities (e.g., Node Template, Node Type, Capability Types, etc.) based upon
         their capabilities' property definitions' values.
 
-        :rtype: list of (str, :class:`CapabilityDefinition`)
+        :type: list of (str, :class:`CapabilityDefinition`)
         """
 
     @cachedmethod

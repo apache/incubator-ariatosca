@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Utilities for working with open/close patterns.
+"""
+
 class OpenClose(object):
     """
-    Wraps an object that has open() and close() methods to support the "with" keyword.
+    Wraps an object that has ``open()`` and ``close()`` methods to support the ``with`` keyword.
     """
 
     def __init__(self, wrapped):
