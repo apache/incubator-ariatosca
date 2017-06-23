@@ -13,6 +13,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Consumption package.
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.consumption.ConsumptionContext
+   aria.parser.consumption.Style
+
+Consumers
+---------
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.consumption.Consumer
+   aria.parser.consumption.ConsumerChain
+   aria.parser.consumption.ConsumerException
+   aria.parser.consumption.Inputs
+   aria.parser.consumption.ServiceTemplate
+   aria.parser.consumption.Types
+   aria.parser.consumption.CoerceServiceInstanceValues
+   aria.parser.consumption.ValidateServiceInstance
+   aria.parser.consumption.SatisfyRequirements
+   aria.parser.consumption.ValidateCapabilities
+   aria.parser.consumption.FindHosts
+   aria.parser.consumption.ConfigureOperations
+   aria.parser.consumption.ServiceInstance
+   aria.parser.consumption.Read
+   aria.parser.consumption.Validate
+"""
 
 from .exceptions import ConsumerException
 from .context import ConsumptionContext

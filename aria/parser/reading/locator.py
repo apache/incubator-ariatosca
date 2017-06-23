@@ -124,7 +124,7 @@ class Locator(object):
 
 def deepcopy_with_locators(value):
     """
-    Like :code:`deepcopy`, but also copies over locators.
+    Like :func:`deepcopy`, but also copies over locators.
     """
 
     res = deepcopy(value)
@@ -134,7 +134,7 @@ def deepcopy_with_locators(value):
 
 def copy_locators(target, source):
     """
-    Copies over :code:`_locator` for all elements, recursively.
+    Copies over ``_locator`` for all elements, recursively.
 
     Assumes that target and source have exactly the same list/dict structure.
     """

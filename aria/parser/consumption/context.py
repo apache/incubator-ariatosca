@@ -29,16 +29,22 @@ _thread_locals = threading.local()
 
 class ConsumptionContext(object):
     """
-    Properties:
+    Consumption context.
 
-    * :code:`args`: The runtime arguments (usually provided on the command line)
-    * :code:`out`: Message output stream (defaults to stdout)
-    * :code:`style`: Message output style
-    * :code:`validation`: :class:`aria.validation.ValidationContext`
-    * :code:`loading`: :class:`aria.loading.LoadingContext`
-    * :code:`reading`: :class:`aria.reading.ReadingContext`
-    * :code:`presentation`: :class:`aria.presentation.PresentationContext`
-    * :code:`modeling`: :class:`aria.service.ModelingContext`
+    :ivar args: runtime arguments (usually provided on the command line)
+    :ivar out: message output stream (defaults to stdout)
+    :ivar style: message output style
+    :vartype style: Style
+    :ivar validation: validation context
+    :vartype validation: :class:`ValidationContext`
+    :ivar loading: loading context
+    :vartype loading: :class:`LoadingContext`
+    :ivar reading: reading context
+    :vartype reading: :class:`ReadingContext`
+    :ivar presentation: presentation context
+    :vartype presentation: :class:`PresentationContext`
+    :ivar modeling: modeling context
+    :vartype modeling: :class:`ModelingContext`
     """
 
     @staticmethod
@@ -71,7 +77,7 @@ class ConsumptionContext(object):
 
     def write(self, string):
         """
-        Writes to our :code:`out`, making sure to encode UTF-8 if required.
+        Writes to our ``out``, making sure to encode UTF-8 if required.
         """
 
         try:

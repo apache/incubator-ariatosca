@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Plugin management.
+"""
+
 import os
 import tempfile
 import subprocess
@@ -32,7 +36,7 @@ class PluginManager(object):
 
     def __init__(self, model, plugins_dir):
         """
-        :param plugins_dir: Root directory to install plugins in.
+        :param plugins_dir: root directory in which to install plugins
         """
         self._model = model
         self._plugins_dir = plugins_dir
@@ -72,10 +76,13 @@ class PluginManager(object):
     def load_plugin(self, plugin, env=None):
         """
         Load the plugin into an environment.
+
         Loading the plugin means the plugin's code and binaries paths will be appended to the
-        environment's PATH and PYTHONPATH, thereby allowing usage of the plugin.
-        :param plugin: The plugin to load
-        :param env: The environment to load the plugin into; If `None`, os.environ will be used.
+        environment's ``PATH`` and ``PYTHONPATH``, thereby allowing usage of the plugin.
+
+        :param plugin: plugin to load
+        :param env: environment to load the plugin into; If ``None``, :obj:`os.environ` will be
+         used
         """
         env = env or os.environ
         plugin_dir = self.get_plugin_dir(plugin)
@@ -106,9 +113,10 @@ class PluginManager(object):
     @staticmethod
     def validate_plugin(source):
         """
-        validate a plugin archive.
-        A valid plugin is a wagon (http://github.com/cloudify-cosmo/wagon)
-        in the zip format (suffix may also be .wgn).
+        Validate a plugin archive.
+
+        A valid plugin is a `wagon <http://github.com/cloudify-cosmo/wagon>`__ in the zip format
+        (suffix may also be ``.wgn``).
         """
         if not zipfile.is_zipfile(source):
             raise exceptions.InvalidPluginError(

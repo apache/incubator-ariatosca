@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Provides contexts to workflow and operation
+Contexts for workflows and operations.
 """
 
 from . import workflow, operation

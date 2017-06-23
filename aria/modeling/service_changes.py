@@ -14,10 +14,7 @@
 # limitations under the License.
 
 """
-classes:
-    * ServiceUpdate - service update implementation model.
-    * ServiceUpdateStep - service update step implementation model.
-    * ServiceModification - service modification implementation model.
+ARIA modeling service changes module
 """
 
 # pylint: disable=no-self-argument, no-member, abstract-method
@@ -30,7 +27,6 @@ from sqlalchemy import (
     DateTime,
     Enum,
 )
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 
 from .types import (List, Dict)
@@ -44,8 +40,8 @@ class ServiceUpdateBase(ModelMixin):
     """
     __tablename__ = 'service_update'
 
-    __private_fields__ = ['service_fk',
-                          'execution_fk']
+    __private_fields__ = ('service_fk',
+                          'execution_fk')
 
     created_at = Column(DateTime, nullable=False, index=True)
     service_plan = Column(Dict, nullable=False)
@@ -55,29 +51,15 @@ class ServiceUpdateBase(ModelMixin):
     modified_entity_ids = Column(Dict)
     state = Column(Text)
 
-    # region foreign keys
-
-    @declared_attr
-    def execution_fk(cls):
-        return relationship.foreign_key('execution', nullable=True)
-
-    @declared_attr
-    def service_fk(cls):
-        return relationship.foreign_key('service')
-
-    # endregion
-
     # region association proxies
 
     @declared_attr
     def execution_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('execution', cls.name_column_name())
+        return relationship.association_proxy('execution', cls.name_column_name())
 
     @declared_attr
     def service_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('service', cls.name_column_name())
+        return relationship.association_proxy('service', cls.name_column_name())
 
     # endregion
 
@@ -105,6 +87,18 @@ class ServiceUpdateBase(ModelMixin):
 
     # endregion
 
+    # region foreign keys
+
+    @declared_attr
+    def execution_fk(cls):
+        return relationship.foreign_key('execution', nullable=True)
+
+    @declared_attr
+    def service_fk(cls):
+        return relationship.foreign_key('service')
+
+    # endregion
+
     def to_dict(self, suppress_error=False, **kwargs):
         dep_update_dict = super(ServiceUpdateBase, self).to_dict(suppress_error)     #pylint: disable=no-member
         # Taking care of the fact the DeploymentSteps are _BaseModels
@@ -119,7 +113,7 @@ class ServiceUpdateStepBase(ModelMixin):
 
     __tablename__ = 'service_update_step'
 
-    __private_fields__ = ['service_update_fk']
+    __private_fields__ = ('service_update_fk',)
 
     _action_types = namedtuple('ACTION_TYPES', 'ADD, REMOVE, MODIFY')
     ACTION_TYPES = _action_types(ADD='add', REMOVE='remove', MODIFY='modify')
@@ -143,20 +137,11 @@ class ServiceUpdateStepBase(ModelMixin):
     entity_id = Column(Text, nullable=False)
     entity_type = Column(Enum(*ENTITY_TYPES, name='entity_type'), nullable=False)
 
-    # region foreign keys
-
-    @declared_attr
-    def service_update_fk(cls):
-        return relationship.foreign_key('service_update')
-
-    # endregion
-
     # region association proxies
 
     @declared_attr
     def service_update_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('service_update', cls.name_column_name())
+        return relationship.association_proxy('service_update', cls.name_column_name())
 
     # endregion
 
@@ -173,6 +158,14 @@ class ServiceUpdateStepBase(ModelMixin):
     @declared_attr
     def service_update(cls):
         return relationship.many_to_one(cls, 'service_update', back_populates='steps')
+
+    # endregion
+
+    # region foreign keys
+
+    @declared_attr
+    def service_update_fk(cls):
+        return relationship.foreign_key('service_update')
 
     # endregion
 
@@ -211,7 +204,7 @@ class ServiceModificationBase(ModelMixin):
 
     __tablename__ = 'service_modification'
 
-    __private_fields__ = ['service_fk']
+    __private_fields__ = ('service_fk',)
 
     STARTED = 'started'
     FINISHED = 'finished'
@@ -227,20 +220,11 @@ class ServiceModificationBase(ModelMixin):
     nodes = Column(Dict)
     status = Column(Enum(*STATES, name='service_modification_status'))
 
-    # region foreign keys
-
-    @declared_attr
-    def service_fk(cls):
-        return relationship.foreign_key('service')
-
-    # endregion
-
     # region association proxies
 
     @declared_attr
     def service_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('service', cls.name_column_name())
+        return relationship.association_proxy('service', cls.name_column_name())
 
     # endregion
 
@@ -253,8 +237,17 @@ class ServiceModificationBase(ModelMixin):
     # endregion
 
     # region many_to_one relationships
+
     @declared_attr
     def service(cls):
         return relationship.many_to_one(cls, 'service', back_populates='modifications')
+
+    # endregion
+
+    # region foreign keys
+
+    @declared_attr
+    def service_fk(cls):
+        return relationship.foreign_key('service')
 
     # endregion

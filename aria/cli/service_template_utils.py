@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Loading mechanism for service templates.
+"""
+
 import os
 from urlparse import urlparse
 
@@ -23,26 +27,24 @@ from ..utils import archive as archive_utils
 
 
 def get(source, service_template_filename):
-    """Get a source and return a path to the main service template file
+    """
+    Get a source and return a path to the main service template file
 
     The behavior based on then source argument content is:
-        - local yaml file: return the file
-        - local archive:
-            extract it locally and return path service template file
-        - URL:
-            - download and get service template from downloaded archive
-        - github repo:
-            - download and get service template from downloaded archive
 
-    Supported archive types are: csar, zip, tar, tar.gz and tar.bz2
+    * local ``.yaml`` file: return the file
+    * local archive (``.csar``, ``.zip``, ``.tar``, ``.tar.gz``, and ``.tar.bz2``): extract it
+      locally and return path service template file
+    * URL: download and get service template from downloaded archive
+    * GitHub repo: download and get service template from downloaded archive
 
-    :param source: Path/URL/github repo to archive/service-template file
-    :type source: str
-    :param service_template_filename: Path to service template (if source is an archive [but
-     not a csar archive - with csars archives, this is read from the metadata file])
-    :type service_template_filename: str
-    :return: Path to main service template file
-    :rtype: str
+    :param source: path/URL/GitHub repo to archive/service-template file
+    :type source: basestring
+    :param service_template_filename: path to service template if source is a non-CSAR archive
+     with CSAR archives, this is read from the metadata file)
+    :type service_template_filename: basestring
+    :return: path to main service template file
+    :rtype: basestring
     """
     if urlparse(source).scheme:
         downloaded_file = utils.download_file(source)
@@ -66,14 +68,15 @@ def get(source, service_template_filename):
 
 
 def _get_service_template_file_from_archive(archive, service_template_filename):
-    """Extract archive to temporary location and get path to service template file.
+    """
+    Extract archive to temporary location and get path to service template file.
 
-    :param archive: Path to archive file
-    :type archive: str
-    :param service_template_filename: Path to service template file relative to archive
-    :type service_template_filename: str
-    :return: Absolute path to service template file
-    :rtype: str
+    :param archive: path to archive file
+    :type archive: basestring
+    :param service_template_filename: path to service template file relative to archive
+    :type service_template_filename: basestring
+    :return: absolute path to service template file
+    :rtype: basestring
 
     """
     if csar.is_csar_archive(archive):
@@ -95,12 +98,13 @@ def _get_service_template_file_from_archive(archive, service_template_filename):
 
 
 def _map_to_github_url(source):
-    """Returns a path to a downloaded github archive.
+    """
+    Returns a path to a downloaded GitHub archive.
 
-    :param source: github repo in the format of `org/repo[:tag/branch]`.
-    :type source: str
-    :return: URL to the archive file for the given repo in github
-    :rtype: str
+    :param source: GitHub repo: ``org/repo[:tag/branch]``
+    :type source: basestring
+    :return: URL to the archive file for the given repo in GitHub
+    :rtype: basestring
 
     """
     source_parts = source.split(':', 1)

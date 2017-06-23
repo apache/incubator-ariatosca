@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``node-templates`` sub-commands.
+"""
+
 from .. import table
 from .. import utils
 from ..core import aria
@@ -24,22 +28,24 @@ NODE_TEMPLATE_COLUMNS = ['id', 'name', 'description', 'service_template_name', '
 @aria.group(name='node-templates')
 @aria.options.verbose()
 def node_templates():
-    """Handle a service template's node templates
+    """
+    Manages stored service templates' node templates
     """
     pass
 
 
 @node_templates.command(name='show',
-                        short_help='Show node information')
+                        short_help='Show information for a stored node template')
 @aria.argument('node-template-id')
 # @aria.options.service_template_name(required=True)
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def show(node_template_id, model_storage, logger):
-    """Show information for a specific node of a specific service template
+    """
+    Show information for a stored node template
 
-    `NODE_TEMPLATE_ID` is the node id to get information on.
+    NODE_TEMPLATE_ID is the unique node template ID.
     """
     logger.info('Showing node template {0}'.format(node_template_id))
     node_template = model_storage.node_template.get(node_template_id)
@@ -64,7 +70,7 @@ def show(node_template_id, model_storage, logger):
 
 
 @node_templates.command(name='list',
-                        short_help='List node templates for a service template')
+                        short_help='List stored node templates')
 @aria.options.service_template_name()
 @aria.options.sort_by('service_template_name')
 @aria.options.descending
@@ -72,9 +78,10 @@ def show(node_template_id, model_storage, logger):
 @aria.pass_model_storage
 @aria.pass_logger
 def list(service_template_name, sort_by, descending, model_storage, logger):
-    """List node templates
+    """
+    List stored node templates
 
-    If `SERVICE_TEMPLATE_NAME` is provided, list nodes for that service template.
+    If SERVICE_TEMPLATE_NAME is provided, list node templates for that stored service template.
     Otherwise, list node templates for all service templates.
     """
     if service_template_name:

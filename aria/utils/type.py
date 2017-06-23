@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Type utilities.
+"""
+
 import datetime
 
 from .specification import implements_specification
@@ -79,7 +83,7 @@ def full_type_name(value):
 @implements_specification('3.2.1-1', 'tosca-simple-1.0')
 def canonical_type_name(value):
     """
-    Returns the canonical TOSCA type name of a primitive value, or None if unknown.
+    Returns the canonical TOSCA type name of a primitive value, or ``None`` if unknown.
 
     For a list of TOSCA type names, see the `TOSCA Simple Profile v1.0
     cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01
@@ -95,7 +99,7 @@ def canonical_type_name(value):
 @implements_specification('3.2.1-2', 'tosca-simple-1.0')
 def canonical_type(type_name):
     """
-    Return the canonical type for any Python, YAML, or TOSCA type name or alias, or None if
+    Return the canonical type for any Python, YAML, or TOSCA type name or alias, or ``None`` if
     unsupported.
 
     :param type_name: Type name (case insensitive)
@@ -109,9 +113,8 @@ def validate_value_type(value, type_name):
     Validate that a value is of a specific type. Supports Python, YAML, and TOSCA type names and
     aliases.
 
-    A ValueError will be raised on type mismatch.
-
-    :param type_name: Type name (case insensitive)
+    :param type_name: type name (case insensitive)
+    :raises ~exceptions.ValueError: on type mismatch
     """
 
     the_type = canonical_type(type_name)
@@ -132,9 +135,8 @@ def convert_value_to_type(str_value, python_type_name):
     """
     Converts a value to a specific Python primitive type.
 
-    A ValueError will be raised for unsupported types or conversion failure.
-
     :param python_type_name: Python primitive type name (case insensitive)
+    :raises ~exceptions.ValueError: for unsupported types or conversion failure
     """
 
     python_type_name = python_type_name.lower()

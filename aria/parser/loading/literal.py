@@ -21,7 +21,7 @@ class LiteralLoader(Loader):
     """
     ARIA literal loader.
 
-    See :class:`aria.loading.LiteralLocation`.
+    See :class:`~aria.parser.loading.LiteralLocation`.
     """
 
     def __init__(self, location):

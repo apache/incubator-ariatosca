@@ -12,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-File system based RAPI
+File system implementation of the storage resource API ("RAPI").
 """
+
 import os
 import shutil
 from multiprocessing import RLock
@@ -30,13 +32,12 @@ from aria.storage import (
 
 class FileSystemResourceAPI(api.ResourceAPI):
     """
-    File system resource storage.
+    File system implementation of the storage resource API ("RAPI").
     """
 
     def __init__(self, directory, **kwargs):
         """
-        File system implementation for storage api.
-        :param str directory: root dir for storage.
+        :param directory: root dir for storage
         """
         super(FileSystemResourceAPI, self).__init__(**kwargs)
         self.directory = directory
@@ -47,8 +48,7 @@ class FileSystemResourceAPI(api.ResourceAPI):
     @contextmanager
     def connect(self):
         """
-        Established a connection and destroys it after use.
-        :return:
+        Establishes a connection and destroys it after use.
         """
         try:
             self._establish_connection()
@@ -60,16 +60,13 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def _establish_connection(self):
         """
-        Establish a conenction. used in the 'connect' contextmanager.
-        :return:
+        Establishes a connection. Used in the ``connect`` context manager.
         """
         self._lock.acquire()
 
-
     def _destroy_connection(self):
         """
-        Destroy a connection. used in the 'connect' contextmanager.
-        :return:
+        Destroys a connection. Used in the ``connect`` context manager.
         """
         self._lock.release()
 
@@ -79,9 +76,9 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def create(self, **kwargs):
         """
-        Create directory in storage by path.
-        tries to create the root directory as well.
-        :param str name: path of file in storage.
+        Creates a directory in by path. Tries to create the root directory as well.
+
+        :param name: path of directory
         """
         try:
             os.makedirs(self.directory)
@@ -94,11 +91,11 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def read(self, entry_id, path, **_):
         """
-        Retrieve the content of a file system storage resource.
+        Retrieves the contents of a file.
 
-        :param str entry_id: the id of the entry.
-        :param str path: a path to the specific resource to read.
-        :return: the content of the file.
+        :param entry_id: entry ID
+        :param path: path to resource
+        :return: contents of the file
         :rtype: bytes
         """
         resource_relative_path = os.path.join(self.name, entry_id, path or '')
@@ -118,11 +115,11 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def download(self, entry_id, destination, path=None, **_):
         """
-        Download a specific file or dir from the file system resource storage.
+        Downloads a file or directory.
 
-        :param str entry_id: the id of the entry.
-        :param str destination: the destination to download to
-        :param str path: the path to download relative to the root of the entry (otherwise all).
+        :param entry_id: entry ID
+        :param destination: download destination
+        :param path: path to download relative to the root of the entry (otherwise all)
         """
         resource_relative_path = os.path.join(self.name, entry_id, path or '')
         resource = os.path.join(self.directory, resource_relative_path)
@@ -136,10 +133,10 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def upload(self, entry_id, source, path=None, **_):
         """
-        Uploads a specific file or dir to the file system resource storage.
+        Uploads a file or directory.
 
-        :param str entry_id: the id of the entry.
-        :param source: the source of the files to upload.
+        :param entry_id: entry ID
+        :param source: source of the files to upload
         :param path: the destination of the file/s relative to the entry root dir.
         """
         resource_directory = os.path.join(self.directory, self.name, entry_id)
@@ -153,10 +150,10 @@ class FileSystemResourceAPI(api.ResourceAPI):
 
     def delete(self, entry_id, path=None, **_):
         """
-        Deletes a file system storage resource.
+        Deletes a file or directory.
 
-        :param str entry_id: the id of the entry.
-        :param str path: a path to delete relative to the root of the entry (otherwise all).
+        :param entry_id: entry ID
+        :param path: path to delete relative to the root of the entry (otherwise all)
         """
         destination = os.path.join(self.directory, self.name, entry_id, path or '')
         if os.path.exists(destination):

@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Workflow and operation contexts
+Workflow context.
 """
 
 import threading
@@ -26,7 +26,7 @@ from .common import BaseContext
 
 class WorkflowContext(BaseContext):
     """
-    Context object used during workflow creation and execution
+    Context used during workflow creation and execution.
     """
     def __init__(self,
                  workflow_name,
@@ -57,21 +57,21 @@ class WorkflowContext(BaseContext):
     @property
     def execution(self):
         """
-        The execution model
+        Execution model.
         """
         return self.model.execution.get(self._execution_id)
 
     @execution.setter
     def execution(self, value):
         """
-        Store the execution in the model storage
+        Stores the execution in the storage model API ("MAPI").
         """
         self.model.execution.put(value)
 
     @property
     def node_templates(self):
         """
-        Iterator over nodes
+        Iterates over nodes templates.
         """
         key = 'service_{0}'.format(self.model.node_template.model_cls.name_column_name())
 
@@ -84,7 +84,7 @@ class WorkflowContext(BaseContext):
     @property
     def nodes(self):
         """
-        Iterator over node instances
+        Iterates over nodes.
         """
         key = 'service_{0}'.format(self.model.node.model_cls.name_column_name())
         return self.model.node.iter(
@@ -102,7 +102,7 @@ class WorkflowContext(BaseContext):
 
 class _CurrentContext(threading.local):
     """
-    Provides thread-level context, which sugarcoats the task mapi.
+    Provides a thread-level context, with sugar for the task MAPI.
     """
 
     def __init__(self):
@@ -114,9 +114,7 @@ class _CurrentContext(threading.local):
 
     def get(self):
         """
-        Retrieves the current workflow context
-        :return: the workflow context
-        :rtype: WorkflowContext
+        Retrieves the current workflow context.
         """
         if self._workflow_context is not None:
             return self._workflow_context
@@ -125,9 +123,7 @@ class _CurrentContext(threading.local):
     @contextmanager
     def push(self, workflow_context):
         """
-        Switches the current context to the provided context
-        :param workflow_context: the context to switch to.
-        :yields: the current context
+        Switches the current context to the provided context.
         """
         prev_workflow_context = self._workflow_context
         self._set(workflow_context)

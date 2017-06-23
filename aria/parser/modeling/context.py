@@ -38,14 +38,20 @@ class IdType(object):
 
 class ModelingContext(object):
     """
-    Properties:
+    Modeling context.
 
-    * :code:`template`: The generated service template
-    * :code:`instance`: The generated service instance
-    * :code:`node_id_format`: Format for node instance IDs
-    * :code:`id_type`: Type of IDs to use for instances
-    * :code:`id_max_length`: Maximum allowed instance ID length
-    * :code:`inputs`: Dict of inputs values
+    :ivar template: generated service template
+    :vartype template: aria.modeling.models.ServiceTemplate
+    :ivar instance: generated service instance
+    :vartype instance: aria.modeling.models.Service
+    :ivar node_id_format: format for node instance IDs
+    :vartype node_id_format: basestring
+    :ivar id_type: type of IDs to use for instances
+    :vartype id_type: basestring
+    :ivar id_max_length: maximum allowed instance ID length
+    :vartype id_max_length: int
+    :ivar inputs: inputs values
+    :vartype inputs: {:obj:`basestring`, object}
     """
 
     def __init__(self):

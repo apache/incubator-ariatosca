@@ -14,29 +14,9 @@
 # limitations under the License.
 
 """
-ARIA's storage Sub-Package
-Path: aria.storage
-
-Storage package is a generic abstraction over different storage types.
-We define this abstraction with the following components:
-
-1. storage: simple mapi to use
-2. driver: implementation of the database client mapi.
-3. model: defines the structure of the table/document.
-4. field: defines a field/item in the model.
-
-API:
-    * application_storage_factory - function, default ARIA storage factory.
-    * Storage - class, simple storage mapi.
-    * models - module, default ARIA standard models.
-    * structures - module, default ARIA structures - holds the base model,
-                   and different fields types.
-    * Model - class, abstract model implementation.
-    * Field - class, base field implementation.
-    * IterField - class, base iterable field implementation.
-    * drivers - module, a pool of ARIA standard drivers.
-    * StorageDriver - class, abstract model implementation.
+Storage package.
 """
+
 from .core import (
     Storage,
     ModelStorage,

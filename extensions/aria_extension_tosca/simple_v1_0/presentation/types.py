@@ -17,11 +17,11 @@ def convert_shorthand_to_full_type_name(context, name, types_dict): # pylint: di
     """
     Converts a shorthand type name to its full type name, or else returns it unchanged.
 
-    Works by checking for :code:`shorthand_name` in the types' :code:`_extensions` field. See also
+    Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
     :class:`aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
 
-    Can be used as the conversion function argument in :code:`type_validator` and
-    :code:`derived_from_validator`.
+    Can be used as the conversion function argument in ``type_validator`` and
+    ``derived_from_validator``.
     """
 
     if (name is not None) and types_dict and (name not in types_dict):
@@ -35,11 +35,11 @@ def get_type_by_full_or_shorthand_name(context, name, *types_dict_names):
     """
     Gets a type either by its full name or its shorthand name.
 
-    Works by checking for :code:`shorthand_name` in the types' :code:`_extensions` field. See also
-    :class:`aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
+    Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
+    :class:`~aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
 
     The arguments from the third onwards are used to locate a nested field under
-    :code:`service_template` under the root presenter.
+    ``service_template`` under the root presenter.
     """
 
     if name is not None:

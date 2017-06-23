@@ -39,6 +39,8 @@ from .presentation.types import (convert_shorthand_to_full_type_name,
 @implements_specification('3.5.1', 'tosca-simple-1.0')
 class Description(AsIsPresentation):
     """
+    Human-readable description.
+
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_DESCRIPTION>`__
@@ -55,6 +57,10 @@ class Description(AsIsPresentation):
 @has_fields
 @implements_specification('3.9.3.2', 'tosca-simple-1.0')
 class MetaData(ExtensiblePresentation):
+    """
+    Meta data.
+    """
+
     @primitive_field(str)
     @implements_specification('3.9.3.3', 'tosca-simple-1.0')
     def template_name(self):
@@ -82,7 +88,7 @@ class MetaData(ExtensiblePresentation):
     @primitive_dict_unknown_fields()
     def custom(self):
         """
-        :rtype: dict
+        :type: dict
         """
 
 @short_form_field('url')
@@ -103,7 +109,7 @@ class Repository(ExtensiblePresentation):
         """
         The optional description for the repository.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_field(str, required=True)
@@ -111,7 +117,7 @@ class Repository(ExtensiblePresentation):
         """
         The required URL or network address used to access the repository.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field()
@@ -119,7 +125,7 @@ class Repository(ExtensiblePresentation):
         """
         The optional Credential used to authorize access to the repository.
 
-        :rtype: tosca.datatypes.Credential
+        :type: tosca.datatypes.Credential
         """
 
     @cachedmethod
@@ -145,7 +151,7 @@ class Import(ExtensiblePresentation):
         """
         The required symbolic name for the imported file.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str)
@@ -154,7 +160,7 @@ class Import(ExtensiblePresentation):
         The optional symbolic name of the repository definition where the imported file can be found
         as a string.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str)
@@ -163,7 +169,7 @@ class Import(ExtensiblePresentation):
         The optional namespace URI to that will be applied to type definitions found within the
         imported file as a string.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str)
@@ -173,7 +179,7 @@ class Import(ExtensiblePresentation):
         forming a qualified name (i.e., qname) when referencing type definitions from the imported
         file.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
 @has_fields
@@ -233,7 +239,7 @@ class ConstraintClause(ExtensiblePresentation):
         Constrains a property or parameter to a value in range of (inclusive) the two values
         declared.
 
-        Note: subclasses or templates of types that declare a property with the :code:`in_range`
+        Note: subclasses or templates of types that declare a property with the ``in_range``
         constraint MAY only further restrict the range specified by the parent type.
         """
 
@@ -300,19 +306,19 @@ class EntrySchema(ExtensiblePresentation):
     @primitive_field(str, required=True)
     def type(self):
         """
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
     def description(self):
         """
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_list_field(ConstraintClause)
     def constraints(self):
         """
-        :rtype: list of (str, :class:`ConstraintClause`)
+        :type: list of (str, :class:`ConstraintClause`)
         """
 
     @cachedmethod
@@ -326,13 +332,17 @@ class EntrySchema(ExtensiblePresentation):
 @short_form_field('primary')
 @has_fields
 class OperationImplementation(ExtensiblePresentation):
+    """
+    Operation implementation.
+    """
+
     @primitive_field(str)
     def primary(self):
         """
         The optional implementation artifact name (i.e., the primary script file name within a
         TOSCA CSAR file).
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_list_field(str)
@@ -342,10 +352,14 @@ class OperationImplementation(ExtensiblePresentation):
         which are referenced by the primary implementation artifact (e.g., a library the script
         installs or a secondary script).
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
 class SubstitutionMappingsRequirement(AsIsPresentation):
+    """
+    Substitution mapping for requirement.
+    """
+
     @property
     @cachedmethod
     def node_template(self):
@@ -361,6 +375,10 @@ class SubstitutionMappingsRequirement(AsIsPresentation):
         validate_subtitution_mappings_requirement(context, self)
 
 class SubstitutionMappingsCapability(AsIsPresentation):
+    """
+    Substitution mapping for capability.
+    """
+
     @property
     @cachedmethod
     def node_template(self):
@@ -378,23 +396,27 @@ class SubstitutionMappingsCapability(AsIsPresentation):
 @has_fields
 @implements_specification('2.10', 'tosca-simple-1.0')
 class SubstitutionMappings(ExtensiblePresentation):
+    """
+    Substitution mappings.
+    """
+
     @field_validator(type_validator('node type', convert_shorthand_to_full_type_name, 'node_types'))
     @primitive_field(str, required=True)
     def node_type(self):
         """
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_dict_field(SubstitutionMappingsRequirement)
     def requirements(self):
         """
-        :rtype: dict of str, :class:`SubstitutionMappingsRequirement`
+        :type: {:obj:`basestring`: :class:`SubstitutionMappingsRequirement`}
         """
 
     @object_dict_field(SubstitutionMappingsCapability)
     def capabilities(self):
         """
-        :rtype: dict of str, :class:`SubstitutionMappingsCapability`
+        :type: {:obj:`basestring`: :class:`SubstitutionMappingsCapability`}
         """
 
     @cachedmethod

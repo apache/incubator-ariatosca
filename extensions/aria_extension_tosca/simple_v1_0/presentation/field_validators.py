@@ -33,7 +33,7 @@ def copy_validator(template_type_name, templates_dict_name):
     """
     Makes sure that the field refers to an existing template defined in the root presenter.
 
-    Use with the :func:`field_validator` decorator for the :code:`copy` field in
+    Use with the :func:`field_validator` decorator for the ``copy`` field in
     :class:`NodeTemplate` and :class:`RelationshipTemplate`.
     """
 
@@ -64,7 +64,7 @@ def data_type_validator(type_name='data type'):
     """
     Makes sure that the field refers to a valid data type, whether complex or primitive.
 
-    Used with the :func:`field_validator` decorator for the :code:`type` fields in
+    Used with the :func:`field_validator` decorator for the ``type`` fields in
     :class:`PropertyDefinition`, :class:`AttributeDefinition`, :class:`ParameterDefinition`,
     and :class:`EntrySchema`.
 
@@ -103,10 +103,10 @@ def data_type_validator(type_name='data type'):
 
 def entry_schema_validator(field, presentation, context):
     """
-    According to whether the data type supports :code:`entry_schema` (e.g., it is or inherits from
+    According to whether the data type supports ``entry_schema`` (e.g., it is or inherits from
     list or map), make sure that we either have or don't have a valid data type value.
 
-    Used with the :func:`field_validator` decorator for the :code:`entry_schema` field in
+    Used with the :func:`field_validator` decorator for the ``entry_schema`` field in
     :class:`PropertyDefinition` and :class:`AttributeDefinition`.
     """
 
@@ -145,7 +145,7 @@ def data_value_validator(field, presentation, context):
     """
     Makes sure that the field contains a valid value according to data type and constraints.
 
-    Used with the :func:`field_validator` decorator for the :code:`default` field in
+    Used with the :func:`field_validator` decorator for the ``default`` field in
     :class:`PropertyDefinition` and :class:`AttributeDefinition`.
     """
 
@@ -172,7 +172,7 @@ def data_type_derived_from_validator(field, presentation, context):
     """
     Makes sure that the field refers to a valid parent data type (complex or primitive).
 
-    Used with the :func:`field_validator` decorator for the :code:`derived_from` field in
+    Used with the :func:`field_validator` decorator for the ``derived_from`` field in
     :class:`DataType`.
     """
 
@@ -201,7 +201,7 @@ def data_type_properties_validator(field, presentation, context):
     """
     Makes sure that we do not have properties if we have a primitive ancestor.
 
-    Used with the :func:`field_validator` decorator for the :code:`properties` field in
+    Used with the :func:`field_validator` decorator for the ``properties`` field in
     :class:`DataType`.
     """
 
@@ -241,7 +241,7 @@ def constraint_clause_in_range_validator(field, presentation, context):
     valid value for the container type, and that the upper bound is either "UNBOUNDED" or a valid
     value for the container type.
 
-    Used with the :func:`field_validator` decorator for the :code:`in_range` field in
+    Used with the :func:`field_validator` decorator for the ``in_range`` field in
     :class:`ConstraintClause`.
     """
 
@@ -278,7 +278,7 @@ def constraint_clause_valid_values_validator(field, presentation, context):
     """
     Makes sure that the value is a list of valid values for the container type.
 
-    Used with the :func:`field_validator` decorator for the :code:`valid_values` field in
+    Used with the :func:`field_validator` decorator for the ``valid_values`` field in
     :class:`ConstraintClause`.
     """
 
@@ -294,7 +294,7 @@ def constraint_clause_pattern_validator(field, presentation, context):
     """
     Makes sure that the value is a valid regular expression.
 
-    Used with the :func:`field_validator` decorator for the :code:`pattern` field in
+    Used with the :func:`field_validator` decorator for the ``pattern`` field in
     :class:`ConstraintClause`.
     """
 
@@ -324,7 +324,7 @@ def node_template_or_type_validator(field, presentation, context):
     """
     Makes sure that the field refers to either a node template or a node type.
 
-    Used with the :func:`field_validator` decorator for the :code:`node` field in
+    Used with the :func:`field_validator` decorator for the ``node`` field in
     :class:`RequirementAssignment`.
     """
 
@@ -343,11 +343,11 @@ def node_template_or_type_validator(field, presentation, context):
 def capability_definition_or_type_validator(field, presentation, context):
     """
     Makes sure refers to either a capability assignment name in the node template referred to by the
-    :code:`node` field or a general capability type.
+    ``node`` field or a general capability type.
 
-    If the value refers to a capability type, make sure the :code:`node` field was not assigned.
+    If the value refers to a capability type, make sure the ``node`` field was not assigned.
 
-    Used with the :func:`field_validator` decorator for the :code:`capability` field in
+    Used with the :func:`field_validator` decorator for the ``capability`` field in
     :class:`RequirementAssignment`.
     """
 
@@ -385,7 +385,7 @@ def node_filter_validator(field, presentation, context):
     """
     Makes sure that the field has a value only if "node" refers to a node type.
 
-    Used with the :func:`field_validator` decorator for the :code:`node_filter` field in
+    Used with the :func:`field_validator` decorator for the ``node_filter`` field in
     :class:`RequirementAssignment`.
     """
 
@@ -409,7 +409,7 @@ def relationship_template_or_type_validator(field, presentation, context):
     """
     Makes sure that the field refers to either a relationship template or a relationship type.
 
-    Used with the :func:`field_validator` decorator for the :code:`type` field in
+    Used with the :func:`field_validator` decorator for the ``type`` field in
     :class:`RelationshipAssignment`.
     """
 
@@ -434,7 +434,7 @@ def list_node_type_or_group_type_validator(field, presentation, context):
     """
     Makes sure that the field's elements refer to either node types or a group types.
 
-    Used with the :func:`field_validator` decorator for the :code:`targets` field in
+    Used with the :func:`field_validator` decorator for the ``targets`` field in
     :class:`PolicyType`.
     """
 
@@ -458,7 +458,7 @@ def policy_targets_validator(field, presentation, context):
     Makes sure that the field's elements refer to either node templates or groups, and that
     they match the node types and group types declared in the policy type.
 
-    Used with the :func:`field_validator` decorator for the :code:`targets` field in
+    Used with the :func:`field_validator` decorator for the ``targets`` field in
     :class:`PolicyTemplate`.
     """
 
@@ -514,7 +514,7 @@ def node_filter_properties_validator(field, presentation, context):
     """
     Makes sure that the field's elements refer to defined properties in the target node type.
 
-    Used with the :func:`field_validator` decorator for the :code:`properties` field in
+    Used with the :func:`field_validator` decorator for the ``properties`` field in
     :class:`NodeFilter`.
     """
 
@@ -537,7 +537,7 @@ def node_filter_capabilities_validator(field, presentation, context):
     Makes sure that the field's elements refer to defined capabilities and properties in the target
     node type.
 
-    Used with the :func:`field_validator` decorator for the :code:`capabilities` field in
+    Used with the :func:`field_validator` decorator for the ``capabilities`` field in
     :class:`NodeFilter`.
     """
 

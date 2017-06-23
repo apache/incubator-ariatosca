@@ -13,13 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+File utilities.
+"""
+
 import errno
 import os
 import shutil
 
 
 def makedirs(path):
-    """An extension of os.makedirs that doesn't fail if the directory already exists"""
+    """
+    Enhancement of :func:`os.makedirs` that doesn't fail if the directory already exists.
+    """
     if os.path.isdir(path):
         return
     try:
@@ -29,7 +35,6 @@ def makedirs(path):
             raise
 
 def remove_if_exists(path):
-
     try:
         if os.path.isfile(path):
             os.remove(path)

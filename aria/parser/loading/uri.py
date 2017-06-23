@@ -29,14 +29,14 @@ class UriTextLoader(Loader):
     """
     Base class for ARIA URI loaders.
 
-    See :class:`aria.loading.UriLocation`.
+    See :class:`~aria.parser.loading.UriLocation`.
 
     Supports a list of search prefixes that are tried in order if the URI cannot be found.
     They will be:
 
-    * If :code:`origin_location` is provided its prefix will come first.
+    * If ``origin_location`` is provided its prefix will come first.
     * Then the prefixes in the :class:`LoadingContext` will be added.
-    * Finally, the global prefixes specified in :code:`URI_LOADER_PREFIXES` will be added.
+    * Finally, the parser can supply a ``uri_loader_prefix`` function with extra prefixes.
     """
 
     def __init__(self, context, location, origin_location=None):

@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``executions`` sub-commands.
+"""
+
 import os
 
 from .. import helptexts
@@ -27,28 +31,30 @@ from ...orchestrator.workflows.executor.dry import DryExecutor
 from ...utils import formatting
 from ...utils import threading
 
-EXECUTION_COLUMNS = ['id', 'workflow_name', 'status', 'service_name',
-                     'created_at', 'error']
+EXECUTION_COLUMNS = ('id', 'workflow_name', 'status', 'service_name',
+                     'created_at', 'error')
 
 
 @aria.group(name='executions')
 @aria.options.verbose()
 def executions():
-    """Handle workflow executions
+    """
+    Manage executions
     """
     pass
 
 
 @executions.command(name='show',
-                    short_help='Show execution information')
+                    short_help='Show information for an execution')
 @aria.argument('execution-id')
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def show(execution_id, model_storage, logger):
-    """Show information for a specific execution
+    """
+    Show information for an execution
 
-    `EXECUTION_ID` is the execution to get information on.
+    EXECUTION_ID is the unique ID of the execution.
     """
     logger.info('Showing execution {0}'.format(execution_id))
     execution = model_storage.execution.get(execution_id)
@@ -68,7 +74,7 @@ def show(execution_id, model_storage, logger):
 
 
 @executions.command(name='list',
-                    short_help='List service executions')
+                    short_help='List executions')
 @aria.options.service_name(required=False)
 @aria.options.sort_by()
 @aria.options.descending
@@ -80,10 +86,11 @@ def list(service_name,
          descending,
          model_storage,
          logger):
-    """List executions
+    """
+    List executions
 
-    If `SERVICE_NAME` is provided, list executions for that service.
-    Otherwise, list executions for all services.
+    If SERVICE_NAME is provided, list executions on that service. Otherwise, list executions on all
+    services.
     """
     if service_name:
         logger.info('Listing executions for service {0}...'.format(
@@ -102,7 +109,7 @@ def list(service_name,
 
 
 @executions.command(name='start',
-                    short_help='Execute a workflow')
+                    short_help='Start a workflow on a service')
 @aria.argument('workflow-name')
 @aria.options.service_name(required=True)
 @aria.options.inputs(help=helptexts.EXECUTION_INPUTS)
@@ -126,9 +133,12 @@ def start(workflow_name,
           resource_storage,
           plugin_manager,
           logger):
-    """Execute a workflow
+    """
+    Start a workflow on a service
 
-    `WORKFLOW_NAME` is the name of the workflow to execute (e.g. `uninstall`)
+    SERVICE_NAME is the unique name of the service.
+
+    WORKFLOW_NAME is the unique name of the workflow within the service (e.g. "uninstall").
     """
     service = model_storage.service.get_by_name(service_name)
     executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
@@ -145,7 +155,7 @@ def start(workflow_name,
 
 
 @executions.command(name='resume',
-                    short_help='Resume a workflow')
+                    short_help='Resume a stopped execution')
 @aria.argument('execution-id')
 @aria.options.inputs(help=helptexts.EXECUTION_INPUTS)
 @aria.options.dry_execution
@@ -166,6 +176,11 @@ def resume(execution_id,
            resource_storage,
            plugin_manager,
            logger):
+    """
+    Resume a stopped execution
+
+    EXECUTION_ID is the unique ID of the execution.
+    """
     executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
 
     execution = model_storage.execution.get(execution_id)
@@ -225,7 +240,7 @@ def _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern):
 
 
 def _cancel_execution(workflow_runner, execution_thread, logger, log_iterator):
-    logger.info('Cancelling execution. Press Ctrl+C again to force-cancel')
+    logger.info('Cancelling execution. Press Ctrl+C again to force-cancel.')
     workflow_runner.cancel()
     while execution_thread.is_alive():
         try:

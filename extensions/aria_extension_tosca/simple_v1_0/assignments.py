@@ -61,7 +61,7 @@ class OperationAssignment(ExtensiblePresentation):
         """
         The optional description string for the associated named operation.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_field(OperationImplementation)
@@ -70,7 +70,7 @@ class OperationAssignment(ExtensiblePresentation):
         The optional implementation artifact name (e.g., a script file name within a TOSCA CSAR
         file).
 
-        :rtype: :class:`OperationImplementation`
+        :type: :class:`OperationImplementation`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -81,7 +81,7 @@ class OperationAssignment(ExtensiblePresentation):
         when operation definitions are included as part of a Requirement assignment in a Node
         Template.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @cachedmethod
@@ -124,13 +124,13 @@ class InterfaceAssignment(ExtensiblePresentation):
         when interface definitions are referenced as part of a Requirement assignment in a Node
         Template.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @object_dict_unknown_fields(OperationAssignment)
     def operations(self):
         """
-        :rtype: dict of str, :class:`OperationAssignment`
+        :type: {:obj:`basestring`: :class:`OperationAssignment`}
         """
 
     @cachedmethod
@@ -157,6 +157,10 @@ class InterfaceAssignment(ExtensiblePresentation):
 @short_form_field('type')
 @has_fields
 class RelationshipAssignment(ExtensiblePresentation):
+    """
+    Relationship assignment.
+    """
+
     @field_validator(relationship_template_or_type_validator)
     @primitive_field(str)
     def type(self):
@@ -164,7 +168,7 @@ class RelationshipAssignment(ExtensiblePresentation):
         The optional reserved keyname used to provide the name of the Relationship Type for the
         requirement assignment's relationship keyname.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -172,7 +176,7 @@ class RelationshipAssignment(ExtensiblePresentation):
         """
         ARIA NOTE: This field is not mentioned in the spec, but is implied.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @object_dict_field(InterfaceAssignment)
@@ -182,7 +186,7 @@ class RelationshipAssignment(ExtensiblePresentation):
         the corresponding Relationship Type in order to provide Property assignments for these
         interfaces or operations of these interfaces.
 
-        :rtype: dict of str, :class:`InterfaceAssignment`
+        :type: {:obj:`basestring`: :class:`InterfaceAssignment`}
         """
 
     @cachedmethod
@@ -224,7 +228,7 @@ class RequirementAssignment(ExtensiblePresentation):
         * Capability Type that the provider will use to select a type-compatible target node
           template to fulfill the requirement at runtime.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_validator(node_template_or_type_validator)
@@ -238,7 +242,7 @@ class RequirementAssignment(ExtensiblePresentation):
         * Node Type name that the provider will use to select a type-compatible node template to
           fulfill the requirement at runtime.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(RelationshipAssignment)
@@ -251,7 +255,7 @@ class RequirementAssignment(ExtensiblePresentation):
         * Relationship Type that the provider will use to select a type-compatible relationship
           template to relate the source node to the target node at runtime.
 
-        :rtype: :class:`RelationshipAssignment`
+        :type: :class:`RelationshipAssignment`
         """
 
     @field_validator(node_filter_validator)
@@ -261,7 +265,7 @@ class RequirementAssignment(ExtensiblePresentation):
         The optional filter definition that TOSCA orchestrators or providers would use to select a
         type-compatible target node that can fulfill the associated abstract requirement at runtime.
 
-        :rtype: :class:`NodeFilter`
+        :type: :class:`NodeFilter`
         """
 
     @cachedmethod
@@ -325,7 +329,7 @@ class CapabilityAssignment(ExtensiblePresentation):
         """
         An optional list of property definitions for the Capability definition.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @object_dict_field(AttributeAssignment)
@@ -333,7 +337,7 @@ class CapabilityAssignment(ExtensiblePresentation):
         """
         An optional list of attribute definitions for the Capability definition.
 
-        :rtype: dict of str, :class:`AttributeAssignment`
+        :type: {:obj:`basestring`: :class:`AttributeAssignment`}
         """
 
     @cachedmethod
@@ -370,7 +374,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         """
         The required artifact type for the artifact definition.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_field(str, required=True)
@@ -379,7 +383,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         The required URI string (relative or absolute) which can be used to locate the artifact's
         file.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_validator(type_validator('repository', 'repositories'))
@@ -390,7 +394,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         repository that contains the artifact. The artifact is expected to be referenceable by its
         file URI within the repository.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Description)
@@ -398,7 +402,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         """
         The optional description for the artifact definition.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_field(str)
@@ -406,7 +410,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         """
         The file path the associated file would be deployed into within the target node's container.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_dict_field(PropertyAssignment)
@@ -414,7 +418,7 @@ class ArtifactAssignment(ExtensiblePresentation):
         """
         ARIA NOTE: This field is not mentioned in the spec, but is implied.
 
-        :rtype: dict of str, :class:`PropertyAssignment`
+        :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
     @cachedmethod

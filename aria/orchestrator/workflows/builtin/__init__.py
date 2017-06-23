@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-A set of builtin workflows
+Built-in workflows.
 """
 
 from .install import install

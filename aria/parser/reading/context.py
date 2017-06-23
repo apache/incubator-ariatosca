@@ -16,10 +16,12 @@ from .source import DefaultReaderSource
 
 class ReadingContext(object):
     """
-    Properties:
+    Reading context.
 
-    * :code:`reader_source`: For finding reader instances
-    * :code:`reader`: Overrides :code:`reader_source` with a specific class
+    :ivar reader_source: for finding reader instances
+    :vartype reader_source: ReaderSource
+    :ivar reader: overrides ``reader_source`` with a specific class
+    :vartype reader: type
     """
 
     def __init__(self):

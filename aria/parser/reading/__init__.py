@@ -10,6 +10,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Reading package.
+
+.. autosummary::
+   :nosignatures:
+
+   aria.parser.reading.ReadingContext
+   ReaderException
+   ReaderNotFoundError
+   ReaderSyntaxError
+   AlreadyReadException
+   JinjaReader
+   JsonReader
+   Locator
+   deepcopy_with_locators
+   copy_locators
+   RawReader
+   Reader
+   ReaderSource
+   DefaultReaderSource
+   YamlReader
+"""
+
 from .raw import RawReader
 from .reader import Reader
 from .yaml import YamlReader

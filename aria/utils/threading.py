@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Threading utilities.
+"""
+
 from __future__ import absolute_import  # so we can import standard 'threading'
 
 import sys
@@ -26,6 +30,7 @@ from .exceptions import print_exception
 class ExecutorException(Exception):
     pass
 
+
 class DaemonThread(Thread):
     def __init__(self, *args, **kwargs):
         super(DaemonThread, self).__init__(*args, **kwargs)
@@ -33,16 +38,15 @@ class DaemonThread(Thread):
 
     def run(self):
         """
-        We're overriding `Thread.run` in order to avoid annoying (but harmless) error
-        messages during shutdown. The problem is that CPython nullifies the
-        global state _before_ shutting down daemon threads, so that exceptions
-        might happen, and then `Thread.__bootstrap_inner` prints them out.
+        We're overriding ``Thread.run`` in order to avoid annoying (but harmless) error messages
+        during shutdown. The problem is that CPython nullifies the global state _before_ shutting
+        down daemon threads, so that exceptions might happen, and then ``Thread.__bootstrap_inner``
+        prints them out.
 
         Our solution is to swallow these exceptions here.
 
-        The side effect is that uncaught exceptions in our own thread code will _not_
-        be printed out as usual, so it's our responsibility to catch them in our
-        code.
+        The side effect is that uncaught exceptions in our own thread code will _not_ be printed out
+        as usual, so it's our responsibility to catch them in our code.
         """
 
         try:
@@ -53,6 +57,7 @@ class DaemonThread(Thread):
         except BaseException:
             # Exceptions might occur in daemon threads during interpreter shutdown
             pass
+
 
 # https://gist.github.com/tliron/81dd915166b0bfc64be08b4f8e22c835
 class FixedThreadPoolExecutor(object):
@@ -77,8 +82,8 @@ class FixedThreadPoolExecutor(object):
         executor.raise_first()
         print executor.returns
 
-    You can also use it with the Python "with" keyword, in which case you don't need to call "close"
-    explicitly::
+    You can also use it with the Python ``with`` keyword, in which case you don't need to call
+    ``close`` explicitly::
 
         with FixedThreadPoolExecutor(10) as executor:
             for value in range(100):
@@ -95,11 +100,10 @@ class FixedThreadPoolExecutor(object):
                  timeout=None,
                  print_exceptions=False):
         """
-        :param size: Number of threads in the pool (fixed).
-        :param timeout: Timeout in seconds for all
-               blocking operations. (Defaults to none, meaning no timeout)
-        :param print_exceptions: Set to true in order to
-               print exceptions from tasks. (Defaults to false)
+        :param size: number of threads in the pool; if ``None`` will use an optimal number for the
+         platform
+        :param timeout: timeout in seconds for all blocking operations (``None`` means no timeout)
+        :param print_exceptions: set to ``True`` in order to print exceptions from tasks
         """
         if not size:
             try:
@@ -131,7 +135,7 @@ class FixedThreadPoolExecutor(object):
 
         The task will be called ASAP on the next available worker thread in the pool.
 
-        Will raise an :class:`ExecutorException` exception if cannot be submitted.
+        :raises ExecutorException: if cannot be submitted
         """
 
         try:
@@ -145,7 +149,7 @@ class FixedThreadPoolExecutor(object):
 
         You cannot submit tasks anymore after calling this.
 
-        This is called automatically upon exit if you are using the "with" keyword.
+        This is called automatically upon exit if you are using the ``with`` keyword.
         """
 
         self.drain()
@@ -194,9 +198,9 @@ class FixedThreadPoolExecutor(object):
         """
         If exceptions were thrown by any task, then the first one will be raised.
 
-        This is rather arbitrary: proper handling would involve iterating all the
-        exceptions. However, if you want to use the "raise" mechanism, you are
-        limited to raising only one of them.
+        This is rather arbitrary: proper handling would involve iterating all the exceptions.
+        However, if you want to use the "raise" mechanism, you are limited to raising only one of
+        them.
         """
 
         exceptions = self.exceptions
@@ -238,13 +242,13 @@ class FixedThreadPoolExecutor(object):
         self.close()
         return False
 
+
 class LockedList(list):
     """
-    A list that supports the "with" keyword with a built-in lock.
+    A list that supports the ``with`` keyword with a built-in lock.
 
-    Though Python lists are thread-safe in that they will not raise exceptions
-    during concurrent access, they do not guarantee atomicity. This class will
-    let you gain atomicity when needed.
+    Though Python lists are thread-safe in that they will not raise exceptions during concurrent
+    access, they do not guarantee atomicity. This class will let you gain atomicity when needed.
     """
 
     def __init__(self, *args, **kwargs):
@@ -260,7 +264,7 @@ class LockedList(list):
 
 class ExceptionThread(Thread):
     """
-    A thread from which top level exceptions can be retrieved or reraised
+    A thread from which top level exceptions can be retrieved or re-raised.
     """
     def __init__(self, *args, **kwargs):
         Thread.__init__(self, *args, **kwargs)

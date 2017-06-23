@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""
+Terminal colorization utilities.
+"""
+
 from StringIO import StringIO
 import re
 
@@ -75,8 +80,7 @@ class ColorSpec(object):
     def __init__(self, fore=None, back=None, style=None):
         """
         It is possible to provide fore, back and style arguments. each could be either
-        the color is lower case letter, or the actual color from colorama.
-
+        the color is lower case letter, or the actual color from Colorama.
         """
         self._kwargs = dict(fore=fore, back=back, style=style)
         self._str = StringIO()

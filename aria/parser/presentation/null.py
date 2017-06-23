@@ -33,7 +33,7 @@ NULL = Null()
 
 def none_to_null(value):
     """
-    Convert :code:`None` to :code:`NULL`, recursively.
+    Convert ``None`` to ``NULL``, recursively.
     """
 
     if value is None:
@@ -51,7 +51,7 @@ def none_to_null(value):
 
 def null_to_none(value):
     """
-    Convert :code:`NULL` to :code:`None`, recursively.
+    Convert ``NULL`` to ``None``, recursively.
     """
 
     if value is NULL:

@@ -12,9 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """
-SQLAlchemy based MAPI
+SQLAlchemy implementation of the storage model API ("MAPI").
 """
+
 import os
 import platform
 
@@ -42,7 +44,7 @@ _predicates = {'ge': '__ge__',
 
 class SQLAlchemyModelAPI(api.ModelAPI):
     """
-    SQL based MAPI.
+    SQLAlchemy implementation of the storage model API ("MAPI").
     """
 
     def __init__(self,
@@ -54,7 +56,8 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         self._session = session
 
     def get(self, entry_id, include=None, **kwargs):
-        """Return a single result based on the model class and element ID
+        """
+        Returns a single result based on the model class and element ID
         """
         query = self._get_query(include, {'id': entry_id})
         result = query.first()
@@ -102,25 +105,28 @@ class SQLAlchemyModelAPI(api.ModelAPI):
              filters=None,
              sort=None,
              **kwargs):
-        """Return a (possibly empty) list of `model_class` results
+        """
+        Returns a (possibly empty) list of ``model_class`` results.
         """
         for result in self._get_query(include, filters, sort):
             yield self._instrument(result)
 
     def put(self, entry, **kwargs):
-        """Create a `model_class` instance from a serializable `model` object
+        """
+        Creatse a ``model_class`` instance from a serializable ``model`` object.
 
-        :param entry: A dict with relevant kwargs, or an instance of a class
-        that has a `to_dict` method, and whose attributes match the columns
-        of `model_class` (might also my just an instance of `model_class`)
-        :return: An instance of `model_class`
+        :param entry: dict with relevant kwargs, or an instance of a class that has a ``to_dict``
+         method, and whose attributes match the columns of ``model_class`` (might also be just an
+         instance of ``model_class``)
+        :return: an instance of ``model_class``
         """
         self._session.add(entry)
         self._safe_commit()
         return entry
 
     def delete(self, entry, **kwargs):
-        """Delete a single result based on the model class and element ID
+        """
+        Deletes a single result based on the model class and element ID.
         """
         self._load_relationships(entry)
         self._session.delete(entry)
@@ -128,17 +134,19 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         return entry
 
     def update(self, entry, **kwargs):
-        """Add `instance` to the DB session, and attempt to commit
+        """
+        Adds ``instance`` to the database session, and attempts to commit.
 
-        :return: The updated instance
+        :return: updated instance
         """
         return self.put(entry)
 
     def refresh(self, entry):
-        """Reload the instance with fresh information from the DB
+        """
+        Reloads the instance with fresh information from the database.
 
-        :param entry: Instance to be re-loaded from the DB
-        :return: The refreshed instance
+        :param entry: instance to be re-loaded from the database
+        :return: refreshed instance
         """
         self._session.refresh(entry)
         self._load_relationships(entry)
@@ -160,14 +168,14 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     def drop(self):
         """
-        Drop the table from the storage.
-        :return:
+        Drops the table.
         """
         self.model_cls.__table__.drop(self._engine)
 
     def _safe_commit(self):
-        """Try to commit changes in the session. Roll back if exception raised
-        Excepts SQLAlchemy errors and rollbacks if they're caught
+        """
+        Try to commit changes in the session. Roll back if exception raised SQLAlchemy errors and
+        rolls back if they're caught.
         """
         try:
             self._session.commit()
@@ -179,11 +187,11 @@ class SQLAlchemyModelAPI(api.ModelAPI):
             raise exceptions.StorageError('SQL Storage error: {0}'.format(str(e)))
 
     def _get_base_query(self, include, joins):
-        """Create the initial query from the model class and included columns
+        """
+        Create the initial query from the model class and included columns.
 
-        :param include: A (possibly empty) list of columns to include in
-        the query
-        :return: An SQLAlchemy AppenderQuery object
+        :param include: (possibly empty) list of columns to include in the query
+        :return: SQLAlchemy AppenderQuery object
         """
         # If only some columns are included, query through the session object
         if include:
@@ -199,9 +207,10 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     @staticmethod
     def _get_joins(model_class, columns):
-        """Get a list of all the tables on which we need to join
+        """
+        Gets a list of all the tables on which we need to join.
 
-        :param columns: A set of all attributes involved in the query
+        :param columns: set of all attributes involved in the query
         """
 
         # Using a list instead of a set because order is important
@@ -222,12 +231,13 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     @staticmethod
     def _sort_query(query, sort=None):
-        """Add sorting clauses to the query
+        """
+        Adds sorting clauses to the query.
 
-        :param query: Base SQL query
-        :param sort: An optional dictionary where keys are column names to
-        sort by, and values are the order (asc/desc)
-        :return: An SQLAlchemy AppenderQuery object
+        :param query: base SQL query
+        :param sort: optional dictionary where keys are column names to sort by, and values are
+         the order (asc/desc)
+        :return: SQLAlchemy AppenderQuery object
         """
         if sort:
             for column, order in sort.items():
@@ -237,13 +247,13 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         return query
 
     def _filter_query(self, query, filters):
-        """Add filter clauses to the query
+        """
+        Adds filter clauses to the query.
 
-        :param query: Base SQL query
-        :param filters: An optional dictionary where keys are column names to
-        filter by, and values are values applicable for those columns (or lists
-        of such values)
-        :return: An SQLAlchemy AppenderQuery object
+        :param query: base SQL query
+        :param filters: optional dictionary where keys are column names to filter by, and values
+         are values applicable for those columns (or lists of such values)
+        :return: SQLAlchemy AppenderQuery object
         """
         return self._add_value_filter(query, filters)
 
@@ -264,17 +274,16 @@ class SQLAlchemyModelAPI(api.ModelAPI):
                    include=None,
                    filters=None,
                    sort=None):
-        """Get an SQL query object based on the params passed
+        """
+        Gets a SQL query object based on the params passed.
 
-        :param model_class: SQL DB table class
-        :param include: An optional list of columns to include in the query
-        :param filters: An optional dictionary where keys are column names to
-        filter by, and values are values applicable for those columns (or lists
-        of such values)
-        :param sort: An optional dictionary where keys are column names to
-        sort by, and values are the order (asc/desc)
-        :return: A sorted and filtered query with only the relevant
-        columns
+        :param model_class: SQL database table class
+        :param include: optional list of columns to include in the query
+        :param filters: optional dictionary where keys are column names to filter by, and values
+         are values applicable for those columns (or lists of such values)
+        :param sort: optional dictionary where keys are column names to sort by, and values are the
+         order (asc/desc)
+        :return: sorted and filtered query with only the relevant columns
         """
         include, filters, sort, joins = self._get_joins_and_converted_columns(
             include, filters, sort
@@ -305,9 +314,10 @@ class SQLAlchemyModelAPI(api.ModelAPI):
                                          include,
                                          filters,
                                          sort):
-        """Get a list of tables on which we need to join and the converted
-        `include`, `filters` and `sort` arguments (converted to actual SQLA
-        column/label objects instead of column names)
+        """
+        Gets a list of tables on which we need to join and the converted ``include``, ``filters``
+        and ```sort`` arguments (converted to actual SQLAlchemy column/label objects instead of
+        column names).
         """
         include = include or []
         filters = filters or dict()
@@ -325,8 +335,9 @@ class SQLAlchemyModelAPI(api.ModelAPI):
                                       include,
                                       filters,
                                       sort):
-        """Go over the optional parameters (include, filters, sort), and
-        replace column names with actual SQLA column objects
+        """
+        Gooes over the optional parameters (include, filters, sort), and replace column names with
+        actual SQLAlechmy column objects.
         """
         include = [self._get_column(c) for c in include]
         filters = dict((self._get_column(c), filters[c]) for c in filters)
@@ -335,9 +346,10 @@ class SQLAlchemyModelAPI(api.ModelAPI):
         return include, filters, sort
 
     def _get_column(self, column_name):
-        """Return the column on which an action (filtering, sorting, etc.)
-        would need to be performed. Can be either an attribute of the class,
-        or an association proxy linked to a relationship the class has
+        """
+        Returns the column on which an action (filtering, sorting, etc.) would need to be performed.
+        Can be either an attribute of the class, or an association proxy linked to a relationship
+        in the class.
         """
         column = getattr(self.model_cls, column_name)
         if column.is_attribute:
@@ -352,15 +364,16 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     @staticmethod
     def _paginate(query, pagination):
-        """Paginate the query by size and offset
+        """
+        Paginates the query by size and offset.
 
-        :param query: Current SQLAlchemy query object
-        :param pagination: An optional dict with size and offset keys
-        :return: A tuple with four elements:
-        - res ults: `size` items starting from `offset`
-        - the total count of items
-        - `size` [default: 0]
-        - `offset` [default: 0]
+        :param query: current SQLAlchemy query object
+        :param pagination: optional dict with size and offset keys
+        :return: tuple with four elements:
+         * results: ``size`` items starting from ``offset``
+         * the total count of items
+         * ``size`` [default: 0]
+         * ``offset`` [default: 0]
         """
         if pagination:
             size = pagination.get('size', 0)
@@ -374,8 +387,9 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
     @staticmethod
     def _load_relationships(instance):
-        """A helper method used to overcome a problem where the relationships
-        that rely on joins aren't being loaded automatically
+        """
+        Helper method used to overcome a problem where the relationships that rely on joins aren't
+        being loaded automatically.
         """
         for rel in instance.__mapper__.relationships:
             getattr(instance, rel.key)
@@ -389,13 +403,15 @@ class SQLAlchemyModelAPI(api.ModelAPI):
 
 def init_storage(base_dir, filename='db.sqlite'):
     """
-    A builtin ModelStorage initiator.
-    Creates a sqlalchemy engine and a session to be passed to the mapi.
+    Built-in ModelStorage initiator.
 
-    Initiator_kwargs must be passed to the ModelStorage which must hold the base_dir for the
-    location of the db file, and an option filename. This would create an sqlite db.
-    :param base_dir: the dir of the db
-    :param filename: the db file name.
+    Creates a SQLAlchemy engine and a session to be passed to the MAPI.
+
+    ``initiator_kwargs`` must be passed to the ModelStorage which must hold the ``base_dir`` for the
+    location of the database file, and an option filename. This would create an SQLite database.
+
+    :param base_dir: directory of the database
+    :param filename: database file name.
     :return:
     """
     uri = 'sqlite:///{platform_char}{path}'.format(
@@ -415,7 +431,7 @@ def init_storage(base_dir, filename='db.sqlite'):
 
 class ListResult(list):
     """
-    a ListResult contains results about the requested items.
+    Contains results about the requested items.
     """
     def __init__(self, metadata, *args, **qwargs):
         super(ListResult, self).__init__(*args, **qwargs)

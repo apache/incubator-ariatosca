@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+ARIA modeling service instance module
+"""
+
 # pylint: disable=too-many-lines, no-self-argument, no-member, abstract-method
 
 from sqlalchemy import (
@@ -23,7 +27,6 @@ from sqlalchemy import (
     Boolean
 )
 from sqlalchemy import DateTime
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
 
@@ -45,51 +48,157 @@ from . import (
 
 class ServiceBase(InstanceModelMixin):
     """
-    A service is usually an instance of a :class:`ServiceTemplate`.
-
-    You will usually not create it programmatically, but instead instantiate it from a service
-    template.
-
-    :ivar name: Name (unique for this ARIA installation)
-    :vartype name: basestring
-    :ivar service_template: Template from which this service was instantiated (optional)
-    :vartype service_template: :class:`ServiceTemplate`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar meta_data: Custom annotations
-    :vartype meta_data: {basestring: :class:`Metadata`}
-    :ivar node: Nodes
-    :vartype node: {basestring: :class:`Node`}
-    :ivar groups: Groups of nodes
-    :vartype groups: {basestring: :class:`Group`}
-    :ivar policies: Policies
-    :vartype policies: {basestring: :class:`Policy`]}
-    :ivar substitution: The entire service can appear as a node
-    :vartype substitution: :class:`Substitution`
-    :ivar inputs: Externally provided parameters
-    :vartype inputs: {basestring: :class:`Input`}
-    :ivar outputs: These parameters are filled in after service installation
-    :vartype outputs: {basestring: :class:`Output`}
-    :ivar workflows: Custom workflows that can be performed on the service
-    :vartype workflows: {basestring: :class:`Operation`}
-    :ivar plugins: Plugins used by the service
-    :vartype plugins: {basestring: :class:`Plugin`}
-    :ivar created_at: Creation timestamp
-    :vartype created_at: :class:`datetime.datetime`
-    :ivar updated_at: Update timestamp
-    :vartype updated_at: :class:`datetime.datetime`
-    :ivar modifications: Modifications of this service
-    :vartype modifications: [:class:`ServiceModification`]
-    :ivar updates: Updates of this service
-    :vartype updates: [:class:`ServiceUpdate`]
-    :ivar executions: Executions on this service
-    :vartype executions: [:class:`Execution`]
+    Usually an instance of a :class:`ServiceTemplate` and its many associated templates (node
+    templates, group templates, policy templates, etc.). However, it can also be created
+    programmatically.
     """
 
     __tablename__ = 'service'
 
-    __private_fields__ = ['substitution_fk',
-                          'service_template_fk']
+    __private_fields__ = ('substitution_fk',
+                          'service_template_fk')
+
+    # region association proxies
+
+    @declared_attr
+    def service_template_name(cls):
+        return relationship.association_proxy('service_template', 'name', type=':obj:`basestring`')
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def substitution(cls):
+        """
+        Exposes the entire service as a single node.
+
+        :type: :class:`Substitution`
+        """
+        return relationship.one_to_one(cls, 'substitution', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def outputs(cls):
+        """
+        Output parameters.
+
+        :type: {:obj:`basestring`: :class:`Output`}
+        """
+        return relationship.one_to_many(cls, 'output', dict_key='name')
+
+    @declared_attr
+    def inputs(cls):
+        """
+        Externally provided parameters.
+
+        :type: {:obj:`basestring`: :class:`Input`}
+        """
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
+    def updates(cls):
+        """
+        Service updates.
+
+        :type: [:class:`ServiceUpdate`]
+        """
+        return relationship.one_to_many(cls, 'service_update')
+
+    @declared_attr
+    def modifications(cls):
+        """
+        Service modifications.
+
+        :type: [:class:`ServiceModification`]
+        """
+        return relationship.one_to_many(cls, 'service_modification')
+
+    @declared_attr
+    def executions(cls):
+        """
+        Executions.
+
+        :type: [:class:`Execution`]
+        """
+        return relationship.one_to_many(cls, 'execution')
+
+    @declared_attr
+    def nodes(cls):
+        """
+        Nodes.
+
+        :type: {:obj:`basestring`, :class:`Node`}
+        """
+        return relationship.one_to_many(cls, 'node', dict_key='name')
+
+    @declared_attr
+    def groups(cls):
+        """
+        Groups.
+
+        :type: {:obj:`basestring`, :class:`Group`}
+        """
+        return relationship.one_to_many(cls, 'group', dict_key='name')
+
+    @declared_attr
+    def policies(cls):
+        """
+        Policies.
+
+        :type: {:obj:`basestring`, :class:`Policy`}
+        """
+        return relationship.one_to_many(cls, 'policy', dict_key='name')
+
+    @declared_attr
+    def workflows(cls):
+        """
+        Workflows.
+
+        :type: {:obj:`basestring`, :class:`Operation`}
+        """
+        return relationship.one_to_many(cls, 'operation', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service_template(cls):
+        """
+        Source service template (can be ``None``).
+
+        :type: :class:`ServiceTemplate`
+        """
+        return relationship.many_to_one(cls, 'service_template')
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def meta_data(cls):
+        """
+        Associated metadata.
+
+        :type: {:obj:`basestring`, :class:`Metadata`}
+        """
+        # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
+        return relationship.many_to_many(cls, 'metadata', dict_key='name')
+
+    @declared_attr
+    def plugins(cls):
+        """
+        Associated plugins.
+
+        :type: {:obj:`basestring`, :class:`Plugin`}
+        """
+        return relationship.many_to_many(cls, 'plugin', dict_key='name')
+
+    # endregion
 
     # region foreign keys
 
@@ -105,87 +214,23 @@ class ServiceBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    @declared_attr
-    def service_template_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('service_template', 'name')
+    :type: :obj:`basestring`
+    """)
 
-    # endregion
+    created_at = Column(DateTime, nullable=False, index=True, doc="""
+    Creation timestamp.
 
-    # region one_to_one relationships
+    :type: :class:`~datetime.datetime`
+    """)
 
-    @declared_attr
-    def substitution(cls):
-        return relationship.one_to_one(cls, 'substitution', back_populates=relationship.NO_BACK_POP)
+    updated_at = Column(DateTime, doc="""
+    Update timestamp.
 
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def outputs(cls):
-        return relationship.one_to_many(cls, 'output', dict_key='name')
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.one_to_many(cls, 'input', dict_key='name')
-
-    @declared_attr
-    def updates(cls):
-        return relationship.one_to_many(cls, 'service_update')
-
-    @declared_attr
-    def modifications(cls):
-        return relationship.one_to_many(cls, 'service_modification')
-
-    @declared_attr
-    def executions(cls):
-        return relationship.one_to_many(cls, 'execution')
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.one_to_many(cls, 'node', dict_key='name')
-
-    @declared_attr
-    def groups(cls):
-        return relationship.one_to_many(cls, 'group', dict_key='name')
-
-    @declared_attr
-    def policies(cls):
-        return relationship.one_to_many(cls, 'policy', dict_key='name')
-
-    @declared_attr
-    def workflows(cls):
-        return relationship.one_to_many(cls, 'operation', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def service_template(cls):
-        return relationship.many_to_one(cls, 'service_template')
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def meta_data(cls):
-        # Warning! We cannot use the attr name "metadata" because it's used by SQLAlchemy!
-        return relationship.many_to_many(cls, 'metadata', dict_key='name')
-
-    @declared_attr
-    def plugins(cls):
-        return relationship.many_to_many(cls, 'plugin', dict_key='name')
-
-    # endregion
-
-    description = Column(Text)
-    created_at = Column(DateTime, nullable=False, index=True)
-    updated_at = Column(DateTime)
+    :type: :class:`~datetime.datetime`
+    """)
 
     def satisfy_requirements(self):
         satisfied = True
@@ -311,56 +356,20 @@ class ServiceBase(InstanceModelMixin):
 
 class NodeBase(InstanceModelMixin):
     """
+    Typed vertex in the service topology.
+
+    Nodes may have zero or more :class:`Relationship` instances to other nodes, together forming
+    a many-to-many node graph.
+
     Usually an instance of a :class:`NodeTemplate`.
-
-    Nodes may have zero or more :class:`Relationship` instances to other nodes.
-
-    :ivar name: Name (unique for this service)
-    :vartype name: basestring
-    :ivar node_template: Template from which this node was instantiated (optional)
-    :vartype node_template: :class:`NodeTemplate`
-    :ivar type: Node type
-    :vartype type: :class:`Type`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar interfaces: Bundles of operations
-    :vartype interfaces: {basestring: :class:`Interface`}
-    :ivar artifacts: Associated files
-    :vartype artifacts: {basestring: :class:`Artifact`}
-    :ivar capabilities: Exposed capabilities
-    :vartype capabilities: {basestring: :class:`Capability`}
-    :ivar outbound_relationships: Relationships to other nodes
-    :vartype outbound_relationships: [:class:`Relationship`]
-    :ivar inbound_relationships: Relationships from other nodes
-    :vartype inbound_relationships: [:class:`Relationship`]
-    :ivar host: Host node (can be self)
-    :vartype host: :class:`Node`
-    :ivar state: The state of the node, according to to the TOSCA-defined node states
-    :vartype state: string
-    :ivar version: Used by `aria.storage.instrumentation`
-    :vartype version: int
-    :ivar service: Containing service
-    :vartype service: :class:`Service`
-    :ivar groups: We are a member of these groups
-    :vartype groups: [:class:`Group`]
-    :ivar policies: Policies enacted on this node
-    :vartype policies: [:class:`Policy`]
-    :ivar substitution_mapping: Our contribution to service substitution
-    :vartype substitution_mapping: :class:`SubstitutionMapping`
-    :ivar tasks: Tasks for this node
-    :vartype tasks: [:class:`Task`]
-    :ivar hosted_tasks: Tasks on this node
-    :vartype hosted_tasks: [:class:`Task`]
     """
 
     __tablename__ = 'node'
 
-    __private_fields__ = ['type_fk',
+    __private_fields__ = ('type_fk',
                           'host_fk',
                           'service_fk',
-                          'node_template_fk']
+                          'node_template_fk')
 
     INITIAL = 'initial'
     CREATING = 'creating'
@@ -371,42 +380,170 @@ class NodeBase(InstanceModelMixin):
     STARTED = 'started'
     STOPPING = 'stopping'
     DELETING = 'deleting'
-    # 'deleted' isn't actually part of the tosca spec, since according the description of the
-    # 'deleting' state: "Node is transitioning from its current state to one where it is deleted and
-    #  its state is no longer tracked by the instance model."
-    # However, we prefer to be able to retrieve information about deleted nodes, so we chose to add
-    # this 'deleted' state to enable us to do so.
     DELETED = 'deleted'
     ERROR = 'error'
 
-    STATES = [INITIAL, CREATING, CREATED, CONFIGURING, CONFIGURED, STARTING, STARTED, STOPPING,
-              DELETING, DELETED, ERROR]
+    # 'deleted' isn't actually part of the TOSCA spec, since according the description of the
+    # 'deleting' state: "Node is transitioning from its current state to one where it is deleted and
+    # its state is no longer tracked by the instance model." However, we prefer to be able to
+    # retrieve information about deleted nodes, so we chose to add this 'deleted' state to enable us
+    # to do so.
 
-    _op_to_state = {'create': {'transitional': CREATING, 'finished': CREATED},
+    STATES = (INITIAL, CREATING, CREATED, CONFIGURING, CONFIGURED, STARTING, STARTED, STOPPING,
+              DELETING, DELETED, ERROR)
+
+    _OP_TO_STATE = {'create': {'transitional': CREATING, 'finished': CREATED},
                     'configure': {'transitional': CONFIGURING, 'finished': CONFIGURED},
                     'start': {'transitional': STARTING, 'finished': STARTED},
                     'stop': {'transitional': STOPPING, 'finished': CONFIGURED},
                     'delete': {'transitional': DELETING, 'finished': DELETED}}
 
-    @classmethod
-    def determine_state(cls, op_name, is_transitional):
-        """ :returns the state the node should be in as a result of running the
-            operation on this node.
+    # region association proxies
 
-            e.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
-            the resulting state should either 'creating' (if the task just started) or 'created'
-            (if the task ended).
+    @declared_attr
+    def service_name(cls):
+        return relationship.association_proxy('service', 'name', type=':obj:`basestring`')
 
-            If the operation is not a standard tosca lifecycle operation, then we return None"""
+    @declared_attr
+    def node_template_name(cls):
+        return relationship.association_proxy('node_template', 'name', type=':obj:`basestring`')
 
-        state_type = 'transitional' if is_transitional else 'finished'
-        try:
-            return cls._op_to_state[op_name][state_type]
-        except KeyError:
-            return None
+    # endregion
 
-    def is_available(self):
-        return self.state not in (self.INITIAL, self.DELETED, self.ERROR)
+    # region one_to_one relationships
+
+    @declared_attr
+    def host(cls): # pylint: disable=method-hidden
+        """
+        Node in which we are hosted (can be ``None``).
+
+        Normally the host node is found by following the relationship graph (relationships with
+        ``host`` roles) to final nodes (with ``host`` roles).
+
+        :type: :class:`Node`
+        """
+        return relationship.one_to_one_self(cls, 'host_fk')
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def tasks(cls):
+        """
+        Associated tasks.
+
+        :type: [:class:`Task`]
+        """
+        return relationship.one_to_many(cls, 'task')
+
+    @declared_attr
+    def interfaces(cls):
+        """
+        Associated interfaces.
+
+        :type: {:obj:`basestring`: :class:`Interface`}
+        """
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    @declared_attr
+    def attributes(cls):
+        """
+        Associated mutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Attribute`}
+        """
+        return relationship.one_to_many(cls, 'attribute', dict_key='name')
+
+    @declared_attr
+    def artifacts(cls):
+        """
+        Associated artifacts.
+
+        :type: {:obj:`basestring`: :class:`Artifact`}
+        """
+        return relationship.one_to_many(cls, 'artifact', dict_key='name')
+
+    @declared_attr
+    def capabilities(cls):
+        """
+        Associated exposed capabilities.
+
+        :type: {:obj:`basestring`: :class:`Capability`}
+        """
+        return relationship.one_to_many(cls, 'capability', dict_key='name')
+
+    @declared_attr
+    def outbound_relationships(cls):
+        """
+        Relationships to other nodes.
+
+        :type: [:class:`Relationship`]
+        """
+        return relationship.one_to_many(
+            cls, 'relationship', other_fk='source_node_fk', back_populates='source_node',
+            rel_kwargs=dict(
+                order_by='Relationship.source_position',
+                collection_class=ordering_list('source_position', count_from=0)
+            )
+        )
+
+    @declared_attr
+    def inbound_relationships(cls):
+        """
+        Relationships from other nodes.
+
+        :type: [:class:`Relationship`]
+        """
+        return relationship.one_to_many(
+            cls, 'relationship', other_fk='target_node_fk', back_populates='target_node',
+            rel_kwargs=dict(
+                order_by='Relationship.target_position',
+                collection_class=ordering_list('target_position', count_from=0)
+            )
+        )
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        """
+        Containing service.
+
+        :type: :class:`Service`
+        """
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def node_template(cls):
+        """
+        Source node template (can be ``None``).
+
+        :type: :class:`NodeTemplate`
+        """
+        return relationship.many_to_one(cls, 'node_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Node type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
 
     # region foreign_keys
 
@@ -432,97 +569,45 @@ class NodeBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    @declared_attr
-    def service_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('service', 'name')
+    :type: :obj:`basestring`
+    """)
 
-    @declared_attr
-    def node_template_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('node_template', 'name')
+    state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL, doc="""
+    TOSCA state.
 
-    # endregion
+    :type: :obj:`basestring`
+    """)
 
-    # region one_to_one relationships
+    version = Column(Integer, default=1, doc="""
+    Used by :mod:`aria.storage.instrumentation`.
 
-    @declared_attr
-    def host(cls): # pylint: disable=method-hidden
-        return relationship.one_to_one_self(cls, 'host_fk')
-
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def tasks(cls):
-        return relationship.one_to_many(cls, 'task')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
-
-    @declared_attr
-    def attributes(cls):
-        return relationship.one_to_many(cls, 'attribute', dict_key='name')
-
-    @declared_attr
-    def artifacts(cls):
-        return relationship.one_to_many(cls, 'artifact', dict_key='name')
-
-    @declared_attr
-    def capabilities(cls):
-        return relationship.one_to_many(cls, 'capability', dict_key='name')
-
-    @declared_attr
-    def outbound_relationships(cls):
-        return relationship.one_to_many(
-            cls, 'relationship', other_fk='source_node_fk', back_populates='source_node',
-            rel_kwargs=dict(
-                order_by='Relationship.source_position',
-                collection_class=ordering_list('source_position', count_from=0)
-            )
-        )
-
-    @declared_attr
-    def inbound_relationships(cls):
-        return relationship.one_to_many(
-            cls, 'relationship', other_fk='target_node_fk', back_populates='target_node',
-            rel_kwargs=dict(
-                order_by='Relationship.target_position',
-                collection_class=ordering_list('target_position', count_from=0)
-            )
-        )
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service')
-
-    @declared_attr
-    def node_template(cls):
-        return relationship.many_to_one(cls, 'node_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    description = Column(Text)
-    state = Column(Enum(*STATES, name='node_state'), nullable=False, default=INITIAL)
-    version = Column(Integer, default=1)
+    :type: :obj:`int`
+    """)
 
     __mapper_args__ = {'version_id_col': version} # Enable SQLAlchemy automatic version counting
+
+    @classmethod
+    def determine_state(cls, op_name, is_transitional):
+        """ :returns the state the node should be in as a result of running the
+            operation on this node.
+
+            e.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
+            the resulting state should either 'creating' (if the task just started) or 'created'
+            (if the task ended).
+
+            If the operation is not a standard tosca lifecycle operation, then we return None"""
+
+        state_type = 'transitional' if is_transitional else 'finished'
+        try:
+            return cls._OP_TO_STATE[op_name][state_type]
+        except KeyError:
+            return None
+
+    def is_available(self):
+        return self.state not in (self.INITIAL, self.DELETED, self.ERROR)
 
     @property
     def host_address(self):
@@ -698,31 +783,90 @@ class NodeBase(InstanceModelMixin):
 
 class GroupBase(InstanceModelMixin):
     """
-    Usually an instance of a :class:`GroupTemplate`.
+    Typed logical container for zero or more :class:`Node` instances.
 
-    :ivar name: Name (unique for this service)
-    :vartype name: basestring
-    :ivar group_template: Template from which this group was instantiated (optional)
-    :vartype group_template: :class:`GroupTemplate`
-    :ivar type: Group type
-    :vartype type: :class:`Type`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar nodes: Members of this group
-    :vartype nodes: [:class:`Node`]
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar interfaces: Bundles of operations
-    :vartype interfaces: {basestring: :class:`Interface`}
-    :ivar service: Containing service
-    :vartype service: :class:`Service`
-    :ivar policies: Policies enacted on this group
-    :vartype policies: [:class:`Policy`]
+    Usually an instance of a :class:`GroupTemplate`.
     """
 
     __tablename__ = 'group'
 
-    __private_fields__ = ['type_fk', 'service_fk', 'group_template_fk']
+    __private_fields__ = ('type_fk',
+                          'service_fk',
+                          'group_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    @declared_attr
+    def interfaces(cls):
+        """
+        Associated interfaces.
+
+        :type: {:obj:`basestring`: :class:`Interface`}
+        """
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        """
+        Containing service.
+
+        :type: :class:`Service`
+        """
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def group_template(cls):
+        """
+        Source group template (can be ``None``).
+
+        :type: :class:`GroupTemplate`
+        """
+        return relationship.many_to_one(cls, 'group_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Group type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def nodes(cls):
+        """
+        Member nodes.
+
+        :type: [:class:`Node`]
+        """
+        return relationship.many_to_many(cls, 'node')
+
+    # endregion
 
     # region foreign_keys
 
@@ -743,51 +887,11 @@ class GroupBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service')
-
-    @declared_attr
-    def group_template(cls):
-        return relationship.many_to_one(cls, 'group_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.many_to_many(cls, 'node')
-
-    # endregion
-
-    description = Column(Text)
+    :type: :obj:`basestring`
+    """)
 
     def configure_operations(self):
         for interface in self.interfaces.itervalues():
@@ -824,29 +928,91 @@ class GroupBase(InstanceModelMixin):
 
 class PolicyBase(InstanceModelMixin):
     """
-    Usually an instance of a :class:`PolicyTemplate`.
+    Typed set of orchestration hints applied to zero or more :class:`Node` or :class:`Group`
+    instances.
 
-    :ivar name: Name (unique for this service)
-    :vartype name: basestring
-    :ivar policy_template: Template from which this policy was instantiated (optional)
-    :vartype policy_template: :class:`PolicyTemplate`
-    :ivar type: Policy type
-    :vartype type: :class:`Type`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar nodes: Policy will be enacted on all these nodes
-    :vartype nodes: [:class:`Node`]
-    :ivar groups: Policy will be enacted on all nodes in these groups
-    :vartype groups: [:class:`Group`]
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar service: Containing service
-    :vartype service: :class:`Service`
+    Usually an instance of a :class:`PolicyTemplate`.
     """
 
     __tablename__ = 'policy'
 
-    __private_fields__ = ['type_fk', 'service_fk', 'policy_template_fk']
+    __private_fields__ = ('type_fk',
+                          'service_fk',
+                          'policy_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        """
+        Containing service.
+
+        :type: :class:`Service`
+        """
+        return relationship.many_to_one(cls, 'service')
+
+    @declared_attr
+    def policy_template(cls):
+        """
+        Source policy template (can be ``None``).
+
+        :type: :class:`PolicyTemplate`
+        """
+        return relationship.many_to_one(cls, 'policy_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Group type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region many_to_many relationships
+
+    @declared_attr
+    def nodes(cls):
+        """
+        Policy is enacted on these nodes.
+
+        :type: {:obj:`basestring`: :class:`Node`}
+        """
+        return relationship.many_to_many(cls, 'node')
+
+    @declared_attr
+    def groups(cls):
+        """
+        Policy is enacted on nodes in these groups.
+
+        :type: {:obj:`basestring`: :class:`Group`}
+        """
+        return relationship.many_to_many(cls, 'group')
+
+    # endregion
 
     # region foreign_keys
 
@@ -867,51 +1033,11 @@ class PolicyBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service')
-
-    @declared_attr
-    def policy_template(cls):
-        return relationship.many_to_one(cls, 'policy_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region many_to_many relationships
-
-    @declared_attr
-    def nodes(cls):
-        return relationship.many_to_many(cls, 'node')
-
-    @declared_attr
-    def groups(cls):
-        return relationship.many_to_many(cls, 'group')
-
-    # endregion
-
-    description = Column(Text)
+    :type: :obj:`basestring`
+    """)
 
     @property
     def as_raw(self):
@@ -946,38 +1072,15 @@ class PolicyBase(InstanceModelMixin):
 
 class SubstitutionBase(InstanceModelMixin):
     """
-    Used to substitute a single node for the entire deployment.
+    Exposes the entire service as a single node.
 
     Usually an instance of a :class:`SubstitutionTemplate`.
-
-    :ivar substitution_template: Template from which this substitution was instantiated (optional)
-    :vartype substitution_template: :class:`SubstitutionTemplate`
-    :ivar node_type: Exposed node type
-    :vartype node_type: :class:`Type`
-    :ivar mappings: Requirement and capability mappings
-    :vartype mappings: {basestring: :class:`SubstitutionTemplate`}
-    :ivar service: Containing service
-    :vartype service: :class:`Service`
     """
 
     __tablename__ = 'substitution'
 
-    __private_fields__ = ['node_type_fk',
-                          'substitution_template_fk']
-
-    # region foreign_keys
-
-    @declared_attr
-    def node_type_fk(cls):
-        """For Substitution many-to-one to Type"""
-        return relationship.foreign_key('type')
-
-    @declared_attr
-    def substitution_template_fk(cls):
-        """For Substitution many-to-one to SubstitutionTemplate"""
-        return relationship.foreign_key('substitution_template', nullable=True)
-
-    # endregion
+    __private_fields__ = ('node_type_fk',
+                          'substitution_template_fk')
 
     # region association proxies
 
@@ -991,6 +1094,11 @@ class SubstitutionBase(InstanceModelMixin):
 
     @declared_attr
     def mappings(cls):
+        """
+        Map requirement and capabilities to exposed node.
+
+        :type: {:obj:`basestring`: :class:`SubstitutionMapping`}
+        """
         return relationship.one_to_many(cls, 'substitution_mapping', dict_key='name')
 
     # endregion
@@ -999,15 +1107,44 @@ class SubstitutionBase(InstanceModelMixin):
 
     @declared_attr
     def service(cls):
+        """
+        Containing service.
+
+        :type: :class:`Service`
+        """
         return relationship.one_to_one(cls, 'service', back_populates=relationship.NO_BACK_POP)
 
     @declared_attr
     def substitution_template(cls):
+        """
+        Source substitution template (can be ``None``).
+
+        :type: :class:`SubstitutionTemplate`
+        """
         return relationship.many_to_one(cls, 'substitution_template')
 
     @declared_attr
     def node_type(cls):
+        """
+        Exposed node type.
+
+        :type: :class:`Type`
+        """
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region foreign_keys
+
+    @declared_attr
+    def node_type_fk(cls):
+        """For Substitution many-to-one to Type"""
+        return relationship.foreign_key('type')
+
+    @declared_attr
+    def substitution_template_fk(cls):
+        """For Substitution many-to-one to SubstitutionTemplate"""
+        return relationship.foreign_key('substitution_template', nullable=True)
 
     # endregion
 
@@ -1033,30 +1170,76 @@ class SubstitutionBase(InstanceModelMixin):
 
 class SubstitutionMappingBase(InstanceModelMixin):
     """
-    Used by :class:`Substitution` to map a capability or a requirement to a node.
+    Used by :class:`Substitution` to map a capability or a requirement to the exposed node.
 
-    Only one of `capability_template` and `requirement_template` can be set.
+    The :attr:`name` field should match the capability or requirement template name on the exposed
+    node's type.
 
-    Usually an instance of a :class:`SubstitutionTemplate`.
+    Only one of :attr:`capability` and :attr:`requirement_template` can be set. If the latter is
+    set, then :attr:`node` must also be set.
 
-    :ivar name: Exposed capability or requirement name
-    :vartype name: basestring
-    :ivar node: Node
-    :vartype node: :class:`Node`
-    :ivar capability: Capability in the node
-    :vartype capability: :class:`Capability`
-    :ivar requirement_template: Requirement template in the node template
-    :vartype requirement_template: :class:`RequirementTemplate`
-    :ivar substitution: Containing substitution
-    :vartype substitution: :class:`Substitution`
+    Usually an instance of a :class:`SubstitutionMappingTemplate`.
     """
 
     __tablename__ = 'substitution_mapping'
 
-    __private_fields__ = ['substitution_fk',
-                          'node_fk',
+    __private_fields__ = ('substitution_fk',
                           'capability_fk',
-                          'requirement_template_fk']
+                          'requirement_template_fk',
+                          'node_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def capability(cls):
+        """
+        Capability to expose (can be ``None``).
+
+        :type: :class:`Capability`
+        """
+        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def requirement_template(cls):
+        """
+        Requirement template to expose (can be ``None``).
+
+        :type: :class:`RequirementTemplate`
+        """
+        return relationship.one_to_one(cls, 'requirement_template',
+                                       back_populates=relationship.NO_BACK_POP)
+
+    @declared_attr
+    def node(cls):
+        """
+        Node for which to expose :attr:`requirement_template` (can be ``None``).
+
+        :type: :class:`Node`
+        """
+        return relationship.one_to_one(cls, 'node', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def substitution(cls):
+        """
+        Containing substitution.
+
+        :type: :class:`Substitution`
+        """
+        return relationship.many_to_one(cls, 'substitution', back_populates='mappings')
+
+    # endregion
 
     # region foreign keys
 
@@ -1066,52 +1249,19 @@ class SubstitutionMappingBase(InstanceModelMixin):
         return relationship.foreign_key('substitution')
 
     @declared_attr
-    def node_fk(cls):
-        """For Substitution one-to-one to NodeTemplate"""
-        return relationship.foreign_key('node')
-
-    @declared_attr
     def capability_fk(cls):
         """For Substitution one-to-one to Capability"""
         return relationship.foreign_key('capability', nullable=True)
 
     @declared_attr
+    def node_fk(cls):
+        """For Substitution one-to-one to Node"""
+        return relationship.foreign_key('node', nullable=True)
+
+    @declared_attr
     def requirement_template_fk(cls):
         """For Substitution one-to-one to RequirementTemplate"""
         return relationship.foreign_key('requirement_template', nullable=True)
-
-    # endregion
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    @declared_attr
-    def substitution(cls):
-        return relationship.many_to_one(cls, 'substitution', back_populates='mappings')
-
-    @declared_attr
-    def node(cls):
-        return relationship.one_to_one(cls, 'node', back_populates=relationship.NO_BACK_POP)
-
-    @declared_attr
-    def capability(cls):
-        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
-
-    @declared_attr
-    def requirement_template(cls):
-        return relationship.one_to_one(
-            cls, 'requirement_template', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region one_to_many relationships
-
-    # endregion
-
-    # region many_to_one relationships
 
     # endregion
 
@@ -1134,56 +1284,143 @@ class SubstitutionMappingBase(InstanceModelMixin):
 
     def dump(self):
         context = ConsumptionContext.get_thread_local()
-        console.puts('{0} -> {1}.{2}'.format(
-            context.style.node(self.name),
-            context.style.node(self.node.name),
-            context.style.node(self.capability.name
-                               if self.capability
-                               else self.requirement_template.name)))
+        if self.capability is not None:
+            console.puts('{0} -> {1}.{2}'.format(
+                context.style.node(self.name),
+                context.style.node(self.capability.node.name),
+                context.style.node(self.capability.name)))
+        else:
+            console.puts('{0} -> {1}.{2}'.format(
+                context.style.node(self.name),
+                context.style.node(self.node.name),
+                context.style.node(self.requirement_template.name)))
 
 
 class RelationshipBase(InstanceModelMixin):
     """
-    Connects :class:`Node` to a capability in another node.
+    Optionally-typed edge in the service topology, connecting a :class:`Node` to a
+    :class:`Capability` of another node.
 
-    Might be an instance of a :class:`RelationshipTemplate`.
-
-    :ivar name: Name (usually the name of the requirement at the source node template)
-    :vartype name: basestring
-    :ivar relationship_template: Template from which this relationship was instantiated (optional)
-    :vartype relationship_template: :class:`RelationshipTemplate`
-    :ivar requirement_template: Template from which this relationship was instantiated (optional)
-    :vartype requirement_template: :class:`RequirementTemplate`
-    :ivar type: Relationship type
-    :vartype type: :class:`Type`
-    :ivar target_capability: Capability at the target node (optional)
-    :vartype target_capability: :class:`Capability`
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar interfaces: Bundles of operations
-    :vartype interfaces: {basestring: :class:`Interfaces`}
-    :ivar source_position: The position of the relationship in the outbound relationships.
-    :vartype source_position: int
-    :ivar target_position: The position of the relationship in the inbound relationships.
-    :vartype target_position: int
-    :ivar source_node: Source node
-    :vartype source_node: :class:`Node`
-    :ivar target_node: Target node
-    :vartype target_node: :class:`Node`
-    :ivar tasks: Tasks for this relationship
-    :vartype tasks: [:class:`Task`]
+    Might be an instance of :class:`RelationshipTemplate` and/or :class:`RequirementTemplate`.
     """
 
     __tablename__ = 'relationship'
 
-    __private_fields__ = ['type_fk',
+    __private_fields__ = ('type_fk',
                           'source_node_fk',
                           'target_node_fk',
                           'target_capability_fk',
                           'requirement_template_fk',
                           'relationship_template_fk',
                           'target_position',
-                          'source_position']
+                          'source_position')
+
+    # region association proxies
+
+    @declared_attr
+    def source_node_name(cls):
+        return relationship.association_proxy('source_node', 'name')
+
+    @declared_attr
+    def target_node_name(cls):
+        return relationship.association_proxy('target_node', 'name')
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def target_capability(cls):
+        """
+        Target capability.
+
+        :type: :class:`Capability`
+        """
+        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def tasks(cls):
+        """
+        Associated tasks.
+
+        :type: [:class:`Task`]
+        """
+        return relationship.one_to_many(cls, 'task')
+
+    @declared_attr
+    def interfaces(cls):
+        """
+        Associated interfaces.
+
+        :type: {:obj:`basestring`: :class:`Interface`}
+        """
+        return relationship.one_to_many(cls, 'interface', dict_key='name')
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def source_node(cls):
+        """
+        Source node.
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(
+            cls, 'node', fk='source_node_fk', back_populates='outbound_relationships')
+
+    @declared_attr
+    def target_node(cls):
+        """
+        Target node.
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(
+            cls, 'node', fk='target_node_fk', back_populates='inbound_relationships')
+
+    @declared_attr
+    def relationship_template(cls):
+        """
+        Source relationship template (can be ``None``).
+
+        :type: :class:`RelationshipTemplate`
+        """
+        return relationship.many_to_one(cls, 'relationship_template')
+
+    @declared_attr
+    def requirement_template(cls):
+        """
+        Source requirement template (can be ``None``).
+
+        :type: :class:`RequirementTemplate`
+        """
+        return relationship.many_to_one(cls, 'requirement_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Relationship type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
 
     # region foreign keys
 
@@ -1219,72 +1456,17 @@ class RelationshipBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    source_position = Column(Integer, doc="""
+    Position at source.
 
-    @declared_attr
-    def source_node_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('source_node', 'name')
+    :type: :obj:`int`
+    """)
 
-    @declared_attr
-    def target_node_name(cls):
-        """Required for use by SQLAlchemy queries"""
-        return association_proxy('target_node', 'name')
+    target_position = Column(Integer, doc="""
+    Position at target.
 
-    # endregion
-
-    # region one_to_one relationships
-
-    @declared_attr
-    def target_capability(cls):
-        return relationship.one_to_one(cls, 'capability', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def tasks(cls):
-        return relationship.one_to_many(cls, 'task')
-
-    @declared_attr
-    def interfaces(cls):
-        return relationship.one_to_many(cls, 'interface', dict_key='name')
-
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def source_node(cls):
-        return relationship.many_to_one(
-            cls, 'node', fk='source_node_fk', back_populates='outbound_relationships')
-
-    @declared_attr
-    def target_node(cls):
-        return relationship.many_to_one(
-            cls, 'node', fk='target_node_fk', back_populates='inbound_relationships')
-
-    @declared_attr
-    def relationship_template(cls):
-        return relationship.many_to_one(cls, 'relationship_template')
-
-    @declared_attr
-    def requirement_template(cls):
-        return relationship.many_to_one(cls, 'requirement_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    source_position = Column(Integer)
-    target_position = Column(Integer)
+    :type: :obj:`int`
+    """)
 
     def configure_operations(self):
         for interface in self.interfaces.itervalues():
@@ -1332,37 +1514,69 @@ class RelationshipBase(InstanceModelMixin):
 
 class CapabilityBase(InstanceModelMixin):
     """
-    A capability of a :class:`Node`.
+    Typed attachment serving two purposes: to provide extra properties and attributes to a
+    :class:`Node`, and to expose targets for :class:`Relationship` instances from other nodes.
 
     Usually an instance of a :class:`CapabilityTemplate`.
-
-    :ivar name: Name (unique for the node)
-    :vartype name: basestring
-    :ivar capability_template: Template from which this capability was instantiated (optional)
-    :vartype capability_template: :class:`capabilityTemplate`
-    :ivar type: Capability type
-    :vartype type: :class:`Type`
-    :ivar min_occurrences: Minimum number of requirement matches required
-    :vartype min_occurrences: int
-    :ivar max_occurrences: Maximum number of requirement matches allowed
-    :vartype min_occurrences: int
-    :ivar occurrences: Actual number of requirement matches
-    :vartype occurrences: int
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar node: Containing node
-    :vartype node: :class:`Node`
-    :ivar relationship: Available when we are the target of a relationship
-    :vartype relationship: :class:`Relationship`
-    :ivar substitution_mapping: Our contribution to service substitution
-    :vartype substitution_mapping: :class:`SubstitutionMapping`
     """
 
     __tablename__ = 'capability'
 
-    __private_fields__ = ['capability_fk',
+    __private_fields__ = ('capability_fk',
                           'node_fk',
-                          'capability_template_fk']
+                          'capability_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node(cls):
+        """
+        Containing node.
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def capability_template(cls):
+        """
+        Source capability template (can be ``None``).
+
+        :type: :class:`CapabilityTemplate`
+        """
+        return relationship.many_to_one(cls, 'capability_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Capability type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
 
     # region foreign_keys
 
@@ -1383,41 +1597,23 @@ class CapabilityBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    min_occurrences = Column(Integer, default=None, doc="""
+    Minimum number of requirement matches required.
 
-    # endregion
+    :type: :obj:`int`
+    """)
 
-    # region one_to_one relationships
+    max_occurrences = Column(Integer, default=None, doc="""
+    Maximum number of requirement matches allowed.
 
-    # endregion
+    :type: :obj:`int`
+    """)
 
-    # region one_to_many relationships
+    occurrences = Column(Integer, default=0, doc="""
+    Number of requirement matches.
 
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def node(cls):
-        return relationship.many_to_one(cls, 'node')
-
-    @declared_attr
-    def capability_template(cls):
-        return relationship.many_to_one(cls, 'capability_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    min_occurrences = Column(Integer, default=None)
-    max_occurrences = Column(Integer, default=None)
-    occurrences = Column(Integer, default=0)
+    :type: :obj:`int`
+    """)
 
     @property
     def has_enough_relationships(self):
@@ -1461,37 +1657,99 @@ class CapabilityBase(InstanceModelMixin):
 
 class InterfaceBase(InstanceModelMixin):
     """
-    A typed set of :class:`Operation`.
+    Typed bundle of :class:`Operation` instances.
 
-    Usually an instance of :class:`InterfaceTemplate`.
+    Can be associated with a :class:`Node`, a :class:`Group`, or a :class:`Relationship`.
 
-    :ivar name: Name (unique for the node, group, or relationship)
-    :vartype name: basestring
-    :ivar interface_template: Template from which this interface was instantiated (optional)
-    :vartype interface_template: :class:`InterfaceTemplate`
-    :ivar type: Interface type
-    :vartype type: :class:`Type`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar inputs: Inputs that can be used by all operations in the interface
-    :vartype inputs: {basestring: :class:`Input`}
-    :ivar operations: Operations
-    :vartype operations: {basestring: :class:`Operation`}
-    :ivar node: Containing node
-    :vartype node: :class:`Node`
-    :ivar group: Containing group
-    :vartype group: :class:`Group`
-    :ivar relationship: Containing relationship
-    :vartype relationship: :class:`Relationship`
+    Usually an instance of a :class:`InterfaceTemplate`.
     """
 
     __tablename__ = 'interface'
 
-    __private_fields__ = ['type_fk',
+    __private_fields__ = ('type_fk',
                           'node_fk',
                           'group_fk',
                           'relationship_fk',
-                          'interface_template_fk']
+                          'interface_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def inputs(cls):
+        """
+        Parameters for all operations of the interface.
+
+        :type: {:obj:`basestring`: :class:`Input`}
+        """
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
+    def operations(cls):
+        """
+        Associated operations.
+
+        :type: {:obj:`basestring`: :class:`Operation`}
+        """
+        return relationship.one_to_many(cls, 'operation', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node(cls):
+        """
+        Containing node (can be ``None``).
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def group(cls):
+        """
+        Containing group (can be ``None``).
+
+        :type: :class:`Group`
+        """
+        return relationship.many_to_one(cls, 'group')
+
+    @declared_attr
+    def relationship(cls):
+        """
+        Containing relationship (can be ``None``).
+
+        :type: :class:`Relationship`
+        """
+        return relationship.many_to_one(cls, 'relationship')
+
+    @declared_attr
+    def interface_template(cls):
+        """
+        Source interface template (can be ``None``).
+
+        :type: :class:`InterfaceTemplate`
+        """
+        return relationship.many_to_one(cls, 'interface_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Interface type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
 
     # region foreign_keys
 
@@ -1522,51 +1780,11 @@ class InterfaceBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
-    # region one_to_many relationships
-
-    @declared_attr
-    def inputs(cls):
-        return relationship.one_to_many(cls, 'input', dict_key='name')
-
-    @declared_attr
-    def operations(cls):
-        return relationship.one_to_many(cls, 'operation', dict_key='name')
-
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def node(cls):
-        return relationship.many_to_one(cls, 'node')
-
-    @declared_attr
-    def relationship(cls):
-        return relationship.many_to_one(cls, 'relationship')
-
-    @declared_attr
-    def group(cls):
-        return relationship.many_to_one(cls, 'group')
-
-    @declared_attr
-    def interface_template(cls):
-        return relationship.many_to_one(cls, 'interface_template')
-
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    description = Column(Text)
+    :type: :obj:`basestring`
+    """)
 
     def configure_operations(self):
         for operation in self.operations.itervalues():
@@ -1602,52 +1820,112 @@ class InterfaceBase(InstanceModelMixin):
 
 class OperationBase(InstanceModelMixin):
     """
-    An operation in a :class:`Interface`.
+    Entry points to Python functions called as part of a workflow execution.
+
+    The operation signature (its :attr:`name` and its :attr:`inputs`'s names and types) is declared
+    by the type of the :class:`Interface`, however each operation can provide its own
+    :attr:`implementation` as well as additional inputs.
+
+    The Python :attr:`function` is usually provided by an associated :class:`Plugin`. Its purpose is
+    to execute the implementation, providing it with both the operation's and interface's inputs.
+    The :attr:`arguments` of the function should be set according to the specific signature of the
+    function.
+
+    Additionally, :attr:`configuration` parameters can be provided as hints to configure the
+    function's behavior. For example, they can be used to configure remote execution credentials.
 
     Might be an instance of :class:`OperationTemplate`.
-
-    :ivar name: Name (unique for the interface or service)
-    :vartype name: basestring
-    :ivar operation_template: Template from which this operation was instantiated (optional)
-    :vartype operation_template: :class:`OperationTemplate`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar relationship_edge: When true specified that the operation is on the relationship's
-                             target edge instead of its source (only used by relationship
-                             operations)
-    :vartype relationship_edge: bool
-    :ivar implementation: Implementation (interpreted by the plugin)
-    :vartype implementation: basestring
-    :ivar dependencies: Dependency strings (interpreted by the plugin)
-    :vartype dependencies: [basestring]
-    :ivar inputs: Input that can be used by this operation
-    :vartype inputs: {basestring: :class:`Input`}
-    :ivar plugin: Associated plugin
-    :vartype plugin: :class:`Plugin`
-    :ivar configurations: Configuration (interpreted by the plugin)
-    :vartype configurations: {basestring, :class:`Configuration`}
-    :ivar function: Name of the operation function
-    :vartype function: basestring
-    :ivar arguments: Arguments to send to the operation function
-    :vartype arguments: {basestring: :class:`Argument`}
-    :ivar executor: Name of executor to run the operation with
-    :vartype executor: basestring
-    :ivar max_attempts: Maximum number of attempts allowed in case of failure
-    :vartype max_attempts: int
-    :ivar retry_interval: Interval between retries (in seconds)
-    :vartype retry_interval: int
-    :ivar interface: Containing interface
-    :vartype interface: :class:`Interface`
-    :ivar service: Containing service
-    :vartype service: :class:`Service`
     """
 
     __tablename__ = 'operation'
 
-    __private_fields__ = ['service_fk',
+    __private_fields__ = ('service_fk',
                           'interface_fk',
                           'plugin_fk',
-                          'operation_template_fk']
+                          'operation_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    @declared_attr
+    def plugin(cls):
+        """
+        Associated plugin.
+
+        :type: :class:`Plugin`
+        """
+        return relationship.one_to_one(cls, 'plugin', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def inputs(cls):
+        """
+        Parameters provided to the :attr:`implementation`.
+
+        :type: {:obj:`basestring`: :class:`Input`}
+        """
+        return relationship.one_to_many(cls, 'input', dict_key='name')
+
+    @declared_attr
+    def arguments(cls):
+        """
+        Arguments sent to the Python :attr:`function`.
+
+        :type: {:obj:`basestring`: :class:`Argument`}
+        """
+        return relationship.one_to_many(cls, 'argument', dict_key='name')
+
+    @declared_attr
+    def configurations(cls):
+        """
+        Configuration parameters for the Python :attr:`function`.
+
+        :type: {:obj:`basestring`: :class:`Configuration`}
+        """
+        return relationship.one_to_many(cls, 'configuration', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service(cls):
+        """
+        Containing service (can be ``None``). For workflow operations.
+
+        :type: :class:`Service`
+        """
+        return relationship.many_to_one(cls, 'service', back_populates='workflows')
+
+    @declared_attr
+    def interface(cls):
+        """
+        Containing interface (can be ``None``).
+
+        :type: :class:`Interface`
+        """
+        return relationship.many_to_one(cls, 'interface')
+
+    @declared_attr
+    def operation_template(cls):
+        """
+        Source operation template (can be ``None``).
+
+        :type: :class:`OperationTemplate`
+        """
+        return relationship.many_to_one(cls, 'operation_template')
+
+    # endregion
+
+    # region many_to_many relationships
+
+    # endregion
 
     # region foreign_keys
 
@@ -1673,62 +1951,54 @@ class OperationBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    # endregion
+    :type: :obj:`basestring`
+    """)
 
-    # region one_to_one relationships
+    relationship_edge = Column(Boolean, doc="""
+    When ``True`` specifies that the operation is on the relationship's target edge; ``False`` is
+    the source edge (only used by operations on relationships)
 
-    @declared_attr
-    def plugin(cls):
-        return relationship.one_to_one(cls, 'plugin', back_populates=relationship.NO_BACK_POP)
+    :type: :obj:`bool`
+    """)
 
-    # endregion
+    implementation = Column(Text, doc="""
+    Implementation (usually the name of an artifact).
 
-    # region one_to_many relationships
+    :type: :obj:`basestring`
+    """)
 
-    @declared_attr
-    def inputs(cls):
-        return relationship.one_to_many(cls, 'input', dict_key='name')
+    dependencies = Column(modeling_types.StrictList(item_cls=basestring), doc="""
+    Dependencies (usually names of artifacts).
 
-    @declared_attr
-    def configurations(cls):
-        return relationship.one_to_many(cls, 'configuration', dict_key='name')
+    :type: [:obj:`basestring`]
+    """)
 
-    @declared_attr
-    def arguments(cls):
-        return relationship.one_to_many(cls, 'argument', dict_key='name')
+    function = Column(Text, doc="""
+    Full path to Python function.
 
-    # endregion
+    :type: :obj:`basestring`
+    """)
 
-    # region many_to_one relationships
+    executor = Column(Text, doc="""
+    Name of executor.
 
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service', back_populates='workflows')
+    :type: :obj:`basestring`
+    """)
 
-    @declared_attr
-    def interface(cls):
-        return relationship.many_to_one(cls, 'interface')
+    max_attempts = Column(Integer, doc="""
+    Maximum number of attempts allowed in case of task failure.
 
-    @declared_attr
-    def operation_template(cls):
-        return relationship.many_to_one(cls, 'operation_template')
+    :type: :obj:`int`
+    """)
 
-    # endregion
+    retry_interval = Column(Integer, doc="""
+    Interval between task retry attemps (in seconds).
 
-    # region many_to_many relationships
-
-    # endregion
-
-    description = Column(Text)
-    relationship_edge = Column(Boolean)
-    implementation = Column(Text)
-    dependencies = Column(modeling_types.StrictList(item_cls=basestring))
-    function = Column(Text)
-    executor = Column(Text)
-    max_attempts = Column(Integer)
-    retry_interval = Column(Integer)
+    :type: :obj:`float`
+    """)
 
     def configure(self):
         if (self.implementation is None) and (self.function is None):
@@ -1821,37 +2091,68 @@ class OperationBase(InstanceModelMixin):
 
 class ArtifactBase(InstanceModelMixin):
     """
-    A file associated with a :class:`Node`.
+    Typed file, either provided in a CSAR or downloaded from a repository.
 
     Usually an instance of :class:`ArtifactTemplate`.
-
-    :ivar name: Name (unique for the node)
-    :vartype name: basestring
-    :ivar artifact_template: Template from which this artifact was instantiated (optional)
-    :vartype artifact_template: :class:`ArtifactTemplate`
-    :ivar type: Artifact type
-    :vartype type: :class:`Type`
-    :ivar description: Human-readable description
-    :vartype description: string
-    :ivar source_path: Source path (CSAR or repository)
-    :vartype source_path: basestring
-    :ivar target_path: Path at destination machine
-    :vartype target_path: basestring
-    :ivar repository_url: Repository URL
-    :vartype repository_path: basestring
-    :ivar repository_credential: Credentials for accessing the repository
-    :vartype repository_credential: {basestring: basestring}
-    :ivar properties: Associated parameters
-    :vartype properties: {basestring: :class:`Property`}
-    :ivar node: Containing node
-    :vartype node: :class:`Node`
     """
 
     __tablename__ = 'artifact'
 
-    __private_fields__ = ['type_fk',
+    __private_fields__ = ('type_fk',
                           'node_fk',
-                          'artifact_template_fk']
+                          'artifact_template_fk')
+
+    # region association proxies
+
+    # endregion
+
+    # region one_to_one relationships
+
+    # endregion
+
+    # region one_to_many relationships
+
+    @declared_attr
+    def properties(cls):
+        """
+        Associated immutable parameters.
+
+        :type: {:obj:`basestring`: :class:`Property`}
+        """
+        return relationship.one_to_many(cls, 'property', dict_key='name')
+
+    # endregion
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node(cls):
+        """
+        Containing node.
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def artifact_template(cls):
+        """
+        Source artifact template (can be ``None``).
+
+        :type: :class:`ArtifactTemplate`
+        """
+        return relationship.many_to_one(cls, 'artifact_template')
+
+    @declared_attr
+    def type(cls):
+        """
+        Artifact type.
+
+        :type: :class:`Type`
+        """
+        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
 
     # region foreign_keys
 
@@ -1872,41 +2173,35 @@ class ArtifactBase(InstanceModelMixin):
 
     # endregion
 
-    # region association proxies
+    description = Column(Text, doc="""
+    Human-readable description.
 
-    # endregion
+    :type: :obj:`basestring`
+    """)
 
-    # region one_to_one relationships
+    source_path = Column(Text, doc="""
+    Source path (in CSAR or repository).
 
-    # endregion
+    :type: :obj:`basestring`
+    """)
 
-    # region one_to_many relationships
+    target_path = Column(Text, doc="""
+    Path at which to install at destination.
 
-    @declared_attr
-    def properties(cls):
-        return relationship.one_to_many(cls, 'property', dict_key='name')
+    :type: :obj:`basestring`
+    """)
 
-    # endregion
+    repository_url = Column(Text, doc="""
+    Repository URL.
 
-    # region many_to_one relationships
-    @declared_attr
-    def node(cls):
-        return relationship.many_to_one(cls, 'node')
+    :type: :obj:`basestring`
+    """)
 
-    @declared_attr
-    def artifact_template(cls):
-        return relationship.many_to_one(cls, 'artifact_template')
+    repository_credential = Column(modeling_types.StrictDict(basestring, basestring), doc="""
+    Credentials for accessing the repository.
 
-    @declared_attr
-    def type(cls):
-        return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
-    # endregion
-
-    description = Column(Text)
-    source_path = Column(Text)
-    target_path = Column(Text)
-    repository_url = Column(Text)
-    repository_credential = Column(modeling_types.StrictDict(basestring, basestring))
+    :type: {:obj:`basestring`, :obj:`basestring`}
+    """)
 
     @property
     def as_raw(self):

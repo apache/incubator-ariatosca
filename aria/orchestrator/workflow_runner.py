@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Workflow runner
+Running workflows.
 """
 
 import os
@@ -44,15 +44,16 @@ class WorkflowRunner(object):
         """
         Manages a single workflow execution on a given service.
 
-        :param workflow_name: Workflow name
-        :param service_id: Service ID
-        :param inputs: A key-value dict of inputs for the execution
-        :param model_storage: Model storage
-        :param resource_storage: Resource storage
-        :param plugin_manager: Plugin manager
-        :param executor: Executor for tasks. Defaults to a ProcessExecutor instance.
-        :param task_max_attempts: Maximum attempts of repeating each failing task
-        :param task_retry_interval: Retry interval in between retry attempts of a failing task
+        :param workflow_name: workflow name
+        :param service_id: service ID
+        :param inputs: key-value dict of inputs for the execution
+        :param model_storage: model storage API ("MAPI")
+        :param resource_storage: resource storage API ("RAPI")
+        :param plugin_manager: plugin manager
+        :param executor: executor for tasks; defaults to a
+         :class:`~aria.orchestrator.workflows.executor.process.ProcessExecutor` instance
+        :param task_max_attempts: maximum attempts of repeating each failing task
+        :param task_retry_interval: retry interval between retry attempts of a failing task
         """
 
         if not (execution_id or (workflow_name and service_id)):

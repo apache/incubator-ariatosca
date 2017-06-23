@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+UUID generation utilities.
+"""
+
 from __future__ import absolute_import  # so we can import standard 'uuid'
 
 from random import randrange
@@ -32,14 +36,14 @@ def generate_uuid(length=None, variant='base57'):
     """
     A random string with varying degrees of guarantee of universal uniqueness.
 
-    :param variant: options are:
-                    * 'base57' (the default) uses a mix of upper and lowercase alphanumerics
-                      ensuring no visually ambiguous characters; default length 22
-                    * 'alphanumeric' uses lowercase alphanumeric; default length 25
-                    * 'uuid' user lowercase hexadecimal in the classic UUID format, including
-                      dashes; length is always 36
-                    * 'hex' uses lowercase hexadecimal characters but has no guarantee of
-                      uniqueness; default length of 5
+    :param variant:
+     * ``base57`` (the default) uses a mix of upper and lowercase alphanumerics ensuring no visually
+       ambiguous characters; default length 22
+     * ``alphanumeric`` uses lowercase alphanumeric; default length 25
+     * ``uuid`` uses lowercase hexadecimal in the classic UUID format, including dashes; length is
+       always 36
+     * ``hex`` uses lowercase hexadecimal characters but has no guarantee of uniqueness; default
+       length of 5
     """
 
     if variant == 'base57':

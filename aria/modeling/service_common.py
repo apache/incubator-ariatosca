@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+ARIA modeling service common module
+"""
+
 # pylint: disable=no-self-argument, no-member, abstract-method
 
 from sqlalchemy import (
@@ -32,8 +36,33 @@ from . import relationship
 
 
 class OutputBase(ParameterMixin):
+    """
+    Output parameter or declaration for an output parameter.
+    """
 
     __tablename__ = 'output'
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def service_template(cls):
+        """
+        Containing service template (can be ``None``).
+
+        :type: :class:`ServiceTemplate`
+        """
+        return relationship.many_to_one(cls, 'service_template')
+
+    @declared_attr
+    def service(cls):
+        """
+        Containing service (can be ``None``).
+
+        :type: :class:`ServiceTemplate`
+        """
+        return relationship.many_to_one(cls, 'service')
+
+    # endregion
 
     # region foreign keys
 
@@ -47,22 +76,80 @@ class OutputBase(ParameterMixin):
 
     # endregion
 
+
+class InputBase(ParameterMixin):
+    """
+    Input parameter or declaration for an input parameter.
+    """
+
+    __tablename__ = 'input'
+
     # region many_to_one relationships
 
     @declared_attr
     def service_template(cls):
+        """
+        Containing service template (can be ``None``).
+
+        :type: :class:`ServiceTemplate`
+        """
         return relationship.many_to_one(cls, 'service_template')
 
     @declared_attr
     def service(cls):
+        """
+        Containing service (can be ``None``).
+
+        :type: :class:`Service`
+        """
         return relationship.many_to_one(cls, 'service')
 
+    @declared_attr
+    def interface(cls):
+        """
+        Containing interface (can be ``None``).
+
+        :type: :class:`Interface`
+        """
+        return relationship.many_to_one(cls, 'interface')
+
+    @declared_attr
+    def operation(cls):
+        """
+        Containing operation (can be ``None``).
+
+        :type: :class:`Operation`
+        """
+        return relationship.many_to_one(cls, 'operation')
+
+    @declared_attr
+    def interface_template(cls):
+        """
+        Containing interface template (can be ``None``).
+
+        :type: :class:`InterfaceTemplate`
+        """
+        return relationship.many_to_one(cls, 'interface_template')
+
+    @declared_attr
+    def operation_template(cls):
+        """
+        Containing operation template (can be ``None``).
+
+        :type: :class:`OperationTemplate`
+        """
+        return relationship.many_to_one(cls, 'operation_template')
+
+    @declared_attr
+    def execution(cls):
+        """
+        Containing execution (can be ``None``).
+
+        :type: :class:`Execution`
+        """
+        return relationship.many_to_one(cls, 'execution')
+
     # endregion
-
-
-class InputBase(ParameterMixin):
-
-    __tablename__ = 'input'
 
     # region foreign keys
 
@@ -100,42 +187,35 @@ class InputBase(ParameterMixin):
 
     # endregion
 
+
+class ConfigurationBase(ParameterMixin):
+    """
+    Configuration parameter.
+    """
+
+    __tablename__ = 'configuration'
+
     # region many_to_one relationships
 
     @declared_attr
-    def service_template(cls):
-        return relationship.many_to_one(cls, 'service_template')
-
-    @declared_attr
-    def service(cls):
-        return relationship.many_to_one(cls, 'service')
-
-    @declared_attr
-    def interface(cls):
-        return relationship.many_to_one(cls, 'interface')
-
-    @declared_attr
-    def operation(cls):
-        return relationship.many_to_one(cls, 'operation')
-
-    @declared_attr
-    def interface_template(cls):
-        return relationship.many_to_one(cls, 'interface_template')
-
-    @declared_attr
     def operation_template(cls):
+        """
+        Containing operation template (can be ``None``).
+
+        :type: :class:`OperationTemplate`
+        """
         return relationship.many_to_one(cls, 'operation_template')
 
     @declared_attr
-    def execution(cls):
-        return relationship.many_to_one(cls, 'execution')
+    def operation(cls):
+        """
+        Containing operation (can be ``None``).
+
+        :type: :class:`Operation`
+        """
+        return relationship.many_to_one(cls, 'operation')
 
     # endregion
-
-
-class ConfigurationBase(ParameterMixin):
-
-    __tablename__ = 'configuration'
 
     # region foreign keys
 
@@ -149,22 +229,125 @@ class ConfigurationBase(ParameterMixin):
 
     # endregion
 
+
+class PropertyBase(ParameterMixin):
+    """
+    Property parameter or declaration for a property parameter.
+    """
+
+    __tablename__ = 'property'
+
     # region many_to_one relationships
 
     @declared_attr
-    def operation_template(cls):
-        return relationship.many_to_one(cls, 'operation_template')
+    def node_template(cls):
+        """
+        Containing node template (can be ``None``).
+
+        :type: :class:`NodeTemplate`
+        """
+        return relationship.many_to_one(cls, 'node_template')
 
     @declared_attr
-    def operation(cls):
-        return relationship.many_to_one(cls, 'operation')
+    def group_template(cls):
+        """
+        Containing group template (can be ``None``).
+
+        :type: :class:`GroupTemplate`
+        """
+        return relationship.many_to_one(cls, 'group_template')
+
+    @declared_attr
+    def policy_template(cls):
+        """
+        Containing policy template (can be ``None``).
+
+        :type: :class:`PolicyTemplate`
+        """
+        return relationship.many_to_one(cls, 'policy_template')
+
+    @declared_attr
+    def relationship_template(cls):
+        """
+        Containing relationship template (can be ``None``).
+
+        :type: :class:`RelationshipTemplate`
+        """
+        return relationship.many_to_one(cls, 'relationship_template')
+
+    @declared_attr
+    def capability_template(cls):
+        """
+        Containing capability template (can be ``None``).
+
+        :type: :class:`CapabilityTemplate`
+        """
+        return relationship.many_to_one(cls, 'capability_template')
+
+    @declared_attr
+    def artifact_template(cls):
+        """
+        Containing artifact template (can be ``None``).
+
+        :type: :class:`ArtifactTemplate`
+        """
+        return relationship.many_to_one(cls, 'artifact_template')
+
+    @declared_attr
+    def node(cls):
+        """
+        Containing node (can be ``None``).
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(cls, 'node')
+
+    @declared_attr
+    def group(cls):
+        """
+        Containing group (can be ``None``).
+
+        :type: :class:`Group`
+        """
+        return relationship.many_to_one(cls, 'group')
+
+    @declared_attr
+    def policy(cls):
+        """
+        Containing policy (can be ``None``).
+
+        :type: :class:`Policy`
+        """
+        return relationship.many_to_one(cls, 'policy')
+
+    @declared_attr
+    def relationship(cls):
+        """
+        Containing relationship (can be ``None``).
+
+        :type: :class:`Relationship`
+        """
+        return relationship.many_to_one(cls, 'relationship')
+
+    @declared_attr
+    def capability(cls):
+        """
+        Containing capability (can be ``None``).
+
+        :type: :class:`Capability`
+        """
+        return relationship.many_to_one(cls, 'capability')
+
+    @declared_attr
+    def artifact(cls):
+        """
+        Containing artifact (can be ``None``).
+
+        :type: :class:`Artifact`
+        """
+        return relationship.many_to_one(cls, 'artifact')
 
     # endregion
-
-
-class PropertyBase(ParameterMixin):
-
-    __tablename__ = 'property'
 
     # region foreign keys
 
@@ -215,64 +398,38 @@ class PropertyBase(ParameterMixin):
     @declared_attr
     def artifact_fk(cls):
         return relationship.foreign_key('artifact', nullable=True)
-    # endregion
-
-    # region many_to_one relationships
-
-    @declared_attr
-    def node_template(cls):
-        return relationship.many_to_one(cls, 'node_template')
-
-    @declared_attr
-    def group_template(cls):
-        return relationship.many_to_one(cls, 'group_template')
-
-    @declared_attr
-    def policy_template(cls):
-        return relationship.many_to_one(cls, 'policy_template')
-
-    @declared_attr
-    def relationship_template(cls):
-        return relationship.many_to_one(cls, 'relationship_template')
-
-    @declared_attr
-    def capability_template(cls):
-        return relationship.many_to_one(cls, 'capability_template')
-
-    @declared_attr
-    def artifact_template(cls):
-        return relationship.many_to_one(cls, 'artifact_template')
-
-    @declared_attr
-    def node(cls):
-        return relationship.many_to_one(cls, 'node')
-
-    @declared_attr
-    def group(cls):
-        return relationship.many_to_one(cls, 'group')
-
-    @declared_attr
-    def policy(cls):
-        return relationship.many_to_one(cls, 'policy')
-
-    @declared_attr
-    def relationship(cls):
-        return relationship.many_to_one(cls, 'relationship')
-
-    @declared_attr
-    def capability(cls):
-        return relationship.many_to_one(cls, 'capability')
-
-    @declared_attr
-    def artifact(cls):
-        return relationship.many_to_one(cls, 'artifact')
 
     # endregion
 
 
 class AttributeBase(ParameterMixin):
+    """
+    Attribute parameter or declaration for an attribute parameter.
+    """
 
     __tablename__ = 'attribute'
+
+    # region many_to_one relationships
+
+    @declared_attr
+    def node_template(cls):
+        """
+        Containing node template (can be ``None``).
+
+        :type: :class:`NodeTemplate`
+        """
+        return relationship.many_to_one(cls, 'node_template')
+
+    @declared_attr
+    def node(cls):
+        """
+        Containing node (can be ``None``).
+
+        :type: :class:`Node`
+        """
+        return relationship.many_to_one(cls, 'node')
+
+    # endregion
 
     # region foreign keys
 
@@ -288,39 +445,51 @@ class AttributeBase(ParameterMixin):
 
     # endregion
 
-    # region many_to_one relationships
-
-    @declared_attr
-    def node_template(cls):
-        return relationship.many_to_one(cls, 'node_template')
-
-    @declared_attr
-    def node(cls):
-        return relationship.many_to_one(cls, 'node')
-
-    # endregion
-
 
 class TypeBase(InstanceModelMixin):
     """
-    Represents a type and its children.
+    Type and its children. Can serve as the root for a type hierarchy.
     """
 
     __tablename__ = 'type'
 
-    __private_fields__ = ['parent_type_fk']
+    __private_fields__ = ('parent_type_fk',)
 
     variant = Column(Text, nullable=False)
-    description = Column(Text)
+
+    description = Column(Text, doc="""
+    Human-readable description.
+
+    :type: :obj:`basestring`
+    """)
+
     _role = Column(Text, name='role')
+
+    # region one_to_one relationships
 
     @declared_attr
     def parent(cls):
+        """
+        Parent type (will be ``None`` for the root of a type hierarchy).
+
+        :type: :class:`Type`
+        """
         return relationship.one_to_one_self(cls, 'parent_type_fk')
+
+    # endregion
+
+    # region one_to_many relationships
 
     @declared_attr
     def children(cls):
+        """
+        Children.
+
+        :type: [:class:`Type`]
+        """
         return relationship.one_to_many(cls, other_fk='parent_type_fk', self=True)
+
+    # endregion
 
     # region foreign keys
 
@@ -402,8 +571,9 @@ class TypeBase(InstanceModelMixin):
     @property
     def hierarchy(self):
         """
-        Return the type hierarchy.
-        :return:
+        Type hierarchy as a list beginning with this type and ending in the root.
+
+        :type: [:class:`Type`]
         """
         return [self] + (self.parent.hierarchy if self.parent else [])
 
@@ -414,9 +584,9 @@ class MetadataBase(TemplateModelMixin):
 
     This model is used by both service template and service instance elements.
 
-    :ivar name: Name
+    :ivar name: name
     :vartype name: basestring
-    :ivar value: Value
+    :ivar value: value
     :vartype value: basestring
     """
 

@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ARIA documentation build configuration file.
+# ARIA TOSCA documentation build configuration file.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -48,7 +48,12 @@ with open('../VERSION') as f:
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.intersphinx',
+    'sphinx_click.ext'
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -67,9 +72,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'ARIA'
-copyright = u'2016, Apache Software Foundation' # @ReservedAssignment
-author = u'ARIA'
+project = u'ARIA TOSCA'
+copyright = u'2016-2017, Apache Software Foundation' # @ReservedAssignment
+author = u'Apache Software Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -152,7 +157,7 @@ html_theme = 'sphinx_rtd_theme'
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = u'ARIA v0.1.0'
+# html_title = u'ARIA TOSCA v0.1.0'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
@@ -252,7 +257,7 @@ html_static_path = ['_static']
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ARIAdoc'
+htmlhelp_basename = 'ARIATOSCAdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -278,7 +283,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'ARIA.tex', u'ARIA',
+    (master_doc, 'ARIATOSCA.tex', u'ARIA TOSCA',
      u'Apache Software Foundation', 'manual'),
 ]
 
@@ -314,7 +319,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'aria', u'ARIA',
+    (master_doc, 'aria', u'ARIA TOSCA',
      [author], 1)
 ]
 
@@ -329,8 +334,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'ARIA', u'ARIA',
-     author, 'ARIA', 'Toolkit for parsing TOSCA.',
+    (master_doc, 'ARIATOSCA', u'ARIA TOSCA',
+     author, 'ARIA TOSCA', 'an open, light, CLI-driven library of orchestration tools that other '
+     'open projects can consume to easily build TOSCA-based orchestration solutions.',
      'Miscellaneous'),
 ]
 
@@ -350,19 +356,61 @@ texinfo_documents = [
 #
 # texinfo_no_detailmenu = False
 
+
+# -- Options for InterSphinx
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/2.7', None)
+}
+
 # -- Options for Python domain
 
-# Include __init__ docstring into class docstring
+# Append __init__ docstring into class docstring
 autoclass_content = 'both'
 
 # Default to everything important
-autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
+autodoc_default_flags = [
+    'members',
+    'undoc-members',
+    'show-inheritance'
+]
 
-def on_skip_members(app, what, name, obj, skip, options):
-    if not skip:
-        if name in ('FIELDS', 'ALLOW_UNKNOWN_FIELDS', 'SHORT_FORM_FIELD'):
-            skip = True
+SKIP_MEMBERS = (
+    'FIELDS',
+    'ALLOW_UNKNOWN_FIELDS',
+    'SHORT_FORM_FIELD',
+    'INSTRUMENTATION_FIELDS'
+)
+
+SKIP_MEMBER_SUFFIXES = (
+    '_fk',
+)
+
+NEVER_SKIP_MEMBERS = (
+    '__evaluate__',
+)
+
+# 'autodoc-skip-member' event
+def on_skip_member(app, what, name, obj, skip, options):
+    if name in NEVER_SKIP_MEMBERS:
+        return False
+    if name in SKIP_MEMBERS: 
+        return True
+    for suffix in SKIP_MEMBER_SUFFIXES:
+        if name.endswith(suffix):
+            return True
     return skip
-    
+
+from sphinx.domains.python import PythonDomain
+
+class PatchedPythonDomain(PythonDomain):
+    # See: https://github.com/sphinx-doc/sphinx/issues/3866
+    def resolve_xref(self, env, fromdocname, builder, typ, target, node, contnode):
+        if 'refspecific' in node:
+            del node['refspecific']
+        return super(PatchedPythonDomain, self).resolve_xref(
+            env, fromdocname, builder, typ, target, node, contnode)
+
 def setup(app):
-    app.connect('autodoc-skip-member', on_skip_members)
+    app.connect('autodoc-skip-member', on_skip_member)
+    app.override_domain(PatchedPythonDomain)

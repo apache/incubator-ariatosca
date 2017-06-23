@@ -13,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+ARIA modeling relationship module
+"""
+
 # pylint: disable=invalid-name, redefined-outer-name
+
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.ext.associationproxy import association_proxy as original_association_proxy
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -43,9 +49,9 @@ def foreign_key(other_table, nullable=False):
 
     *This utility method should only be used during class creation.*
 
-    :param other_table: Other table name
+    :param other_table: other table name
     :type other_table: basestring
-    :param nullable: True to allow null values (meaning that there is no relationship)
+    :param nullable: ``True`` to allow null values (meaning that there is no relationship)
     :type nullable: bool
     """
 
@@ -63,9 +69,9 @@ def one_to_one_self(model_class, fk):
 
     *This utility method should only be used during class creation.*
 
-    :param model_class: The class in which this relationship will be declared
+    :param model_class: class in which this relationship will be declared
     :type model_class: type
-    :param fk: Foreign key name
+    :param fk: foreign key name
     :type fk: basestring
     """
 
@@ -90,6 +96,35 @@ def one_to_one_self(model_class, fk):
     )
 
 
+def one_to_many_self(model_class, fk, dict_key=None):
+    """
+    Declare a one-to-many relationship property. The property value would be a list or dict of
+    instances of the same model.
+
+    You will need an associated foreign key to our own table.
+
+    *This utility method should only be used during class creation.*
+
+    :param model_class: class in which this relationship will be declared
+    :type model_class: type
+    :param fk: Foreign key name
+    :type fk: basestring
+    :param dict_key: if set the value will be a dict with this key as the dict key; otherwise will
+     be a list
+    :type dict_key: basestring
+    """
+    return _relationship(
+        model_class,
+        model_class.__tablename__,
+        relationship_kwargs={
+            'remote_side': '{model_class}.{remote_column}'.format(
+                model_class=model_class.__name__, remote_column=fk)
+        },
+        back_populates=False,
+        dict_key=dict_key
+    )
+
+
 def one_to_one(model_class,
                other_table,
                fk=None,
@@ -105,17 +140,17 @@ def one_to_one(model_class,
 
     *This utility method should only be used during class creation.*
 
-    :param model_class: The class in which this relationship will be declared
+    :param model_class: class in which this relationship will be declared
     :type model_class: type
-    :param other_table: Other table name
+    :param other_table: other table name
     :type other_table: basestring
-    :param fk: Foreign key name at our table (no need specify if there's no ambiguity)
+    :param fk: foreign key name at our table (no need specify if there's no ambiguity)
     :type fk: basestring
-    :param other_fk: Foreign key name at the other table (no need specify if there's no ambiguity)
+    :param other_fk: foreign key name at the other table (no need specify if there's no ambiguity)
     :type other_fk: basestring
-    :param back_populates: Override name of matching many-to-many property at other table; set to
-                       false to disable
-    :type back_populates: basestring|bool
+    :param back_populates: override name of matching many-to-many property at other table; set to
+     ``False`` to disable
+    :type back_populates: basestring or bool
     """
     backref_kwargs = None
     if back_populates is not NO_BACK_POP:
@@ -150,18 +185,18 @@ def one_to_many(model_class,
 
     *This utility method should only be used during class creation.*
 
-    :param model_class: The class in which this relationship will be declared
+    :param model_class: class in which this relationship will be declared
     :type model_class: type
-    :param child_table: Child table name
+    :param other_table: other table name
     :type other_table: basestring
-    :param other_fk: Foreign key name at the child table (no need specify if there's no ambiguity)
+    :param other_fk: foreign key name at the other table (no need specify if there's no ambiguity)
     :type other_fk: basestring
-    :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
-                     be a list
+    :param dict_key: if set the value will be a dict with this key as the dict key; otherwise will
+     be a list
     :type dict_key: basestring
-    :param back_populates: Override name of matching many-to-one property at child table; set to
-                           false to disable
-    :type back_populates: basestring|bool
+    :param back_populates: override name of matching many-to-one property at other table; set to
+     ``false`` to disable
+    :type back_populates: basestring or bool
     """
     relationship_kwargs = rel_kwargs or {}
     if self:
@@ -201,19 +236,19 @@ def many_to_one(model_class,
     The declaration will automatically create a matching one-to-many property at the child model,
     named after the plural form of our table name. Use the ``parent_property`` argument to override
     this name. Note: the automatic property will always be a SQLAlchemy query object; if you need a
-    Python collection then use :meth:`one_to_many` at that model.
+    Python collection then use :func:`one_to_many` at that model.
 
     *This utility method should only be used during class creation.*
 
-    :param model_class: The class in which this relationship will be declared
+    :param model_class: class in which this relationship will be declared
     :type model_class: type
-    :param parent_table: Parent table name
+    :param parent_table: parent table name
     :type parent_table: basestring
-    :param fk: Foreign key name at our table (no need specify if there's no ambiguity)
+    :param fk: foreign key name at our table (no need specify if there's no ambiguity)
     :type fk: basestring
-    :param back_populates: Override name of matching one-to-many property at parent table; set to
-                            false to disable
-    :type back_populates: basestring|bool
+    :param back_populates: override name of matching one-to-many property at parent table; set to
+     ``False`` to disable
+    :type back_populates: basestring or bool
     """
     if back_populates is None:
         back_populates = formatting.pluralize(model_class.__tablename__)
@@ -241,22 +276,22 @@ def many_to_many(model_class,
     The declaration will automatically create a matching many-to-many property at the other model,
     named after the plural form of our table name. Use the ``other_property`` argument to override
     this name. Note: the automatic property will always be a SQLAlchemy query object; if you need a
-    Python collection then use :meth:`many_to_many` again at that model.
+    Python collection then use :func:`many_to_many` again at that model.
 
     *This utility method should only be used during class creation.*
 
-    :param model_class: The class in which this relationship will be declared
+    :param model_class: class in which this relationship will be declared
     :type model_class: type
-    :param other_table: Parent table name
+    :param other_table: parent table name
     :type other_table: basestring
-    :param prefix: Optional prefix for extra table name as well as for ``other_property``
+    :param prefix: optional prefix for extra table name as well as for ``other_property``
     :type prefix: basestring
-    :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
-                     be a list
+    :param dict_key: if set the value will be a dict with this key as the dict key; otherwise will
+     be a list
     :type dict_key: basestring
-    :param other_property: Override name of matching many-to-many property at other table; set to
-                           false to disable
-    :type other_property: basestring|bool
+    :param other_property: override name of matching many-to-many property at other table; set to
+     ``False`` to disable
+    :type other_property: basestring or bool
     """
 
     this_table = model_class.__tablename__
@@ -299,6 +334,21 @@ def many_to_many(model_class,
         kwargs['dict_key'] = dict_key
 
     return _relationship(model_class, other_table, **kwargs)
+
+
+def association_proxy(*args, **kwargs):
+    if 'type' in kwargs:
+        type_ = kwargs.get('type')
+        del kwargs['type']
+    else:
+        type_ = ':obj:`basestring`'
+    proxy = original_association_proxy(*args, **kwargs)
+    proxy.__doc__ = """
+    Internal. For use in SQLAlchemy queries.
+
+    :type: {0}
+    """.format(type_)
+    return proxy
 
 
 def _relationship(model_class,

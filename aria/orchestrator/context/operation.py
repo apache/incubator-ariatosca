@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Workflow and operation contexts
+Operation contexts.
 """
 
 import threading
@@ -27,7 +27,7 @@ from . import common
 
 class BaseOperationContext(common.BaseContext):
     """
-    Context object used during operation creation and execution
+    Base class for contexts used during operation creation and execution.
     """
 
     def __init__(self, task_id, actor_id, **kwargs):
@@ -116,7 +116,7 @@ class BaseOperationContext(common.BaseContext):
 
 class NodeOperationContext(BaseOperationContext):
     """
-    Context for node based operations.
+    Context for node operations.
     """
 
     @property
@@ -138,7 +138,7 @@ class NodeOperationContext(BaseOperationContext):
 
 class RelationshipOperationContext(BaseOperationContext):
     """
-    Context for relationship based operations.
+    Context for relationship operations.
     """
 
     @property

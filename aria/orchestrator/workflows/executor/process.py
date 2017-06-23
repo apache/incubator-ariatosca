@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Subprocess based executor
+Sub-process task executor.
 """
 
 # pylint: disable=wrong-import-position
@@ -67,7 +67,7 @@ _Task = namedtuple('_Task', 'proc, ctx')
 
 class ProcessExecutor(base.BaseExecutor):
     """
-    Executor which runs tasks in a subprocess environment
+    Sub-process task executor.
     """
 
     def __init__(self, plugin_manager=None, python_path=None, *args, **kwargs):

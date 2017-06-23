@@ -16,7 +16,7 @@
 # pylint: skip-file
 
 """
-Builtin heal workflow
+Built-in heal workflow.
 """
 
 from aria import workflow
@@ -28,11 +28,11 @@ from ..api import task
 @workflow
 def heal(ctx, graph, node_id):
     """
-    The heal workflow
+    Built-in heal workflow..
 
-    :param WorkflowContext ctx: the workflow context
-    :param TaskGraph graph: the graph which will describe the workflow.
-    :param node_id: the id of the node to heal
+    :param ctx: workflow context
+    :param graph: graph which will describe the workflow.
+    :param node_id: ID of the node to heal
     :return:
     """
     failing_node = ctx.model.node.get(node_id)
@@ -60,13 +60,12 @@ def heal(ctx, graph, node_id):
 @workflow(suffix_template='{failing_nodes}')
 def heal_uninstall(ctx, graph, failing_nodes, targeted_nodes):
     """
-    the uninstall part of the heal mechanism
-    :param WorkflowContext ctx: the workflow context
-    :param TaskGraph graph: the task graph to edit.
-    :param failing_nodes: the failing nodes to heal.
-    :param targeted_nodes: the targets of the relationships where the failing node are
-    source
-    :return:
+    Uninstall phase of the heal mechanism.
+
+    :param ctx: workflow context
+    :param graph: task graph to edit
+    :param failing_nodes: failing nodes to heal
+    :param targeted_nodes: targets of the relationships where the failing node are
     """
     node_sub_workflows = {}
 
@@ -113,13 +112,12 @@ def heal_uninstall(ctx, graph, failing_nodes, targeted_nodes):
 @workflow(suffix_template='{failing_nodes}')
 def heal_install(ctx, graph, failing_nodes, targeted_nodes):
     """
-    the install part of the heal mechanism
-    :param WorkflowContext ctx: the workflow context
-    :param TaskGraph graph: the task graph to edit.
-    :param failing_nodes: the failing nodes to heal.
-    :param targeted_nodes: the targets of the relationships where the failing node are
-    source
-    :return:
+    Install phase of the heal mechanism.
+
+    :param ctx: workflow context
+    :param graph: task graph to edit.
+    :param failing_nodes: failing nodes to heal
+    :param targeted_nodes: targets of the relationships where the failing node are
     """
     node_sub_workflows = {}
 

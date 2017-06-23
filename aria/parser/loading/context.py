@@ -20,10 +20,12 @@ from .source import DefaultLoaderSource
 
 class LoadingContext(object):
     """
-    Properties:
+    Loading context.
 
-    * :code:`loader_source`: For finding loader instances
-    * :code:`prefixes`: List of additional prefixes for :class:`UriTextLoader`
+    :ivar loader_source: for finding loader instances
+    :vartype loader_source: ~aria.parser.loading.LoaderSource
+    :ivar prefixes: additional prefixes for :class:`UriTextLoader`
+    :vartype prefixes: [:obj:`basestring`]
     """
 
     def __init__(self):

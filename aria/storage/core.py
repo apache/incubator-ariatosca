@@ -14,29 +14,9 @@
 # limitations under the License.
 
 """
-ARIA's storage Sub-Package
-Path: aria.storage
-
-Storage package is a generic abstraction over different storage types.
-We define this abstraction with the following components:
-
-1. storage: simple mapi to use
-2. driver: implementation of the database client mapi.
-3. model: defines the structure of the table/document.
-4. field: defines a field/item in the model.
-
-API:
-    * application_storage_factory - function, default ARIA storage factory.
-    * Storage - class, simple storage mapi.
-    * models - module, default ARIA standard models.
-    * structures - module, default ARIA structures - holds the base model,
-                   and different fields types.
-    * Model - class, abstract model implementation.
-    * Field - class, base field implementation.
-    * IterField - class, base iterable field implementation.
-    * drivers - module, a pool of ARIA standard drivers.
-    * StorageDriver - class, abstract model implementation.
+Storage API management.
 """
+
 import copy
 from contextlib import contextmanager
 
@@ -52,7 +32,7 @@ __all__ = (
 
 class Storage(LoggerMixin):
     """
-    Represents the storage
+    Base class for storage managers.
     """
     def __init__(self,
                  api_cls,
@@ -62,13 +42,12 @@ class Storage(LoggerMixin):
                  initiator_kwargs=None,
                  **kwargs):
         """
-
-        :param api_cls: API cls for each model.
+        :param api_cls: API class for each entry
         :param api_kwargs:
-        :param items: the items to register
-        :param initiator: a func which initializes the storage before the first use.
-        This function should return a dict, this dict would be passed in addition to the api kwargs.
-        This enables the creation of any unpickable objects across process.
+        :param items: items to register
+        :param initiator: function which initializes the storage before the first use; this function
+         should return a dict, this dict would be passed in addition to the API kwargs; this enables
+         the creation of non-serializable objects
         :param initiator_kwargs:
         :param kwargs:
         """
@@ -112,22 +91,22 @@ class Storage(LoggerMixin):
 
     def register(self, entry):
         """
-        Register the entry to the storage
-        :param name:
-        :return:
+        Register an API.
+
+        :param entry:
         """
         raise NotImplementedError('Subclass must implement abstract register method')
 
 
 class ResourceStorage(Storage):
     """
-    Represents resource storage.
+    Manages storage resource APIs ("RAPIs").
     """
     def register(self, name):
         """
-        Register the resource type to resource storage.
-        :param name:
-        :return:
+        Register a storage resource API ("RAPI").
+
+        :param name: name
         """
         self.registered[name] = self.api(name=name, **self._all_api_kwargs)
         self.registered[name].create()
@@ -136,7 +115,7 @@ class ResourceStorage(Storage):
 
 class ModelStorage(Storage):
     """
-    Represents model storage.
+    Manages storage model APIs ("MAPIs").
     """
     def __init__(self, *args, **kwargs):
         if kwargs.get('initiator', None) is None:
@@ -145,9 +124,9 @@ class ModelStorage(Storage):
 
     def register(self, model_cls):
         """
-        Register the model into the model storage.
-        :param model_cls: the model to register.
-        :return:
+        Register a storage model API ("MAPI").
+
+        :param model_cls: model API to register
         """
         model_name = model_cls.__modelname__
         if model_name in self.registered:
@@ -162,8 +141,7 @@ class ModelStorage(Storage):
 
     def drop(self):
         """
-        Drop all the tables from the model.
-        :return:
+        Drop all the tables.
         """
         for mapi in self.registered.values():
             mapi.drop()

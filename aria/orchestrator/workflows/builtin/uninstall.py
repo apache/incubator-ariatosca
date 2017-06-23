@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Builtin uninstall workflow
+Built-in uninstall workflow.
 """
 
 from ... import workflow
@@ -24,6 +24,9 @@ from . import workflows
 
 @workflow
 def uninstall(ctx, graph):
+    """
+    Built-in uninstall workflow.
+    """
     tasks_and_nodes = []
     for node in ctx.nodes:
         tasks_and_nodes.append((api_task.WorkflowTask(workflows.uninstall_node, node=node), node))

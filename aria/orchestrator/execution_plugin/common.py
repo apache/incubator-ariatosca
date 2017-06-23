@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Execution plugin utilities.
+"""
+
 import json
 import os
 import tempfile
@@ -52,21 +56,23 @@ def download_script(ctx, script_path):
 
 def create_process_config(script_path, process, operation_kwargs, quote_json_env_vars=False):
     """
-    update a process with it's environment variables, and return it.
+    Updates a process with its environment variables, and return it.
 
-    Get a dict representing a process and a dict representing the environment
-    variables. Convert each environment variable to a format of
-    <string representing the name of the variable> :
-    <json formatted string representing the value of the variable>.
-    Finally, update the process with the newly formatted environment variables,
-    and return the process.
+    Gets a dict representing a process and a dict representing the environment variables. Converts
+    each environment variable to a format of::
 
-    :param process: a dict representing a process
+        <string representing the name of the variable>:
+        <json formatted string representing the value of the variable>.
+
+    Finally, updates the process with the newly formatted environment variables, and return the
+    process.
+
+    :param process: dict representing a process
     :type process: dict
-    :param operation_kwargs: a dict representing environment variables that
-    should exist in the process' running environment.
+    :param operation_kwargs: dict representing environment variables that should exist in the
+     process's running environment.
     :type operation_kwargs: dict
-    :return: the process updated with its environment variables.
+    :return: process updated with its environment variables
     :rtype: dict
     """
     process = process or {}

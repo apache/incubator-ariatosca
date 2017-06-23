@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Allows JSON-serializable collections to be used as SQLAlchemy column types.
+"""
+
 import json
 from collections import namedtuple
 
@@ -52,12 +56,18 @@ class _MutableType(TypeDecorator):
 
 
 class Dict(_MutableType):
+    """
+    JSON-serializable dict type for SQLAlchemy columns.
+    """
     @property
     def python_type(self):
         return dict
 
 
 class List(_MutableType):
+    """
+    JSON-serializable list type for SQLAlchemy columns.
+    """
     @property
     def python_type(self):
         return list
@@ -67,7 +77,9 @@ class _StrictDictMixin(object):
 
     @classmethod
     def coerce(cls, key, value):
-        "Convert plain dictionaries to MutableDict."
+        """
+        Convert plain dictionaries to MutableDict.
+        """
         try:
             if not isinstance(value, cls):
                 if isinstance(value, dict):
@@ -117,7 +129,9 @@ class _MutableDict(mutable.MutableDict):
 
     @classmethod
     def coerce(cls, key, value):
-        "Convert plain dictionaries to MutableDict."
+        """
+        Convert plain dictionaries to MutableDict.
+        """
         try:
             return mutable.MutableDict.coerce(key, value)
         except ValueError as e:
@@ -142,7 +156,9 @@ class _StrictListMixin(object):
             raise exceptions.ValueFormatException('could not coerce to MutableDict', cause=e)
 
     def __setitem__(self, index, value):
-        """Detect list set events and emit change events."""
+        """
+        Detect list set events and emit change events.
+        """
         self._assert_item(value)
         super(_StrictListMixin, self).__setitem__(index, value)
 
@@ -169,7 +185,9 @@ class _MutableList(mutable.MutableList):
 
     @classmethod
     def coerce(cls, key, value):
-        "Convert plain dictionaries to MutableDict."
+        """
+        Convert plain dictionaries to MutableDict.
+        """
         try:
             return mutable.MutableList.coerce(key, value)
         except ValueError as e:
@@ -181,9 +199,9 @@ _StrictValue = namedtuple('_StrictValue', 'type_cls, listener_cls')
 
 class _StrictDict(object):
     """
-    This entire class functions as a factory for strict dicts and their listeners.
-    No type class, and no listener type class is created more than once. If a relevant type class
-    exists it is returned.
+    This entire class functions as a factory for strict dicts and their listeners. No type class,
+    and no listener type class is created more than once. If a relevant type class exists it is
+    returned.
     """
     _strict_map = {}
 
@@ -216,13 +234,19 @@ class _StrictDict(object):
 
 
 StrictDict = _StrictDict()
+"""
+JSON-serializable strict dict type for SQLAlchemy columns.
+
+:param key_cls:
+:param value_cls:
+"""
 
 
 class _StrictList(object):
     """
-    This entire class functions as a factory for strict lists and their listeners.
-    No type class, and no listener type class is created more than once. If a relevant type class
-    exists it is returned.
+    This entire class functions as a factory for strict lists and their listeners. No type class,
+    and no listener type class is created more than once. If a relevant type class exists it is
+    returned.
     """
     _strict_map = {}
 
@@ -254,6 +278,11 @@ class _StrictList(object):
 
 
 StrictList = _StrictList()
+"""
+JSON-serializable strict list type for SQLAlchemy columns.
+
+:param item_cls:
+"""
 
 
 def _mutable_association_listener(mapper, cls):

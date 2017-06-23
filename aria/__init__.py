@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-ARIA top level package
+The ARIA root package provides entry points for extension and storage initialization.
 """
 
 import sys
@@ -45,13 +45,17 @@ __all__ = (
     '__version__',
     'workflow',
     'operation',
+    'install_aria_extensions',
+    'application_model_storage',
+    'application_resource_storage'
 )
 
 
 def install_aria_extensions():
     """
-    Iterates all Python packages with names beginning with :code:`aria_extension_` and all
-    :code:`aria_extension` entry points and loads them.
+    Iterates all Python packages with names beginning with ``aria_extension_`` and all
+    ``aria_extension`` entry points and loads them.
+
     It then invokes all registered extension functions.
     """
     for loader, module_name, _ in iter_modules():
@@ -64,7 +68,7 @@ def install_aria_extensions():
 
 def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kwargs=None):
     """
-    Initiate model storage
+    Initiate model storage.
     """
     return storage.ModelStorage(api_cls=api,
                                 api_kwargs=api_kwargs,
@@ -75,7 +79,7 @@ def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kw
 
 def application_resource_storage(api, api_kwargs=None, initiator=None, initiator_kwargs=None):
     """
-    Initiate resource storage
+    Initiate resource storage.
     """
 
     return storage.ResourceStorage(api_cls=api,

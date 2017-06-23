@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Miscellaneous modeling utilities.
+"""
+
 import os
 from json import JSONEncoder
 from StringIO import StringIO
@@ -26,6 +30,13 @@ from ..utils.formatting import string_list_as_string
 
 
 class ModelJSONEncoder(JSONEncoder):
+    """
+    JSON encoder that automatically unwraps ``value`` attributes.
+    """
+    def __init__(self, *args, **kwargs):
+        # Just here to make sure Sphinx doesn't grab the base constructor's docstring
+        super(ModelJSONEncoder, self).__init__(*args, **kwargs)
+
     def default(self, o):  # pylint: disable=method-hidden
         from .mixins import ModelMixin
         if isinstance(o, ModelMixin):
@@ -40,8 +51,8 @@ class ModelJSONEncoder(JSONEncoder):
 
 class NodeTemplateContainerHolder(object):
     """
-    Wrapper that allows using a :class:`aria.modeling.models.NodeTemplate` model directly as the
-    ``container_holder`` input for :func:`aria.modeling.functions.evaluate`.
+    Wrapper that allows using a :class:`~aria.modeling.models.NodeTemplate` model directly as the
+    ``container_holder`` input for :func:`~aria.modeling.functions.evaluate`.
     """
 
     def __init__(self, node_template):
@@ -60,18 +71,17 @@ def merge_parameter_values(parameter_values, declared_parameters, model_cls):
     Exceptions will be raised for validation errors.
 
     :param parameter_values: provided parameter values or None
-    :type parameter_values: {basestring, object}
+    :type parameter_values: {:obj:`basestring`: object}
     :param declared_parameters: declared parameters
-    :type declared_parameters: {basestring, :class:`aria.modeling.models.Parameter`}
+    :type declared_parameters: {:obj:`basestring`: :class:`~aria.modeling.models.Parameter`}
     :return: the merged parameters
-    :rtype: {basestring, :class:`aria.modeling.models.Parameter`}
-    :raises aria.modeling.exceptions.UndeclaredParametersException: if a key in ``parameter_values``
-            does not exist in ``declared_parameters``
-    :raises aria.modeling.exceptions.MissingRequiredParametersException: if a key in
-            ``declared_parameters`` does not exist in ``parameter_values`` and also has no default
-            value
-    :raises aria.modeling.exceptions.ParametersOfWrongTypeException: if a value in
-            ``parameter_values`` does not match its type in ``declared_parameters``
+    :rtype: {:obj:`basestring`: :class:`~aria.modeling.models.Parameter`}
+    :raises ~aria.modeling.exceptions.UndeclaredParametersException: if a key in
+     ``parameter_values`` does not exist in ``declared_parameters``
+    :raises ~aria.modeling.exceptions.MissingRequiredParametersException: if a key in
+     ``declared_parameters`` does not exist in ``parameter_values`` and also has no default value
+    :raises ~aria.modeling.exceptions.ParametersOfWrongTypeException: if a value in
+      ``parameter_values`` does not match its type in ``declared_parameters``
     """
 
     parameter_values = parameter_values or {}
@@ -204,6 +214,22 @@ def dump_interfaces(interfaces, name='Interfaces'):
 class classproperty(object):                                                                        # pylint: disable=invalid-name
     def __init__(self, f):
         self._func = f
+        self.__doct__ = f.__doc__
 
     def __get__(self, instance, owner):
         return self._func(owner)
+
+
+def fix_doc(cls):
+    """
+    Class decorator to use the last base class's docstring and make sure Sphinx doesn't grab the
+    base constructor's docstring.
+    """
+    original_init = cls.__init__
+    def init(*args, **kwargs):
+        original_init(*args, **kwargs)
+
+    cls.__init__ = init
+    cls.__doc__ = cls.__bases__[-1].__doc__
+
+    return cls

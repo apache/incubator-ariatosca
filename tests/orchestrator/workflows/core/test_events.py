@@ -128,8 +128,8 @@ def run_standard_lifecycle_operation_on_node(ctx, op_name):
 
 
 def _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, op_name):
-    assert global_test_dict['transitional_state'] == NodeBase._op_to_state[op_name]['transitional']
-    assert node.state == NodeBase._op_to_state[op_name]['finished']
+    assert global_test_dict['transitional_state'] == NodeBase._OP_TO_STATE[op_name]['transitional']
+    assert node.state == NodeBase._OP_TO_STATE[op_name]['finished']
 
 
 @workflow

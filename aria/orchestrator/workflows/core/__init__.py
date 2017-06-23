@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Core for the workflow execution mechanism
+Workflow core.
 """
 
 from . import engine

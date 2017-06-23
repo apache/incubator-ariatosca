@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``worfklows`` sub-commands.
+"""
+
 from .. import table
 from ..core import aria
 from ..exceptions import AriaCliError
@@ -22,22 +26,26 @@ WORKFLOW_COLUMNS = ['name', 'service_template_name', 'service_name']
 
 @aria.group(name='workflows')
 def workflows():
-    """Handle service workflows
+    """
+    Manage service workflows
     """
     pass
 
 
 @workflows.command(name='show',
-                   short_help='Show workflow information')
+                   short_help='Show information for a service workflow')
 @aria.argument('workflow-name')
 @aria.options.service_name(required=True)
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def show(workflow_name, service_name, model_storage, logger):
-    """Show information for a specific workflow of a specific service
+    """
+    Show information for a service workflow
 
-    `WORKFLOW_NAME` is the name of the workflow to get information on.
+    SERVICE_NAME is the unique name of the service.
+
+    WORKFLOW_NAME is the unique name of the workflow within the service (e.g. "uninstall").
     """
     logger.info('Retrieving workflow {0} for service {1}'.format(
         workflow_name, service_name))
@@ -81,13 +89,16 @@ def show(workflow_name, service_name, model_storage, logger):
 
 
 @workflows.command(name='list',
-                   short_help='List workflows for a service')
+                   short_help='List service workflows')
 @aria.options.service_name(required=True)
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def list(service_name, model_storage, logger):
-    """List all workflows of a specific service
+    """
+    List service workflows
+
+    SERVICE_NAME is the unique name of the service.
     """
     logger.info('Listing workflows for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)

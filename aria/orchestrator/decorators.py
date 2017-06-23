@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Workflow and operation decorators
+Workflow and operation decorators.
 """
 
 from functools import partial, wraps
@@ -32,7 +32,7 @@ OPERATION_DECORATOR_RESERVED_ARGUMENTS = set(('ctx', 'toolbelt'))
 
 def workflow(func=None, suffix_template=''):
     """
-    Workflow decorator
+    Workflow decorator.
     """
     if func is None:
         return partial(workflow, suffix_template=suffix_template)
@@ -58,7 +58,7 @@ def workflow(func=None, suffix_template=''):
 
 def operation(func=None, toolbelt=False, suffix_template='', logging_handlers=None):
     """
-    Operation decorator
+    Operation decorator.
     """
 
     if func is None:

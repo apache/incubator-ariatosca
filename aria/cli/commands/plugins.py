@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``plugins`` sub-commands.
+"""
+
 from .. import table
 from .. import utils
 from ..core import aria
@@ -25,24 +29,26 @@ PLUGIN_COLUMNS = ['id', 'package_name', 'package_version', 'supported_platform',
 @aria.group(name='plugins')
 @aria.options.verbose()
 def plugins():
-    """Handle plugins
+    """
+    Manage plugins
     """
     pass
 
 
 @plugins.command(name='validate',
-                 short_help='Validate a plugin')
+                 short_help='Validate a plugin archive')
 @aria.argument('plugin-path')
 @aria.options.verbose()
 @aria.pass_plugin_manager
 @aria.pass_logger
 def validate(plugin_path, plugin_manager, logger):
-    """Validate a plugin archive
+    """
+    Validate a plugin archive
 
-    A valid plugin is a wagon (http://github.com/cloudify-cosmo/wagon)
-    in the zip format (suffix may also be .wgn).
+    A valid plugin is a wagon (`http://github.com/cloudify-cosmo/wagon`) in the ZIP format (suffix
+    may also be `.wgn`).
 
-    `PLUGIN_PATH` is the path to wagon archive to validate.
+    PLUGIN_PATH is the path to the wagon archive.
     """
     logger.info('Validating plugin {0}...'.format(plugin_path))
     plugin_manager.validate_plugin(plugin_path)
@@ -57,9 +63,13 @@ def validate(plugin_path, plugin_manager, logger):
 @aria.pass_plugin_manager
 @aria.pass_logger
 def install(ctx, plugin_path, plugin_manager, logger):
-    """Install a plugin
+    """
+    Install a plugin
 
-    `PLUGIN_PATH` is the path to wagon archive to install.
+    A valid plugin is a wagon (`http://github.com/cloudify-cosmo/wagon`) in the ZIP format (suffix
+    may also be `.wgn`).
+
+    PLUGIN_PATH is the path to the wagon archive.
     """
     ctx.invoke(validate, plugin_path=plugin_path)
     logger.info('Installing plugin {0}...'.format(plugin_path))
@@ -68,15 +78,16 @@ def install(ctx, plugin_path, plugin_manager, logger):
 
 
 @plugins.command(name='show',
-                 short_help='show plugin information')
+                 short_help='Show information for an installed plugin')
 @aria.argument('plugin-id')
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def show(plugin_id, model_storage, logger):
-    """Show information for a specific plugin
+    """
+    Show information for an installed plugin
 
-    `PLUGIN_ID` is the id of the plugin to show information on.
+    PLUGIN_ID is the unique installed plugin ID in this ARIA instance.
     """
     logger.info('Showing plugin {0}...'.format(plugin_id))
     plugin = model_storage.plugin.get(plugin_id)
@@ -84,14 +95,15 @@ def show(plugin_id, model_storage, logger):
 
 
 @plugins.command(name='list',
-                 short_help='List plugins')
+                 short_help='List all installed plugins')
 @aria.options.sort_by('uploaded_at')
 @aria.options.descending
 @aria.options.verbose()
 @aria.pass_model_storage
 @aria.pass_logger
 def list(sort_by, descending, model_storage, logger):
-    """List all plugins on the manager
+    """
+    List all installed plugins
     """
     logger.info('Listing all plugins...')
     plugins_list = model_storage.plugin.list(

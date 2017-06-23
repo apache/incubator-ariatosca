@@ -13,8 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Various CLI default values.
+"""
 
+#: Default service template filename
 SERVICE_TEMPLATE_FILENAME = 'service_template.yaml'
+
+#: Default task max attempts
 TASK_MAX_ATTEMPTS = 30
+
+#: Default task retry interval
 TASK_RETRY_INTERVAL = 30
+
+#: Default sort descending
 SORT_DESCENDING = False

@@ -64,7 +64,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         An optional parent Artifact Type name the Artifact Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @field_getter(data_type_class_getter(Version))
@@ -73,7 +73,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         An optional version for the Artifact Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -81,7 +81,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         An optional description for the Artifact Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @primitive_field(str)
@@ -89,7 +89,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         The required mime type property for the Artifact Type.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @primitive_list_field(str)
@@ -97,7 +97,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         The required file extension property for the Artifact Type.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @object_dict_field(PropertyDefinition)
@@ -105,7 +105,7 @@ class ArtifactType(ExtensiblePresentation):
         """
         An optional list of property definitions for the Artifact Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @cachedmethod
@@ -147,7 +147,7 @@ class DataType(ExtensiblePresentation):
         """
         The optional key used when a datatype is derived from an existing TOSCA Data Type.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -155,7 +155,7 @@ class DataType(ExtensiblePresentation):
         """
         An optional version for the Data Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -163,7 +163,7 @@ class DataType(ExtensiblePresentation):
         """
         The optional description for the Data Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @field_validator(data_type_constraints_validator)
@@ -172,7 +172,7 @@ class DataType(ExtensiblePresentation):
         """
         The optional list of sequenced constraint clauses for the Data Type.
 
-        :rtype: list of (str, :class:`ConstraintClause`)
+        :type: list of (str, :class:`ConstraintClause`)
         """
 
     @field_validator(data_type_properties_validator)
@@ -182,7 +182,7 @@ class DataType(ExtensiblePresentation):
         The optional list property definitions that comprise the schema for a complex Data Type in
         TOSCA.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @cachedmethod
@@ -244,7 +244,7 @@ class CapabilityType(ExtensiblePresentation):
         """
         An optional parent capability type name this new Capability Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -252,7 +252,7 @@ class CapabilityType(ExtensiblePresentation):
         """
         An optional version for the Capability Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -260,7 +260,7 @@ class CapabilityType(ExtensiblePresentation):
         """
         An optional description for the Capability Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -270,7 +270,7 @@ class CapabilityType(ExtensiblePresentation):
 
         ARIA NOTE: The spec says 'list', but the examples are all of dicts.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_field(AttributeDefinition)
@@ -278,7 +278,7 @@ class CapabilityType(ExtensiblePresentation):
         """
         An optional list of attribute definitions for the Capability Type.
 
-        :rtype: dict of str, :class:`AttributeDefinition`
+        :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
     @field_validator(list_type_validator('node type', convert_shorthand_to_full_type_name,
@@ -289,7 +289,7 @@ class CapabilityType(ExtensiblePresentation):
         An optional list of one or more valid names of Node Types that are supported as valid
         sources of any relationship established to the declared Capability Type.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @cachedmethod
@@ -345,7 +345,7 @@ class InterfaceType(ExtensiblePresentation):
         """
         An optional parent Interface Type name this new Interface Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -353,7 +353,7 @@ class InterfaceType(ExtensiblePresentation):
         """
         An optional version for the Interface Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -361,7 +361,7 @@ class InterfaceType(ExtensiblePresentation):
         """
         An optional description for the Interface Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -369,13 +369,13 @@ class InterfaceType(ExtensiblePresentation):
         """
         The optional list of input parameter definitions.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_unknown_fields(OperationDefinition)
     def operations(self):
         """
-        :rtype: dict of str, :class:`OperationDefinition`
+        :type: {:obj:`basestring`: :class:`OperationDefinition`}
         """
 
     @cachedmethod
@@ -424,7 +424,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional parent Relationship Type name the Relationship Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -432,7 +432,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional version for the Relationship Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -440,7 +440,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional description for the Relationship Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -448,7 +448,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional list of property definitions for the Relationship Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_field(AttributeDefinition)
@@ -456,7 +456,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional list of attribute definitions for the Relationship Type.
 
-        :rtype: dict of str, :class:`AttributeDefinition`
+        :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
     @object_dict_field(InterfaceDefinition)
@@ -464,7 +464,7 @@ class RelationshipType(ExtensiblePresentation):
         """
         An optional list of interface definitions interfaces supported by the Relationship Type.
 
-        :rtype: dict of str, :class:`InterfaceDefinition`
+        :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
     @field_validator(list_type_validator('capability type', convert_shorthand_to_full_type_name,
@@ -475,7 +475,7 @@ class RelationshipType(ExtensiblePresentation):
         An optional list of one or more names of Capability Types that are valid targets for this
         relationship.
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @cachedmethod
@@ -538,7 +538,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional parent Node Type name this new Node Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -546,7 +546,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional version for the Node Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -554,7 +554,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional description for the Node Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -562,7 +562,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional list of property definitions for the Node Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @object_dict_field(AttributeDefinition)
@@ -570,7 +570,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional list of attribute definitions for the Node Type.
 
-        :rtype: dict of str, :class:`AttributeDefinition`
+        :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
     @object_sequenced_list_field(RequirementDefinition)
@@ -582,7 +582,7 @@ class NodeType(ExtensiblePresentation):
         more than one requirement of the same name, behavior is undefined. The idea is to use the
         "occurrences" field if you need to limit the number of requirement assignments.
 
-        :rtype: list of (str, :class:`RequirementDefinition`)
+        :type: list of (str, :class:`RequirementDefinition`)
         """
 
     @object_dict_field(CapabilityDefinition)
@@ -590,7 +590,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional list of capability definitions for the Node Type.
 
-        :rtype: list of :class:`CapabilityDefinition`
+        :type: list of :class:`CapabilityDefinition`
         """
 
     @object_dict_field(InterfaceDefinition)
@@ -598,7 +598,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional list of interface definitions supported by the Node Type.
 
-        :rtype: dict of str, :class:`InterfaceDefinition`
+        :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
     @object_dict_field(ArtifactAssignment)
@@ -606,7 +606,7 @@ class NodeType(ExtensiblePresentation):
         """
         An optional list of named artifact definitions for the Node Type.
 
-        :rtype: dict of str, :class:`ArtifactAssignment`
+        :type: {:obj:`basestring`: :class:`ArtifactAssignment`}
         """
 
     @cachedmethod
@@ -694,7 +694,7 @@ class GroupType(ExtensiblePresentation):
         """
         An optional parent Group Type name the Group Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -702,7 +702,7 @@ class GroupType(ExtensiblePresentation):
         """
         An optional version for the Group Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -710,7 +710,7 @@ class GroupType(ExtensiblePresentation):
         """
         The optional description for the Group Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -718,7 +718,7 @@ class GroupType(ExtensiblePresentation):
         """
         An optional list of property definitions for the Group Type.
 
-        :rtype: dict of str, :class:`PropertyDefinition`
+        :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
     @field_validator(list_type_validator('node type', convert_shorthand_to_full_type_name,
@@ -734,7 +734,7 @@ class GroupType(ExtensiblePresentation):
         For example, if we were to name this as an explicit Relationship Type we might call this
         "MemberOf" (group).
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @object_dict_field(InterfaceDefinition)
@@ -742,7 +742,7 @@ class GroupType(ExtensiblePresentation):
         """
         An optional list of interface definitions supported by the Group Type.
 
-        :rtype: dict of str, :class:`InterfaceDefinition`
+        :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
     @cachedmethod
@@ -800,7 +800,7 @@ class PolicyType(ExtensiblePresentation):
         """
         An optional parent Policy Type name the Policy Type derives from.
 
-        :rtype: str
+        :type: :obj:`basestring`
         """
 
     @object_field(Version)
@@ -808,7 +808,7 @@ class PolicyType(ExtensiblePresentation):
         """
         An optional version for the Policy Type definition.
 
-        :rtype: :class:`Version`
+        :type: :class:`Version`
         """
 
     @object_field(Description)
@@ -816,7 +816,7 @@ class PolicyType(ExtensiblePresentation):
         """
         The optional description for the Policy Type.
 
-        :rtype: :class:`Description`
+        :type: :class:`Description`
         """
 
     @object_dict_field(PropertyDefinition)
@@ -824,7 +824,7 @@ class PolicyType(ExtensiblePresentation):
         """
         An optional list of property definitions for the Policy Type.
 
-        :rtype: :class:`PropertyDefinition`
+        :type: :class:`PropertyDefinition`
         """
 
     @field_validator(list_node_type_or_group_type_validator)
@@ -838,7 +838,7 @@ class PolicyType(ExtensiblePresentation):
         were to name this as an explicit Relationship Type we might call this "AppliesTo" (node or
         group).
 
-        :rtype: list of str
+        :type: [:obj:`basestring`]
         """
 
     @cachedmethod

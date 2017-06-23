@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """
-Logging related mixins and functions
+Mix-ins and functions for logging, supporting multiple backends (such as SQL) and consistent
+formatting.
 """
 
 import logging
@@ -38,12 +39,11 @@ _base_logger = logging.getLogger('aria')
 
 class LoggerMixin(object):
     """
-    Mixin Logger Class
-    configuration (class members):
-        logger_name: logger name [default: <class_name>]
-        logger_level: logger level [default: logging.DEBUG]
-        base_logger: This Mixing will create child logger from this base_logger
-                    [default: root logger]
+    Provides logging functionality to a class.
+
+    :ivar logger_name: logger name; default to the class name
+    :ivar logger_level: logger level; defaults to ``logging.DEBUG``
+    :ivar base_logger: child loggers are created from this; defaults to the root logger
     """
     logger_name = None
     logger_level = logging.DEBUG
@@ -66,7 +66,7 @@ class LoggerMixin(object):
             base_logger=logging.getLogger(),
             **kwargs):
         """
-        Set the logger used by the consuming class
+        Set the logger used by the consuming class.
         """
         cls.logger_name = logger_name
         cls.logger_level = logger_level
@@ -86,10 +86,12 @@ class LoggerMixin(object):
 
 def create_logger(logger=_base_logger, handlers=(), **configs):
     """
-
-    :param logging.Logger logger: The logger name [default: aria logger]
-    :param list handlers: The logger handlers
-    :param configs: The logger configurations
+    :param logger: logger name; defaults to ARIA logger
+    :type logger: logging.Logger
+    :param handlers: logger handlers
+    :type handlers: []
+    :param configs: logger configurations
+    :type configs: []
     :return: logger
     """
     logger.handlers = []
@@ -103,10 +105,8 @@ def create_logger(logger=_base_logger, handlers=(), **configs):
 
 def create_console_log_handler(level=logging.DEBUG, formatter=None):
     """
-
     :param level:
     :param formatter:
-    :return:
     """
     console = logging.StreamHandler()
     console.setLevel(level)
@@ -123,10 +123,9 @@ def create_sqla_log_handler(model, log_cls, execution_id, level=logging.DEBUG):
 
 class _DefaultConsoleFormat(logging.Formatter):
     """
-    _DefaultConsoleFormat class
-    Console logger formatter
-     info level logs format: '%(message)s'
-     every other log level are formatted: '%(levelname)s: %(message)s'
+    Info level log format: ``%(message)s``.
+
+    Every other log level is formatted: ``%(levelname)s: %(message)s``.
     """
     def format(self, record):
         try:
@@ -147,7 +146,7 @@ def create_file_log_handler(
         backup_count=10,
         formatter=None):
     """
-    Create a logging.handlers.RotatingFileHandler
+    Create a :class:`logging.handlers.RotatingFileHandler`.
     """
     rotating_file = logging_handlers.RotatingFileHandler(
         filename=file_path,
@@ -161,7 +160,6 @@ def create_file_log_handler(
 
 
 class _SQLAlchemyHandler(logging.Handler):
-
     def __init__(self, model, log_cls, execution_id, **kwargs):
         logging.Handler.__init__(self, **kwargs)
         self._model = model

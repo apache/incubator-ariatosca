@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Enhancements to Python's ``argparse`` module.
+"""
+
 from __future__ import absolute_import  # so we can import standard 'argparse'
 
 from argparse import ArgumentParser as BaseArgumentParser
@@ -27,7 +31,7 @@ class ArgumentParser(BaseArgumentParser):
 
     def add_flag_argument(self, name, help_true=None, help_false=None, default=False):
         """
-        Adds a flag argument as two arguments: :code:`--my-flag` and :code:`--no-my-flag`.
+        Adds a flag argument as two arguments: ``--my-flag`` and ``--no-my-flag``.
         """
 
         dest = name.replace('-', '_')

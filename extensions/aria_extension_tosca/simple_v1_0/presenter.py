@@ -27,9 +27,9 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstrac
     ARIA presenter for the `TOSCA Simple Profile v1.0 cos01 <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html>`__.
 
-    Supported :code:`tosca_definitions_version` values:
+    Supported ``tosca_definitions_version`` values:
 
-    * :code:`tosca_simple_yaml_1_0`
+    * ``tosca_simple_yaml_1_0``
     """
 
     DSL_VERSIONS = ('tosca_simple_yaml_1_0',)

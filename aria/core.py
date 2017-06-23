@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+ARIA core module.
+"""
+
 from . import exceptions
 from .parser import consumption
 from .parser.loading.location import UriLocation

@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+CLI ``services`` sub-commands.
+"""
 
 import os
 from StringIO import StringIO
@@ -36,13 +39,14 @@ SERVICE_COLUMNS = ('id', 'name', 'description', 'service_template_name', 'create
 @aria.group(name='services')
 @aria.options.verbose()
 def services():
-    """Handle services
+    """
+    Manage services
     """
     pass
 
 
 @services.command(name='show',
-                  short_help='Display service information')
+                  short_help='Show information for a service')
 @aria.argument('service-name')
 @aria.options.verbose()
 @aria.options.service_mode_full
@@ -52,9 +56,10 @@ def services():
 @aria.pass_model_storage
 @aria.pass_logger
 def show(service_name, model_storage, mode_full, mode_graph, format_json, format_yaml, logger):
-    """Show information for a specific service template
+    """
+    Show information for a service
 
-    `SERVICE_NAME` is the name of the service to display information on.
+    SERVICE_NAME is the unique name of the service.
     """
     service = model_storage.service.get_by_name(service_name)
 
@@ -99,10 +104,11 @@ def list(service_template_name,
          descending,
          model_storage,
          logger):
-    """List services
+    """
+    List services
 
-    If `--service-template-name` is provided, list services for that service template.
-    Otherwise, list services for all service templates.
+    If `--service-template-name` is provided, list services based on that service template.
+    Otherwise, list all services.
     """
     if service_template_name:
         logger.info('Listing services for service template {0}...'.format(
@@ -120,7 +126,7 @@ def list(service_template_name,
 
 
 @services.command(name='create',
-                  short_help='Create a services')
+                  short_help='Create a service')
 @aria.argument('service-name', required=False)
 @aria.options.service_template_name(required=True)
 @aria.options.inputs(help=helptexts.SERVICE_INPUTS)
@@ -136,10 +142,10 @@ def create(service_template_name,
            resource_storage,
            plugin_manager,
            logger):
-    """Create a service
+    """
+    Create a service
 
-    `SERVICE_NAME` is the name of the service you'd like to create.
-
+    SERVICE_NAME is the unique name to give to the service.
     """
     logger.info('Creating new service from service template {0}...'.format(
         service_template_name))
@@ -168,9 +174,10 @@ def create(service_template_name,
 @aria.pass_plugin_manager
 @aria.pass_logger
 def delete(service_name, force, model_storage, resource_storage, plugin_manager, logger):
-    """Delete a service
+    """
+    Delete a service
 
-    `SERVICE_NAME` is the name of the service to delete.
+    SERVICE_NAME is the unique name of the service.
     """
     logger.info('Deleting service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
@@ -186,9 +193,10 @@ def delete(service_name, force, model_storage, resource_storage, plugin_manager,
 @aria.pass_model_storage
 @aria.pass_logger
 def outputs(service_name, model_storage, logger):
-    """Show outputs for a specific service
+    """
+    Show service outputs
 
-    `SERVICE_NAME` is the name of the service to print outputs for.
+    SERVICE_NAME is the unique name of the service.
     """
     logger.info('Showing outputs for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
@@ -211,9 +219,10 @@ def outputs(service_name, model_storage, logger):
 @aria.pass_model_storage
 @aria.pass_logger
 def inputs(service_name, model_storage, logger):
-    """Show inputs for a specific service
+    """
+    Show service inputs
 
-    `SERVICE_NAME` is the id of the service to print inputs for.
+    SERVICE_NAME is the unique name of the service.
     """
     logger.info('Showing inputs for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)

@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+String formatting and string-based format utilities.
+"""
+
 import json
 from types import MethodType
 
@@ -42,8 +46,7 @@ yaml.representer.RoundTripRepresenter.add_representer(
 
 class JsonAsRawEncoder(json.JSONEncoder):
     """
-    A :class:`JSONEncoder` that will use the :code:`as_raw` property of objects
-    if available.
+    A :class:`JSONEncoder` that will use the ``as_raw`` property of objects if available.
     """
     def raw_encoder_default(self, obj):
         try:
@@ -61,8 +64,7 @@ class JsonAsRawEncoder(json.JSONEncoder):
 
 class YamlAsRawDumper(yaml.dumper.RoundTripDumper):  # pylint: disable=too-many-ancestors
     """
-    A :class:`RoundTripDumper` that will use the :code:`as_raw` property of objects
-    if available.
+    A :class:`RoundTripDumper` that will use the ``as_raw`` property of objects if available.
     """
 
     def represent_data(self, data):
@@ -101,8 +103,8 @@ def decode_dict(data):
 
 def safe_str(value):
     """
-    Like :code:`str` coercion, but makes sure that Unicode strings are properly
-    encoded, and will never return None.
+    Like :class:`str` coercion, but makes sure that Unicode strings are properly encoded, and will
+    never return ``None``.
     """
 
     try:
@@ -113,7 +115,7 @@ def safe_str(value):
 
 def safe_repr(value):
     """
-    Like :code:`repr`, but calls :code:`as_raw` and :code:`as_agnostic` first.
+    Like :func:`repr`, but calls :func:`as_raw` and :func:`as_agnostic` first.
     """
 
     return repr(as_agnostic(as_raw(value)))
@@ -143,7 +145,7 @@ def pluralize(noun):
 
 def as_raw(value):
     """
-    Converts values using their :code:`as_raw` property, if it exists, recursively.
+    Converts values using their ``as_raw`` property, if it exists, recursively.
     """
 
     if hasattr(value, 'as_raw'):
@@ -164,7 +166,7 @@ def as_raw(value):
 
 def as_raw_list(value):
     """
-    Assuming value is a list, converts its values using :code:`as_raw`.
+    Assuming value is a list, converts its values using :func:`as_raw`.
     """
 
     if value is None:
@@ -176,8 +178,7 @@ def as_raw_list(value):
 
 def as_raw_dict(value):
     """
-    Assuming value is a dict, converts its values using :code:`as_raw`.
-    The keys are left as is.
+    Assuming value is a dict, converts its values using :func:`as_raw`. The keys are left as is.
     """
 
     if value is None:
@@ -188,8 +189,8 @@ def as_raw_dict(value):
 
 def as_agnostic(value):
     """
-    Converts subclasses of list and dict to standard lists and dicts, and Unicode strings
-    to non-Unicode if possible, recursively.
+    Converts subclasses of list and dict to standard lists and dicts, and Unicode strings to
+    non-Unicode if possible, recursively.
 
     Useful for creating human-readable output of structures.
     """
@@ -216,8 +217,7 @@ def as_agnostic(value):
 
 def json_dumps(value, indent=2):
     """
-    JSON dumps that supports Unicode and the :code:`as_raw` property of objects
-    if available.
+    JSON dumps that supports Unicode and the ``as_raw`` property of objects if available.
     """
 
     return json.dumps(value, indent=indent, ensure_ascii=False, cls=JsonAsRawEncoder)
@@ -225,8 +225,7 @@ def json_dumps(value, indent=2):
 
 def yaml_dumps(value, indent=2):
     """
-    YAML dumps that supports Unicode and the :code:`as_raw` property of objects
-    if available.
+    YAML dumps that supports Unicode and the ``as_raw`` property of objects if available.
     """
 
     return yaml.dump(value, indent=indent, allow_unicode=True, Dumper=YamlAsRawDumper)

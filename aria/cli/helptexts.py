@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Gathers all CLI command help texts in one place.
+"""
 
 DEFAULT_MUTUALITY_ERROR_MESSAGE = 'mutually exclusive'
 VERBOSE = \
-    "Show verbose output. You can supply this up to three times (i.e. -vvv)"
+    "Show verbose output; you can supply this up to three times (i.e. -vvv)"
 
 VERSION = "Display the version and exit"
 FORCE_RESET = "Confirmation for resetting ARIA's working directory"
@@ -28,12 +31,12 @@ EXECUTION_ID = "The unique identifier for the execution"
 
 SERVICE_TEMPLATE_PATH = "The path to the application's service template file"
 SERVICE_TEMPLATE_FILENAME = (
-    "The name of the archive's main service template file. "
-    "This is only relevant if uploading a (non-CSAR) archive")
+    "The name of the archive's main service template file "
+    "(only relevant if uploading a non-CSAR archive)")
 INPUTS_PARAMS_USAGE = (
-    '(Can be provided as wildcard based paths '
-    '(*.yaml, /my_inputs/, etc..) to YAML files, a JSON string or as '
-    'key1=value1;key2=value2). This argument can be used multiple times')
+    '(can be provided as wildcard based paths '
+    '("inp?.yaml", "/my_inputs/", etc.) to YAML files, a JSON string or as '
+    '"key1=value1;key2=value2"); this argument can be used multiple times')
 SERVICE_INPUTS = "Inputs for the service {0}".format(INPUTS_PARAMS_USAGE)
 EXECUTION_INPUTS = "Inputs for the execution {0}".format(INPUTS_PARAMS_USAGE)
 
@@ -46,8 +49,8 @@ DRY_EXECUTION = "Execute a workflow dry run (prints operations information witho
 IGNORE_AVAILABLE_NODES = "Delete the service even if it has available nodes"
 SORT_BY = "Key for sorting the list"
 DESCENDING = "Sort list in descending order [default: False]"
-JSON_OUTPUT = "Output logs in a consumable JSON format"
-MARK_PATTERN = "Mark a regex pattern in the logs"
+JSON_OUTPUT = "Output logs in JSON format"
+MARK_PATTERN = "Mark a regular expression pattern in the logs"
 
 SHOW_FULL = "Show full information"
 SHOW_JSON = "Show in JSON format (implies --full)"

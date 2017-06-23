@@ -14,8 +14,9 @@
 # limitations under the License.
 
 """
-Workflow related Exception classes
+Workflow exceptions.
 """
+
 import os
 
 from .. import exceptions
@@ -23,14 +24,14 @@ from .. import exceptions
 
 class ExecutorException(exceptions.AriaError):
     """
-    General executor exception
+    General executor exception.
     """
     pass
 
 
 class ProcessException(ExecutorException):
     """
-    Raised when subprocess execution fails
+    Raised when subprocess execution fails.
     """
 
     def __init__(self, command, stderr=None, stdout=None, return_code=None):
@@ -62,13 +63,13 @@ class ProcessException(ExecutorException):
 
 class AriaEngineError(exceptions.AriaError):
     """
-    Raised by the workflow engine
+    Raised by the workflow engine.
     """
 
 
 class TaskException(exceptions.AriaError):
     """
-    Raised by the task
+    Raised by the task.
     """
 
 

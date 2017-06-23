@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Constraints for the requirements-and-capabilities matching mechanism.
+"""
 
 class NodeTemplateConstraint(object):
     """
@@ -23,6 +26,6 @@ class NodeTemplateConstraint(object):
 
     def matches(self, source_node_template, target_node_template):
         """
-        Returns true is the target matches the constraint for the source.
+        Returns ``True`` if the target matches the constraint for the source.
         """
         raise NotImplementedError

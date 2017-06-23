@@ -14,9 +14,7 @@
 # limitations under the License.
 
 """
-classes:
-    * ModelMixin - abstract model implementation.
-    * ModelIDMixin - abstract model implementation with IDs.
+ARIA modeling mix-ins module
 """
 
 from sqlalchemy.ext import associationproxy
@@ -49,11 +47,11 @@ class ModelMixin(object):
 
     def to_dict(self, fields=None, suppress_error=False):
         """
-        Return a dict representation of the model
+        Create a dict representation of the model.
 
-        :param suppress_error: If set to True, sets ``None`` to attributes that it's unable to
-                               retrieve (e.g., if a relationship wasn't established yet, and so it's
-                               impossible to access a property through it)
+        :param suppress_error: if set to ``True``, sets ``None`` to attributes that it's unable to
+         retrieve (e.g., if a relationship wasn't established yet, and so it's impossible to access
+         a property through it)
         """
 
         res = dict()
@@ -79,14 +77,14 @@ class ModelMixin(object):
     @classmethod
     def fields(cls):
         """
-        Return the list of field names for this table
+        List of field names for this table.
 
-        Mostly for backwards compatibility in the code (that uses ``fields``)
+        Mostly for backwards compatibility in the code (that uses ``fields``).
         """
 
         fields = set(cls._iter_association_proxies())
         fields.update(cls.__table__.columns.keys())
-        return fields - set(getattr(cls, '__private_fields__', []))
+        return fields - set(getattr(cls, '__private_fields__', ()))
 
     @classmethod
     def _iter_association_proxies(cls):
@@ -101,8 +99,17 @@ class ModelMixin(object):
 
 
 class ModelIDMixin(object):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(Text, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, doc="""
+    Unique ID.
+    
+    :type: :obj:`int`
+    """)
+
+    name = Column(Text, index=True, doc="""
+    Model name.
+    
+    :type: :obj:`basestring`
+    """)
 
     @classmethod
     def id_column_name(cls):
@@ -115,10 +122,10 @@ class ModelIDMixin(object):
 
 class InstanceModelMixin(ModelMixin):
     """
-    Mixin for :class:`ServiceInstance` models.
+    Mix-in for service instance models.
 
-    All models support validation, diagnostic dumping, and representation as
-    raw data (which can be translated into JSON or YAML) via ``as_raw``.
+    All models support validation, diagnostic dumping, and representation as raw data (which can be
+    translated into JSON or YAML) via :meth:`as_raw`.
     """
 
     @property
@@ -137,9 +144,9 @@ class InstanceModelMixin(ModelMixin):
 
 class TemplateModelMixin(InstanceModelMixin):
     """
-    Mixin for :class:`ServiceTemplate` models.
+    Mix-in for service template models.
 
-    All model models can be instantiated into :class:`ServiceInstance` models.
+    All model models can be instantiated into service instance models.
     """
 
     def instantiate(self, container):
@@ -148,24 +155,26 @@ class TemplateModelMixin(InstanceModelMixin):
 
 class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):                                 #pylint: disable=abstract-method
     """
-    Represents a typed value. The value can contain nested intrinsic functions.
+    Mix-in for typed values. The value can contain nested intrinsic functions.
 
-    This model can be used as the ``container_holder`` argument for :func:`functions.evaluate`.
-
-    :ivar name: Name
-    :vartype name: basestring
-    :ivar type_name: Type name
-    :vartype type_name: basestring
-    :ivar value: Value
-    :ivar description: Description
-    :vartype description: basestring
+    This model can be used as the ``container_holder`` argument for
+    :func:`~aria.modeling.functions.evaluate`.
     """
 
     __tablename__ = 'parameter'
 
-    name = Column(Text)
-    type_name = Column(Text)
-    description = Column(Text)
+    type_name = Column(Text, doc="""
+    Type name.
+    
+    :type: :obj:`basestring`
+    """)
+
+    description = Column(Text, doc="""
+    Human-readable description.
+    
+    :type: :obj:`basestring`
+    """)
+
     _value = Column(PickleType)
 
     @property
@@ -187,8 +196,10 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
         """
         The sole owner of this parameter, which is another model that relates to it.
 
-        *All* parameters should have an owner model. In case this property method fails to find
-        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
+        *All* parameters should have an owner model.
+
+        :raises ~exceptions.ValueError: if failed to find an owner, which signifies an abnormal,
+         orphaned parameter
         """
 
         # Find first non-null relationship
@@ -210,8 +221,10 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
         The logical container is equivalent to the ``SELF`` keyword used by intrinsic functions in
         TOSCA.
 
-        *All* parameters should have a container model. In case this property method fails to find
-        it, it will raise a ValueError, which should signify an abnormal, orphaned parameter.
+        *All* parameters should have a container model.
+
+        :raises ~exceptions.ValueError: if failed to find a container model, which signifies an
+         abnormal, orphaned parameter
         """
 
         from . import models
@@ -253,7 +266,11 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
     @caching.cachedmethod
     def service(self):
         """
-        The :class:`Service` containing this parameter, or None if not contained in a service.
+        The :class:`~aria.modeling.models.Service` model containing this parameter, or ``None`` if
+        not contained in a service.
+
+        :raises ~exceptions.ValueError: if failed to find a container model, which signifies an
+         abnormal, orphaned parameter
         """
 
         from . import models
@@ -268,8 +285,11 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
     @caching.cachedmethod
     def service_template(self):
         """
-        The :class:`ServiceTemplate` containing this parameter, or None if not contained in a
-        service template.
+        The :class:`~aria.modeling.models.ServiceTemplate` model containing this parameter, or
+        ``None`` if not contained in a service template.
+
+        :raises ~exceptions.ValueError: if failed to find a container model, which signifies an
+         abnormal, orphaned parameter
         """
 
         from . import models
@@ -329,10 +349,10 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
         cos01 specification <http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01
         /TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Toc373867862>`__
 
-        :param name: Parameter name
+        :param name: parameter name
         :type name: basestring
-        :param value: Parameter value
-        :param description: Description (optional)
+        :param value: parameter value
+        :param description: human-readable description (optional)
         :type description: basestring
         """
 
@@ -345,7 +365,6 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
                    description=description)
 
     def as_other_parameter_model(self, other_model_cls):
-
         name, value = self.unwrapped
         return other_model_cls.wrap(name, value)
 

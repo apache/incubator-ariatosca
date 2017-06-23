@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Enhancements and ARIA-specific conveniences for `Click <http://click.pocoo.org>`__.
+"""
+
 import os
 import sys
 import difflib
@@ -227,9 +231,8 @@ class AliasedGroup(click.Group):
 
     def resolve_command(self, ctx, args):
         """
-        Override clicks ``resolve_command`` method
-        and appends *Did you mean ...* suggestions
-        to the raised exception message.
+        Override clicks ``resolve_command`` method and appends *Did you mean ...* suggestions to the
+        raised exception message.
         """
         try:
             return super(AliasedGroup, self).resolve_command(ctx, args)
@@ -250,7 +253,7 @@ class AliasedGroup(click.Group):
 
 def group(name):
     """
-    Allow to create a group with a default click context and a cls for click's ``didyoueamn``
+    Allow to create a group with a default click context and a class for Click's ``didyoueamn``
     without having to repeat it for every group.
     """
     return click.group(
@@ -271,7 +274,7 @@ def command(*args, **kwargs):
 
 def argument(*args, **kwargs):
     """
-    Make Click arguments ARIA specific.
+    Make Click arguments specific to ARIA.
 
     This exists purely for aesthetic reasons, otherwise some decorators are called
     ``@click.something`` instead of ``@aria.something``

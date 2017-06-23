@@ -14,7 +14,7 @@
 # limitations under the License.
 
 """
-Builtin execute_operation workflow
+Built-in operation execution Workflow.
 """
 
 from ... import workflow
@@ -34,13 +34,13 @@ def execute_operation(
         node_ids,
         **kwargs):
     """
-    The execute_operation workflow
+    Built-in operation execution Workflow.
 
-    :param WorkflowContext workflow_context: the workflow context
-    :param TaskGraph graph: the graph which will describe the workflow.
-    :param basestring operation: the operation name to execute
-    :param dict operation_kwargs:
-    :param bool run_by_dependency_order:
+    :param workflow_context: workflow context
+    :param graph: graph which will describe the workflow
+    :param operation: operation name to execute
+    :param operation_kwargs:
+    :param run_by_dependency_order:
     :param type_names:
     :param node_template_ids:
     :param node_ids:

@@ -14,10 +14,7 @@
 # limitations under the License.
 
 """
-ARIA's events Sub-Package
-Path: aria.events.storage_event_handler
-
-Implementation of storage handlers for workflow and operation events.
+Workflow event handling.
 """
 
 from datetime import (

@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Tabular formatting utilities.
+"""
+
 import os
 from datetime import datetime
 
@@ -23,6 +27,23 @@ from .env import logger
 
 def print_data(columns, items, header_text,
                column_formatters=None, col_max_width=None, defaults=None):
+    """
+    Prints data in a tabular form.
+
+    :param columns: columns of the table, e.g. ``['id','name']``
+    :type columns: iterable of basestring
+    :param items: each element must have keys or attributes corresponding to the ``columns`` items,
+     e.g. ``[{'id':'123', 'name':'Pete'}]``
+    :type data: [{:obj:`basestring`: :obj:`basestring`}]
+    :param column_formatters: maps column name to formatter, a function that may manipulate the
+     string values printed for this column, e.g. ``{'created_at': timestamp_formatter}``
+    :type column_formatters: {:obj:`basestring`: :obj:`function`}
+    :param col_max_width: maximum width of table
+    :type col_max_width: int
+    :param defaults: default values for keys that don't exist in the data itself, e.g.
+     ``{'serviceId':'123'}``
+    :type defaults: {:obj:`basestring`: :obj:`basestring`}
+    """
     if items is None:
         items = []
     elif not isinstance(items, list):
@@ -43,30 +64,17 @@ def _generate(cols, data, column_formatters=None, defaults=None):
     """
     Return a new PrettyTable instance representing the list.
 
-    Arguments:
-
-        cols - An iterable of strings that specify what
-               are the columns of the table.
-
-               for example: ['id','name']
-
-        data - An iterable of dictionaries or objects, each element must
-               have keys or attributes corresponding to the cols items.
-
-               for example: [{'id':'123', 'name':'Pete'}]
-
-        column_formatters - A dictionary from a column name to a formatter - a function that
-                            may manipulate the string values printed for this column.
-                            (See below for a few built-in formatter examples)
-
-                            for example: {'created_at': timestamp_formatter}
-
-        defaults - A dictionary specifying default values for
-                   key's that don't exist in the data itself.
-
-                   for example: {'serviceId':'123'} will set the
-                   serviceId value for all rows to '123'.
-
+    :param cols: columns of the table, e.g. ``['id','name']``
+    :type cols: iterable of :obj:`basestring`
+    :param data: each element must have keys or attributes corresponding to the ``cols`` items,
+     e.g. ``[{'id':'123', 'name':'Pete'}]``
+    :type data: [{:obj:`basestring`: :obj:`basestring`}]
+    :param column_formatters: maps column name to formatter, a function that may manipulate the
+     string values printed for this column, e.g. ``{'created_at': timestamp_formatter}``
+    :type column_formatters: {:obj:`basestring`: :obj:`function`}
+    :param defaults: default values for keys that don't exist in the data itself, e.g.
+     ``{'serviceId':'123'}``
+    :type defaults: {:obj:`basestring`: :obj:`basestring`}
     """
     def get_values_per_column(column, row_data):
         if hasattr(row_data, column) or (isinstance(row_data, dict) and column in row_data):
