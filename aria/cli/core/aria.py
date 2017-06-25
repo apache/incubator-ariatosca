@@ -28,9 +28,9 @@ from ..env import (
 )
 from .. import defaults
 from .. import helptexts
+from ..ascii_art import ARIA_ASCII_ART
 from ..inputs import inputs_to_dict
 from ... import __version__
-from ... import aria_package_name
 from ...utils.exceptions import get_exception_as_string
 
 
@@ -97,7 +97,7 @@ def show_version(ctx, param, value):
     if not value:
         return
 
-    logger.info('{0} {1}'.format(aria_package_name, __version__))
+    logger.info('{0} v{1}'.format(ARIA_ASCII_ART, __version__))
     ctx.exit()
 
 
