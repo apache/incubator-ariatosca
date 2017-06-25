@@ -59,6 +59,8 @@ test:
 
 dist: docs
 	python ./setup.py sdist bdist_wheel
+	# pushing LICENSE and additional files into the binary distribution archive
+	-find "$(DIST)" -type f -name '*.whl' -exec zip -u {} LICENSE NOTICE DISCLAIMER \;
 
 deploy:
 	pip install --upgrade "twine>=1.9.1"
