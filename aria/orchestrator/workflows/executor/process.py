@@ -25,6 +25,10 @@ import sys
 # As part of the process executor implementation, subprocess are started with this module as their
 # entry point. We thus remove this module's directory from the python path if it happens to be
 # there
+
+import signal
+from collections import namedtuple
+
 script_dir = os.path.dirname(__file__)
 if script_dir in sys.path:
     sys.path.remove(script_dir)
@@ -39,6 +43,7 @@ import tempfile
 import Queue
 import pickle
 
+import psutil
 import jsonpickle
 
 import aria
@@ -55,6 +60,9 @@ _INT_FMT = 'I'
 _INT_SIZE = struct.calcsize(_INT_FMT)
 UPDATE_TRACKED_CHANGES_FAILED_STR = \
     'Some changes failed writing to storage. For more info refer to the log.'
+
+
+_Task = namedtuple('_Task', 'proc, ctx')
 
 
 class ProcessExecutor(base.BaseExecutor):
@@ -113,9 +121,26 @@ class ProcessExecutor(base.BaseExecutor):
         self._server_socket.close()
         self._listener_thread.join(timeout=60)
 
+        for task_id in self._tasks:
+            self.terminate(task_id)
+
+    def terminate(self, task_id):
+        task = self._remove_task(task_id)
+        # The process might have managed to finish, thus it would not be in the tasks list
+        if task:
+            try:
+                parent_process = psutil.Process(task.proc.pid)
+                for child_process in reversed(parent_process.children(recursive=True)):
+                    try:
+                        child_process.send_signal(signal.SIGKILL)
+                    except BaseException:
+                        pass
+                parent_process.send_signal(signal.SIGKILL)
+            except BaseException:
+                pass
+
     def _execute(self, ctx):
         self._check_closed()
-        self._tasks[ctx.task.id] = ctx
 
         # Temporary file used to pass arguments to the started subprocess
         file_descriptor, arguments_json_path = tempfile.mkstemp(prefix='executor-', suffix='.json')
@@ -125,13 +150,18 @@ class ProcessExecutor(base.BaseExecutor):
 
         env = self._construct_subprocess_env(task=ctx.task)
         # Asynchronously start the operation in a subprocess
-        subprocess.Popen(
-            '{0} {1} {2}'.format(sys.executable, __file__, arguments_json_path),
-            env=env,
-            shell=True)
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                os.path.expanduser(os.path.expandvars(__file__)),
+                os.path.expanduser(os.path.expandvars(arguments_json_path))
+            ],
+            env=env)
+
+        self._tasks[ctx.task.id] = _Task(ctx=ctx, proc=proc)
 
     def _remove_task(self, task_id):
-        return self._tasks.pop(task_id)
+        return self._tasks.pop(task_id, None)
 
     def _check_closed(self):
         if self._stopped:
@@ -191,15 +221,18 @@ class ProcessExecutor(base.BaseExecutor):
                 _send_message(connection, response)
 
     def _handle_task_started_request(self, task_id, **kwargs):
-        self._task_started(self._tasks[task_id])
+        self._task_started(self._tasks[task_id].ctx)
 
     def _handle_task_succeeded_request(self, task_id, **kwargs):
         task = self._remove_task(task_id)
-        self._task_succeeded(task)
+        if task:
+            self._task_succeeded(task.ctx)
 
     def _handle_task_failed_request(self, task_id, request, **kwargs):
         task = self._remove_task(task_id)
-        self._task_failed(task, exception=request['exception'], traceback=request['traceback'])
+        if task:
+            self._task_failed(
+                task.ctx, exception=request['exception'], traceback=request['traceback'])
 
 
 def _send_message(connection, message):

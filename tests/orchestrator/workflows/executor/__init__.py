@@ -18,9 +18,12 @@ from contextlib import contextmanager
 
 import aria
 from aria.modeling import models
+from aria.orchestrator.context.common import BaseContext
 
 
 class MockContext(object):
+
+    INSTRUMENTATION_FIELDS = BaseContext.INSTRUMENTATION_FIELDS
 
     def __init__(self, storage, task_kwargs=None):
         self.logger = logging.getLogger('mock_logger')
@@ -45,6 +48,10 @@ class MockContext(object):
 
     def close(self):
         pass
+
+    @property
+    def model(self):
+        return self._storage
 
     @classmethod
     def instantiate_from_dict(cls, storage_kwargs=None, task_kwargs=None):

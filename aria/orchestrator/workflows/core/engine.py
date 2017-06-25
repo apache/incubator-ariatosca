@@ -66,12 +66,22 @@ class Engine(logger.LoggerMixin):
                 else:
                     time.sleep(0.1)
             if cancel:
+                self._terminate_tasks(tasks_tracker.executing_tasks)
                 events.on_cancelled_workflow_signal.send(ctx)
             else:
                 events.on_success_workflow_signal.send(ctx)
         except BaseException as e:
+            # Cleanup any remaining tasks
+            self._terminate_tasks(tasks_tracker.executing_tasks)
             events.on_failure_workflow_signal.send(ctx, exception=e)
             raise
+
+    def _terminate_tasks(self, tasks):
+        for task in tasks:
+            try:
+                self._executors[task._executor].terminate(task.id)
+            except BaseException:
+                pass
 
     @staticmethod
     def cancel_execution(ctx):

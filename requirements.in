@@ -33,6 +33,7 @@ PrettyTable>=0.7,<0.8
 click_didyoumean==0.0.3
 backports.shutil_get_terminal_size==1.0.0
 logutils==0.3.4.1
+psutil>=5.2.2, < 6.0.0
 importlib ; python_version < '2.7'
 ordereddict ; python_version < '2.7'
 total-ordering ; python_version < '2.7'  # only one version on pypi

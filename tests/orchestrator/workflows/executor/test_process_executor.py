@@ -14,17 +14,24 @@
 # limitations under the License.
 
 import os
+import time
 import Queue
+import subprocess
 
 import pytest
+import psutil
+import retrying
 
 import aria
+from aria import operation
+from aria.modeling import models
 from aria.orchestrator import events
 from aria.utils.plugin import create as create_plugin
 from aria.orchestrator.workflows.executor import process
 
 import tests.storage
 import tests.resources
+from tests.helpers import FilesystemDataHolder
 from tests.fixtures import (  # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
@@ -71,10 +78,45 @@ class TestProcessExecutor(object):
             executor.execute(MockContext(model, task_kwargs=dict(function='some.function')))
         assert 'closed' in exc_info.value.message
 
+    def test_process_termination(self, executor, model, fs_test_holder):
+        argument = models.Argument.wrap('holder_path', fs_test_holder._path)
+        model.argument.put(argument)
+        ctx = MockContext(
+            model,
+            task_kwargs=dict(
+                function='{0}.{1}'.format(__name__, freezing_task.__name__),
+                arguments=dict(holder_path=argument)),
+        )
+
+        executor.execute(ctx)
+
+        @retrying.retry(retry_on_result=lambda r: r is False, stop_max_delay=60000, wait_fixed=500)
+        def wait_for_extra_process_id():
+            return fs_test_holder.get('subproc', False)
+
+        pids = [executor._tasks[ctx.task.id].proc.pid, wait_for_extra_process_id()]
+        assert any(p.pid == pid for p in psutil.process_iter() for pid in pids)
+        executor.terminate(ctx.task.id)
+
+        # Give a chance to the processes to terminate
+        time.sleep(2)
+        assert not any(p.pid == pid and p.status() != psutil.STATUS_ZOMBIE
+                       for p in psutil.process_iter()
+                       for pid in pids)
+
+
+@pytest.fixture
+def fs_test_holder(tmpdir):
+    dataholder_path = str(tmpdir.join('dataholder'))
+    holder = FilesystemDataHolder(dataholder_path)
+    return holder
+
 
 @pytest.fixture
 def executor(plugin_manager):
-    result = process.ProcessExecutor(plugin_manager=plugin_manager)
+    result = process.ProcessExecutor(
+        plugin_manager=plugin_manager,
+        python_path=[tests.ROOT_DIR])
     yield result
     result.close()
 
@@ -92,3 +134,11 @@ def model(tmpdir):
                                               initiator_kwargs=dict(base_dir=str(tmpdir)))
     yield _storage
     tests.storage.release_sqlite_storage(_storage)
+
+
+@operation
+def freezing_task(holder_path, **_):
+    holder = FilesystemDataHolder(holder_path)
+    holder['subproc'] = subprocess.Popen('while true; do sleep 5; done', shell=True).pid
+    while True:
+        time.sleep(5)

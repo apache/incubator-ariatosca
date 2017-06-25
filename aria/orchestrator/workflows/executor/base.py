@@ -25,7 +25,7 @@ class BaseExecutor(logger.LoggerMixin):
     """
     Base class for executors for running tasks
     """
-    def _execute(self, task):
+    def _execute(self, ctx):
         raise NotImplementedError
 
     def execute(self, ctx):
@@ -45,6 +45,13 @@ class BaseExecutor(logger.LoggerMixin):
     def close(self):
         """
         Close the executor
+        """
+        pass
+
+    def terminate(self, ctx):
+        """
+        Terminate the executing task
+        :return:
         """
         pass
 

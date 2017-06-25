@@ -42,15 +42,15 @@ class CeleryExecutor(BaseExecutor):
         self._receiver_thread.start()
         self._started_queue.get(timeout=30)
 
-    def _execute(self, task):
-        self._tasks[task.id] = task
-        arguments = dict(arg.unwrapped for arg in task.arguments.values())
-        arguments['ctx'] = task.context
-        self._results[task.id] = self._app.send_task(
-            task.operation_mapping,
+    def _execute(self, ctx):
+        self._tasks[ctx.id] = ctx
+        arguments = dict(arg.unwrapped for arg in ctx.arguments.values())
+        arguments['ctx'] = ctx.context
+        self._results[ctx.id] = self._app.send_task(
+            ctx.operation_mapping,
             kwargs=arguments,
-            task_id=task.id,
-            queue=self._get_queue(task))
+            task_id=ctx.id,
+            queue=self._get_queue(ctx))
 
     def close(self):
         self._stopped = True

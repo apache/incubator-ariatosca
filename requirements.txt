@@ -26,6 +26,7 @@ networkx==1.9.1
 ordereddict==1.1 ; python_version < "2.7"
 packaging==16.8           # via setuptools
 prettytable==0.7.2
+psutil==5.2.2
 pyparsing==2.2.0          # via packaging
 requests==2.13.0
 retrying==1.3.3
