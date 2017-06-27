@@ -493,7 +493,7 @@ class NodeTemplateBase(TemplateModelMixin):
 
     @declared_attr
     def requirement_templates(cls):
-        return relationship.one_to_many(cls, 'requirement_template', child_fk='node_template_fk')
+        return relationship.one_to_many(cls, 'requirement_template', other_fk='node_template_fk')
 
     @declared_attr
     def properties(cls):

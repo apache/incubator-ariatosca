@@ -350,11 +350,11 @@ class TestResumableWorkflows(object):
         if events['execution_ended'].wait(60) is False:
             raise TimeoutError("Execution did not end")
 
-        first_task, second_task = workflow_context.model.task.list(filters={'_stub_type': None})
-        assert first_task.status == first_task.SUCCESS
-        assert second_task.status in (second_task.FAILED, second_task.RETRYING)
+        tasks = workflow_context.model.task.list(filters={'_stub_type': None})
+        assert any(task.status == task.SUCCESS for task in tasks)
+        assert any(task.status in (task.FAILED, task.RETRYING) for task in tasks)
         events['is_resumed'].set()
-        assert second_task.status in (second_task.FAILED, second_task.RETRYING)
+        assert any(task.status in (task.FAILED, task.RETRYING) for task in tasks)
 
         # Create a new workflow runner, with an existing execution id. This would cause
         # the old execution to restart.
@@ -370,7 +370,7 @@ class TestResumableWorkflows(object):
         new_wf_runner.execute()
 
         # Wait for it to finish and assert changes.
-        assert second_task.status == second_task.SUCCESS
+        assert all(task.status == task.SUCCESS for task in tasks)
         assert node.attributes['invocations'].value == 3
         assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
 

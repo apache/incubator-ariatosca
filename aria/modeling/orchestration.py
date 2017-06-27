@@ -397,13 +397,8 @@ class TaskBase(mixins.ModelMixin):
         raise TaskRetryException(message, retry_interval=retry_interval)
 
     @declared_attr
-    def dependency_fk(self):
-        return relationship.foreign_key('task', nullable=True)
-
-    @declared_attr
     def dependencies(cls):
-        # symmetric relationship causes funky graphs
-        return relationship.one_to_many_self(cls, 'dependency_fk')
+        return relationship.many_to_many(cls, self=True)
 
     def has_ended(self):
         return self.status in (self.SUCCESS, self.FAILED)

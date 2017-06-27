@@ -97,8 +97,8 @@ class WorkflowRunner(object):
         if not self._is_resume:
             workflow_fn = self._get_workflow_fn()
             self._tasks_graph = workflow_fn(ctx=self._workflow_context, **execution_inputs_dict)
-            graph_compiler.GraphCompiler(self._workflow_context, executor.__class__).compile(
-                self._tasks_graph)
+            compiler = graph_compiler.GraphCompiler(self._workflow_context, executor.__class__)
+            compiler.compile(self._tasks_graph)
 
         self._engine = engine.Engine(executors={executor.__class__: executor})
 

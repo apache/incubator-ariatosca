@@ -37,7 +37,6 @@ class GraphCompiler(object):
         :param end_stub_type: internal use
         :param depends_on: internal use
         """
-        task_graph = task_graph or self._task_graph
         depends_on = list(depends_on)
 
         # Insert start marker
@@ -110,8 +109,7 @@ class GraphCompiler(object):
         """
         tasks = []
         for dependency in dependencies:
-            if getattr(dependency, 'actor', False):
-                # This is
+            if isinstance(dependency, (api.task.StubTask, api.task.OperationTask)):
                 dependency_name = dependency.id
             else:
                 dependency_name = self._end_graph_suffix(dependency.id)

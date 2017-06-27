@@ -99,7 +99,7 @@ class TestProcessExecutor(object):
         executor.terminate(ctx.task.id)
 
         # Give a chance to the processes to terminate
-        time.sleep(2)
+        time.sleep(10) # windows might require more time
         assert not any(p.pid == pid and p.status() != psutil.STATUS_ZOMBIE
                        for p in psutil.process_iter()
                        for pid in pids)

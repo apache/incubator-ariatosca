@@ -320,7 +320,7 @@ class TypeBase(InstanceModelMixin):
 
     @declared_attr
     def children(cls):
-        return relationship.one_to_many_self(cls, 'parent_type_fk')
+        return relationship.one_to_many(cls, other_fk='parent_type_fk', self=True)
 
     # region foreign keys
 

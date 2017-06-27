@@ -483,7 +483,7 @@ class NodeBase(InstanceModelMixin):
     @declared_attr
     def outbound_relationships(cls):
         return relationship.one_to_many(
-            cls, 'relationship', child_fk='source_node_fk', back_populates='source_node',
+            cls, 'relationship', other_fk='source_node_fk', back_populates='source_node',
             rel_kwargs=dict(
                 order_by='Relationship.source_position',
                 collection_class=ordering_list('source_position', count_from=0)
@@ -493,7 +493,7 @@ class NodeBase(InstanceModelMixin):
     @declared_attr
     def inbound_relationships(cls):
         return relationship.one_to_many(
-            cls, 'relationship', child_fk='target_node_fk', back_populates='target_node',
+            cls, 'relationship', other_fk='target_node_fk', back_populates='target_node',
             rel_kwargs=dict(
                 order_by='Relationship.target_position',
                 collection_class=ordering_list('target_position', count_from=0)

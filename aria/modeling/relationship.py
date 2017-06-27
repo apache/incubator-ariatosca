@@ -90,35 +90,6 @@ def one_to_one_self(model_class, fk):
     )
 
 
-def one_to_many_self(model_class, fk, dict_key=None):
-    """
-    Declare a one-to-many relationship property. The property value would be a list or dict of
-    instances of the same model.
-
-    You will need an associated foreign key to our own table.
-
-    *This utility method should only be used during class creation.*
-
-    :param model_class: The class in which this relationship will be declared
-    :type model_class: type
-    :param fk: Foreign key name
-    :type fk: basestring
-    :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
-                     be a list
-    :type dict_key: basestring
-    """
-    return _relationship(
-        model_class,
-        model_class.__tablename__,
-        relationship_kwargs={
-            'remote_side': '{model_class}.{remote_column}'.format(
-                model_class=model_class.__name__, remote_column=fk)
-        },
-        back_populates=False,
-        dict_key=dict_key
-    )
-
-
 def one_to_one(model_class,
                other_table,
                fk=None,
@@ -162,11 +133,12 @@ def one_to_one(model_class,
 
 
 def one_to_many(model_class,
-                child_table,
-                child_fk=None,
+                other_table=None,
+                other_fk=None,
                 dict_key=None,
                 back_populates=None,
-                rel_kwargs=None):
+                rel_kwargs=None,
+                self=False):
     """
     Declare a one-to-many relationship property. The property value would be a list or dict of
     instances of the child table's model.
@@ -181,9 +153,9 @@ def one_to_many(model_class,
     :param model_class: The class in which this relationship will be declared
     :type model_class: type
     :param child_table: Child table name
-    :type child_table: basestring
-    :param child_fk: Foreign key name at the child table (no need specify if there's no ambiguity)
-    :type child_fk: basestring
+    :type other_table: basestring
+    :param other_fk: Foreign key name at the child table (no need specify if there's no ambiguity)
+    :type other_fk: basestring
     :param dict_key: If set the value will be a dict with this key as the dict key; otherwise will
                      be a list
     :type dict_key: basestring
@@ -191,18 +163,28 @@ def one_to_many(model_class,
                            false to disable
     :type back_populates: basestring|bool
     """
-    rel_kwargs = rel_kwargs or {}
-    rel_kwargs.setdefault('cascade', 'all')
-    if back_populates is None:
-        back_populates = model_class.__tablename__
+    relationship_kwargs = rel_kwargs or {}
+    if self:
+        assert other_fk
+        other_table_name = model_class.__tablename__
+        back_populates = False
+        relationship_kwargs['remote_side'] = '{model}.{column}'.format(model=model_class.__name__,
+                                                                       column=other_fk)
+
+    else:
+        assert other_table
+        other_table_name = other_table
+        if back_populates is None:
+            back_populates = model_class.__tablename__
+        relationship_kwargs.setdefault('cascade', 'all')
 
     return _relationship(
         model_class,
-        child_table,
+        other_table_name,
         back_populates=back_populates,
-        other_fk=child_fk,
+        other_fk=other_fk,
         dict_key=dict_key,
-        relationship_kwargs=rel_kwargs)
+        relationship_kwargs=relationship_kwargs)
 
 
 def many_to_one(model_class,
@@ -244,10 +226,11 @@ def many_to_one(model_class,
 
 
 def many_to_many(model_class,
-                 other_table,
+                 other_table=None,
                  prefix=None,
                  dict_key=None,
-                 other_property=None):
+                 other_property=None,
+                 self=False):
     """
     Declare a many-to-many relationship property. The property value would be a list or dict of
     instances of the other table's model.
@@ -280,8 +263,11 @@ def many_to_many(model_class,
     this_column_name = '{0}_id'.format(this_table)
     this_foreign_key = '{0}.id'.format(this_table)
 
-    other_column_name = '{0}_id'.format(other_table)
-    other_foreign_key = '{0}.id'.format(other_table)
+    if self:
+        other_table = this_table
+
+    other_column_name = '{0}_{1}'.format(other_table, 'self_ref_id' if self else 'id')
+    other_foreign_key = '{0}.{1}'.format(other_table, 'id')
 
     secondary_table_name = '{0}_{1}'.format(this_table, other_table)
 
@@ -299,13 +285,20 @@ def many_to_many(model_class,
         other_foreign_key
     )
 
-    return _relationship(
-        model_class,
-        other_table,
-        relationship_kwargs={'secondary': secondary_table},
-        backref_kwargs={'name': other_property, 'uselist': True} if other_property else None,
-        dict_key=dict_key
-    )
+    kwargs = {'relationship_kwargs': {'secondary': secondary_table}}
+
+    if self:
+        kwargs['back_populates'] = NO_BACK_POP
+        kwargs['relationship_kwargs']['primaryjoin'] = \
+                    getattr(model_class, 'id') == getattr(secondary_table.c, this_column_name)
+        kwargs['relationship_kwargs']['secondaryjoin'] = \
+            getattr(model_class, 'id') == getattr(secondary_table.c, other_column_name)
+    else:
+        kwargs['backref_kwargs'] = \
+            {'name': other_property, 'uselist': True} if other_property else None
+        kwargs['dict_key'] = dict_key
+
+    return _relationship(model_class, other_table, **kwargs)
 
 
 def _relationship(model_class,
@@ -368,14 +361,6 @@ def _get_secondary_table(metadata,
     return Table(
         name,
         metadata,
-        Column(
-            first_column,
-            Integer,
-            ForeignKey(first_foreign_key)
-        ),
-        Column(
-            second_column,
-            Integer,
-            ForeignKey(second_foreign_key)
-        )
+        Column(first_column, Integer, ForeignKey(first_foreign_key)),
+        Column(second_column, Integer, ForeignKey(second_foreign_key))
     )
