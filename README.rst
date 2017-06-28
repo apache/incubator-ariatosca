@@ -138,7 +138,7 @@ Subscribe by sending a mail to ``<group>-subscribe@ariatosca.incubator.apache.or
 lists `here <https://www.apache.org/foundation/mailinglists.html>`__.
 
 For past correspondence, see the
-`dev mailing list archive <http://mail-archives.apache.org/mod_mbox/incubator-ariatosca-dev/>`__.
+`dev mailing list archive <https://lists.apache.org/list.html?dev@ariatosca.apache.org>`__.
 
 
 License
