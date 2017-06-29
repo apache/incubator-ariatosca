@@ -24,13 +24,13 @@ PYTHON_VERSION = $$(python -V 2>&1 | cut -f2 -d' ' | cut -f1,2 -d'.' --output-de
 .PHONY: clean install install-virtual docs test dist deploy
 
 default:
-	@echo "Please choose one of the following targets: clean, install, install-virtual, docs, test, dist, deploy, requirements.txt"
+	@echo "Please choose one of the following targets: clean, install, install-virtual, docs, test, dist, requirements.txt"
 
 clean:
 	rm -rf "$(DIST)" "$(HTML)" .tox .coverage*
-	-find . -type f -name '.coverage' -delete
-	-find . -type d -name '.coverage' -exec rm -rf {} \; 2>/dev/null
-	-find . -type d -name '*.egg-info' -exec rm -rf {} \; 2>/dev/null
+	-find . -maxdepth 1 -type f -name '.coverage' -delete
+	-find . -maxdepth 1 -type d -name '.coverage' -exec rm -rf {} \; 2>/dev/null
+	-find . -maxdepth 1 -type d -name 'build' -exec rm -rf {} \; 2>/dev/null
 
 install:
 	pip install .[ssh]
@@ -51,21 +51,12 @@ docs:
 
 test:
 	pip install --upgrade "tox>=2.7.0"
-	tox -e pylint_code
-	tox -e pylint_tests
-	tox -e py$(PYTHON_VERSION)
-	tox -e py$(PYTHON_VERSION)e2e
-	tox -e py$(PYTHON_VERSION)ssh
+	tox -e pylint_code -e pylint_tests -e py$(PYTHON_VERSION) -e py$(PYTHON_VERSION)e2e -e py$(PYTHON_VERSION)ssh
 
 dist: docs
 	python ./setup.py sdist bdist_wheel
 	# pushing LICENSE and additional files into the binary distribution archive
 	-find "$(DIST)" -type f -name '*.whl' -exec zip -u {} LICENSE NOTICE DISCLAIMER \;
-
-deploy:
-	pip install --upgrade "twine>=1.9.1"
-	gpg --detach-sign -a "$(DIST)"/*
-	twine upload "$(DIST)"/*
 
 ./requirements.txt: ./requirements.in
 	pip install --upgrade "pip-tools>=1.9.0"
