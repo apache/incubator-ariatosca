@@ -26,7 +26,6 @@ import sys
 # entry point. We thus remove this module's directory from the python path if it happens to be
 # there
 
-import signal
 from collections import namedtuple
 
 script_dir = os.path.dirname(__file__)
@@ -121,7 +120,8 @@ class ProcessExecutor(base.BaseExecutor):
         self._server_socket.close()
         self._listener_thread.join(timeout=60)
 
-        for task_id in self._tasks:
+        # we use set(self._tasks) since tasks may change in the process of closing
+        for task_id in set(self._tasks):
             self.terminate(task_id)
 
     def terminate(self, task_id):
@@ -132,10 +132,10 @@ class ProcessExecutor(base.BaseExecutor):
                 parent_process = psutil.Process(task.proc.pid)
                 for child_process in reversed(parent_process.children(recursive=True)):
                     try:
-                        child_process.send_signal(signal.SIGKILL)
+                        child_process.kill()
                     except BaseException:
                         pass
-                parent_process.send_signal(signal.SIGKILL)
+                parent_process.kill()
             except BaseException:
                 pass
 
