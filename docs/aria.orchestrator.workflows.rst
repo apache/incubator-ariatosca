@@ -35,10 +35,10 @@
 
 .. automodule:: aria.orchestrator.workflows.core
 
-:mod:`aria.orchestrator.workflows.core.compile`
------------------------------------------------
+:mod:`aria.orchestrator.workflows.core.graph_compiler`
+------------------------------------------------------
 
-.. automodule:: aria.orchestrator.workflows.core.compile
+.. automodule:: aria.orchestrator.workflows.core.graph_compiler
 
 :mod:`aria.orchestrator.workflows.core.engine`
 ----------------------------------------------

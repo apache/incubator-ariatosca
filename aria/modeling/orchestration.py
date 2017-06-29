@@ -91,7 +91,7 @@ class ExecutionBase(mixins.ModelMixin):
     @declared_attr
     def logs(cls):
         """
-        General log messages for the execution (not for its tasks).
+        Log messages for the execution (including log messages for its tasks).
 
         :type: [:class:`Log`]
         """

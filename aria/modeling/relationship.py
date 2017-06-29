@@ -96,35 +96,6 @@ def one_to_one_self(model_class, fk):
     )
 
 
-def one_to_many_self(model_class, fk, dict_key=None):
-    """
-    Declare a one-to-many relationship property. The property value would be a list or dict of
-    instances of the same model.
-
-    You will need an associated foreign key to our own table.
-
-    *This utility method should only be used during class creation.*
-
-    :param model_class: class in which this relationship will be declared
-    :type model_class: type
-    :param fk: Foreign key name
-    :type fk: basestring
-    :param dict_key: if set the value will be a dict with this key as the dict key; otherwise will
-     be a list
-    :type dict_key: basestring
-    """
-    return _relationship(
-        model_class,
-        model_class.__tablename__,
-        relationship_kwargs={
-            'remote_side': '{model_class}.{remote_column}'.format(
-                model_class=model_class.__name__, remote_column=fk)
-        },
-        back_populates=False,
-        dict_key=dict_key
-    )
-
-
 def one_to_one(model_class,
                other_table,
                fk=None,
@@ -195,8 +166,13 @@ def one_to_many(model_class,
      be a list
     :type dict_key: basestring
     :param back_populates: override name of matching many-to-one property at other table; set to
-     ``false`` to disable
+     ``False`` to disable
     :type back_populates: basestring or bool
+    :param rel_kwargs: additional relationship kwargs to be used by SQLAlchemy
+    :type rel_kwargs: dict
+    :param self: used for relationships between a table and itself. if set, other_table will
+     become the same as the source table.
+    :type self: bool
     """
     relationship_kwargs = rel_kwargs or {}
     if self:
@@ -292,6 +268,9 @@ def many_to_many(model_class,
     :param other_property: override name of matching many-to-many property at other table; set to
      ``False`` to disable
     :type other_property: basestring or bool
+    :param self: used for relationships between a table and itself. if set, other_table will
+     become the same as the source table.
+    :type self: bool
     """
 
     this_table = model_class.__tablename__
