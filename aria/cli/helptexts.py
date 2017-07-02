@@ -46,6 +46,7 @@ TASK_MAX_ATTEMPTS = \
     "How many times should a task be attempted in case of failures [default: {0}]"
 DRY_EXECUTION = "Execute a workflow dry run (prints operations information without causing side " \
                 "effects)"
+RETRY_FAILED_TASK = "Retry tasks that failed in the previous execution attempt"
 IGNORE_AVAILABLE_NODES = "Delete the service even if it has available nodes"
 SORT_BY = "Key for sorting the list"
 DESCENDING = "Sort list in descending order [default: False]"

@@ -38,7 +38,8 @@ DEFAULT_TASK_RETRY_INTERVAL = 30
 class WorkflowRunner(object):
 
     def __init__(self, model_storage, resource_storage, plugin_manager,
-                 execution_id=None, service_id=None, workflow_name=None, inputs=None, executor=None,
+                 execution_id=None, retry_failed_tasks=False,
+                 service_id=None, workflow_name=None, inputs=None, executor=None,
                  task_max_attempts=DEFAULT_TASK_MAX_ATTEMPTS,
                  task_retry_interval=DEFAULT_TASK_RETRY_INTERVAL):
         """
@@ -62,6 +63,7 @@ class WorkflowRunner(object):
                 "and service id with inputs")
 
         self._is_resume = execution_id is not None
+        self._retry_failed_tasks = retry_failed_tasks
 
         self._model_storage = model_storage
         self._resource_storage = resource_storage
@@ -116,7 +118,9 @@ class WorkflowRunner(object):
         return self._model_storage.service.get(self._service_id)
 
     def execute(self):
-        self._engine.execute(ctx=self._workflow_context, resuming=self._is_resume)
+        self._engine.execute(ctx=self._workflow_context,
+                             resuming=self._is_resume,
+                             retry_failed=self._retry_failed_tasks)
 
     def cancel(self):
         self._engine.cancel_execution(ctx=self._workflow_context)

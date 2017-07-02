@@ -157,10 +157,8 @@ def start(workflow_name,
 @executions.command(name='resume',
                     short_help='Resume a stopped execution')
 @aria.argument('execution-id')
-@aria.options.inputs(help=helptexts.EXECUTION_INPUTS)
 @aria.options.dry_execution
-@aria.options.task_max_attempts()
-@aria.options.task_retry_interval()
+@aria.options.retry_failed_tasks
 @aria.options.mark_pattern()
 @aria.options.verbose()
 @aria.pass_model_storage
@@ -168,9 +166,8 @@ def start(workflow_name,
 @aria.pass_plugin_manager
 @aria.pass_logger
 def resume(execution_id,
+           retry_failed_tasks,
            dry,
-           task_max_attempts,
-           task_retry_interval,
            mark_pattern,
            model_storage,
            resource_storage,
@@ -194,8 +191,7 @@ def resume(execution_id,
     workflow_runner = \
         WorkflowRunner(
             model_storage, resource_storage, plugin_manager,
-            execution_id=execution_id, executor=executor,
-            task_max_attempts=task_max_attempts, task_retry_interval=task_retry_interval
+            execution_id=execution_id, retry_failed_tasks=retry_failed_tasks, executor=executor,
         )
 
     logger.info('Resuming {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))

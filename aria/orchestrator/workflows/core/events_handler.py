@@ -71,6 +71,7 @@ def _task_succeeded(ctx, *args, **kwargs):
     with ctx.persist_changes:
         ctx.task.ended_at = datetime.utcnow()
         ctx.task.status = ctx.task.SUCCESS
+        ctx.task.attempts_count += 1
 
         _update_node_state_if_necessary(ctx)
 
@@ -119,7 +120,7 @@ def _workflow_cancelled(workflow_context, *args, **kwargs):
 
 
 @events.on_resume_workflow_signal.connect
-def _workflow_resume(workflow_context, *args, **kwargs):
+def _workflow_resume(workflow_context, retry_failed=False, *args, **kwargs):
     with workflow_context.persist_changes:
         execution = workflow_context.execution
         execution.status = execution.PENDING
@@ -127,6 +128,13 @@ def _workflow_resume(workflow_context, *args, **kwargs):
         for task in execution.tasks:
             if not task.has_ended():
                 task.status = task.PENDING
+
+        if retry_failed:
+            for task in execution.tasks:
+                if task.status == task.FAILED and not task.ignore_failure:
+                    task.attempts_count = 0
+                    task.status = task.PENDING
+
 
 
 @events.on_cancelling_workflow_signal.connect

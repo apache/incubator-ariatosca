@@ -310,6 +310,12 @@ class Options(object):
             is_flag=True,
             help=helptexts.DRY_EXECUTION)
 
+        self.retry_failed_tasks = click.option(
+            '--retry-failed-tasks',
+            is_flag=True,
+            help=helptexts.RETRY_FAILED_TASK
+        )
+
         self.reset_config = click.option(
             '--reset-config',
             is_flag=True,

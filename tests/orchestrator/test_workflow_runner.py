@@ -51,7 +51,7 @@ custom_events = {
     'is_resumed': Event(),
     'is_active': Event(),
     'execution_cancelled': Event(),
-    'execution_ended': Event()
+    'execution_failed': Event(),
 }
 
 
@@ -166,7 +166,8 @@ def test_execute(request, service):
         assert engine_kwargs['ctx'].execution.workflow_name == 'test_workflow'
 
         mock_engine_execute.assert_called_once_with(ctx=workflow_runner._workflow_context,
-                                                    resuming=False)
+                                                    resuming=False,
+                                                    retry_failed=False)
 
 
 def test_cancel_execution(request):
@@ -358,10 +359,11 @@ class TestResumableWorkflows(object):
     def test_resume_workflow(self, workflow_context, thread_executor):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
-        self._create_interface(workflow_context, node, mock_resuming_task)
+        self._create_interface(workflow_context, node, mock_pass_first_task_only)
 
         wf_runner = self._create_initial_workflow_runner(
-            workflow_context, mock_parallel_workflow, thread_executor)
+            workflow_context, mock_parallel_tasks_workflow, thread_executor,
+            inputs={'number_of_tasks': 2})
 
         wf_thread = Thread(target=wf_runner.execute)
         wf_thread.daemon = True
@@ -369,6 +371,7 @@ class TestResumableWorkflows(object):
 
         # Wait for the execution to start
         self._wait_for_active_and_cancel(wf_runner)
+        node = workflow_context.model.node.refresh(node)
 
         tasks = workflow_context.model.task.list(filters={'_stub_type': None})
         assert any(task.status == task.SUCCESS for task in tasks)
@@ -390,6 +393,7 @@ class TestResumableWorkflows(object):
         new_wf_runner.execute()
 
         # Wait for it to finish and assert changes.
+        node = workflow_context.model.node.refresh(node)
         assert all(task.status == task.SUCCESS for task in tasks)
         assert node.attributes['invocations'].value == 3
         assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
@@ -400,13 +404,15 @@ class TestResumableWorkflows(object):
         self._create_interface(workflow_context, node, mock_stuck_task)
 
         wf_runner = self._create_initial_workflow_runner(
-            workflow_context, mock_single_task_workflow, thread_executor)
+            workflow_context, mock_parallel_tasks_workflow, thread_executor,
+            inputs={'number_of_tasks': 1})
 
         wf_thread = Thread(target=wf_runner.execute)
         wf_thread.daemon = True
         wf_thread.start()
 
         self._wait_for_active_and_cancel(wf_runner)
+        node = workflow_context.model.node.refresh(node)
         task = workflow_context.model.task.list(filters={'_stub_type': None})[0]
         assert node.attributes['invocations'].value == 1
         assert task.status == task.STARTED
@@ -430,6 +436,7 @@ class TestResumableWorkflows(object):
             new_thread_executor.close()
 
         # Wait for it to finish and assert changes.
+        node = workflow_context.model.node.refresh(node)
         assert node.attributes['invocations'].value == 2
         assert task.status == task.SUCCESS
         assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
@@ -439,13 +446,15 @@ class TestResumableWorkflows(object):
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_failed_before_resuming)
 
-        wf_runner = self._create_initial_workflow_runner(
-            workflow_context, mock_single_task_workflow, thread_executor)
+        wf_runner = self._create_initial_workflow_runner(workflow_context,
+                                                         mock_parallel_tasks_workflow,
+                                                         thread_executor)
         wf_thread = Thread(target=wf_runner.execute)
         wf_thread.setDaemon(True)
         wf_thread.start()
 
         self._wait_for_active_and_cancel(wf_runner)
+        node = workflow_context.model.node.refresh(node)
 
         task = workflow_context.model.task.list(filters={'_stub_type': None})[0]
         assert node.attributes['invocations'].value == 2
@@ -474,9 +483,113 @@ class TestResumableWorkflows(object):
             new_thread_executor.close()
 
         # Wait for it to finish and assert changes.
+        node = workflow_context.model.node.refresh(node)
         assert node.attributes['invocations'].value == task.max_attempts - 1
         assert task.status == task.SUCCESS
         assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+
+    def test_resume_failed_task_and_successful_task(self, workflow_context, thread_executor):
+        node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
+        node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
+        self._create_interface(workflow_context, node, mock_pass_first_task_only)
+
+        wf_runner = self._create_initial_workflow_runner(
+            workflow_context,
+            mock_parallel_tasks_workflow,
+            thread_executor,
+            inputs={'retry_interval': 1, 'max_attempts': 2, 'number_of_tasks': 2}
+        )
+        wf_thread = Thread(target=wf_runner.execute)
+        wf_thread.setDaemon(True)
+        wf_thread.start()
+
+        if custom_events['execution_failed'].wait(60) is False:
+            raise TimeoutError("Execution did not end")
+
+        tasks = workflow_context.model.task.list(filters={'_stub_type': None})
+        node = workflow_context.model.node.refresh(node)
+        assert node.attributes['invocations'].value == 3
+        failed_task = [t for t in tasks if t.status == t.FAILED][0]
+
+        # First task passes
+        assert any(task.status == task.FAILED for task in tasks)
+        assert failed_task.attempts_count == 2
+        # Second task fails
+        assert any(task.status == task.SUCCESS for task in tasks)
+        assert wf_runner.execution.status in wf_runner.execution.FAILED
+
+        custom_events['is_resumed'].set()
+        new_thread_executor = thread.ThreadExecutor()
+        try:
+            new_wf_runner = WorkflowRunner(
+                service_id=wf_runner.service.id,
+                retry_failed_tasks=True,
+                inputs={},
+                model_storage=workflow_context.model,
+                resource_storage=workflow_context.resource,
+                plugin_manager=None,
+                execution_id=wf_runner.execution.id,
+                executor=new_thread_executor)
+
+            new_wf_runner.execute()
+        finally:
+            new_thread_executor.close()
+
+        # Wait for it to finish and assert changes.
+        node = workflow_context.model.node.refresh(node)
+        assert failed_task.attempts_count == 1
+        assert node.attributes['invocations'].value == 4
+        assert all(task.status == task.SUCCESS for task in tasks)
+        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+
+    def test_two_sequential_task_first_task_failed(self, workflow_context, thread_executor):
+        node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
+        node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
+        self._create_interface(workflow_context, node, mock_fail_first_task_only)
+
+        wf_runner = self._create_initial_workflow_runner(
+            workflow_context,
+            mock_sequential_tasks_workflow,
+            thread_executor,
+            inputs={'retry_interval': 1, 'max_attempts': 1, 'number_of_tasks': 2}
+        )
+        wf_thread = Thread(target=wf_runner.execute)
+        wf_thread.setDaemon(True)
+        wf_thread.start()
+
+        if custom_events['execution_failed'].wait(60) is False:
+            raise TimeoutError("Execution did not end")
+
+        tasks = workflow_context.model.task.list(filters={'_stub_type': None})
+        node = workflow_context.model.node.refresh(node)
+        assert node.attributes['invocations'].value == 1
+        assert any(t.status == t.FAILED for t in tasks)
+        assert any(t.status == t.PENDING for t in tasks)
+
+        custom_events['is_resumed'].set()
+        new_thread_executor = thread.ThreadExecutor()
+        try:
+            new_wf_runner = WorkflowRunner(
+                service_id=wf_runner.service.id,
+                inputs={},
+                model_storage=workflow_context.model,
+                resource_storage=workflow_context.resource,
+                plugin_manager=None,
+                execution_id=wf_runner.execution.id,
+                executor=new_thread_executor)
+
+            new_wf_runner.execute()
+        finally:
+            new_thread_executor.close()
+
+        # Wait for it to finish and assert changes.
+        node = workflow_context.model.node.refresh(node)
+        assert node.attributes['invocations'].value == 2
+        assert any(t.status == t.SUCCESS for t in tasks)
+        assert any(t.status == t.FAILED for t in tasks)
+        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+
+
 
     @staticmethod
     @pytest.fixture
@@ -524,51 +637,42 @@ class TestResumableWorkflows(object):
         def execution_cancelled(*args, **kwargs):
             custom_events['execution_cancelled'].set()
 
-        def execution_ended(*args, **kwargs):
-            custom_events['execution_ended'].set()
+        def execution_failed(*args, **kwargs):
+            custom_events['execution_failed'].set()
 
         events.on_cancelled_workflow_signal.connect(execution_cancelled)
-        events.on_failure_workflow_signal.connect(execution_ended)
+        events.on_failure_workflow_signal.connect(execution_failed)
         yield
         events.on_cancelled_workflow_signal.disconnect(execution_cancelled)
-        events.on_failure_workflow_signal.disconnect(execution_ended)
+        events.on_failure_workflow_signal.disconnect(execution_failed)
         for event in custom_events.values():
             event.clear()
 
 
 @workflow
-def mock_parallel_workflow(ctx, graph):
+def mock_sequential_tasks_workflow(ctx, graph,
+                                   retry_interval=1, max_attempts=10, number_of_tasks=1):
     node = ctx.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
-    graph.add_tasks(
-        api.task.OperationTask(
-            node, interface_name='aria.interfaces.lifecycle', operation_name='create'),
-        api.task.OperationTask(
-            node, interface_name='aria.interfaces.lifecycle', operation_name='create')
-    )
-
-
-@operation
-def mock_resuming_task(ctx):
-    ctx.node.attributes['invocations'] += 1
-
-    if ctx.node.attributes['invocations'] != 1:
-        custom_events['is_active'].set()
-        if not custom_events['is_resumed'].isSet():
-            # if resume was called, increase by one. o/w fail the execution - second task should
-            # fail as long it was not a part of resuming the workflow
-            raise FailingTask("wasn't resumed yet")
+    graph.sequence(*_create_tasks(node, retry_interval, max_attempts, number_of_tasks))
 
 
 @workflow
-def mock_single_task_workflow(ctx, graph):
+def mock_parallel_tasks_workflow(ctx, graph,
+                                 retry_interval=1, max_attempts=10, number_of_tasks=1):
     node = ctx.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
-    graph.add_tasks(
+    graph.add_tasks(*_create_tasks(node, retry_interval, max_attempts, number_of_tasks))
+
+
+def _create_tasks(node, retry_interval, max_attempts, number_of_tasks):
+    return [
         api.task.OperationTask(node,
-                               interface_name='aria.interfaces.lifecycle',
-                               operation_name='create',
-                               retry_interval=1,
-                               max_attempts=10),
-    )
+                               'aria.interfaces.lifecycle',
+                               'create',
+                               retry_interval=retry_interval,
+                               max_attempts=max_attempts)
+        for _ in xrange(number_of_tasks)
+    ]
+
 
 
 @operation
@@ -600,3 +704,23 @@ def mock_stuck_task(ctx):
         if not custom_events['is_active'].isSet():
             custom_events['is_active'].set()
         time.sleep(5)
+
+
+@operation
+def mock_pass_first_task_only(ctx):
+    ctx.node.attributes['invocations'] += 1
+
+    if ctx.node.attributes['invocations'] != 1:
+        custom_events['is_active'].set()
+        if not custom_events['is_resumed'].isSet():
+            # if resume was called, increase by one. o/w fail the execution - second task should
+            # fail as long it was not a part of resuming the workflow
+            raise FailingTask("wasn't resumed yet")
+
+
+@operation
+def mock_fail_first_task_only(ctx):
+    ctx.node.attributes['invocations'] += 1
+
+    if not custom_events['is_resumed'].isSet() and ctx.node.attributes['invocations'] == 1:
+        raise FailingTask("First task should fail")

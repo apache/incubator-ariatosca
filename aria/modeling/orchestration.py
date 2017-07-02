@@ -65,7 +65,9 @@ class ExecutionBase(mixins.ModelMixin):
         PENDING: (STARTED, CANCELLED),
         STARTED: END_STATES + (CANCELLING,),
         CANCELLING: END_STATES,
-        CANCELLED: PENDING
+        # Retrying
+        CANCELLED: PENDING,
+        FAILED: PENDING
     }
 
     # region one_to_many relationships

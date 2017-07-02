@@ -41,14 +41,15 @@ class Engine(logger.LoggerMixin):
         self._executors = executors.copy()
         self._executors.setdefault(StubTaskExecutor, StubTaskExecutor())
 
-    def execute(self, ctx, resuming=False):
+    def execute(self, ctx, resuming=False, retry_failed=False):
         """
         Executes the workflow.
         """
         if resuming:
-            events.on_resume_workflow_signal.send(ctx)
+            events.on_resume_workflow_signal.send(ctx, retry_failed=retry_failed)
 
         tasks_tracker = _TasksTracker(ctx)
+
         try:
             events.start_workflow_signal.send(ctx)
             while True:
@@ -124,8 +125,10 @@ class Engine(logger.LoggerMixin):
 
 
 class _TasksTracker(object):
+
     def __init__(self, ctx):
         self._ctx = ctx
+
         self._tasks = ctx.execution.tasks
         self._executed_tasks = [task for task in self._tasks if task.has_ended()]
         self._executable_tasks = list(set(self._tasks) - set(self._executed_tasks))
@@ -155,7 +158,7 @@ class _TasksTracker(object):
     def executable_tasks(self):
         now = datetime.utcnow()
         # we need both lists since retrying task are in the executing task list.
-        for task in self._update_tasks(self._executing_tasks + self._executable_tasks):
+        for task in self._update_tasks(set(self._executing_tasks + self._executable_tasks)):
             if all([task.is_waiting(),
                     task.due_at <= now,
                     all(dependency in self._executed_tasks for dependency in task.dependencies)
