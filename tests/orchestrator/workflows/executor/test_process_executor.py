@@ -78,6 +78,7 @@ class TestProcessExecutor(object):
             executor.execute(MockContext(model, task_kwargs=dict(function='some.function')))
         assert 'closed' in exc_info.value.message
 
+    @pytest.mark.skipif(os.name == 'nt', reason='uses bash script')
     def test_process_termination(self, executor, model, fs_test_holder):
         argument = models.Argument.wrap('holder_path', fs_test_holder._path)
         model.argument.put(argument)

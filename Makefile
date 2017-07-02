@@ -27,10 +27,10 @@ default:
 	@echo "Please choose one of the following targets: clean, install, install-virtual, docs, test, dist, requirements.txt"
 
 clean:
-	rm -rf "$(DIST)" "$(HTML)" .tox .coverage*
+	rm -rf "$(DIST)" "$(HTML)" build .tox .coverage*
 	-find . -maxdepth 1 -type f -name '.coverage' -delete
-	-find . -maxdepth 1 -type d -name '.coverage' -exec rm -rf {} \; 2>/dev/null
-	-find . -maxdepth 1 -type d -name 'build' -exec rm -rf {} \; 2>/dev/null
+	-find . -type f -name '*.pyc' -delete
+	-find . -type d -name '__pycache__' -prune -exec rm -rf {} \; 2>/dev/null
 
 install:
 	pip install .[ssh]
