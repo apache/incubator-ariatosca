@@ -45,67 +45,82 @@ TYPE_URI_NAME = 'tosca.interfaces.node.lifecycle.Standard'
 SHORTHAND_NAME = 'Standard'
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_create(ctx):
-    node = run_operation_on_node(ctx, interface_name=TYPE_URI_NAME, op_name='create')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_create(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=TYPE_URI_NAME, op_name='create', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'create')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_configure(ctx):
-    node = run_operation_on_node(ctx, interface_name=TYPE_URI_NAME, op_name='configure')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_configure(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=TYPE_URI_NAME, op_name='configure', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'configure')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_start(ctx):
-    node = run_operation_on_node(ctx, interface_name=TYPE_URI_NAME, op_name='start')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_start(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=TYPE_URI_NAME, op_name='start', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'start')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_stop(ctx):
-    node = run_operation_on_node(ctx, interface_name=TYPE_URI_NAME, op_name='stop')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_stop(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=TYPE_URI_NAME, op_name='stop', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'stop')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_delete(ctx):
-    node = run_operation_on_node(ctx, interface_name=TYPE_URI_NAME, op_name='delete')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_delete(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=TYPE_URI_NAME, op_name='delete', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'delete')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_create_shorthand_name(ctx):
-    node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='create')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_create_shorthand_name(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=SHORTHAND_NAME, op_name='create', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'create')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_configure_shorthand_name(ctx):
-    node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='configure')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_configure_shorthand_name(
+        ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=SHORTHAND_NAME, op_name='configure', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'configure')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_start_shorthand_name(ctx):
-    node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='start')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_start_shorthand_name(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=SHORTHAND_NAME, op_name='start', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'start')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_stop_shorthand_name(ctx):
-    node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='stop')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_stop_shorthand_name(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=SHORTHAND_NAME, op_name='stop', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'stop')
 
 
-def test_node_state_changes_as_a_result_of_standard_lifecycle_delete_shorthand_name(ctx):
-    node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='delete')
+def test_node_state_changes_as_a_result_of_standard_lifecycle_delete_shorthand_name(ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name=SHORTHAND_NAME, op_name='delete', executor=executor)
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'delete')
 
 
-def test_node_state_doesnt_change_as_a_result_of_an_operation_that_is_not_standard_lifecycle1(ctx):
-    node = run_operation_on_node(ctx, interface_name='interface_name', op_name='op_name')
+def test_node_state_doesnt_change_as_a_result_of_an_operation_that_is_not_standard_lifecycle1(
+        ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name='interface_name', op_name='op_name', executor=executor)
     assert node.state == node.INITIAL
 
 
-def test_node_state_doesnt_change_as_a_result_of_an_operation_that_is_not_standard_lifecycle2(ctx):
-    node = run_operation_on_node(ctx, interface_name='interface_name', op_name='create')
+def test_node_state_doesnt_change_as_a_result_of_an_operation_that_is_not_standard_lifecycle2(
+        ctx, executor):
+    node = run_operation_on_node(
+        ctx, interface_name='interface_name', op_name='create', executor=executor)
     assert node.state == node.INITIAL
 
 
-def run_operation_on_node(ctx, op_name, interface_name):
+def run_operation_on_node(ctx, op_name, interface_name, executor):
     node = ctx.model.node.get_by_name(mock.models.DEPENDENCY_NODE_NAME)
     interface = mock.models.create_interface(
         service=node.service,
@@ -117,14 +132,16 @@ def run_operation_on_node(ctx, op_name, interface_name):
         single_operation_workflow(ctx, node=node, interface_name=interface_name, op_name=op_name)
     )
 
-    eng = engine.Engine(executors={ThreadExecutor: ThreadExecutor()})
+    eng = engine.Engine(executors={executor.__class__: executor})
     eng.execute(ctx)
     return node
 
 
-def run_standard_lifecycle_operation_on_node(ctx, op_name):
-    return run_operation_on_node(ctx, interface_name='aria.interfaces.lifecycle.Standard',
-                                 op_name=op_name)
+def run_standard_lifecycle_operation_on_node(ctx, op_name, executor):
+    return run_operation_on_node(ctx,
+                                 interface_name='aria.interfaces.lifecycle.Standard',
+                                 op_name=op_name,
+                                 executor=executor)
 
 
 def _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, op_name):
@@ -143,3 +160,12 @@ def single_operation_workflow(graph, node, interface_name, op_name, **_):
 @operation
 def func(ctx):
     global_test_dict['transitional_state'] = ctx.node.state
+
+
+@pytest.fixture
+def executor():
+    result = ThreadExecutor()
+    try:
+        yield result
+    finally:
+        result.close()
