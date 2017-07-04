@@ -16,6 +16,8 @@
 """
 Execution plugin constants.
 """
+import os
+import tempfile
 
 from . import exceptions
 
@@ -28,7 +30,7 @@ DEFAULT_POWERSHELL_EXECUTABLE = 'powershell'
 ILLEGAL_CTX_OPERATION_MESSAGE = 'ctx may only abort or retry once'
 
 # related to ssh
-DEFAULT_BASE_DIR = '/tmp/aria-ctx'
+DEFAULT_BASE_DIR = os.path.join(tempfile.gettempdir(), 'aria-ctx')
 FABRIC_ENV_DEFAULTS = {
     'connection_attempts': 5,
     'timeout': 10,
