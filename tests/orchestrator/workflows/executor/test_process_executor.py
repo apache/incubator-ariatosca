@@ -43,36 +43,25 @@ from . import MockContext
 
 class TestProcessExecutor(object):
 
-    def test_plugin_execution(self, executor, mock_plugin, model):
+    def test_plugin_execution(self, executor, mock_plugin, model, queue):
         ctx = MockContext(
             model,
             task_kwargs=dict(function='mock_plugin1.operation', plugin_fk=mock_plugin.id)
         )
 
-        queue = Queue.Queue()
-
-        def handler(_, exception=None, **kwargs):
-            queue.put(exception)
-
-        events.on_success_task_signal.connect(handler)
-        events.on_failure_task_signal.connect(handler)
-        try:
-            executor.execute(ctx)
-            error = queue.get(timeout=60)
-            # tests/resources/plugins/mock-plugin1 is the plugin installed
-            # during this tests setup. The module mock_plugin1 contains a single
-            # operation named "operation" which calls an entry point defined in the plugin's
-            # setup.py. This entry points simply prints 'mock-plugin-output' to stdout.
-            # The "operation" operation that called this subprocess, then raises a RuntimeError
-            # with that subprocess output as the error message.
-            # This is what we assert here. This tests checks that both the PYTHONPATH (operation)
-            # and PATH (entry point) are properly updated in the subprocess in which the task is
-            # running.
-            assert isinstance(error, RuntimeError)
-            assert error.message == 'mock-plugin-output'
-        finally:
-            events.on_success_task_signal.disconnect(handler)
-            events.on_failure_task_signal.disconnect(handler)
+        executor.execute(ctx)
+        error = queue.get(timeout=60)
+        # tests/resources/plugins/mock-plugin1 is the plugin installed
+        # during this tests setup. The module mock_plugin1 contains a single
+        # operation named "operation" which calls an entry point defined in the plugin's
+        # setup.py. This entry points simply prints 'mock-plugin-output' to stdout.
+        # The "operation" operation that called this subprocess, then raises a RuntimeError
+        # with that subprocess output as the error message.
+        # This is what we assert here. This tests checks that both the PYTHONPATH (operation)
+        # and PATH (entry point) are properly updated in the subprocess in which the task is
+        # running.
+        assert isinstance(error, RuntimeError)
+        assert error.message == 'mock-plugin-output'
 
     def test_closed(self, executor, model):
         executor.close()
@@ -127,6 +116,23 @@ while True:
                 # making the test more readable
                 assert pid not in psutil.pids()
 
+
+@pytest.fixture
+def queue():
+    _queue = Queue.Queue()
+
+    def handler(_, exception=None, **kwargs):
+        _queue.put(exception)
+
+    events.on_success_task_signal.connect(handler)
+    events.on_failure_task_signal.connect(handler)
+    try:
+        yield _queue
+    finally:
+        events.on_success_task_signal.disconnect(handler)
+        events.on_failure_task_signal.disconnect(handler)
+
+
 @pytest.fixture
 def fs_test_holder(tmpdir):
     dataholder_path = str(tmpdir.join('dataholder'))
@@ -136,11 +142,11 @@ def fs_test_holder(tmpdir):
 
 @pytest.fixture
 def executor(plugin_manager):
-    result = process.ProcessExecutor(
-        plugin_manager=plugin_manager,
-        python_path=[tests.ROOT_DIR])
-    yield result
-    result.close()
+    result = process.ProcessExecutor(plugin_manager=plugin_manager, python_path=[tests.ROOT_DIR])
+    try:
+        yield result
+    finally:
+        result.close()
 
 
 @pytest.fixture
