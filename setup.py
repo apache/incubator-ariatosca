@@ -45,20 +45,38 @@ with open(os.path.join(root_dir, 'README.rst')) as readme:
 
 install_requires = []
 
-# We need to parse the requirements for the conditional dependencies to work for wheels creation
-# as well as source dist installation
-with open(os.path.join(root_dir, 'requirements.in')) as requirements:
-    for requirement in requirements.readlines():
-        install_requires.append(requirement.strip())
-
 ssh_requires = [
     'Fabric>=1.13.0, <1.14',
-    "pypiwin32==219 ; sys_platform == 'win32'"
+]
+win_ssh_requires = [
+    # Fabric depends on the pypiwin32 on Windows, but doesn't install it
+    'pypiwin32==219'
 ]
 
 extras_require = {
-    'ssh': ssh_requires
+    'ssh': ssh_requires,
+    'ssh:sys_platform=="win32"': win_ssh_requires
 }
+
+with open(os.path.join(root_dir, 'requirements.in')) as requirements:
+    for requirement in requirements.readlines():
+        requirement = requirement.split('#')[0].strip()  # get rid of comments or trailing comments
+        if not requirement:
+            continue  # skip empty and comment lines
+
+        # dependencies which use environment markers have to go in as conditional dependencies
+        # under "extra_require" rather than "install_requires", or otherwise the environment
+        # markers get ignored when installing from wheel. See more here:
+        # https://wheel.readthedocs.io/en/latest/index.html#defining-conditional-dependencies
+        # https://hynek.me/articles/conditional-python-dependencies/
+        if ';' in requirement:
+            package, condition = requirement.split(';')
+            cond_name = ':{0}'.format(condition.strip())
+            extras_require.setdefault(cond_name, [])
+            extras_require[cond_name].append(package.strip())
+        else:
+            install_requires.append(requirement)
+
 
 console_scripts = ['aria = aria.cli.main:main']
 
