@@ -43,6 +43,7 @@ def ctx(tmpdir):
 
 TYPE_URI_NAME = 'tosca.interfaces.node.lifecycle.Standard'
 SHORTHAND_NAME = 'Standard'
+TYPE_QUALIFIED_NAME = 'tosca:Standard'
 
 
 def test_node_state_changes_as_a_result_of_standard_lifecycle_create(ctx):
@@ -94,6 +95,29 @@ def test_node_state_changes_as_a_result_of_standard_lifecycle_delete_shorthand_n
     node = run_operation_on_node(ctx, interface_name=SHORTHAND_NAME, op_name='delete')
     _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'delete')
 
+def test_node_state_changes_as_a_result_of_standard_lifecycle_create_typequalified_name(ctx):
+    node = run_operation_on_node(ctx, interface_name=TYPE_QUALIFIED_NAME, op_name='create')
+    _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'create')
+
+
+def test_node_state_changes_as_a_result_of_standard_lifecycle_configure_typequalified_name(ctx):
+    node = run_operation_on_node(ctx, interface_name=TYPE_QUALIFIED_NAME, op_name='configure')
+    _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'configure')
+
+
+def test_node_state_changes_as_a_result_of_standard_lifecycle_start_typequalified_name(ctx):
+    node = run_operation_on_node(ctx, interface_name=TYPE_QUALIFIED_NAME, op_name='start')
+    _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'start')
+
+
+def test_node_state_changes_as_a_result_of_standard_lifecycle_stop_typequalified_name(ctx):
+    node = run_operation_on_node(ctx, interface_name=TYPE_QUALIFIED_NAME, op_name='stop')
+    _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'stop')
+
+
+def test_node_state_changes_as_a_result_of_standard_lifecycle_delete_typequalified_name(ctx):
+    node = run_operation_on_node(ctx, interface_name=TYPE_QUALIFIED_NAME, op_name='delete')
+    _assert_node_state_changed_as_a_result_of_standard_lifecycle_operation(node, 'delete')
 
 def test_node_state_doesnt_change_as_a_result_of_an_operation_that_is_not_standard_lifecycle1(ctx):
     node = run_operation_on_node(ctx, interface_name='interface_name', op_name='op_name')
