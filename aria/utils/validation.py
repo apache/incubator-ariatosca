@@ -78,7 +78,7 @@ def validate_function_arguments(func, func_kwargs):
 
     # all args without the ones with default values
     args = func.func_code.co_varnames[:args_count]
-    non_default_args = args[:len(func.func_defaults)] if func.func_defaults else args
+    non_default_args = args[:len(args) - len(func.func_defaults)] if func.func_defaults else args
 
     # Check if any args without default values is missing in the func_kwargs
     for arg in non_default_args:
