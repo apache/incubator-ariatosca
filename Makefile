@@ -58,11 +58,6 @@ test:
 	    -e py$(PYTHON_VERSION)ssh \
 	    -e docs
 
-dist: docs
-	python ./setup.py sdist bdist_wheel
-	# pushing LICENSE and additional files into the binary distribution archive
-	-find "$(DIST)" -type f -name '*.whl' -exec zip -u {} LICENSE NOTICE DISCLAIMER \;
-
 ./requirements.txt: ./requirements.in
 	pip install --upgrade "pip-tools>=1.9.0"
 	pip-compile --output-file ./requirements.txt ./requirements.in
