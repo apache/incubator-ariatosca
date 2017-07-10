@@ -11,23 +11,34 @@
 # limitations under the License.
 
 sudo: false
+
 language: python
+
 python:
   - "2.7"
+
 env:
-- TOX_ENV=pylint_code
-- TOX_ENV=pylint_tests
-- TOX_ENV=py27
-- TOX_ENV=py26
-- TOX_ENV=py27e2e
-- TOX_ENV=py26e2e
-- TOX_ENV=py27ssh
-- TOX_ENV=py26ssh
+  - TOX_ENV=pylint_code
+  - TOX_ENV=pylint_tests
+  - TOX_ENV=py27
+  - TOX_ENV=py26
+  - TOX_ENV=py27e2e
+  - TOX_ENV=py26e2e
+  - TOX_ENV=py27ssh
+  - TOX_ENV=py26ssh
+  - TOX_ENV=docs
+
 install:
   - pip install --upgrade pip
   - pip install --upgrade setuptools
   - pip install tox
+
 script:
   - pip --version
   - tox --version
-  - tox -e $TOX_ENV
+  - PYTEST_PROCESSES=1 tox -e $TOX_ENV
+
+# The PYTEST_PROCESSES environment var is used in tox.ini to override the --numprocesses argument
+# for PyTest's xdist plugin. The reason this is necessary is that conventional Travis environments
+# may report a large amount of available CPUs, but they they are greatly restricted. Through trial
+# and error we found that more than 1 process may result in failures.
