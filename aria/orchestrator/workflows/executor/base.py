@@ -49,7 +49,7 @@ class BaseExecutor(logger.LoggerMixin):
         """
         pass
 
-    def terminate(self, ctx):
+    def terminate(self, task_id):
         """
         Terminate the executing task
         :return:

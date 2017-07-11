@@ -36,9 +36,10 @@ class ThreadExecutor(BaseExecutor):
     Note: This executor is incapable of running plugin operations.
     """
 
-    def __init__(self, pool_size=1, *args, **kwargs):
+    def __init__(self, pool_size=1, close_timeout=5, *args, **kwargs):
         super(ThreadExecutor, self).__init__(*args, **kwargs)
         self._stopped = False
+        self._close_timeout = close_timeout
         self._queue = Queue.Queue()
         self._pool = []
         for i in range(pool_size):
@@ -54,7 +55,10 @@ class ThreadExecutor(BaseExecutor):
     def close(self):
         self._stopped = True
         for thread in self._pool:
-            thread.join()
+            if self._close_timeout is None:
+                thread.join()
+            else:
+                thread.join(self._close_timeout)
 
     def _processor(self):
         while not self._stopped:
@@ -63,7 +67,7 @@ class ThreadExecutor(BaseExecutor):
                 self._task_started(ctx)
                 try:
                     task_func = imports.load_attribute(ctx.task.function)
-                    arguments = dict(arg.unwrapped for arg in ctx.task.arguments.values())
+                    arguments = dict(arg.unwrapped for arg in ctx.task.arguments.itervalues())
                     task_func(ctx=ctx, **arguments)
                     self._task_succeeded(ctx)
                 except BaseException as e:

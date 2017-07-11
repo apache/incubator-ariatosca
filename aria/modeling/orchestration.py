@@ -220,8 +220,10 @@ class TaskBase(mixins.ModelMixin):
 
     __tablename__ = 'task'
 
-    __private_fields__ = ('dependency_operation_task_fk', 'dependency_stub_task_fk', 'node_fk',
-                          'relationship_fk', 'plugin_fk', 'execution_fk')
+    __private_fields__ = ('node_fk',
+                          'relationship_fk',
+                          'plugin_fk',
+                          'execution_fk')
 
     START_WORKFLOW = 'start_workflow'
     END_WORKFLOW = 'end_workflow'

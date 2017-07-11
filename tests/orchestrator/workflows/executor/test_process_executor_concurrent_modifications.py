@@ -120,8 +120,10 @@ def _test(context, executor, lock_files, func, dataholder, expected_failure):
 @pytest.fixture
 def executor():
     result = process.ProcessExecutor(python_path=[tests.ROOT_DIR])
-    yield result
-    result.close()
+    try:
+        yield result
+    finally:
+        result.close()
 
 
 @pytest.fixture

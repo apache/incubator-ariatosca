@@ -54,8 +54,20 @@ interface_types:
 
   Maintenance:
     derived_from: tosca.interfaces.Root
-    enable: {}
-    disable: {}
+    inputs:
+      mode:
+        type: string
+        default: immediate
+        constraints:
+          - valid_values: [ immediate, eventual ]
+        description: >-
+          The mode in which maintenance mode is enabled/disabled.
+    enable:
+      description: >-
+        Enable maintenance mode.
+    disable:
+      description: >-
+        Disable maintenance mode.
 
 node_types:
 
@@ -102,8 +114,10 @@ topology_template:
               #token: { token: [ 'zero.one|two-three', '.|-', 3 ] }
       interfaces:
         Maintenance:
-          enable: juju > charm.maintenance_on
-          disable: juju > charm.maintenance_off
+          inputs:
+            mode: eventual
+          enable: maintenance_node_cellar.sh
+          disable: maintenance_node_cellar.sh
         Standard:
           create:
             implementation:
@@ -155,7 +169,7 @@ topology_template:
         capabilities:
           - scalable:
               properties:
-                - max_instances: { greater_or_equal: 8 }
+                - max_instances: { greater_or_equal: 5 }
 
     mongodb:
       description: >-
@@ -171,7 +185,7 @@ topology_template:
               capabilities:
                 - scalable:
                     properties:
-                      - max_instances: { greater_or_equal: 8 }
+                      - max_instances: { greater_or_equal: 5 }
             relationship:
               interfaces:
                 Configure:
@@ -225,7 +239,7 @@ topology_template:
       capabilities:
         scalable:
           properties:
-            max_instances: 10
+            max_instances: 5 # overrides the policy
 
     data_host:
       copy: loadbalancer_host
@@ -246,7 +260,7 @@ topology_template:
       capabilities:
         scalable:
           properties:
-            max_instances: 10
+            max_instances: 6 # overrides the policy
 
     data_volume:
       type: openstack.Volume
@@ -273,10 +287,21 @@ topology_template:
 
   policies:
   
-    scaling:
+    app_scaling:
+      type: aria.Scaling
+      properties:
+        max_instances: 10
+        default_instances: 2
+      targets:
+        - node_cellar
+        - nodejs
+  
+    host_scaling:
       type: openstack.Scaling
       properties:
         bandwidth_threshold: 2 GB
+        max_instances: 10
+        default_instances: 2
       targets: # node templates or groups
         - node_cellar_group
     

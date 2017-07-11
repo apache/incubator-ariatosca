@@ -51,6 +51,7 @@ node_types:
       host: # @override
         type: tosca.capabilities.Container
         valid_source_types: [ nodejs.Application ]
+        occurrences: [ 0, 1 ]
 
   nodejs.Application:
     derived_from: tosca.nodes.WebApplication

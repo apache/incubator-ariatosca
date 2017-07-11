@@ -93,7 +93,7 @@ class WorkflowRunner(object):
         executor = executor or ProcessExecutor(plugin_manager=plugin_manager)
 
         # transforming the execution inputs to dict, to pass them to the workflow function
-        execution_inputs_dict = dict(inp.unwrapped for inp in self.execution.inputs.values())
+        execution_inputs_dict = dict(inp.unwrapped for inp in self.execution.inputs.itervalues())
 
         if not self._is_resume:
             workflow_fn = self._get_workflow_fn()

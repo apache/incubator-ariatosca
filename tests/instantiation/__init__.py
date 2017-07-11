@@ -12,22 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from aria.utils.caching import cachedmethod
-from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
-
-
-@has_fields
-class ExtensiblePresentation(Presentation):
-    """
-    A presentation that supports an optional ``_extensions`` dict field.
-    """
-
-    @primitive_dict_field()
-    def _extensions(self):
-        pass
-
-    @cachedmethod
-    def _get_extension(self, name, default=None):
-        extensions = self._extensions
-        return extensions.get(name, default) if extensions is not None else None # pylint: disable=no-member

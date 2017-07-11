@@ -466,7 +466,7 @@ def operation_common(ctx, holder):
     holder['actor_name'] = ctx.task.actor.name
     holder['task_name'] = ctx.task.name
     holder['function'] = ctx.task.function
-    holder['arguments'] = dict(i.unwrapped for i in ctx.task.arguments.values())
+    holder['arguments'] = dict(i.unwrapped for i in ctx.task.arguments.itervalues())
 
 
 @operation

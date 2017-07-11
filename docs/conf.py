@@ -390,8 +390,20 @@ NEVER_SKIP_MEMBERS = (
     '__evaluate__',
 )
 
-# 'autodoc-skip-member' event
-def on_skip_member(app, what, name, obj, skip, options):
+SKIP_DOCUMENTS = ()
+
+from sphinx import addnodes
+from sphinx.domains.python import PythonDomain
+
+try:
+    import fabric
+except:
+    # Note: "exclude_patterns" is not good enough for us, because we still have a TOC entry.
+    # Unfortunately, there is no way to conditionally exclude a TOC entry, and TOC entries without
+    # matching documents emit an error. So, we will have to manipulate the doctree directly!
+    SKIP_DOCUMENTS = ('aria.orchestrator.execution_plugin.ssh',)
+
+def on_autodoc_skip_member(app, what, name, obj, skip, options):
     if name in NEVER_SKIP_MEMBERS:
         return False
     if name in SKIP_MEMBERS: 
@@ -401,7 +413,18 @@ def on_skip_member(app, what, name, obj, skip, options):
             return True
     return skip
 
-from sphinx.domains.python import PythonDomain
+def on_source_read(app, docname, source):
+    # Empty out source
+    if docname in SKIP_DOCUMENTS:
+        source[0] = ''
+
+def on_doctree_read(app, doctree):
+    # Remove TOC entry (see: https://gist.github.com/kakawait/9215487)
+    for toctreenode in doctree.traverse(addnodes.toctree):
+        for e in toctreenode['entries']:
+            ref = str(e[1])
+            if ref in SKIP_DOCUMENTS:
+                toctreenode['entries'].remove(e)    
 
 class PatchedPythonDomain(PythonDomain):
     # See: https://github.com/sphinx-doc/sphinx/issues/3866
@@ -412,5 +435,7 @@ class PatchedPythonDomain(PythonDomain):
             env, fromdocname, builder, typ, target, node, contnode)
 
 def setup(app):
-    app.connect('autodoc-skip-member', on_skip_member)
+    app.connect('autodoc-skip-member', on_autodoc_skip_member)
+    app.connect('source-read', on_source_read)
+    app.connect('doctree-read', on_doctree_read)
     app.override_domain(PatchedPythonDomain)

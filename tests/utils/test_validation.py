@@ -13,21 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.caching import cachedmethod
-from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
+import pytest
+
+from aria.utils import validation
 
 
-@has_fields
-class ExtensiblePresentation(Presentation):
-    """
-    A presentation that supports an optional ``_extensions`` dict field.
-    """
+def test_function_kwargs_validation():
 
-    @primitive_dict_field()
-    def _extensions(self):
+    def mock_function(arg1, arg2=1, arg3=1):
         pass
 
-    @cachedmethod
-    def _get_extension(self, name, default=None):
-        extensions = self._extensions
-        return extensions.get(name, default) if extensions is not None else None # pylint: disable=no-member
+    with pytest.raises(ValueError):
+        validation.validate_function_arguments(mock_function, dict(arg2=1))
+    with pytest.raises(ValueError):
+        validation.validate_function_arguments(mock_function, dict(arg3=3))
+    with pytest.raises(ValueError):
+        validation.validate_function_arguments(mock_function, dict(arg2=2, arg3=3))
+
+    validation.validate_function_arguments(mock_function, dict(arg1=1, arg3=3))
+    validation.validate_function_arguments(mock_function, dict(arg1=1, arg2=2))
+    validation.validate_function_arguments(mock_function, dict(arg1=1, arg2=2, arg3=3))

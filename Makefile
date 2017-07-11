@@ -47,11 +47,16 @@ install-virtual:
 docs:
 	pip install --requirement "$(DOCS)/requirements.txt"
 	rm -rf "$(HTML)"
-	sphinx-build -b html "$(DOCS)" "$(HTML)"
+	sphinx-build -W -T -b html "$(DOCS)" "$(HTML)"
 
 test:
 	pip install --upgrade "tox>=2.7.0"
-	tox -e pylint_code -e pylint_tests -e py$(PYTHON_VERSION) -e py$(PYTHON_VERSION)e2e -e py$(PYTHON_VERSION)ssh
+	tox -e pylint_code \
+	    -e pylint_tests \
+	    -e py$(PYTHON_VERSION) \
+	    -e py$(PYTHON_VERSION)e2e \
+	    -e py$(PYTHON_VERSION)ssh \
+	    -e docs
 
 dist: docs
 	python ./setup.py sdist bdist_wheel

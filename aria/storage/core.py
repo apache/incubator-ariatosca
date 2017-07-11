@@ -143,7 +143,7 @@ class ModelStorage(Storage):
         """
         Drop all the tables.
         """
-        for mapi in self.registered.values():
+        for mapi in self.registered.itervalues():
             mapi.drop()
 
     @contextmanager

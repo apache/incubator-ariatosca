@@ -168,9 +168,6 @@ def create_node_template_model(context, service_template, node_template):
     model = NodeTemplate(name=node_template._name,
                          type=node_type)
 
-    model.default_instances = 1
-    model.min_instances = 0
-
     if node_template.description:
         model.description = node_template.description.value
 

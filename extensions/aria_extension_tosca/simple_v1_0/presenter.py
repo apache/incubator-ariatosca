@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import FrozenList, EMPTY_READ_ONLY_LIST
+from aria.utils.collections import (FrozenList, EMPTY_READ_ONLY_LIST)
 from aria.utils.caching import cachedmethod
 from aria.parser.presentation import Presenter
 
@@ -21,6 +21,7 @@ from .modeling import create_service_template_model
 from .modeling.functions import (Concat, Token, GetInput, GetProperty, GetAttribute,
                                  GetOperationOutput, GetNodesOfType, GetArtifact)
 from .templates import ServiceTemplate
+
 
 class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstract-method
     """

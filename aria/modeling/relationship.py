@@ -374,7 +374,7 @@ def _get_class_for_table(model_class, tablename):
     if tablename in (model_class.__name__, model_class.__tablename__):
         return model_class
 
-    for table_cls in model_class._decl_class_registry.values():
+    for table_cls in model_class._decl_class_registry.itervalues():
         if tablename == getattr(table_cls, '__tablename__', None):
             return table_cls
 

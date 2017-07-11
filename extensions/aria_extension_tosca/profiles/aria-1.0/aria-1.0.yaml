@@ -58,4 +58,40 @@ policy_types:
           the full path to a Python @workflow function that generates a task graph based on the
           service topology.
         type: string
-        required: true
+
+  aria.Scaling:
+    _extensions:
+      type_qualified_name: aria:Scaling
+      role: scaling
+    description: >-
+      Scaling.
+    derived_from: tosca.policies.Scaling
+    properties:
+      min_instances:
+        description: >-
+          This property is used to indicate the minimum number of instances that should be created
+          for the associated TOSCA Node Template by a TOSCA orchestrator.
+        type: integer
+        default: 1
+        constraints:
+          - greater_or_equal: 0
+      max_instances:
+        description: >-
+          This property is used to indicate the maximum number of instances that should be created
+          for the associated TOSCA Node Template by a TOSCA orchestrator.
+        type: integer
+        default: 1
+        constraints:
+          - greater_or_equal: 0
+      default_instances:
+        description: >-
+          An optional property that indicates the requested default number of instances that should
+          be the starting number of instances a TOSCA orchestrator should attempt to allocate. Note:
+          The value for this property MUST be in the range between the values set for
+          "min_instances" and "max_instances" properties.
+        type: integer
+        constraints:
+          - greater_or_equal: 0
+        required: false
+    targets:
+      - tosca.nodes.Root

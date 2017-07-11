@@ -15,6 +15,7 @@
 
 imports:
   - os.yaml
+  - aria-1.0
 
 dsl_definitions:
 
@@ -169,7 +170,7 @@ policy_types:
   openstack.Scaling:
     description: >-
       OpenStack scaling policy.
-    derived_from: tosca.policies.Scaling
+    derived_from: aria.Scaling
     properties:
       bandwidth_threshold:
         type: scalar-unit.size

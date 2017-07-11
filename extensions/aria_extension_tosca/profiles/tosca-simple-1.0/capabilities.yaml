@@ -132,6 +132,7 @@ capability_types:
       specification: tosca-simple-1.0
       specification_section: 5.4.10
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_SCALABLE'
+      role: scaling
     description: >-
       This is the default TOSCA type that should be used to express a scalability capability for a node.
     derived_from: tosca.capabilities.Root
