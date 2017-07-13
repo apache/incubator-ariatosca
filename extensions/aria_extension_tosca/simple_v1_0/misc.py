@@ -52,7 +52,7 @@ class Description(AsIsPresentation):
 
     def _dump(self, context):
         value = as_raw(self.value)
-        puts(context.style.meta(value))
+        puts(context.style.meta_style(value))
 
 
 @allow_unknown_fields

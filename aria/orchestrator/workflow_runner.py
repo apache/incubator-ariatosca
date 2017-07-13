@@ -141,9 +141,8 @@ class WorkflowRunner(object):
                                                      supplied_inputs=inputs or {})
         modeling_utils.validate_required_inputs_are_supplied(declared_inputs=workflow_inputs,
                                                              supplied_inputs=inputs or {})
-        execution.inputs = modeling_utils.merge_parameter_values(inputs,
-                                                                 workflow_inputs,
-                                                                 model_cls=models.Input)
+        execution.inputs = modeling_utils.merge_parameter_values(
+            inputs, workflow_inputs, model_cls=models.Input)
         # TODO: these two following calls should execute atomically
         self._validate_no_active_executions(execution)
         self._model_storage.execution.put(execution)

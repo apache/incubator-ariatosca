@@ -47,6 +47,7 @@ def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
     assert not context.validation.has_issues
     return context, dumper
 
+
 def consume_types_use_case(use_case_name, consumer_class_name='instance', cache=True):
     cachedmethod.ENABLED = cache
     uri = get_service_template_uri('tosca-simple-1.0', 'types', use_case_name,
@@ -61,12 +62,23 @@ def consume_types_use_case(use_case_name, consumer_class_name='instance', cache=
     assert not context.validation.has_issues
     return context, dumper
 
+
 def consume_node_cellar(consumer_class_name='instance', cache=True):
+    consume_test_case(
+        get_service_template_uri('tosca-simple-1.0', 'node-cellar', 'node-cellar.yaml'),
+        consumer_class_name=consumer_class_name,
+        inputs_uri=get_service_template_uri('tosca-simple-1.0', 'node-cellar', 'inputs.yaml'),
+        cache=cache
+
+    )
+
+
+def consume_test_case(uri, inputs_uri=None, consumer_class_name='instance', cache=True):
     cachedmethod.ENABLED = cache
-    uri = get_service_template_uri('tosca-simple-1.0', 'node-cellar', 'node-cellar.yaml')
+    uri = get_service_template_uri(uri)
     context = create_context(uri)
-    context.args.append('--inputs=' + get_service_template_uri('tosca-simple-1.0', 'node-cellar',
-                                                               'inputs.yaml'))
+    if inputs_uri:
+        context.args.append('--inputs=' + get_service_template_uri(inputs_uri))
     consumer, dumper = create_consumer(context, consumer_class_name)
     consumer.consume()
     context.validation.dump_issues()

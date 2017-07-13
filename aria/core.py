@@ -20,6 +20,7 @@ ARIA core module.
 from . import exceptions
 from .parser import consumption
 from .parser.loading.location import UriLocation
+from .orchestrator import topology
 
 
 class Core(object):
@@ -67,31 +68,26 @@ class Core(object):
         self.resource_storage.service_template.delete(entry_id=str(service_template.id))
 
     def create_service(self, service_template_id, inputs, service_name=None):
-
         service_template = self.model_storage.service_template.get(service_template_id)
-
-        # creating an empty ConsumptionContext, initiating a threadlocal context
-        context = consumption.ConsumptionContext()
 
         storage_session = self.model_storage._all_api_kwargs['session']
         # setting no autoflush for the duration of instantiation - this helps avoid dependency
         # constraints as they're being set up
         with storage_session.no_autoflush:
-            service = service_template.instantiate(None, self.model_storage, inputs=inputs)
+            topology_ = topology.Topology()
+            service = topology_.instantiate(
+                service_template, inputs=inputs, plugins=self.model_storage.plugin.list())
+            topology_.coerce(service, report_issues=True)
 
-            consumption.ConsumerChain(
-                context,
-                (
-                    consumption.CoerceServiceInstanceValues,
-                    consumption.ValidateServiceInstance,
-                    consumption.SatisfyRequirements,
-                    consumption.CoerceServiceInstanceValues,
-                    consumption.ValidateCapabilities,
-                    consumption.FindHosts,
-                    consumption.ConfigureOperations,
-                    consumption.CoerceServiceInstanceValues
-                )).consume()
-            if context.validation.dump_issues():
+            topology_.validate(service)
+            topology_.satisfy_requirements(service)
+            topology_.coerce(service, report_issues=True)
+
+            topology_.validate_capabilities(service)
+            topology_.assign_hosts(service)
+            topology_.configure_operations(service)
+            topology_.coerce(service, report_issues=True)
+            if topology_.dump_issues():
                 raise exceptions.InstantiationError('Failed to instantiate service template `{0}`'
                                                     .format(service_template.name))
 
@@ -122,6 +118,8 @@ class Core(object):
     def _parse_service_template(service_template_path):
         context = consumption.ConsumptionContext()
         context.presentation.location = UriLocation(service_template_path)
+        # Most of the parser uses the topology package in order to manipulate the models.
+        # However, here we use the Consumer mechanism, but this should change in the future.
         consumption.ConsumerChain(
             context,
             (

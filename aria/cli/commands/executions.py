@@ -181,7 +181,7 @@ def resume(execution_id,
     executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
 
     execution = model_storage.execution.get(execution_id)
-    if execution.status != execution.status.CANCELLED:
+    if execution.status != execution.CANCELLED:
         logger.info("Can't resume execution {execution.id} - "
                     "execution is in status {execution.status}. "
                     "Can only resume executions in status {valid_status}"

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...utils.formatting import json_dumps, yaml_dumps
 from .consumer import Consumer, ConsumerChain
+from ...utils.formatting import json_dumps, yaml_dumps
 
 
 class DeriveServiceTemplate(Consumer):
@@ -42,7 +42,7 @@ class CoerceServiceTemplateValues(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.template.coerce_values(True)
+        self.topology.coerce(self.context.modeling.template, report_issues=True)
 
 
 class ValidateServiceTemplate(Consumer):
@@ -51,7 +51,7 @@ class ValidateServiceTemplate(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.template.validate()
+        self.topology.validate(self.context.modeling.template)
 
 
 class ServiceTemplate(ConsumerChain):
@@ -74,7 +74,7 @@ class ServiceTemplate(ConsumerChain):
             raw = self.context.modeling.template_as_raw
             self.context.write(json_dumps(raw, indent=indent))
         else:
-            self.context.modeling.template.dump()
+            self.context.write(self.topology.dump(self.context.modeling.template))
 
 
 class Types(Consumer):
@@ -92,7 +92,7 @@ class Types(Consumer):
             raw = self.context.modeling.types_as_raw
             self.context.write(json_dumps(raw, indent=indent))
         else:
-            self.context.modeling.template.dump_types()
+            self.topology.dump_types(self.context, self.context.modeling.template)
 
 
 class InstantiateServiceInstance(Consumer):
@@ -105,9 +105,10 @@ class InstantiateServiceInstance(Consumer):
             self.context.validation.report('InstantiateServiceInstance consumer: missing service '
                                            'template')
             return
-
-        self.context.modeling.template.instantiate(None, None,
-                                                   inputs=dict(self.context.modeling.inputs))
+        self.context.modeling.instance = self.topology.instantiate(
+            self.context.modeling.template,
+            inputs=dict(self.context.modeling.inputs)
+        )
 
 
 class CoerceServiceInstanceValues(Consumer):
@@ -116,7 +117,7 @@ class CoerceServiceInstanceValues(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.coerce_values(True)
+        self.topology.coerce(self.context.modeling.instance, report_issues=True)
 
 
 class ValidateServiceInstance(Consumer):
@@ -125,7 +126,7 @@ class ValidateServiceInstance(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.validate()
+        self.topology.validate(self.context.modeling.instance)
 
 
 class SatisfyRequirements(Consumer):
@@ -134,7 +135,7 @@ class SatisfyRequirements(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.satisfy_requirements()
+        self.topology.satisfy_requirements(self.context.modeling.instance)
 
 
 class ValidateCapabilities(Consumer):
@@ -143,7 +144,7 @@ class ValidateCapabilities(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.validate_capabilities()
+        self.topology.validate_capabilities(self.context.modeling.instance)
 
 
 class FindHosts(Consumer):
@@ -152,7 +153,7 @@ class FindHosts(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.find_hosts()
+        self.topology.assign_hosts(self.context.modeling.instance)
 
 
 class ConfigureOperations(Consumer):
@@ -161,7 +162,7 @@ class ConfigureOperations(Consumer):
     """
 
     def consume(self):
-        self.context.modeling.instance.configure_operations()
+        self.topology.configure_operations(self.context.modeling.instance)
 
 
 class ServiceInstance(ConsumerChain):
@@ -193,4 +194,5 @@ class ServiceInstance(ConsumerChain):
             raw = self.context.modeling.instance_as_raw
             self.context.write(json_dumps(raw, indent=indent))
         else:
-            self.context.modeling.instance.dump()
+            str_rep = self.topology.dump(self.context.modeling.instance)
+            self.context.write(str_rep)

@@ -20,7 +20,6 @@ Consumption package.
    :nosignatures:
 
    aria.parser.consumption.ConsumptionContext
-   aria.parser.consumption.Style
 
 Consumers
 ---------
@@ -47,7 +46,6 @@ Consumers
 
 from .exceptions import ConsumerException
 from .context import ConsumptionContext
-from .style import Style
 from .consumer import (
     Consumer,
     ConsumerChain
@@ -70,7 +68,6 @@ from .inputs import Inputs
 __all__ = (
     'ConsumerException',
     'ConsumptionContext',
-    'Style',
     'Consumer',
     'ConsumerChain',
     'Read',

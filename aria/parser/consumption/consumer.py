@@ -27,6 +27,9 @@ class Consumer(object):
     """
 
     def __init__(self, context):
+        from ...orchestrator import topology
+
+        self.topology = topology.Topology()
         self.context = context
 
     def consume(self):
@@ -73,6 +76,10 @@ class ConsumerChain(Consumer):
                     handle_exception(consumer, e)
                 else:
                     raise e
+
+            if consumer.topology.has_issues:
+                self.context.validation.extend_issues(consumer.topology.issues)
+
             if self.context.validation.has_issues:
                 break
 

@@ -37,13 +37,13 @@ class Value(object):
 
     def _dump(self, context):
         if self.type is not None:
-            puts(context.style.type(self.type))
+            puts(context.style.type_style(self.type))
         if self.value is not None:
-            puts(context.style.literal(self.value))
+            puts(context.style.literal_style(self.value))
         if self.description is not None:
-            puts(context.style.meta(self.description))
+            puts(context.style.meta_style(self.description))
         if self.required is not None:
-            puts(context.style.required(self.required))
+            puts(context.style.required_style(self.required))
 
 
 class PresentationBase(HasCachedMethods):
@@ -142,7 +142,7 @@ class PresentationBase(HasCachedMethods):
 
         if self._name:
             puts(context.style.node(self._name))
-            with context.style.indent:
+            with context.style.indent():
                 self._dump_content(context)
         else:
             self._dump_content(context)
@@ -162,7 +162,7 @@ class PresentationBase(HasCachedMethods):
             for field_name in self._iter_field_names():  # pylint: disable=no-member
                 self._dump_field(context, field_name)
         else:
-            puts(context.style.literal(self._raw))
+            puts(context.style.literal_style(self._raw))
 
     def _dump_field(self, context, field_name):
         """
@@ -242,7 +242,7 @@ class AsIsPresentation(PresentationBase):
     def _dump(self, context):
         if hasattr(self._raw, '_dump'):
             puts(context.style.node(self._name))
-            with context.style.indent:
+            with context.style.indent():
                 self._raw._dump(context)
         else:
             super(AsIsPresentation, self)._dump(context)

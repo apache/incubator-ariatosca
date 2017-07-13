@@ -26,11 +26,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declared_attr
 
-from ..parser.consumption import ConsumptionContext
 from ..utils import (
     collections,
     formatting,
-    console,
 )
 from .mixins import InstanceModelMixin, TemplateModelMixin, ParameterMixin
 from . import relationship
@@ -563,17 +561,6 @@ class TypeBase(InstanceModelMixin):
         self._append_raw_children(types)
         return types
 
-    def coerce_values(self, report_issues):
-        pass
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.name:
-            console.puts(context.style.type(self.name))
-        with context.style.indent:
-            for child in self.children:
-                child.dump()
-
     def _append_raw_children(self, types):
         for child in self.children:
             raw_child = formatting.as_raw(child)
@@ -612,17 +599,3 @@ class MetadataBase(TemplateModelMixin):
         return collections.OrderedDict((
             ('name', self.name),
             ('value', self.value)))
-
-    def coerce_values(self, report_issues):
-        pass
-
-    def instantiate(self, container):
-        from . import models
-        return models.Metadata(name=self.name,
-                               value=self.value)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('{0}: {1}'.format(
-            context.style.property(self.name),
-            context.style.literal(self.value)))

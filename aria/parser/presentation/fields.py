@@ -571,7 +571,7 @@ class Field(object):
     def _dump_primitive(self, context, value):
         if hasattr(value, 'as_raw'):
             value = as_raw(value)
-        puts('%s: %s' % (self.name, context.style.literal(value)))
+        puts('%s: %s' % (self.name, context.style.literal_style(value)))
 
     # primitive list
 
@@ -606,11 +606,11 @@ class Field(object):
 
     def _dump_primitive_list(self, context, value):
         puts('%s:' % self.name)
-        with context.style.indent:
+        with context.style.indent():
             for primitive in value:
                 if hasattr(primitive, 'as_raw'):
                     primitive = as_raw(primitive)
-                puts(context.style.literal(primitive))
+                puts(context.style.literal_style(primitive))
 
     # primitive dict
 
@@ -635,11 +635,11 @@ class Field(object):
 
     def _dump_primitive_dict(self, context, value):
         puts('%s:' % self.name)
-        with context.style.indent:
+        with context.style.indent():
             for v in value.itervalues():
                 if hasattr(v, 'as_raw'):
                     v = as_raw(v)
-                puts(context.style.literal(v))
+                puts(context.style.literal_style(v))
 
     # object
 
@@ -654,7 +654,7 @@ class Field(object):
 
     def _dump_object(self, context, value):
         puts('%s:' % self.name)
-        with context.style.indent:
+        with context.style.indent():
             if hasattr(value, '_dump'):
                 value._dump(context)
 
@@ -669,7 +669,7 @@ class Field(object):
 
     def _dump_object_list(self, context, value):
         puts('%s:' % self.name)
-        with context.style.indent:
+        with context.style.indent():
             for v in value:
                 if hasattr(v, '_dump'):
                     v._dump(context)
@@ -685,7 +685,7 @@ class Field(object):
 
     def _dump_object_dict(self, context, value):
         puts('%s:' % self.name)
-        with context.style.indent:
+        with context.style.indent():
             for v in value.itervalues():
                 if hasattr(v, '_dump'):
                     v._dump(context)

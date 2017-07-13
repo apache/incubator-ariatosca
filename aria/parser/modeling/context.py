@@ -19,6 +19,10 @@ from ...utils.collections import StrictDict, prune
 from ...utils.uuid import generate_uuid
 
 
+# See: http://www.faqs.org/rfcs/rfc1035.html
+ID_MAX_LENGTH = 63
+
+
 class IdType(object):
     LOCAL_SERIAL = 0
     """
@@ -61,7 +65,7 @@ class ModelingContext(object):
         #self.id_type = IdType.LOCAL_SERIAL
         #self.id_type = IdType.LOCAL_RANDOM
         self.id_type = IdType.UNIVERSAL_RANDOM
-        self.id_max_length = 63 # See: http://www.faqs.org/rfcs/rfc1035.html
+        self.id_max_length = ID_MAX_LENGTH
         self.inputs = StrictDict(key_class=basestring)
 
         self._serial_id_counter = itertools.count(1)

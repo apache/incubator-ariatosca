@@ -16,12 +16,12 @@
 import sys
 import threading
 
+from ...utils import console
 from ..validation import ValidationContext
 from ..loading import LoadingContext
 from ..reading import ReadingContext
 from ..presentation import PresentationContext
 from ..modeling import ModelingContext
-from .style import Style
 
 
 _thread_locals = threading.local()
@@ -58,12 +58,12 @@ class ConsumptionContext(object):
     def __init__(self, set_thread_local=True):
         self.args = []
         self.out = sys.stdout
-        self.style = Style()
         self.validation = ValidationContext()
         self.loading = LoadingContext()
         self.reading = ReadingContext()
         self.presentation = PresentationContext()
         self.modeling = ModelingContext()
+        self.style = console.TopologyStylizer()
 
         if set_thread_local:
             self.set_thread_local()

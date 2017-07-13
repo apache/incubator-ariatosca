@@ -28,7 +28,7 @@ from ...core import Core
 from ...storage import exceptions as storage_exceptions
 from ...parser import consumption
 from ...utils import (formatting, collections, console)
-
+from ... orchestrator import topology
 
 DESCRIPTION_FIELD_LENGTH_LIMIT = 20
 SERVICE_TEMPLATE_COLUMNS = \
@@ -73,10 +73,9 @@ def show(service_template_name, model_storage, mode_full, mode_types, format_jso
         elif format_yaml:
             console.puts(formatting.yaml_dumps(collections.prune(service_template.as_raw)))
         else:
-            service_template.dump()
+            console.puts(topology.Topology().dump(service_template))
     elif mode_types:
-        consumption.ConsumptionContext()
-        service_template.dump_types()
+        console.puts(topology.Topology().dump_types(service_template=service_template))
     else:
         logger.info('Showing service template {0}...'.format(service_template_name))
         service_template_dict = service_template.to_dict()

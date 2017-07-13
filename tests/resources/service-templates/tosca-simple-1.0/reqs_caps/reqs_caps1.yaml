@@ -13,53 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-General-purpose utilities package.
-"""
+tosca_definitions_version: tosca_simple_yaml_1_0
 
-from . import (
-    archive,
-    argparse,
-    caching,
-    collections,
-    console,
-    exceptions,
-    file,
-    formatting,
-    http,
-    imports,
-    openclose,
-    plugin,
-    process,
-    specification,
-    threading,
-    type,
-    uris,
-    uuid,
-    validation,
-    versions
-)
+capability_types:
+  Socket:
+    derived_from: tosca.capabilities.Root
 
+node_types:
+  Socket:
+    derived_from: tosca.nodes.Root
+    capabilities:
+      socket: Socket
 
-__all__ = (
-    'archive',
-    'argparse',
-    'caching',
-    'collections',
-    'console',
-    'exceptions',
-    'file',
-    'formatting',
-    'http',
-    'imports',
-    'openclose',
-    'plugin',
-    'process',
-    'specification',
-    'threading',
-    'type',
-    'uris',
-    'uuid',
-    'validation',
-    'versions'
-)
+  Plug:
+    derived_from: tosca.nodes.Root
+    requirements:
+      - plug:
+          capability: Socket
+
+topology_template:
+  node_templates:
+    socket:
+      type: Socket
+
+    plug:
+      type: Plug

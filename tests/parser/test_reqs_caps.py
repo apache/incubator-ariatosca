@@ -13,53 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-General-purpose utilities package.
-"""
-
-from . import (
-    archive,
-    argparse,
-    caching,
-    collections,
-    console,
-    exceptions,
-    file,
-    formatting,
-    http,
-    imports,
-    openclose,
-    plugin,
-    process,
-    specification,
-    threading,
-    type,
-    uris,
-    uuid,
-    validation,
-    versions
-)
+from .service_templates import consume_test_case
+from ..helpers import get_service_template_uri
 
 
-__all__ = (
-    'archive',
-    'argparse',
-    'caching',
-    'collections',
-    'console',
-    'exceptions',
-    'file',
-    'formatting',
-    'http',
-    'imports',
-    'openclose',
-    'plugin',
-    'process',
-    'specification',
-    'threading',
-    'type',
-    'uris',
-    'uuid',
-    'validation',
-    'versions'
-)
+def test_satisfy_capability_type():
+    consume_reqs_caps_template1('instance')
+
+
+def consume_reqs_caps_template1(consumer_class_name, cache=True):
+    consume_test_case(
+        get_service_template_uri('tosca-simple-1.0', 'reqs_caps', 'reqs_caps1.yaml'),
+        consumer_class_name=consumer_class_name,
+        cache=cache
+    )

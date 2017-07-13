@@ -21,8 +21,6 @@ ARIA modeling service template module
 
 from __future__ import absolute_import  # so we can import standard 'types'
 
-from datetime import datetime
-
 from sqlalchemy import (
     Column,
     Text,
@@ -33,15 +31,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declared_attr
 
-from ..parser import validation
-from ..parser.consumption import ConsumptionContext
-from ..parser.reading import deepcopy_with_locators
-from ..utils import (collections, formatting, console)
-from ..utils.versions import VersionString
+from ..utils import (collections, formatting)
 from .mixins import TemplateModelMixin
 from . import (
     relationship,
-    utils,
     types as modeling_types
 )
 
@@ -331,130 +324,6 @@ class ServiceTemplateBase(TemplateModelMixin):
             ('interface_types', formatting.as_raw(self.interface_types)),
             ('artifact_types', formatting.as_raw(self.artifact_types))))
 
-    def instantiate(self, container, model_storage, inputs=None):  # pylint: disable=arguments-differ
-        from . import models
-        now = datetime.now()
-        service = models.Service(created_at=now,
-                                 updated_at=now,
-                                 description=deepcopy_with_locators(self.description),
-                                 service_template=self)
-
-        # TODO: we want to remove this use of the context
-        context = ConsumptionContext.get_thread_local()
-        context.modeling.instance = service
-
-        utils.validate_no_undeclared_inputs(declared_inputs=self.inputs,
-                                            supplied_inputs=inputs or {})
-        utils.validate_required_inputs_are_supplied(declared_inputs=self.inputs,
-                                                    supplied_inputs=inputs or {})
-
-        service.inputs = utils.merge_parameter_values(inputs, self.inputs, model_cls=models.Input)
-        # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
-
-        for plugin_specification in self.plugin_specifications.itervalues():
-            if plugin_specification.enabled:
-                if plugin_specification.resolve(model_storage):
-                    plugin = plugin_specification.plugin
-                    service.plugins[plugin.name] = plugin
-                else:
-                    context = ConsumptionContext.get_thread_local()
-                    context.validation.report('specified plugin not found: {0}'.format(
-                        plugin_specification.name), level=validation.Issue.EXTERNAL)
-
-        utils.instantiate_dict(self, service.meta_data, self.meta_data)
-
-        for node_template in self.node_templates.itervalues():
-            for _ in range(node_template.scaling['default_instances']):
-                node = node_template.instantiate(container)
-                service.nodes[node.name] = node
-
-        utils.instantiate_dict(self, service.groups, self.group_templates)
-        utils.instantiate_dict(self, service.policies, self.policy_templates)
-        utils.instantiate_dict(self, service.workflows, self.workflow_templates)
-
-        if self.substitution_template is not None:
-            service.substitution = self.substitution_template.instantiate(container)
-
-        utils.instantiate_dict(self, service.outputs, self.outputs)
-
-        return service
-
-    def validate(self):
-        utils.validate_dict_values(self.meta_data)
-        utils.validate_dict_values(self.node_templates)
-        utils.validate_dict_values(self.group_templates)
-        utils.validate_dict_values(self.policy_templates)
-        if self.substitution_template is not None:
-            self.substitution_template.validate()
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.outputs)
-        utils.validate_dict_values(self.workflow_templates)
-        if self.node_types is not None:
-            self.node_types.validate()
-        if self.group_types is not None:
-            self.group_types.validate()
-        if self.policy_types is not None:
-            self.policy_types.validate()
-        if self.relationship_types is not None:
-            self.relationship_types.validate()
-        if self.capability_types is not None:
-            self.capability_types.validate()
-        if self.interface_types is not None:
-            self.interface_types.validate()
-        if self.artifact_types is not None:
-            self.artifact_types.validate()
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.meta_data, report_issues)
-        utils.coerce_dict_values(self.node_templates, report_issues)
-        utils.coerce_dict_values(self.group_templates, report_issues)
-        utils.coerce_dict_values(self.policy_templates, report_issues)
-        if self.substitution_template is not None:
-            self.substitution_template.coerce_values(report_issues)
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.outputs, report_issues)
-        utils.coerce_dict_values(self.workflow_templates, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.description is not None:
-            console.puts(context.style.meta(self.description))
-        utils.dump_dict_values(self.meta_data, 'Metadata')
-        for node_template in self.node_templates.itervalues():
-            node_template.dump()
-        for group_template in self.group_templates.itervalues():
-            group_template.dump()
-        for policy_template in self.policy_templates.itervalues():
-            policy_template.dump()
-        if self.substitution_template is not None:
-            self.substitution_template.dump()
-        utils.dump_dict_values(self.inputs, 'Inputs')
-        utils.dump_dict_values(self.outputs, 'Outputs')
-        utils.dump_dict_values(self.workflow_templates, 'Workflow templates')
-
-    def dump_types(self):
-        if self.node_types.children:
-            console.puts('Node types:')
-            self.node_types.dump()
-        if self.group_types.children:
-            console.puts('Group types:')
-            self.group_types.dump()
-        if self.capability_types.children:
-            console.puts('Capability types:')
-            self.capability_types.dump()
-        if self.relationship_types.children:
-            console.puts('Relationship types:')
-            self.relationship_types.dump()
-        if self.policy_types.children:
-            console.puts('Policy types:')
-            self.policy_types.dump()
-        if self.artifact_types.children:
-            console.puts('Artifact types:')
-            self.artifact_types.dump()
-        if self.interface_types.children:
-            console.puts('Interface types:')
-            self.interface_types.dump()
-
 
 class NodeTemplateBase(TemplateModelMixin):
     """
@@ -625,114 +494,6 @@ class NodeTemplateBase(TemplateModelMixin):
             ('capability_templates', formatting.as_raw_list(self.capability_templates)),
             ('requirement_templates', formatting.as_raw_list(self.requirement_templates))))
 
-    def instantiate(self, container):
-        from . import models
-        node = models.Node(name=self._next_name,
-                           type=self.type,
-                           description=deepcopy_with_locators(self.description),
-                           state=models.Node.INITIAL,
-                           node_template=self)
-        utils.instantiate_dict(node, node.properties, self.properties)
-        utils.instantiate_dict(node, node.attributes, self.attributes)
-        utils.instantiate_dict(node, node.interfaces, self.interface_templates)
-        utils.instantiate_dict(node, node.artifacts, self.artifact_templates)
-        utils.instantiate_dict(node, node.capabilities, self.capability_templates)
-
-        # Default attributes
-        if ('tosca_name' in node.attributes) \
-            and (node.attributes['tosca_name'].type_name == 'string'):
-            node.attributes['tosca_name'].value = self.name
-        if 'tosca_id' in node.attributes \
-            and (node.attributes['tosca_id'].type_name == 'string'):
-            node.attributes['tosca_id'].value = node.name
-
-        return node
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.attributes)
-        utils.validate_dict_values(self.interface_templates)
-        utils.validate_dict_values(self.artifact_templates)
-        utils.validate_dict_values(self.capability_templates)
-        utils.validate_list_values(self.requirement_templates)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.attributes, report_issues)
-        utils.coerce_dict_values(self.interface_templates, report_issues)
-        utils.coerce_dict_values(self.artifact_templates, report_issues)
-        utils.coerce_dict_values(self.capability_templates, report_issues)
-        utils.coerce_list_values(self.requirement_templates, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Node template: {0}'.format(context.style.node(self.name)))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_dict_values(self.attributes, 'Attributes')
-            utils.dump_interfaces(self.interface_templates)
-            utils.dump_dict_values(self.artifact_templates, 'Artifact templates')
-            utils.dump_dict_values(self.capability_templates, 'Capability templates')
-            utils.dump_list_values(self.requirement_templates, 'Requirement templates')
-
-    @property
-    def scaling(self):
-        scaling = {}
-
-        def extract_property(properties, name):
-            if name in scaling:
-                return
-            prop = properties.get(name)
-            if (prop is not None) and (prop.type_name == 'integer') and (prop.value is not None):
-                scaling[name] = prop.value
-
-        def extract_properties(properties):
-            extract_property(properties, 'min_instances')
-            extract_property(properties, 'max_instances')
-            extract_property(properties, 'default_instances')
-
-        def default_property(name, value):
-            if name not in scaling:
-                scaling[name] = value
-
-        # From our scaling capabilities
-        for capability_template in self.capability_templates.itervalues():
-            if capability_template.type.role == 'scaling':
-                extract_properties(capability_template.properties)
-
-        # From service scaling policies
-        for policy_template in self.service_template.policy_templates.itervalues():
-            if policy_template.type.role == 'scaling':
-                if policy_template.is_for_node_template(self.name):
-                    extract_properties(policy_template.properties)
-
-        # Defaults
-        default_property('min_instances', 0)
-        default_property('max_instances', 1)
-        default_property('default_instances', 1)
-
-        # Validate
-        # pylint: disable=too-many-boolean-expressions
-        if ((scaling['min_instances'] < 0) or
-                (scaling['max_instances'] < 0) or
-                (scaling['default_instances'] < 0) or
-                (scaling['max_instances'] < scaling['min_instances']) or
-                (scaling['default_instances'] < scaling['min_instances']) or
-                (scaling['default_instances'] > scaling['max_instances'])):
-            context = ConsumptionContext.get_thread_local()
-            context.validation.report('invalid scaling parameters for node template "{0}": '
-                                      'min={1}, max={2}, default={3}'.format(
-                                          self.name,
-                                          scaling['min_instances'],
-                                          scaling['max_instances'],
-                                          scaling['default_instances']),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-        return scaling
-
     def is_target_node_template_valid(self, target_node_template):
         """
         Checks if ``target_node_template`` matches all our ``target_node_template_constraints``.
@@ -768,6 +529,40 @@ class NodeTemplateBase(TemplateModelMixin):
         """
 
         return '{name}_{index}'.format(name=self.name, index=self._next_index)
+
+    @property
+    def scaling(self):
+        scaling = {}
+
+        def extract_property(properties, name):
+            if name in scaling:
+                return
+            prop = properties.get(name)
+            if (prop is not None) and (prop.type_name == 'integer') and (prop.value is not None):
+                scaling[name] = prop.value
+
+        def extract_properties(properties):
+            extract_property(properties, 'min_instances')
+            extract_property(properties, 'max_instances')
+            extract_property(properties, 'default_instances')
+
+        # From our scaling capabilities
+        for capability_template in self.capability_templates.itervalues():
+            if capability_template.type.role == 'scaling':
+                extract_properties(capability_template.properties)
+
+        # From service scaling policies
+        for policy_template in self.service_template.policy_templates.itervalues():
+            if policy_template.type.role == 'scaling':
+                if policy_template.is_for_node_template(self.name):
+                    extract_properties(policy_template.properties)
+
+        # Defaults
+        scaling.setdefault('min_instances', 0)
+        scaling.setdefault('max_instances', 1)
+        scaling.setdefault('default_instances', 1)
+
+        return scaling
 
 
 class GroupTemplateBase(TemplateModelMixin):
@@ -875,40 +670,6 @@ class GroupTemplateBase(TemplateModelMixin):
             ('type_name', self.type.name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interface_templates', formatting.as_raw_list(self.interface_templates))))
-
-    def instantiate(self, container):
-        from . import models
-        group = models.Group(name=self.name,
-                             type=self.type,
-                             description=deepcopy_with_locators(self.description),
-                             group_template=self)
-        utils.instantiate_dict(self, group.properties, self.properties)
-        utils.instantiate_dict(self, group.interfaces, self.interface_templates)
-        if self.node_templates:
-            for node_template in self.node_templates:
-                group.nodes += node_template.nodes
-        return group
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.interface_templates)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.interface_templates, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Group template: {0}'.format(context.style.node(self.name)))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_interfaces(self.interface_templates)
-            if self.node_templates:
-                console.puts('Member node templates: {0}'.format(', '.join(
-                    (str(context.style.node(v.name)) for v in self.node_templates))))
 
     def contains_node_template(self, name):
         for node_template in self.node_templates:
@@ -1022,42 +783,6 @@ class PolicyTemplateBase(TemplateModelMixin):
             ('type_name', self.type.name),
             ('properties', formatting.as_raw_dict(self.properties))))
 
-    def instantiate(self, container):
-        from . import models
-        policy = models.Policy(name=self.name,
-                               type=self.type,
-                               description=deepcopy_with_locators(self.description),
-                               policy_template=self)
-        utils.instantiate_dict(self, policy.properties, self.properties)
-        if self.node_templates:
-            for node_template in self.node_templates:
-                policy.nodes += node_template.nodes
-        if self.group_templates:
-            for group_template in self.group_templates:
-                policy.groups += group_template.groups
-        return policy
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Policy template: {0}'.format(context.style.node(self.name)))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            if self.node_templates:
-                console.puts('Target node templates: {0}'.format(', '.join(
-                    (str(context.style.node(v.name)) for v in self.node_templates))))
-            if self.group_templates:
-                console.puts('Target group templates: {0}'.format(', '.join(
-                    (str(context.style.node(v.name)) for v in self.group_templates))))
-
     def is_for_node_template(self, name):
         for node_template in self.node_templates:
             if node_template.name == name:
@@ -1133,26 +858,6 @@ class SubstitutionTemplateBase(TemplateModelMixin):
         return collections.OrderedDict((
             ('node_type_name', self.node_type.name),
             ('mappings', formatting.as_raw_dict(self.mappings))))
-
-    def instantiate(self, container):
-        from . import models
-        substitution = models.Substitution(node_type=self.node_type,
-                                           substitution_template=self)
-        utils.instantiate_dict(container, substitution.mappings, self.mappings)
-        return substitution
-
-    def validate(self):
-        utils.validate_dict_values(self.mappings)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.mappings, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Substitution template:')
-        with context.style.indent:
-            console.puts('Node type: {0}'.format(context.style.type(self.node_type.name)))
-            utils.dump_dict_values(self.mappings, 'Mappings')
 
 
 class SubstitutionTemplateMappingBase(TemplateModelMixin):
@@ -1232,59 +937,6 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('name', self.name),))
-
-    def coerce_values(self, report_issues):
-        pass
-
-    def instantiate(self, container):
-        from . import models
-        context = ConsumptionContext.get_thread_local()
-        if self.capability_template is not None:
-            node_template = self.capability_template.node_template
-        else:
-            node_template = self.requirement_template.node_template
-        nodes = node_template.nodes
-        if len(nodes) == 0:
-            context.validation.report(
-                'mapping "{0}" refers to node template "{1}" but there are no '
-                'node instances'.format(self.mapped_name, self.node_template.name),
-                level=validation.Issue.BETWEEN_INSTANCES)
-            return None
-        # The TOSCA spec does not provide a way to choose the node,
-        # so we will just pick the first one
-        node = nodes[0]
-        capability = None
-        if self.capability_template:
-            for a_capability in node.capabilities.itervalues():
-                if a_capability.capability_template.name == self.capability_template.name:
-                    capability = a_capability
-        return models.SubstitutionMapping(name=self.name,
-                                          capability=capability,
-                                          requirement_template=self.requirement_template,
-                                          node=node)
-
-
-    def validate(self):
-        context = ConsumptionContext.get_thread_local()
-        if (self.capability_template is None) and (self.requirement_template is None):
-            context.validation.report('mapping "{0}" refers to neither capability nor a requirement'
-                                      ' in node template: {1}'.format(
-                                          self.name,
-                                          formatting.safe_repr(self.node_template.name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.capability_template is not None:
-            node_template = self.capability_template.node_template
-        else:
-            node_template = self.requirement_template.node_template
-        console.puts('{0} -> {1}.{2}'.format(
-            context.style.node(self.name),
-            context.style.node(node_template.name),
-            context.style.node(self.capability_template.name
-                               if self.capability_template
-                               else self.requirement_template.name)))
 
 
 class RequirementTemplateBase(TemplateModelMixin):
@@ -1424,56 +1076,6 @@ class RequirementTemplateBase(TemplateModelMixin):
     :type: [:class:`NodeTemplateConstraint`]
     """)
 
-    def find_target(self, source_node_template):
-        context = ConsumptionContext.get_thread_local()
-
-        # We might already have a specific node template, so we'll just verify it
-        if self.target_node_template is not None:
-            if not source_node_template.is_target_node_template_valid(self.target_node_template):
-                context.validation.report('requirement "{0}" of node template "{1}" is for node '
-                                          'template "{2}" but it does not match constraints'.format(
-                                              self.name,
-                                              self.target_node_template.name,
-                                              source_node_template.name),
-                                          level=validation.Issue.BETWEEN_TYPES)
-            if (self.target_capability_type is not None) \
-                or (self.target_capability_name is not None):
-                target_node_capability = self.find_target_capability(source_node_template,
-                                                                     self.target_node_template)
-                if target_node_capability is None:
-                    return None, None
-            else:
-                target_node_capability = None
-
-            return self.target_node_template, target_node_capability
-
-        # Find first node that matches the type
-        elif self.target_node_type is not None:
-            for target_node_template in \
-                    self.node_template.service_template.node_templates.itervalues():
-                if self.target_node_type.get_descendant(target_node_template.type.name) is None:
-                    continue
-
-                if not source_node_template.is_target_node_template_valid(target_node_template):
-                    continue
-
-                target_node_capability = self.find_target_capability(source_node_template,
-                                                                     target_node_template)
-                if target_node_capability is None:
-                    continue
-
-                return target_node_template, target_node_capability
-
-        return None, None
-
-    def find_target_capability(self, source_node_template, target_node_template):
-        for capability_template in target_node_template.capability_templates.itervalues():
-            if capability_template.satisfies_requirement(source_node_template,
-                                                         self,
-                                                         target_node_template):
-                return capability_template
-        return None
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1486,43 +1088,6 @@ class RequirementTemplateBase(TemplateModelMixin):
              if self.target_capability_type is not None else None),
             ('target_capability_name', self.target_capability_name),
             ('relationship_template', formatting.as_raw(self.relationship_template))))
-
-    def validate(self):
-        if self.relationship_template:
-            self.relationship_template.validate()
-
-    def coerce_values(self, report_issues):
-        if self.relationship_template is not None:
-            self.relationship_template.coerce_values(report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.name:
-            console.puts(context.style.node(self.name))
-        else:
-            console.puts('Requirement:')
-        with context.style.indent:
-            if self.target_node_type is not None:
-                console.puts('Target node type: {0}'.format(
-                    context.style.type(self.target_node_type.name)))
-            elif self.target_node_template is not None:
-                console.puts('Target node template: {0}'.format(
-                    context.style.node(self.target_node_template.name)))
-            if self.target_capability_type is not None:
-                console.puts('Target capability type: {0}'.format(
-                    context.style.type(self.target_capability_type.name)))
-            elif self.target_capability_name is not None:
-                console.puts('Target capability name: {0}'.format(
-                    context.style.node(self.target_capability_name)))
-            if self.target_node_template_constraints:
-                console.puts('Target node template constraints:')
-                with context.style.indent:
-                    for constraint in self.target_node_template_constraints:
-                        console.puts(context.style.literal(constraint))
-            if self.relationship_template:
-                console.puts('Relationship:')
-                with context.style.indent:
-                    self.relationship_template.dump()
 
 
 class RelationshipTemplateBase(TemplateModelMixin):
@@ -1605,37 +1170,6 @@ class RelationshipTemplateBase(TemplateModelMixin):
             ('description', self.description),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interface_templates', formatting.as_raw_list(self.interface_templates))))
-
-    def instantiate(self, container):
-        from . import models
-        relationship_model = models.Relationship(name=self.name,
-                                                 type=self.type,
-                                                 relationship_template=self)
-        utils.instantiate_dict(container, relationship_model.properties, self.properties)
-        utils.instantiate_dict(container, relationship_model.interfaces, self.interface_templates)
-        return relationship_model
-
-    def validate(self):
-        # TODO: either type or name must be set
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.interface_templates)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.interface_templates, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.type is not None:
-            console.puts('Relationship type: {0}'.format(context.style.type(self.type.name)))
-        else:
-            console.puts('Relationship template: {0}'.format(
-                context.style.node(self.name)))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_interfaces(self.interface_templates, 'Interface templates')
 
 
 class CapabilityTemplateBase(TemplateModelMixin):
@@ -1739,29 +1273,6 @@ class CapabilityTemplateBase(TemplateModelMixin):
     :type: :obj:`int`
     """)
 
-    def satisfies_requirement(self,
-                              source_node_template,
-                              requirement,
-                              target_node_template):
-        # Do we match the required capability type?
-        if requirement.target_capability_type and \
-            requirement.target_capability_type.get_descendant(self.type.name) is None:
-            return False
-
-        # Are we in valid_source_node_types?
-        if self.valid_source_node_types:
-            for valid_source_node_type in self.valid_source_node_types:
-                if valid_source_node_type.get_descendant(source_node_template.type.name) is None:
-                    return False
-
-        # Apply requirement constraints
-        if requirement.target_node_template_constraints:
-            for node_template_constraint in requirement.target_node_template_constraints:
-                if not node_template_constraint.matches(source_node_template, target_node_template):
-                    return False
-
-        return True
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1772,42 +1283,6 @@ class CapabilityTemplateBase(TemplateModelMixin):
             ('max_occurrences', self.max_occurrences),
             ('valid_source_node_types', [v.name for v in self.valid_source_node_types]),
             ('properties', formatting.as_raw_dict(self.properties))))
-
-    def instantiate(self, container):
-        from . import models
-        capability = models.Capability(name=self.name,
-                                       type=self.type,
-                                       min_occurrences=self.min_occurrences,
-                                       max_occurrences=self.max_occurrences,
-                                       occurrences=0,
-                                       capability_template=self)
-        utils.instantiate_dict(container, capability.properties, self.properties)
-        return capability
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            console.puts(
-                'Occurrences: {0:d}{1}'.format(
-                    self.min_occurrences or 0,
-                    ' to {0:d}'.format(self.max_occurrences)
-                    if self.max_occurrences is not None
-                    else ' or more'))
-            if self.valid_source_node_types:
-                console.puts('Valid source node types: {0}'.format(
-                    ', '.join((str(context.style.type(v.name))
-                               for v in self.valid_source_node_types))))
-            utils.dump_dict_values(self.properties, 'Properties')
 
 
 class InterfaceTemplateBase(TemplateModelMixin):
@@ -1937,34 +1412,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
             ('inputs', formatting.as_raw_dict(self.inputs)),  # pylint: disable=no-member
             # TODO fix self.properties reference
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
-
-    def instantiate(self, container):
-        from . import models
-        interface = models.Interface(name=self.name,
-                                     type=self.type,
-                                     description=deepcopy_with_locators(self.description),
-                                     interface_template=self)
-        utils.instantiate_dict(container, interface.inputs, self.inputs)
-        utils.instantiate_dict(container, interface.operations, self.operation_templates)
-        return interface
-
-    def validate(self):
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.operation_templates)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.operation_templates, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Interface type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.inputs, 'Inputs')
-            utils.dump_dict_values(self.operation_templates, 'Operation templates')
 
 
 class OperationTemplateBase(TemplateModelMixin):
@@ -2124,65 +1571,6 @@ class OperationTemplateBase(TemplateModelMixin):
             ('dependencies', self.dependencies),
             ('inputs', formatting.as_raw_dict(self.inputs))))
 
-    def instantiate(self, container):
-        from . import models
-
-        plugin = self.plugin_specification.plugin \
-            if (self.plugin_specification is not None) and self.plugin_specification.enabled \
-            else None
-
-        operation = models.Operation(name=self.name,
-                                     description=deepcopy_with_locators(self.description),
-                                     relationship_edge=self.relationship_edge,
-                                     implementation=self.implementation,
-                                     dependencies=self.dependencies,
-                                     executor=self.executor,
-                                     plugin=plugin,
-                                     function=self.function,
-                                     max_attempts=self.max_attempts,
-                                     retry_interval=self.retry_interval,
-                                     operation_template=self)
-
-        utils.instantiate_dict(container, operation.inputs, self.inputs)
-        utils.instantiate_dict(container, operation.configurations, self.configurations)
-
-        return operation
-
-    def validate(self):
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.configurations)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.configurations, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            if self.implementation is not None:
-                console.puts('Implementation: {0}'.format(
-                    context.style.literal(self.implementation)))
-            if self.dependencies:
-                console.puts('Dependencies: {0}'.format(
-                    ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
-            utils.dump_dict_values(self.inputs, 'Inputs')
-            if self.executor is not None:
-                console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
-            if self.max_attempts is not None:
-                console.puts('Max attempts: {0}'.format(context.style.literal(self.max_attempts)))
-            if self.retry_interval is not None:
-                console.puts('Retry interval: {0}'.format(
-                    context.style.literal(self.retry_interval)))
-            if self.plugin_specification is not None:
-                console.puts('Plugin specification: {0}'.format(
-                    context.style.literal(self.plugin_specification.name)))
-            utils.dump_dict_values(self.configurations, 'Configuration')
-            if self.function is not None:
-                console.puts('Function: {0}'.format(context.style.literal(self.function)))
-
 
 class ArtifactTemplateBase(TemplateModelMixin):
     """
@@ -2295,43 +1683,6 @@ class ArtifactTemplateBase(TemplateModelMixin):
             ('repository_credential', formatting.as_agnostic(self.repository_credential)),
             ('properties', formatting.as_raw_dict(self.properties))))
 
-    def instantiate(self, container):
-        from . import models
-        artifact = models.Artifact(name=self.name,
-                                   type=self.type,
-                                   description=deepcopy_with_locators(self.description),
-                                   source_path=self.source_path,
-                                   target_path=self.target_path,
-                                   repository_url=self.repository_url,
-                                   repository_credential=self.repository_credential,
-                                   artifact_template=self)
-        utils.instantiate_dict(container, artifact.properties, self.properties)
-        return artifact
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Artifact type: {0}'.format(context.style.type(self.type.name)))
-            console.puts('Source path: {0}'.format(context.style.literal(self.source_path)))
-            if self.target_path is not None:
-                console.puts('Target path: {0}'.format(context.style.literal(self.target_path)))
-            if self.repository_url is not None:
-                console.puts('Repository URL: {0}'.format(
-                    context.style.literal(self.repository_url)))
-            if self.repository_credential:
-                console.puts('Repository credential: {0}'.format(
-                    context.style.literal(self.repository_credential)))
-            utils.dump_dict_values(self.properties, 'Properties')
-
 
 class PluginSpecificationBase(TemplateModelMixin):
     """
@@ -2399,24 +1750,3 @@ class PluginSpecificationBase(TemplateModelMixin):
             ('name', self.name),
             ('version', self.version),
             ('enabled', self.enabled)))
-
-    def coerce_values(self, report_issues):
-        pass
-
-    def resolve(self, model_storage):
-        # TODO: we are planning a separate "instantiation" module where this will be called or
-        # moved to.
-        plugins = model_storage.plugin.list()
-        matching_plugins = []
-        if plugins:
-            for plugin in plugins:
-                if (plugin.name == self.name) and \
-                    ((self.version is None) or \
-                     (VersionString(plugin.package_version) >= self.version)):
-                    matching_plugins.append(plugin)
-        self.plugin = None
-        if matching_plugins:
-            # Return highest version of plugin
-            key = lambda plugin: VersionString(plugin.package_version).key
-            self.plugin = sorted(matching_plugins, key=key)[-1]
-        return self.plugin is not None

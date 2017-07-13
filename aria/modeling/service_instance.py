@@ -30,19 +30,15 @@ from sqlalchemy import DateTime
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.orderinglist import ordering_list
 
+from . import (
+    relationship,
+    types as modeling_types
+)
 from .mixins import InstanceModelMixin
-from ..orchestrator import execution_plugin
-from ..parser import validation
-from ..parser.consumption import ConsumptionContext
+
 from ..utils import (
     collections,
     formatting,
-    console
-)
-from . import (
-    relationship,
-    utils,
-    types as modeling_types
 )
 
 
@@ -232,50 +228,6 @@ class ServiceBase(InstanceModelMixin):
     :type: :class:`~datetime.datetime`
     """)
 
-    def satisfy_requirements(self):
-        satisfied = True
-        for node in self.nodes.itervalues():
-            if not node.satisfy_requirements():
-                satisfied = False
-        return satisfied
-
-    def validate_capabilities(self):
-        satisfied = True
-        for node in self.nodes.itervalues():
-            if not node.validate_capabilities():
-                satisfied = False
-        return satisfied
-
-    def find_hosts(self):
-        for node in self.nodes.itervalues():
-            node.find_host()
-
-    def configure_operations(self):
-        for node in self.nodes.itervalues():
-            node.configure_operations()
-        for group in self.groups.itervalues():
-            group.configure_operations()
-        for operation in self.workflows.itervalues():
-            operation.configure()
-
-    def is_node_a_target(self, target_node):
-        for node in self.nodes.itervalues():
-            if self._is_node_a_target(node, target_node):
-                return True
-        return False
-
-    def _is_node_a_target(self, source_node, target_node):
-        if source_node.outbound_relationships:
-            for relationship_model in source_node.outbound_relationships:
-                if relationship_model.target_node.name == target_node.name:
-                    return True
-                else:
-                    node = relationship_model.target_node
-                    if node is not None:
-                        if self._is_node_a_target(node, target_node):
-                            return True
-        return False
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -288,70 +240,6 @@ class ServiceBase(InstanceModelMixin):
             ('inputs', formatting.as_raw_dict(self.inputs)),
             ('outputs', formatting.as_raw_dict(self.outputs)),
             ('workflows', formatting.as_raw_list(self.workflows))))
-
-    def validate(self):
-        utils.validate_dict_values(self.meta_data)
-        utils.validate_dict_values(self.nodes)
-        utils.validate_dict_values(self.groups)
-        utils.validate_dict_values(self.policies)
-        if self.substitution is not None:
-            self.substitution.validate()
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.outputs)
-        utils.validate_dict_values(self.workflows)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.meta_data, report_issues)
-        utils.coerce_dict_values(self.nodes, report_issues)
-        utils.coerce_dict_values(self.groups, report_issues)
-        utils.coerce_dict_values(self.policies, report_issues)
-        if self.substitution is not None:
-            self.substitution.coerce_values(report_issues)
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.outputs, report_issues)
-        utils.coerce_dict_values(self.workflows, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.description is not None:
-            console.puts(context.style.meta(self.description))
-        utils.dump_dict_values(self.meta_data, 'Metadata')
-        for node in self.nodes.itervalues():
-            node.dump()
-        for group in self.groups.itervalues():
-            group.dump()
-        for policy in self.policies.itervalues():
-            policy.dump()
-        if self.substitution is not None:
-            self.substitution.dump()
-        utils.dump_dict_values(self.inputs, 'Inputs')
-        utils.dump_dict_values(self.outputs, 'Outputs')
-        utils.dump_dict_values(self.workflows, 'Workflows')
-
-    def dump_graph(self):
-        for node in self.nodes.itervalues():
-            if not self.is_node_a_target(node):
-                self._dump_graph_node(node)
-
-    def _dump_graph_node(self, node, capability=None):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(node.name))
-        if capability is not None:
-            console.puts('{0} ({1})'.format(context.style.property(capability.name),
-                                            context.style.type(capability.type.name)))
-        if node.outbound_relationships:
-            with context.style.indent:
-                for relationship_model in node.outbound_relationships:
-                    relationship_name = context.style.property(relationship_model.name)
-                    if relationship_model.type is not None:
-                        console.puts('-> {0} ({1})'.format(relationship_name,
-                                                           context.style.type(
-                                                               relationship_model.type.name)))
-                    else:
-                        console.puts('-> {0}'.format(relationship_name))
-                    with console.indent(3):
-                        self._dump_graph_node(relationship_model.target_node,
-                                              relationship_model.target_capability)
 
 
 class NodeBase(InstanceModelMixin):
@@ -616,118 +504,6 @@ class NodeBase(InstanceModelMixin):
             return attribute.value if attribute else None
         return None
 
-    def satisfy_requirements(self):
-        node_template = self.node_template
-        satisfied = True
-        for requirement_template in node_template.requirement_templates:
-            # Find target template
-            target_node_template, target_node_capability = \
-                requirement_template.find_target(node_template)
-            if target_node_template is not None:
-                satisfied = self._satisfy_capability(target_node_capability,
-                                                     target_node_template,
-                                                     requirement_template)
-            else:
-                context = ConsumptionContext.get_thread_local()
-                context.validation.report('requirement "{0}" of node "{1}" has no target node '
-                                          'template'.format(requirement_template.name, self.name),
-                                          level=validation.Issue.BETWEEN_INSTANCES)
-                satisfied = False
-        return satisfied
-
-    def _satisfy_capability(self, target_node_capability, target_node_template,
-                            requirement_template):
-        from . import models
-        context = ConsumptionContext.get_thread_local()
-        # Find target nodes
-        target_nodes = target_node_template.nodes
-        if target_nodes:
-            target_node = None
-            target_capability = None
-
-            if target_node_capability is not None:
-                # Relate to the first target node that has capacity
-                for node in target_nodes:
-                    a_target_capability = node.capabilities.get(target_node_capability.name)
-                    if a_target_capability.relate():
-                        target_node = node
-                        target_capability = a_target_capability
-                        break
-            else:
-                # Use first target node
-                target_node = target_nodes[0]
-
-            if target_node is not None:
-                if requirement_template.relationship_template is not None:
-                    relationship_model = \
-                        requirement_template.relationship_template.instantiate(self)
-                else:
-                    relationship_model = models.Relationship()
-                relationship_model.name = requirement_template.name
-                relationship_model.requirement_template = requirement_template
-                relationship_model.target_node = target_node
-                relationship_model.target_capability = target_capability
-                self.outbound_relationships.append(relationship_model)
-                return True
-            else:
-                context.validation.report('requirement "{0}" of node "{1}" targets node '
-                                          'template "{2}" but its instantiated nodes do not '
-                                          'have enough capacity'.format(
-                                              requirement_template.name,
-                                              self.name,
-                                              target_node_template.name),
-                                          level=validation.Issue.BETWEEN_INSTANCES)
-                return False
-        else:
-            context.validation.report('requirement "{0}" of node "{1}" targets node template '
-                                      '"{2}" but it has no instantiated nodes'.format(
-                                          requirement_template.name,
-                                          self.name,
-                                          target_node_template.name),
-                                      level=validation.Issue.BETWEEN_INSTANCES)
-            return False
-
-    def validate_capabilities(self):
-        context = ConsumptionContext.get_thread_local()
-        satisfied = False
-        for capability in self.capabilities.itervalues():
-            if not capability.has_enough_relationships:
-                context.validation.report('capability "{0}" of node "{1}" requires at least {2:d} '
-                                          'relationships but has {3:d}'.format(
-                                              capability.name,
-                                              self.name,
-                                              capability.min_occurrences,
-                                              capability.occurrences),
-                                          level=validation.Issue.BETWEEN_INSTANCES)
-                satisfied = False
-        return satisfied
-
-    def find_host(self):
-        def _find_host(node):
-            if node.type.role == 'host':
-                return node
-            for the_relationship in node.outbound_relationships:
-                if (the_relationship.target_capability is not None) and \
-                    the_relationship.target_capability.type.role == 'host':
-                    host = _find_host(the_relationship.target_node)
-                    if host is not None:
-                        return host
-            for the_relationship in node.inbound_relationships:
-                if (the_relationship.target_capability is not None) and \
-                    the_relationship.target_capability.type.role == 'feature':
-                    host = _find_host(the_relationship.source_node)
-                    if host is not None:
-                        return host
-            return None
-
-        self.host = _find_host(self)
-
-    def configure_operations(self):
-        for interface in self.interfaces.itervalues():
-            interface.configure_operations()
-        for the_relationship in self.outbound_relationships:
-            the_relationship.configure_operations()
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -739,46 +515,6 @@ class NodeBase(InstanceModelMixin):
             ('artifacts', formatting.as_raw_list(self.artifacts)),
             ('capabilities', formatting.as_raw_list(self.capabilities)),
             ('relationships', formatting.as_raw_list(self.outbound_relationships))))
-
-    def validate(self):
-        context = ConsumptionContext.get_thread_local()
-        if len(self.name) > context.modeling.id_max_length:
-            context.validation.report('"{0}" has an ID longer than the limit of {1:d} characters: '
-                                      '{2:d}'.format(
-                                          self.name,
-                                          context.modeling.id_max_length,
-                                          len(self.name)),
-                                      level=validation.Issue.BETWEEN_INSTANCES)
-
-        # TODO: validate that node template is of type?
-
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.attributes)
-        utils.validate_dict_values(self.interfaces)
-        utils.validate_dict_values(self.artifacts)
-        utils.validate_dict_values(self.capabilities)
-        utils.validate_list_values(self.outbound_relationships)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.attributes, report_issues)
-        utils.coerce_dict_values(self.interfaces, report_issues)
-        utils.coerce_dict_values(self.artifacts, report_issues)
-        utils.coerce_dict_values(self.capabilities, report_issues)
-        utils.coerce_list_values(self.outbound_relationships, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Node: {0}'.format(context.style.node(self.name)))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            console.puts('Template: {0}'.format(context.style.node(self.node_template.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_dict_values(self.attributes, 'Attributes')
-            utils.dump_interfaces(self.interfaces)
-            utils.dump_dict_values(self.artifacts, 'Artifacts')
-            utils.dump_dict_values(self.capabilities, 'Capabilities')
-            utils.dump_list_values(self.outbound_relationships, 'Relationships')
 
 
 class GroupBase(InstanceModelMixin):
@@ -885,37 +621,12 @@ class GroupBase(InstanceModelMixin):
     :type: :obj:`basestring`
     """)
 
-    def configure_operations(self):
-        for interface in self.interfaces.itervalues():
-            interface.configure_operations()
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
             ('name', self.name),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces))))
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.interfaces)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.interfaces, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Group: {0}'.format(context.style.node(self.name)))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_interfaces(self.interfaces)
-            if self.nodes:
-                console.puts('Member nodes:')
-                with context.style.indent:
-                    for node in self.nodes:
-                        console.puts(context.style.node(node.name))
 
 
 class PolicyBase(InstanceModelMixin):
@@ -1030,29 +741,6 @@ class PolicyBase(InstanceModelMixin):
             ('type_name', self.type.name),
             ('properties', formatting.as_raw_dict(self.properties))))
 
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Policy: {0}'.format(context.style.node(self.name)))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            if self.nodes:
-                console.puts('Target nodes:')
-                with context.style.indent:
-                    for node in self.nodes:
-                        console.puts(context.style.node(node.name))
-            if self.groups:
-                console.puts('Target groups:')
-                with context.style.indent:
-                    for group in self.groups:
-                        console.puts(context.style.node(group.name))
-
 
 class SubstitutionBase(InstanceModelMixin):
     """
@@ -1129,19 +817,6 @@ class SubstitutionBase(InstanceModelMixin):
         return collections.OrderedDict((
             ('node_type_name', self.node_type.name),
             ('mappings', formatting.as_raw_dict(self.mappings))))
-
-    def validate(self):
-        utils.validate_dict_values(self.mappings)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.mappings, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts('Substitution:')
-        with context.style.indent:
-            console.puts('Node type: {0}'.format(context.style.type(self.node_type.name)))
-            utils.dump_dict_values(self.mappings, 'Mappings')
 
 
 class SubstitutionMappingBase(InstanceModelMixin):
@@ -1237,31 +912,6 @@ class SubstitutionMappingBase(InstanceModelMixin):
     def as_raw(self):
         return collections.OrderedDict((
             ('name', self.name),))
-
-    def coerce_values(self, report_issues):
-        pass
-
-    def validate(self):
-        context = ConsumptionContext.get_thread_local()
-        if (self.capability is None) and (self.requirement_template is None):
-            context.validation.report('mapping "{0}" refers to neither capability nor a requirement'
-                                      ' in node: {1}'.format(
-                                          self.name,
-                                          formatting.safe_repr(self.node.name)),
-                                      level=validation.Issue.BETWEEN_TYPES)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.capability is not None:
-            console.puts('{0} -> {1}.{2}'.format(
-                context.style.node(self.name),
-                context.style.node(self.capability.node.name),
-                context.style.node(self.capability.name)))
-        else:
-            console.puts('{0} -> {1}.{2}'.format(
-                context.style.node(self.name),
-                context.style.node(self.node.name),
-                context.style.node(self.requirement_template.name)))
 
 
 class RelationshipBase(InstanceModelMixin):
@@ -1436,10 +1086,6 @@ class RelationshipBase(InstanceModelMixin):
     :type: :obj:`int`
     """)
 
-    def configure_operations(self):
-        for interface in self.interfaces.itervalues():
-            interface.configure_operations()
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1451,33 +1097,6 @@ class RelationshipBase(InstanceModelMixin):
              if self.relationship_template is not None else None),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('interfaces', formatting.as_raw_list(self.interfaces))))
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-        utils.validate_dict_values(self.interfaces)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-        utils.coerce_dict_values(self.interfaces, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.name:
-            console.puts('{0} ->'.format(context.style.node(self.name)))
-        else:
-            console.puts('->')
-        with context.style.indent:
-            console.puts('Node: {0}'.format(context.style.node(self.target_node.name)))
-            if self.target_capability:
-                console.puts('Capability: {0}'.format(context.style.node(
-                    self.target_capability.name)))
-            if self.type is not None:
-                console.puts('Relationship type: {0}'.format(context.style.type(self.type.name)))
-            if (self.relationship_template is not None) and self.relationship_template.name:
-                console.puts('Relationship template: {0}'.format(
-                    context.style.node(self.relationship_template.name)))
-            utils.dump_dict_values(self.properties, 'Properties')
-            utils.dump_interfaces(self.interfaces, 'Interfaces')
 
 
 class CapabilityBase(InstanceModelMixin):
@@ -1594,25 +1213,6 @@ class CapabilityBase(InstanceModelMixin):
             ('name', self.name),
             ('type_name', self.type.name),
             ('properties', formatting.as_raw_dict(self.properties))))
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        with context.style.indent:
-            console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            console.puts('Occurrences: {0:d} ({1:d}{2})'.format(
-                self.occurrences,
-                self.min_occurrences or 0,
-                ' to {0:d}'.format(self.max_occurrences)
-                if self.max_occurrences is not None
-                else ' or more'))
-            utils.dump_dict_values(self.properties, 'Properties')
 
 
 class InterfaceBase(InstanceModelMixin):
@@ -1738,10 +1338,6 @@ class InterfaceBase(InstanceModelMixin):
     :type: :obj:`basestring`
     """)
 
-    def configure_operations(self):
-        for operation in self.operations.itervalues():
-            operation.configure()
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1750,24 +1346,6 @@ class InterfaceBase(InstanceModelMixin):
             ('type_name', self.type.name),
             ('inputs', formatting.as_raw_dict(self.inputs)),
             ('operations', formatting.as_raw_list(self.operations))))
-
-    def validate(self):
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.operations)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.operations, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Interface type: {0}'.format(context.style.type(self.type.name)))
-            utils.dump_dict_values(self.inputs, 'Inputs')
-            utils.dump_dict_values(self.operations, 'Operations')
 
 
 class OperationBase(InstanceModelMixin):
@@ -1944,45 +1522,6 @@ class OperationBase(InstanceModelMixin):
     :type: :obj:`float`
     """)
 
-    def configure(self):
-        if (self.implementation is None) and (self.function is None):
-            return
-
-        if (self.interface is not None) and (self.plugin is None) and (self.function is None):
-            # ("interface" is None for workflow operations, which do not currently use "plugin")
-            # The default (None) plugin is the execution plugin
-            execution_plugin.instantiation.configure_operation(self)
-        else:
-            # In the future plugins may be able to add their own "configure_operation" hook that
-            # can validate the configuration and otherwise create specially derived arguments. For
-            # now, we just send all configuration parameters as arguments without validation.
-            utils.instantiate_dict(self, self.arguments,
-                                   utils.dict_as_arguments(self.configurations))
-
-        if self.interface is not None:
-            # Send all interface inputs as extra arguments
-            # ("interface" is None for workflow operations)
-            # Note that they will override existing arguments of the same names
-            utils.instantiate_dict(self, self.arguments,
-                                   utils.dict_as_arguments(self.interface.inputs))
-
-        # Send all inputs as extra arguments
-        # Note that they will override existing arguments of the same names
-        utils.instantiate_dict(self, self.arguments, utils.dict_as_arguments(self.inputs))
-
-        # Check for reserved arguments
-        from ..orchestrator.decorators import OPERATION_DECORATOR_RESERVED_ARGUMENTS
-        used_reserved_names = \
-            OPERATION_DECORATOR_RESERVED_ARGUMENTS.intersection(self.arguments.keys())
-        if used_reserved_names:
-            context = ConsumptionContext.get_thread_local()
-            context.validation.report('using reserved arguments in operation "{0}": {1}'
-                                      .format(
-                                          self.name,
-                                          formatting.string_list_as_string(used_reserved_names)),
-                                      level=validation.Issue.EXTERNAL)
-
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -1991,46 +1530,6 @@ class OperationBase(InstanceModelMixin):
             ('implementation', self.implementation),
             ('dependencies', self.dependencies),
             ('inputs', formatting.as_raw_dict(self.inputs))))
-
-    def validate(self):
-        # TODO must be associated with either interface or service
-        utils.validate_dict_values(self.inputs)
-        utils.validate_dict_values(self.configurations)
-        utils.validate_dict_values(self.arguments)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.inputs, report_issues)
-        utils.coerce_dict_values(self.configurations, report_issues)
-        utils.coerce_dict_values(self.arguments, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            if self.implementation is not None:
-                console.puts('Implementation: {0}'.format(
-                    context.style.literal(self.implementation)))
-            if self.dependencies:
-                console.puts(
-                    'Dependencies: {0}'.format(
-                        ', '.join((str(context.style.literal(v)) for v in self.dependencies))))
-            utils.dump_dict_values(self.inputs, 'Inputs')
-            if self.executor is not None:
-                console.puts('Executor: {0}'.format(context.style.literal(self.executor)))
-            if self.max_attempts is not None:
-                console.puts('Max attempts: {0}'.format(context.style.literal(self.max_attempts)))
-            if self.retry_interval is not None:
-                console.puts('Retry interval: {0}'.format(
-                    context.style.literal(self.retry_interval)))
-            if self.plugin is not None:
-                console.puts('Plugin: {0}'.format(
-                    context.style.literal(self.plugin.name)))
-            utils.dump_dict_values(self.configurations, 'Configuration')
-            if self.function is not None:
-                console.puts('Function: {0}'.format(context.style.literal(self.function)))
-            utils.dump_dict_values(self.arguments, 'Arguments')
 
 
 class ArtifactBase(InstanceModelMixin):
@@ -2150,27 +1649,3 @@ class ArtifactBase(InstanceModelMixin):
             ('repository_url', self.repository_url),
             ('repository_credential', formatting.as_agnostic(self.repository_credential)),
             ('properties', formatting.as_raw_dict(self.properties))))
-
-    def validate(self):
-        utils.validate_dict_values(self.properties)
-
-    def coerce_values(self, report_issues):
-        utils.coerce_dict_values(self.properties, report_issues)
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        console.puts(context.style.node(self.name))
-        if self.description:
-            console.puts(context.style.meta(self.description))
-        with context.style.indent:
-            console.puts('Artifact type: {0}'.format(context.style.type(self.type.name)))
-            console.puts('Source path: {0}'.format(context.style.literal(self.source_path)))
-            if self.target_path is not None:
-                console.puts('Target path: {0}'.format(context.style.literal(self.target_path)))
-            if self.repository_url is not None:
-                console.puts('Repository URL: {0}'.format(
-                    context.style.literal(self.repository_url)))
-            if self.repository_credential:
-                console.puts('Repository credential: {0}'.format(
-                    context.style.literal(self.repository_credential)))
-            utils.dump_dict_values(self.properties, 'Properties')

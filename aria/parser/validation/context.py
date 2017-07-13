@@ -13,15 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .issue import Issue
-from ...utils.threading import LockedList
-from ...utils.collections import FrozenList
-from ...utils.exceptions import print_exception
-from ...utils.console import puts, Colored, indent
-from ...utils.formatting import as_raw
+from . import issue
 
 
-class ValidationContext(object):
+class ValidationContext(issue.ReporterMixin):
     """
     Validation context.
 
@@ -35,53 +30,7 @@ class ValidationContext(object):
     :vartype max_level: int
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(ValidationContext, self).__init__(*args, **kwargs)
         self.allow_unknown_fields = False
         self.allow_primitive_coersion = False
-        self.max_level = Issue.ALL
-
-        self._issues = LockedList()
-
-    def report(self, message=None, exception=None, location=None, line=None,
-               column=None, locator=None, snippet=None, level=Issue.PLATFORM, issue=None):
-        if issue is None:
-            issue = Issue(message, exception, location, line, column, locator, snippet, level)
-
-        # Avoid duplicate issues
-        with self._issues:
-            for i in self._issues:
-                if str(i) == str(issue):
-                    return
-
-            self._issues.append(issue)
-
-    @property
-    def has_issues(self):
-        return len(self._issues) > 0
-
-    @property
-    def issues(self):
-        issues = [i for i in self._issues if i.level <= self.max_level]
-        issues.sort(key=lambda i: (i.level, i.location, i.line, i.column, i.message))
-        return FrozenList(issues)
-
-    @property
-    def issues_as_raw(self):
-        return [as_raw(i) for i in self.issues]
-
-    def dump_issues(self):
-        issues = self.issues
-        if issues:
-            puts(Colored.blue('Validation issues:', bold=True))
-            with indent(2):
-                for issue in issues:
-                    puts(Colored.blue(issue.heading_as_str))
-                    details = issue.details_as_str
-                    if details:
-                        with indent(3):
-                            puts(details)
-                    if issue.exception is not None:
-                        with indent(3):
-                            print_exception(issue.exception)
-            return True
-        return False

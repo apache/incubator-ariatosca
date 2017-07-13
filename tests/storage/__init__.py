@@ -23,8 +23,6 @@ from sqlalchemy import (
     MetaData
 )
 
-from aria.modeling import models
-
 
 class TestFileSystem(object):
 

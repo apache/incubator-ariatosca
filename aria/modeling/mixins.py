@@ -25,8 +25,7 @@ from sqlalchemy import (
     PickleType
 )
 
-from ..parser.consumption import ConsumptionContext
-from ..utils import console, collections, caching, formatting
+from ..utils import collections, caching
 from ..utils.type import canonical_type_name, full_type_name
 from . import utils, functions
 
@@ -132,25 +131,16 @@ class InstanceModelMixin(ModelMixin):
     def as_raw(self):
         raise NotImplementedError
 
-    def validate(self):
-        pass
-
     def coerce_values(self, report_issues):
         pass
 
-    def dump(self):
-        pass
 
-
-class TemplateModelMixin(InstanceModelMixin):
+class TemplateModelMixin(InstanceModelMixin):                                                       # pylint: disable=abstract-method
     """
     Mix-in for service template models.
 
     All model models can be instantiated into service instance models.
     """
-
-    def instantiate(self, container):
-        raise NotImplementedError
 
 
 class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):                                 #pylint: disable=abstract-method
@@ -305,34 +295,6 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
             ('type_name', self.type_name),
             ('value', self.value),
             ('description', self.description)))
-
-    def instantiate(self, container):
-        return self.__class__(name=self.name,  # pylint: disable=unexpected-keyword-arg
-                              type_name=self.type_name,
-                              _value=self._value,
-                              description=self.description)
-
-    def coerce_values(self, report_issues):
-        value = self._value
-        if value is not None:
-            evaluation = functions.evaluate(value, self, report_issues)
-            if (evaluation is not None) and evaluation.final:
-                # A final evaluation can safely replace the existing value
-                self._value = evaluation.value
-
-    def dump(self):
-        context = ConsumptionContext.get_thread_local()
-        if self.type_name is not None:
-            console.puts('{0}: {1} ({2})'.format(
-                context.style.property(self.name),
-                context.style.literal(formatting.as_raw(self.value)),
-                context.style.type(self.type_name)))
-        else:
-            console.puts('{0}: {1}'.format(
-                context.style.property(self.name),
-                context.style.literal(formatting.as_raw(self.value))))
-        if self.description:
-            console.puts(context.style.meta(self.description))
 
     @property
     def unwrapped(self):

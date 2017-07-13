@@ -497,8 +497,11 @@ def create_plugin_specification_model(context, policy):
 
 
 def create_workflow_operation_template_model(context, service_template, policy):
-    model = OperationTemplate(name=policy._name,
-                              service_template=service_template)
+    model = OperationTemplate(name=policy._name)
+    # since we use backpopulates, these fields are populated upon commit, we get a weird(temporary)
+    # behavior where in previous code service_template.workflow_templates is a dict which has None
+    # as key for the value of model.
+    service_template.workflow_templates[model.name] = model
 
     if policy.description:
         model.description = policy.description.value
@@ -606,7 +609,7 @@ def create_parameter_model_from_value(template_parameter, template_parameter_nam
 def create_parameter_models_from_assignments(properties, source_properties, model_cls):
     if source_properties:
         for property_name, prop in source_properties.iteritems():
-            properties[property_name] = model_cls(name=property_name, # pylint: disable=unexpected-keyword-arg
+            properties[property_name] = model_cls(name=property_name,                               # pylint: disable=unexpected-keyword-arg
                                                   type_name=prop.value.type,
                                                   value=prop.value.value,
                                                   description=prop.value.description)

@@ -30,6 +30,7 @@ from ...modeling import exceptions as modeling_exceptions
 from ...storage import exceptions as storage_exceptions
 from ...parser import consumption
 from ...utils import (formatting, collections, console)
+from ...orchestrator import topology
 
 
 DESCRIPTION_FIELD_LENGTH_LIMIT = 20
@@ -73,10 +74,9 @@ def show(service_name, model_storage, mode_full, mode_graph, format_json, format
         elif format_yaml:
             console.puts(formatting.yaml_dumps(collections.prune(service.as_raw)))
         else:
-            service.dump()
+            console.puts(topology.Topology().dump(service))
     elif mode_graph:
-        consumption.ConsumptionContext()
-        service.dump_graph()
+        console.puts(topology.Topology().dump_graph(service))
     else:
         logger.info('Showing service {0}...'.format(service_name))
         service_dict = service.to_dict()

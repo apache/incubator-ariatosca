@@ -137,14 +137,13 @@ class OperationTask(BaseTask):
         operation = self.actor.interfaces[self.interface_name].operations[self.operation_name]
         self.plugin = operation.plugin
         self.function = operation.function
-        self.arguments = modeling_utils.merge_parameter_values(arguments,
-                                                               operation.arguments,
-                                                               model_cls=models.Argument)
+        self.arguments = modeling_utils.merge_parameter_values(arguments, operation.arguments)
 
         actor = self.actor
         if hasattr(actor, '_wrapped'):
             # Unwrap instrumented model
             actor = actor._wrapped
+
         if isinstance(actor, models.Node):
             self._context_cls = context.operation.NodeOperationContext
         elif isinstance(actor, models.Relationship):

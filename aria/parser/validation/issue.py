@@ -15,8 +15,14 @@
 
 from __future__ import absolute_import  # so we can import standard 'collections'
 
-from ...utils.collections import OrderedDict
-from ...utils.type import full_type_name
+from ...utils import (
+    collections,
+    type,
+    threading,
+    exceptions,
+    console,
+    formatting
+)
 
 
 class Issue(object):
@@ -82,14 +88,14 @@ class Issue(object):
 
     @property
     def as_raw(self):
-        return OrderedDict((
+        return collections.OrderedDict((
             ('level', self.level),
             ('message', self.message),
             ('location', self.location),
             ('line', self.line),
             ('column', self.column),
             ('snippet', self.snippet),
-            ('exception', full_type_name(self.exception) if self.exception else None)))
+            ('exception', type.full_type_name(self.exception) if self.exception else None)))
 
     @property
     def locator_as_str(self):
@@ -124,3 +130,61 @@ class Issue(object):
         if details:
             heading_str += ', ' + details
         return heading_str
+
+
+class ReporterMixin(object):
+
+    Issue = Issue
+
+    def __init__(self, *args, **kwargs):
+        super(ReporterMixin, self).__init__(*args, **kwargs)
+        self._issues = threading.LockedList()
+        self.max_level = self.Issue.ALL
+
+    def report(self, message=None, exception=None, location=None, line=None,
+               column=None, locator=None, snippet=None, level=Issue.PLATFORM, issue=None):
+        if issue is None:
+            issue = self.Issue(message, exception, location, line, column, locator, snippet, level)
+
+        # Avoid duplicate issues
+        with self._issues:
+            for i in self._issues:
+                if str(i) == str(issue):
+                    return
+
+            self._issues.append(issue)
+
+    @property
+    def has_issues(self):
+        return len(self._issues) > 0
+
+    @property
+    def issues(self):
+        issues = [i for i in self._issues if i.level <= self.max_level]
+        issues.sort(key=lambda i: (i.level, i.location, i.line, i.column, i.message))
+        return collections.FrozenList(issues)
+
+    @property
+    def issues_as_raw(self):
+        return [formatting.as_raw(i) for i in self.issues]
+
+    def extend_issues(self, *issues):
+        with self._issues:
+            self._issues.extend(*issues)
+
+    def dump_issues(self):
+        issues = self.issues
+        if issues:
+            console.puts(console.Colored.blue('Validation issues:', bold=True))
+            with console.indent(2):
+                for issue in issues:
+                    console.puts(console.Colored.blue(issue.heading_as_str))
+                    details = issue.details_as_str
+                    if details:
+                        with console.indent(3):
+                            console.puts(details)
+                    if issue.exception is not None:
+                        with console.indent(3):
+                            exceptions.print_exception(issue.exception)
+            return True
+        return False

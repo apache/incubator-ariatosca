@@ -19,19 +19,64 @@ Abstraction API above terminal color libraries.
 
 import os
 import sys
+from StringIO import StringIO
 
 from contextlib import contextmanager
 
-from .formatting import safe_str
 from ..cli import color
+from . import formatting
 
 
 _indent_string = ''
 
 
+class TopologyStylizer(object):
+    def __init__(self, indentation=0):
+        self._str = StringIO()
+        self._indentation = indentation
+
+    def write(self, string):
+        self._str.write(' ' * self._indentation)
+        self._str.write(string)
+        self._str.write(os.linesep)
+
+    @contextmanager
+    def indent(self, indentation=2):
+        self._indentation += indentation
+        yield
+        self._indentation -= indentation
+
+    @staticmethod
+    def type_style(value):
+        return Colored.blue(value, bold=True)
+
+    @staticmethod
+    def node_style(value):
+        return Colored.red(value, bold=True)
+
+    @staticmethod
+    def property_style(value):
+        return Colored.magenta(value, bold=True)
+
+    @staticmethod
+    def literal_style(value):
+        return Colored.magenta(formatting.safe_repr(value))
+
+    @staticmethod
+    def required_style(value):
+        return Colored.white(value)
+
+    @staticmethod
+    def meta_style(value):
+        return Colored.green(value)
+
+    def __str__(self):
+        return self._str.getvalue()
+
+
 def puts(string='', newline=True, stream=sys.stdout):
     stream.write(_indent_string)
-    stream.write(safe_str(string))
+    stream.write(formatting.safe_str(string))
     if newline:
         stream.write(os.linesep)
 

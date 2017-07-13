@@ -24,8 +24,6 @@ Reading package.
    JinjaReader
    JsonReader
    Locator
-   deepcopy_with_locators
-   copy_locators
    RawReader
    Reader
    ReaderSource
@@ -36,7 +34,7 @@ Reading package.
 from .raw import RawReader
 from .reader import Reader
 from .yaml import YamlReader
-from .locator import (Locator, deepcopy_with_locators, copy_locators)
+from .locator import Locator
 from .json import JsonReader
 from .jinja import JinjaReader
 from .context import ReadingContext
@@ -57,8 +55,6 @@ __all__ = (
     'ReadingContext',
     'RawReader',
     'Locator',
-    'deepcopy_with_locators',
-    'copy_locators',
     'YamlReader',
     'JsonReader',
     'JinjaReader')

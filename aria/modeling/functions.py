@@ -16,9 +16,8 @@
 """
 Mechanism for evaluating intrinsic functions.
 """
-
-from ..parser.consumption import ConsumptionContext
 from ..parser.exceptions import InvalidValueError
+from ..parser.consumption import ConsumptionContext
 from ..utils.collections import OrderedDict
 from . import exceptions
 

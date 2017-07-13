@@ -22,8 +22,6 @@ from json import JSONEncoder
 from StringIO import StringIO
 
 from . import exceptions
-from ..parser.consumption import ConsumptionContext
-from ..utils.console import puts
 from ..utils.type import validate_value_type
 from ..utils.collections import OrderedDict
 from ..utils.formatting import string_list_as_string
@@ -84,7 +82,7 @@ def validate_required_inputs_are_supplied(declared_inputs, supplied_inputs):
             .format(string_list_as_string(missing_required_inputs)))
 
 
-def merge_parameter_values(provided_values, declared_parameters, model_cls):
+def merge_parameter_values(provided_values, declared_parameters, model_cls=None):
     """
     Merges parameter values according to those declared by a type.
 
@@ -109,6 +107,7 @@ def merge_parameter_values(provided_values, declared_parameters, model_cls):
     provided_values = provided_values or {}
     provided_values_of_wrong_type = OrderedDict()
     model_parameters = OrderedDict()
+    model_cls = model_cls or _get_class_from_sql_relationship(declared_parameters)
 
     for declared_parameter_name, declared_parameter in declared_parameters.iteritems():
         if declared_parameter_name in provided_values:
@@ -125,14 +124,14 @@ def merge_parameter_values(provided_values, declared_parameters, model_cls):
                 # TODO This error shouldn't be raised (or caught), but right now we lack support
                 # for custom data_types, which will raise this error. Skipping their validation.
                 pass
-            model_parameters[declared_parameter_name] = model_cls( # pylint: disable=unexpected-keyword-arg
+            model_parameters[declared_parameter_name] = model_cls(                                  # pylint: disable=unexpected-keyword-arg
                 name=declared_parameter_name,
                 type_name=type_name,
                 description=declared_parameter.description,
                 value=value)
         else:
             # Copy default value from declaration
-            model_parameters[declared_parameter_name] = declared_parameter.instantiate(None)
+            model_parameters[declared_parameter_name] = model_cls(**declared_parameter.as_raw)
 
     if provided_values_of_wrong_type:
         error_message = StringIO()
@@ -142,76 +141,6 @@ def merge_parameter_values(provided_values, declared_parameters, model_cls):
         raise exceptions.ParametersOfWrongTypeException(error_message.getvalue())
 
     return model_parameters
-
-
-def coerce_dict_values(the_dict, report_issues=False):
-    if not the_dict:
-        return
-    coerce_list_values(the_dict.itervalues(), report_issues)
-
-
-def coerce_list_values(the_list, report_issues=False):
-    if not the_list:
-        return
-    for value in the_list:
-        value.coerce_values(report_issues)
-
-
-def validate_dict_values(the_dict):
-    if not the_dict:
-        return
-    validate_list_values(the_dict.itervalues())
-
-
-def validate_list_values(the_list):
-    if not the_list:
-        return
-    for value in the_list:
-        value.validate()
-
-
-def instantiate_dict(container, the_dict, from_dict):
-    if not from_dict:
-        return
-    for name, value in from_dict.iteritems():
-        value = value.instantiate(container)
-        if value is not None:
-            the_dict[name] = value
-
-
-def instantiate_list(container, the_list, from_list):
-    if not from_list:
-        return
-    for value in from_list:
-        value = value.instantiate(container)
-        if value is not None:
-            the_list.append(value)
-
-
-def dump_list_values(the_list, name):
-    if not the_list:
-        return
-    puts('%s:' % name)
-    context = ConsumptionContext.get_thread_local()
-    with context.style.indent:
-        for value in the_list:
-            value.dump()
-
-
-def dump_dict_values(the_dict, name):
-    if not the_dict:
-        return
-    dump_list_values(the_dict.itervalues(), name)
-
-
-def dump_interfaces(interfaces, name='Interfaces'):
-    if not interfaces:
-        return
-    puts('%s:' % name)
-    context = ConsumptionContext.get_thread_local()
-    with context.style.indent:
-        for interface in interfaces.itervalues():
-            interface.dump()
 
 
 def parameters_as_values(the_dict):
@@ -244,3 +173,9 @@ def fix_doc(cls):
     cls.__doc__ = cls.__bases__[-1].__doc__
 
     return cls
+
+
+def _get_class_from_sql_relationship(field):
+    class_ = field._sa_adapter.owner_state.class_
+    prop_name = field._sa_adapter.attr.key
+    return getattr(class_, prop_name).property.mapper.class_
