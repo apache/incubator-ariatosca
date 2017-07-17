@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .service_templates import (consume_use_case, consume_node_cellar)
+from ..service_templates import (consume_use_case, consume_node_cellar)
 
 
 # Use Cases

@@ -24,7 +24,7 @@ from aria.parser.presentation import (get_locator, validate_primitive)
 from aria.parser.validation import Issue
 
 from .functions import get_function
-from ..presentation.types import get_type_by_full_or_shorthand_or_typequalified_name
+from ..presentation.types import get_type_by_name
 
 
 #
@@ -169,8 +169,7 @@ def get_data_type(context, presentation, field_name, allow_none=False):
         return None
 
     # Try complex data type
-    data_type = get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                    type_name, 'data_types')
+    data_type = get_type_by_name(context, type_name, 'data_types')
     if data_type is not None:
         return data_type
 
@@ -323,8 +322,7 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value): 
 #
 
 def get_data_type_value(context, presentation, field_name, type_name):
-    the_type = get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   type_name, 'data_types')
+    the_type = get_type_by_name(context, type_name, 'data_types')
     if the_type is not None:
         value = getattr(presentation, field_name)
         if value is not None:

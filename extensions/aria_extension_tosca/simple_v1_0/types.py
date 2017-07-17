@@ -43,7 +43,7 @@ from .presentation.field_validators import (data_type_derived_from_validator,
                                             data_type_constraints_validator,
                                             data_type_properties_validator,
                                             list_node_type_or_group_type_validator)
-from .presentation.types import convert_shorthand_typequalified_to_full_type_name
+from .presentation.types import convert_name_to_full_type_name
 
 
 @has_fields
@@ -59,8 +59,7 @@ class ArtifactType(ExtensiblePresentation):
     #DEFN_ENTITY_ARTIFACT_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'artifact_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'artifact_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -112,8 +111,7 @@ class ArtifactType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'artifact_types')
 
     @cachedmethod
@@ -242,8 +240,7 @@ class CapabilityType(ExtensiblePresentation):
     #DEFN_ENTITY_CAPABILITY_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'capability_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'capability_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -286,9 +283,7 @@ class CapabilityType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
-    @field_validator(list_type_validator('node type',
-                                         convert_shorthand_typequalified_to_full_type_name,
-                                         'node_types'))
+    @field_validator(list_type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_list_field(str)
     def valid_source_types(self):
         """
@@ -300,8 +295,7 @@ class CapabilityType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'capability_types')
 
     @cachedmethod
@@ -347,8 +341,7 @@ class InterfaceType(ExtensiblePresentation):
     #DEFN_ENTITY_INTERFACE_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'interface_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'interface_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -389,8 +382,7 @@ class InterfaceType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'interface_types')
 
     @cachedmethod
@@ -428,8 +420,7 @@ class RelationshipType(ExtensiblePresentation):
     #DEFN_ENTITY_RELATIONSHIP_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'relationship_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'relationship_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -478,8 +469,7 @@ class RelationshipType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
-    @field_validator(list_type_validator('capability type',
-                                         convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(list_type_validator('capability type', convert_name_to_full_type_name,
                                          'capability_types'))
     @primitive_list_field(str)
     def valid_target_types(self):
@@ -492,8 +482,7 @@ class RelationshipType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'relationship_types')
 
     @cachedmethod
@@ -546,8 +535,7 @@ class NodeType(ExtensiblePresentation):
     #DEFN_ENTITY_NODE_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'node_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'node_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -626,9 +614,7 @@ class NodeType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
-                                       'node_types')
+        return get_parent_presentation(context, self, convert_name_to_full_type_name, 'node_types')
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
@@ -705,8 +691,7 @@ class GroupType(ExtensiblePresentation):
     #DEFN_ENTITY_GROUP_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'group_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'group_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -739,9 +724,7 @@ class GroupType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
-    @field_validator(list_type_validator('node type',
-                                         convert_shorthand_typequalified_to_full_type_name,
-                                         'node_types'))
+    @field_validator(list_type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_list_field(str)
     def members(self):
         """
@@ -766,8 +749,7 @@ class GroupType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'group_types')
 
     @cachedmethod
@@ -815,8 +797,7 @@ class PolicyType(ExtensiblePresentation):
     #DEFN_ENTITY_POLICY_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'policy_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'policy_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -865,8 +846,7 @@ class PolicyType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context,
-                                       self, convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'policy_types')
 
     @cachedmethod

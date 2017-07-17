@@ -22,8 +22,7 @@ from aria.parser.validation import Issue
 
 from ..modeling.data_types import (get_primitive_data_type, get_data_type_name, coerce_value,
                                    get_container_data_type)
-from .types import (get_type_by_full_or_shorthand_or_typequalified_name,
-                    convert_shorthand_typequalified_to_full_type_name)
+from .types import (get_type_by_name, convert_name_to_full_type_name)
 
 
 #
@@ -89,8 +88,7 @@ def data_type_validator(type_name='data type'):
                     locator=presentation._get_child_locator('type'), level=Issue.BETWEEN_TYPES)
 
             # Can be a complex data type
-            if get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                                   'data_types') is not None:
+            if get_type_by_name(context, value, 'data_types') is not None:
                 return True
 
             # Can be a primitive data type
@@ -172,8 +170,8 @@ def data_value_validator(field, presentation, context):
 #
 
 _data_type_validator = data_type_validator()
-_data_type_derived_from_validator = derived_from_validator(
-    convert_shorthand_typequalified_to_full_type_name, 'data_types')
+_data_type_derived_from_validator = derived_from_validator(convert_name_to_full_type_name,
+                                                           'data_types')
 
 
 def data_type_derived_from_validator(field, presentation, context):
@@ -351,8 +349,7 @@ def node_template_or_type_validator(field, presentation, context):
             context.presentation.get('service_template', 'topology_template', 'node_templates') \
             or {}
         if (value not in node_templates) and \
-            (get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                                 'node_types') is None):
+            (get_type_by_name(context, value, 'node_types') is None):
             report_issue_for_unknown_type(context, presentation, 'node template or node type',
                                           field.name)
 
@@ -378,8 +375,7 @@ def capability_definition_or_type_validator(field, presentation, context):
             if value in capabilities:
                 return
 
-        if get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                               'capability_types') is not None:
+        if get_type_by_name(context, value, 'capability_types') is not None:
             if node is not None:
                 context.validation.report(
                     '"%s" refers to a capability type even though "node" has a value in "%s"'
@@ -442,8 +438,7 @@ def relationship_template_or_type_validator(field, presentation, context):
                                      'relationship_templates') \
             or {}
         if (value not in relationship_templates) and \
-            (get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                                 'relationship_types') is None):
+            (get_type_by_name(context, value, 'relationship_types') is None):
             report_issue_for_unknown_type(context, presentation,
                                           'relationship template or relationship type', field.name)
 
@@ -465,11 +460,8 @@ def list_node_type_or_group_type_validator(field, presentation, context):
     values = getattr(presentation, field.name)
     if values is not None:
         for value in values:
-            if \
-                (get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                                     'node_types') is None) and \
-                (get_type_by_full_or_shorthand_or_typequalified_name(context, value,
-                                                                     'group_types') is None):
+            if (get_type_by_name(context, value, 'node_types') is None) and \
+                    (get_type_by_name(context, value, 'group_types') is None):
                 report_issue_for_unknown_type(context, presentation, 'node type or group type',
                                               field.name, value)
 
