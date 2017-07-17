@@ -16,8 +16,6 @@
 from tests.parser.service_templates import consume_types_use_case
 
 
-# Use Cases
-
 def test_use_case_shorthand_1_name():
     consume_types_use_case('shorthand-1', 'types')
 
