@@ -22,6 +22,7 @@ from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_validators import (node_filter_properties_validator,
                                             node_filter_capabilities_validator)
 
+
 @has_fields
 class CapabilityFilter(ExtensiblePresentation):
     """
@@ -47,6 +48,7 @@ class CapabilityFilter(ExtensiblePresentation):
             return prop._get_type(context) if prop is not None else None
 
         return None
+
 
 @has_fields
 @implements_specification('3.5.4', 'tosca-simple-1.0')

@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-def convert_shorthand_typequalified_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
+def convert_name_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
     """
-    Converts a shorthand type name to its full type name, or else returns it unchanged.
+    Converts a shorthand or typequalified name to its full type name, or else returns it unchanged.
 
     Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
     :class:`aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
@@ -32,9 +32,9 @@ def convert_shorthand_typequalified_to_full_type_name(context, name, types_dict)
                 return full_name
     return name
 
-def get_type_by_full_or_shorthand_or_typequalified_name(context, name, *types_dict_names):
+def get_type_by_name(context, name, *types_dict_names):
     """
-    Gets a type either by its full name or its shorthand name.
+    Gets a type either by its full name or shorthand name or typequalified name.
 
     Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
     :class:`~aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.

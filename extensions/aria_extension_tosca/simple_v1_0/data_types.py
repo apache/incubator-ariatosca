@@ -14,14 +14,14 @@
 # limitations under the License.
 
 import re
-from datetime import datetime, tzinfo, timedelta
+from datetime import (datetime, tzinfo, timedelta)
 try:
     from functools import total_ordering
 except ImportError:
     from total_ordering import total_ordering
 
 from aria.parser import implements_specification
-from aria.utils.collections import StrictDict, OrderedDict
+from aria.utils.collections import (StrictDict, OrderedDict)
 from aria.utils.formatting import safe_repr
 
 from .modeling.data_types import (coerce_to_data_type_class, report_issue_for_bad_format,
@@ -48,7 +48,9 @@ class Timezone(tzinfo):
 
     _ZERO = timedelta(0)
 
+
 UTC = Timezone()
+
 
 @total_ordering
 @implements_specification('timestamp', 'yaml-1.1')
@@ -145,6 +147,7 @@ class Timestamp(object):
     def _fraction_as_str(the_datetime):
         return '{0:g}'.format(the_datetime.microsecond / 1000000.0).lstrip('0')
 
+
 @total_ordering
 @implements_specification('3.2.2', 'tosca-simple-1.0')
 class Version(object):
@@ -229,6 +232,7 @@ class Version(object):
                             return True
         return False
 
+
 @implements_specification('3.2.3', 'tosca-simple-1.0')
 class Range(object):
     """
@@ -276,6 +280,7 @@ class Range(object):
     def as_raw(self):
         return list(self.value)
 
+
 @implements_specification('3.2.4', 'tosca-simple-1.0')
 class List(list):
     """
@@ -308,6 +313,7 @@ class List(list):
     # Can't define as property because it's old-style Python class
     def as_raw(self):
         return list(self)
+
 
 @implements_specification('3.2.5', 'tosca-simple-1.0')
 class Map(StrictDict):
@@ -347,6 +353,7 @@ class Map(StrictDict):
     # Can't define as property because it's old-style Python class
     def as_raw(self):
         return OrderedDict(self)
+
 
 @total_ordering
 @implements_specification('3.2.6', 'tosca-simple-1.0')
@@ -416,6 +423,7 @@ class Scalar(object):
             value = self.TYPE(scalar) # pylint: disable=no-member
         return self.value < value
 
+
 @implements_specification('3.2.6.4', 'tosca-simple-1.0')
 class ScalarSize(Scalar):
     """
@@ -444,6 +452,7 @@ class ScalarSize(Scalar):
     TYPE = int
     UNIT = 'bytes'
 
+
 @implements_specification('3.2.6.5', 'tosca-simple-1.0')
 class ScalarTime(Scalar):
     """
@@ -469,6 +478,7 @@ class ScalarTime(Scalar):
     TYPE = float
     UNIT = 'seconds'
 
+
 @implements_specification('3.2.6.6', 'tosca-simple-1.0')
 class ScalarFrequency(Scalar):
     """
@@ -491,6 +501,7 @@ class ScalarFrequency(Scalar):
     TYPE = float
     UNIT = 'Hz'
 
+
 #
 # The following are hooked in the YAML as 'coerce_value' extensions
 #
@@ -499,9 +510,11 @@ def coerce_timestamp(context, presentation, the_type, entry_schema, constraints,
     return coerce_to_data_type_class(context, presentation, Timestamp, entry_schema, constraints,
                                      value, aspect)
 
+
 def coerce_version(context, presentation, the_type, entry_schema, constraints, value, aspect): # pylint: disable=unused-argument
     return coerce_to_data_type_class(context, presentation, Version, entry_schema, constraints,
                                      value, aspect)
+
 
 def coerce_range(context, presentation, the_type, entry_schema, constraints, value, aspect):
     if aspect == 'in_range':
@@ -516,23 +529,28 @@ def coerce_range(context, presentation, the_type, entry_schema, constraints, val
         return coerce_to_data_type_class(context, presentation, Range, entry_schema, constraints,
                                          value, aspect)
 
+
 def coerce_list(context, presentation, the_type, entry_schema, constraints, value, aspect): # pylint: disable=unused-argument
     return coerce_to_data_type_class(context, presentation, List, entry_schema, constraints,
                                      value, aspect)
 
+
 def coerce_map_value(context, presentation, the_type, entry_schema, constraints, value, aspect): # pylint: disable=unused-argument
     return coerce_to_data_type_class(context, presentation, Map, entry_schema, constraints, value,
                                      aspect)
+
 
 def coerce_scalar_unit_size(context, presentation, the_type, entry_schema, constraints, value, # pylint: disable=unused-argument
                             aspect):
     return coerce_to_data_type_class(context, presentation, ScalarSize, entry_schema, constraints,
                                      value, aspect)
 
+
 def coerce_scalar_unit_time(context, presentation, the_type, entry_schema, constraints, value, # pylint: disable=unused-argument
                             aspect):
     return coerce_to_data_type_class(context, presentation, ScalarTime, entry_schema, constraints,
                                      value, aspect)
+
 
 def coerce_scalar_unit_frequency(context, presentation, the_type, entry_schema, constraints, value, # pylint: disable=unused-argument
                                  aspect):

@@ -287,10 +287,10 @@ JSON-serializable strict list type for SQLAlchemy columns.
 
 def _mutable_association_listener(mapper, cls):
     strict_dict_type_to_listener = \
-        dict((v.type_cls, v.listener_cls) for v in _StrictDict._strict_map.values())
+        dict((v.type_cls, v.listener_cls) for v in _StrictDict._strict_map.itervalues())
 
     strict_list_type_to_listener = \
-        dict((v.type_cls, v.listener_cls) for v in _StrictList._strict_map.values())
+        dict((v.type_cls, v.listener_cls) for v in _StrictList._strict_map.itervalues())
 
     for prop in mapper.column_attrs:
         column_type = prop.columns[0].type

@@ -113,9 +113,12 @@ def get_inherited_interface_definitions(context, presentation, type_name, for_pr
     types.
     """
 
+    if for_presentation is None:
+        for_presentation = presentation
+
     # Get interfaces from parent
     parent = presentation._get_parent(context)
-    interfaces = get_inherited_interface_definitions(context, parent, type_name, presentation) \
+    interfaces = get_inherited_interface_definitions(context, parent, type_name, for_presentation) \
         if parent is not None else OrderedDict()
 
     # Add/merge interfaces from their types
@@ -123,8 +126,7 @@ def get_inherited_interface_definitions(context, presentation, type_name, for_pr
 
     # Add/merge our interfaces
     our_interfaces = presentation.interfaces
-    merge_interface_definitions(context, interfaces, our_interfaces, presentation,
-                                for_presentation=for_presentation)
+    merge_interface_definitions(context, interfaces, our_interfaces, presentation, for_presentation)
 
     return interfaces
 

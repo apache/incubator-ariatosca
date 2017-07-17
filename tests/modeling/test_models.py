@@ -509,19 +509,15 @@ class TestServiceModification(object):
 
 class TestNodeTemplate(object):
     @pytest.mark.parametrize(
-        'is_valid, name, default_instances, max_instances, min_instances, properties',
+        'is_valid, name, properties',
         [
-            (False, m_cls, 1, 1, 1, {}),
-            (False, 'name', m_cls, 1, 1, {}),
-            (False, 'name', 1, m_cls, 1, {}),
-            (False, 'name', 1, 1, m_cls, {}),
-            (False, 'name', 1, 1, 1, m_cls),
+            (False, m_cls, {}),
+            (False, 'name', m_cls),
 
-            (True, 'name', 1, 1, 1, {}),
+            (True, 'name', {}),
         ]
     )
-    def test_node_template_model_creation(self, service_storage, is_valid, name, default_instances,
-                                          max_instances, min_instances, properties):
+    def test_node_template_model_creation(self, service_storage, is_valid, name, properties):
         node_template = _test_model(
             is_valid=is_valid,
             storage=service_storage,
@@ -529,9 +525,6 @@ class TestNodeTemplate(object):
             model_kwargs=dict(
                 name=name,
                 type=service_storage.type.list()[0],
-                default_instances=default_instances,
-                max_instances=max_instances,
-                min_instances=min_instances,
                 properties=properties,
                 service_template=service_storage.service_template.list()[0]
             ))
@@ -620,9 +613,6 @@ class TestNodeHostAddress(object):
         kwargs = dict(
             name='node_template',
             type=storage.type.list()[0],
-            default_instances=1,
-            max_instances=1,
-            min_instances=1,
             service_template=storage.service_template.list()[0]
         )
         if host_address:

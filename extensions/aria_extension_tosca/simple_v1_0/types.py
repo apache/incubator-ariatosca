@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.collections import FrozenDict, FrozenList
+from aria.utils.collections import (FrozenDict, FrozenList)
 from aria.utils.caching import cachedmethod
 from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, allow_unknown_fields, primitive_field,
@@ -43,7 +43,8 @@ from .presentation.field_validators import (data_type_derived_from_validator,
                                             data_type_constraints_validator,
                                             data_type_properties_validator,
                                             list_node_type_or_group_type_validator)
-from .presentation.types import convert_shorthand_typequalified_to_full_type_name
+from .presentation.types import convert_name_to_full_type_name
+
 
 @has_fields
 @implements_specification('3.6.3', 'tosca-simple-1.0')
@@ -58,8 +59,7 @@ class ArtifactType(ExtensiblePresentation):
     #DEFN_ENTITY_ARTIFACT_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'artifact_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'artifact_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -111,8 +111,7 @@ class ArtifactType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'artifact_types')
 
     @cachedmethod
@@ -131,6 +130,7 @@ class ArtifactType(ExtensiblePresentation):
             'mime_type',
             'file_ext',
             'properties'))
+
 
 @has_fields
 @implements_specification('3.6.5', 'tosca-simple-1.0')
@@ -226,6 +226,7 @@ class DataType(ExtensiblePresentation):
             'constraints',
             'properties'))
 
+
 @has_fields
 @implements_specification('3.6.6', 'tosca-simple-1.0')
 class CapabilityType(ExtensiblePresentation):
@@ -239,8 +240,7 @@ class CapabilityType(ExtensiblePresentation):
     #DEFN_ENTITY_CAPABILITY_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'capability_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'capability_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -283,9 +283,7 @@ class CapabilityType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
-    @field_validator(list_type_validator('node type',
-                                         convert_shorthand_typequalified_to_full_type_name,
-                                         'node_types'))
+    @field_validator(list_type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_list_field(str)
     def valid_source_types(self):
         """
@@ -297,8 +295,7 @@ class CapabilityType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'capability_types')
 
     @cachedmethod
@@ -330,6 +327,7 @@ class CapabilityType(ExtensiblePresentation):
             'properties',
             'attributes'))
 
+
 @allow_unknown_fields
 @has_fields
 @implements_specification('3.6.4', 'tosca-simple-1.0')
@@ -343,8 +341,7 @@ class InterfaceType(ExtensiblePresentation):
     #DEFN_ENTITY_INTERFACE_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'interface_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'interface_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -385,8 +382,7 @@ class InterfaceType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'interface_types')
 
     @cachedmethod
@@ -411,6 +407,7 @@ class InterfaceType(ExtensiblePresentation):
             'inputs',
             'operations'))
 
+
 @has_fields
 @implements_specification('3.6.9', 'tosca-simple-1.0')
 class RelationshipType(ExtensiblePresentation):
@@ -423,8 +420,7 @@ class RelationshipType(ExtensiblePresentation):
     #DEFN_ENTITY_RELATIONSHIP_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'relationship_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'relationship_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -473,8 +469,7 @@ class RelationshipType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
-    @field_validator(list_type_validator('capability type',
-                                         convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(list_type_validator('capability type', convert_name_to_full_type_name,
                                          'capability_types'))
     @primitive_list_field(str)
     def valid_target_types(self):
@@ -487,8 +482,7 @@ class RelationshipType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'relationship_types')
 
     @cachedmethod
@@ -527,6 +521,7 @@ class RelationshipType(ExtensiblePresentation):
             'attributes',
             'interfaces'))
 
+
 @has_fields
 @implements_specification('3.6.8', 'tosca-simple-1.0')
 class NodeType(ExtensiblePresentation):
@@ -540,8 +535,7 @@ class NodeType(ExtensiblePresentation):
     #DEFN_ENTITY_NODE_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'node_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'node_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -620,9 +614,7 @@ class NodeType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
-                                       'node_types')
+        return get_parent_presentation(context, self, convert_name_to_full_type_name, 'node_types')
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
@@ -677,6 +669,7 @@ class NodeType(ExtensiblePresentation):
             'requirements',
             'capabilities'))
 
+
 @has_fields
 @implements_specification('3.6.10', 'tosca-simple-1.0')
 class GroupType(ExtensiblePresentation):
@@ -698,8 +691,7 @@ class GroupType(ExtensiblePresentation):
     #DEFN_ENTITY_GROUP_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'group_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'group_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -732,9 +724,7 @@ class GroupType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
-    @field_validator(list_type_validator('node type',
-                                         convert_shorthand_typequalified_to_full_type_name,
-                                         'node_types'))
+    @field_validator(list_type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_list_field(str)
     def members(self):
         """
@@ -759,8 +749,7 @@ class GroupType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context, self,
-                                       convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'group_types')
 
     @cachedmethod
@@ -793,6 +782,7 @@ class GroupType(ExtensiblePresentation):
             'properties',
             'interfaces'))
 
+
 @has_fields
 @implements_specification('3.6.11', 'tosca-simple-1.0')
 class PolicyType(ExtensiblePresentation):
@@ -807,8 +797,7 @@ class PolicyType(ExtensiblePresentation):
     #DEFN_ENTITY_POLICY_TYPE>`__
     """
 
-    @field_validator(derived_from_validator(convert_shorthand_typequalified_to_full_type_name,
-                                            'policy_types'))
+    @field_validator(derived_from_validator(convert_name_to_full_type_name, 'policy_types'))
     @primitive_field(str)
     def derived_from(self):
         """
@@ -857,8 +846,7 @@ class PolicyType(ExtensiblePresentation):
 
     @cachedmethod
     def _get_parent(self, context):
-        return get_parent_presentation(context,
-                                       self, convert_shorthand_typequalified_to_full_type_name,
+        return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'policy_types')
 
     @cachedmethod

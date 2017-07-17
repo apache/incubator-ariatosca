@@ -13,21 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aria.utils.caching import cachedmethod
-from aria.parser.presentation import (Presentation, has_fields, primitive_dict_field)
+from tests.parser.service_templates import consume_types_use_case
 
 
-@has_fields
-class ExtensiblePresentation(Presentation):
-    """
-    A presentation that supports an optional ``_extensions`` dict field.
-    """
+# Use Cases
 
-    @primitive_dict_field()
-    def _extensions(self):
-        pass
+def test_use_case_shorthand_1_name():
+    consume_types_use_case('shorthand-1', 'types')
 
-    @cachedmethod
-    def _get_extension(self, name, default=None):
-        extensions = self._extensions
-        return extensions.get(name, default) if extensions is not None else None # pylint: disable=no-member
+def test_use_case_typequalified_1_name():
+    consume_types_use_case('typequalified-1', 'types')

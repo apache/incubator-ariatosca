@@ -18,11 +18,20 @@ Terminal colorization utilities.
 """
 
 from StringIO import StringIO
+import atexit
 import re
 
 import colorama
 
+from ..utils.formatting import safe_str
+
+
+def _restore_terminal():
+    colorama.deinit()
+
+
 colorama.init()
+atexit.register(_restore_terminal)
 
 
 class StringStylizer(object):
@@ -33,20 +42,20 @@ class StringStylizer(object):
     def __repr__(self):
         if self._color_spec:
             return '{schema}{str}{reset}'.format(
-                schema=self._color_spec, str=str(self._str), reset=Colors.Style.RESET_ALL)
+                schema=self._color_spec, str=safe_str(self._str), reset=Colors.Style.RESET_ALL)
         return self._str
 
     def __add__(self, other):
-        return str(self) + other
+        return safe_str(self) + other
 
     def __radd__(self, other):
-        return other + str(self)
+        return other + safe_str(self)
 
     def color(self, color_spec):
         self._color_spec = color_spec
 
     def replace(self, old, new, **kwargs):
-        self._str = self._str.replace(str(old), str(new), **kwargs)
+        self._str = self._str.replace(safe_str(old), safe_str(new), **kwargs)
 
     def format(self, *args, **kwargs):
         self._str = self._str.format(*args, **kwargs)
@@ -79,8 +88,8 @@ class Colors(object):
 class ColorSpec(object):
     def __init__(self, fore=None, back=None, style=None):
         """
-        It is possible to provide fore, back and style arguments. each could be either
-        the color is lower case letter, or the actual color from Colorama.
+        It is possible to provide fore, back and style arguments. Each could be either the color as
+        lowercase letters, or the full color name for Colorama.
         """
         self._kwargs = dict(fore=fore, back=back, style=style)
         self._str = StringIO()

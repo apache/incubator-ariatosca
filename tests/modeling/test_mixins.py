@@ -112,9 +112,6 @@ def test_relationship_model_ordering(context):
     new_node_template = modeling.models.NodeTemplate(
         name='new_node_template',
         type=source_node.type,
-        default_instances=1,
-        min_instances=1,
-        max_instances=1,
         service_template=service.service_template
     )
 

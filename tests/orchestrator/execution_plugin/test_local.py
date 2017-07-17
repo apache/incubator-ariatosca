@@ -509,8 +509,10 @@ if __name__ == '__main__':
     @pytest.fixture
     def executor(self):
         result = process.ProcessExecutor()
-        yield result
-        result.close()
+        try:
+            yield result
+        finally:
+            result.close()
 
     @pytest.fixture
     def workflow_context(self, tmpdir):

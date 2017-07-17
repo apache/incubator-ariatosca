@@ -29,8 +29,8 @@ from .presentation.field_validators import (node_template_or_type_validator,
                                             relationship_template_or_type_validator,
                                             capability_definition_or_type_validator,
                                             node_filter_validator)
-from .presentation.types import (convert_shorthand_typequalified_to_full_type_name,
-                                 get_type_by_full_or_shorthand_or_typequalified_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
+
 
 @implements_specification('3.5.9', 'tosca-simple-1.0')
 class PropertyAssignment(AsIsPresentation):
@@ -42,6 +42,7 @@ class PropertyAssignment(AsIsPresentation):
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_PROPERTY_VALUE_ASSIGNMENT>`__
     """
+
 
 @short_form_field('implementation')
 @has_fields
@@ -103,6 +104,7 @@ class OperationAssignment(ExtensiblePresentation):
             extensions.update(self._extensions)
         return extensions
 
+
 @allow_unknown_fields
 @has_fields
 @implements_specification('3.5.14-2', 'tosca-simple-1.0')
@@ -154,6 +156,7 @@ class InterfaceAssignment(ExtensiblePresentation):
             for operation in self.operations.itervalues(): # pylint: disable=no-member
                 operation._validate(context)
 
+
 @short_form_field('type')
 @has_fields
 class RelationshipAssignment(ExtensiblePresentation):
@@ -197,11 +200,11 @@ class RelationshipAssignment(ExtensiblePresentation):
                                                           'relationship_templates', type_name)
             if the_type is not None:
                 return the_type, 'relationship_template'
-            the_type = get_type_by_full_or_shorthand_or_typequalified_name(context, type_name,
-                                                                           'relationship_types')
+            the_type = get_type_by_name(context, type_name, 'relationship_types')
             if the_type is not None:
                 return the_type, 'relationship_type'
         return None, None
+
 
 @short_form_field('node')
 @has_fields
@@ -279,8 +282,7 @@ class RequirementAssignment(ExtensiblePresentation):
                                                                'node_templates', node)
             if node_template is not None:
                 return node_template, 'node_template'
-            node_type = get_type_by_full_or_shorthand_or_typequalified_name(context, node,
-                                                                            'node_types')
+            node_type = get_type_by_name(context, node, 'node_types')
             if node_type is not None:
                 return node_type, 'node_type'
 
@@ -296,12 +298,12 @@ class RequirementAssignment(ExtensiblePresentation):
                 capabilities = node._get_capabilities(context)
                 if capability in capabilities:
                     return capabilities[capability], 'capability_assignment'
-            capability_type = get_type_by_full_or_shorthand_or_typequalified_name(
-                context, capability, 'capability_types')
+            capability_type = get_type_by_name(context, capability, 'capability_types')
             if capability_type is not None:
                 return capability_type, 'capability_type'
 
         return None, None
+
 
 @implements_specification('3.5.11', 'tosca-simple-1.0')
 class AttributeAssignment(AsIsPresentation):
@@ -313,6 +315,7 @@ class AttributeAssignment(AsIsPresentation):
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html
     #DEFN_ELEMENT_ATTRIBUTE_VALUE_ASSIGNMENT>`__
     """
+
 
 @has_fields
 @implements_specification('3.7.1', 'tosca-simple-1.0')
@@ -356,6 +359,7 @@ class CapabilityAssignment(ExtensiblePresentation):
         return capability_definition._get_type(context) \
             if capability_definition is not None else None
 
+
 @has_fields
 @implements_specification('3.5.6', 'tosca-simple-1.0')
 class ArtifactAssignment(ExtensiblePresentation):
@@ -369,8 +373,7 @@ class ArtifactAssignment(ExtensiblePresentation):
     #DEFN_ENTITY_ARTIFACT_DEF>`__
     """
 
-    @field_validator(type_validator('artifact type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('artifact type', convert_name_to_full_type_name,
                                     'artifact_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -426,8 +429,7 @@ class ArtifactAssignment(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.type, 'artifact_types')
+        return get_type_by_name(context, self.type, 'artifact_types')
 
     @cachedmethod
     def _get_repository(self, context):

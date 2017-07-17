@@ -17,52 +17,71 @@
 Abstraction API above terminal color libraries.
 """
 
-from clint.textui.core import STDOUT
-from clint.textui import puts as _puts
-from clint.textui.colored import ColoredString as _ColoredString
-from clint.textui import indent  # pylint: disable=unused-import
+import os
+import sys
+
+from contextlib import contextmanager
 
 from .formatting import safe_str
+from ..cli import color
 
 
-class ColoredString(_ColoredString):
-    def __init__(self, color, str_, always_color=False, bold=False):
-        super(ColoredString, self).__init__(color, safe_str(str_), always_color, bold)
+_indent_string = ''
 
 
-def puts(string='', newline=True, stream=STDOUT):
-    _puts(safe_str(string), newline, stream)
+def puts(string='', newline=True, stream=sys.stdout):
+    stream.write(_indent_string)
+    stream.write(safe_str(string))
+    if newline:
+        stream.write(os.linesep)
+
+
+@contextmanager
+def indent(size=4):
+    global _indent_string
+    original_indent_string = _indent_string
+    try:
+        _indent_string += ' ' * size
+        yield
+    finally:
+        _indent_string = original_indent_string
 
 
 class Colored(object):
     @staticmethod
     def black(string, always=False, bold=False):
-        return ColoredString('BLACK', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.BLACK, bold)
 
     @staticmethod
     def red(string, always=False, bold=False):
-        return ColoredString('RED', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.RED, bold)
 
     @staticmethod
     def green(string, always=False, bold=False):
-        return ColoredString('GREEN', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.GREEN, bold)
 
     @staticmethod
     def yellow(string, always=False, bold=False):
-        return ColoredString('YELLOW', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.YELLOW, bold)
 
     @staticmethod
     def blue(string, always=False, bold=False):
-        return ColoredString('BLUE', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.BLUE, bold)
 
     @staticmethod
     def magenta(string, always=False, bold=False):
-        return ColoredString('MAGENTA', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.MAGENTA, bold)
 
     @staticmethod
     def cyan(string, always=False, bold=False):
-        return ColoredString('CYAN', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.CYAN, bold)
 
     @staticmethod
     def white(string, always=False, bold=False):
-        return ColoredString('WHITE', string, always_color=always, bold=bold)
+        return Colored._color(string, color.Colors.Fore.WHITE, bold)
+
+    @staticmethod
+    def _color(string, fore, bold):
+        return color.StringStylizer(string, color.ColorSpec(
+            fore=fore,
+            style=color.Colors.Style.BRIGHT if bold else color.Colors.Style.NORMAL))

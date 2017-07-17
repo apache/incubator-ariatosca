@@ -65,34 +65,6 @@ class ServiceTemplateBase(TemplateModelMixin):
                           'interface_type_fk',
                           'artifact_type_fk')
 
-    description = Column(Text, doc="""
-    Human-readable description.
-
-    :type: :obj:`basestring`
-    """)
-
-    main_file_name = Column(Text, doc="""
-    Filename of CSAR or YAML file from which this service template was parsed.
-    
-    :type: :obj:`basestring`
-    """)
-
-    created_at = Column(DateTime, nullable=False, index=True, doc="""
-    Creation timestamp.
-
-    :type: :class:`~datetime.datetime`
-    """)
-
-    updated_at = Column(DateTime, doc="""
-    Update timestamp.
-
-    :type: :class:`~datetime.datetime`
-    """)
-
-    # region association proxies
-
-    # endregion
-
     # region one_to_one relationships
 
     @declared_attr
@@ -253,10 +225,6 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     # endregion
 
-    # region many_to_one relationships
-
-    # endregion
-
     # region many_to_many relationships
 
     @declared_attr
@@ -315,6 +283,30 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     # endregion
 
+    description = Column(Text, doc="""
+    Human-readable description.
+
+    :type: :obj:`basestring`
+    """)
+
+    main_file_name = Column(Text, doc="""
+    Filename of CSAR or YAML file from which this service template was parsed.
+    
+    :type: :obj:`basestring`
+    """)
+
+    created_at = Column(DateTime, nullable=False, index=True, doc="""
+    Creation timestamp.
+
+    :type: :class:`~datetime.datetime`
+    """)
+
+    updated_at = Column(DateTime, doc="""
+    Update timestamp.
+
+    :type: :class:`~datetime.datetime`
+    """)
+
     @property
     def as_raw(self):
         return collections.OrderedDict((
@@ -341,12 +333,14 @@ class ServiceTemplateBase(TemplateModelMixin):
 
     def instantiate(self, container, model_storage, inputs=None):  # pylint: disable=arguments-differ
         from . import models
-        context = ConsumptionContext.get_thread_local()
         now = datetime.now()
         service = models.Service(created_at=now,
                                  updated_at=now,
                                  description=deepcopy_with_locators(self.description),
                                  service_template=self)
+
+        # TODO: we want to remove this use of the context
+        context = ConsumptionContext.get_thread_local()
         context.modeling.instance = service
 
         service.inputs = utils.merge_parameter_values(inputs, self.inputs, model_cls=models.Input)
@@ -365,7 +359,7 @@ class ServiceTemplateBase(TemplateModelMixin):
         utils.instantiate_dict(self, service.meta_data, self.meta_data)
 
         for node_template in self.node_templates.itervalues():
-            for _ in range(node_template.default_instances):
+            for _ in range(node_template.scaling['default_instances']):
                 node = node_template.instantiate(container)
                 service.nodes[node.name] = node
 
@@ -468,22 +462,6 @@ class NodeTemplateBase(TemplateModelMixin):
     __private_fields__ = ('type_fk',
                           'service_template_fk')
 
-    # region association proxies
-
-    @declared_attr
-    def service_template_name(cls):
-        return relationship.association_proxy('service_template', 'name')
-
-    @declared_attr
-    def type_name(cls):
-        return relationship.association_proxy('type', 'name')
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -573,6 +551,18 @@ class NodeTemplateBase(TemplateModelMixin):
 
     # endregion
 
+    # region association proxies
+
+    @declared_attr
+    def service_template_name(cls):
+        return relationship.association_proxy('service_template', 'name')
+
+    @declared_attr
+    def type_name(cls):
+        return relationship.association_proxy('type', 'name')
+
+    # endregion
+
     # region foreign_keys
 
     @declared_attr
@@ -617,22 +607,12 @@ class NodeTemplateBase(TemplateModelMixin):
     :type: [:class:`NodeTemplateConstraint`]
     """)
 
-    def is_target_node_template_valid(self, target_node_template):
-        if self.target_node_template_constraints:
-            for node_template_constraint in self.target_node_template_constraints:
-                if not node_template_constraint.matches(self, target_node_template):
-                    return False
-        return True
-
     @property
     def as_raw(self):
         return collections.OrderedDict((
             ('name', self.name),
             ('description', self.description),
             ('type_name', self.type.name),
-            ('default_instances', self.default_instances),
-            ('min_instances', self.min_instances),
-            ('max_instances', self.max_instances),
             ('properties', formatting.as_raw_dict(self.properties)),
             ('attributes', formatting.as_raw_dict(self.properties)),
             ('interface_templates', formatting.as_raw_list(self.interface_templates)),
@@ -642,13 +622,7 @@ class NodeTemplateBase(TemplateModelMixin):
 
     def instantiate(self, container):
         from . import models
-        if self.nodes:
-            highest_name_suffix = max(int(n.name.rsplit('_', 1)[-1]) for n in self.nodes)
-            suffix = highest_name_suffix + 1
-        else:
-            suffix = 1
-        name = '{name}_{index}'.format(name=self.name, index=suffix)
-        node = models.Node(name=name,
+        node = models.Node(name=self._next_name,
                            type=self.type,
                            description=deepcopy_with_locators(self.description),
                            state=models.Node.INITIAL,
@@ -660,10 +634,12 @@ class NodeTemplateBase(TemplateModelMixin):
         utils.instantiate_dict(node, node.capabilities, self.capability_templates)
 
         # Default attributes
-        if 'tosca_name' in node.attributes:
+        if ('tosca_name' in node.attributes) \
+            and (node.attributes['tosca_name'].type_name == 'string'):
             node.attributes['tosca_name'].value = self.name
-        if 'tosca_id' in node.attributes:
-            node.attributes['tosca_id'].value = name
+        if 'tosca_id' in node.attributes \
+            and (node.attributes['tosca_id'].type_name == 'string'):
+            node.attributes['tosca_id'].value = node.name
 
         return node
 
@@ -690,18 +666,103 @@ class NodeTemplateBase(TemplateModelMixin):
             console.puts(context.style.meta(self.description))
         with context.style.indent:
             console.puts('Type: {0}'.format(context.style.type(self.type.name)))
-            console.puts('Instances: {0:d} ({1:d}{2})'.format(
-                self.default_instances,
-                self.min_instances,
-                ' to {0:d}'.format(self.max_instances)
-                if self.max_instances is not None
-                else ' or more'))
             utils.dump_dict_values(self.properties, 'Properties')
             utils.dump_dict_values(self.attributes, 'Attributes')
             utils.dump_interfaces(self.interface_templates)
             utils.dump_dict_values(self.artifact_templates, 'Artifact templates')
             utils.dump_dict_values(self.capability_templates, 'Capability templates')
             utils.dump_list_values(self.requirement_templates, 'Requirement templates')
+
+    @property
+    def scaling(self):
+        scaling = {}
+
+        def extract_property(properties, name):
+            if name in scaling:
+                return
+            prop = properties.get(name)
+            if (prop is not None) and (prop.type_name == 'integer') and (prop.value is not None):
+                scaling[name] = prop.value
+
+        def extract_properties(properties):
+            extract_property(properties, 'min_instances')
+            extract_property(properties, 'max_instances')
+            extract_property(properties, 'default_instances')
+
+        def default_property(name, value):
+            if name not in scaling:
+                scaling[name] = value
+
+        # From our scaling capabilities
+        for capability_template in self.capability_templates.itervalues():
+            if capability_template.type.role == 'scaling':
+                extract_properties(capability_template.properties)
+
+        # From service scaling policies
+        for policy_template in self.service_template.policy_templates.itervalues():
+            if policy_template.type.role == 'scaling':
+                if policy_template.is_for_node_template(self.name):
+                    extract_properties(policy_template.properties)
+
+        # Defaults
+        default_property('min_instances', 0)
+        default_property('max_instances', 1)
+        default_property('default_instances', 1)
+
+        # Validate
+        # pylint: disable=too-many-boolean-expressions
+        if ((scaling['min_instances'] < 0) or
+                (scaling['max_instances'] < 0) or
+                (scaling['default_instances'] < 0) or
+                (scaling['max_instances'] < scaling['min_instances']) or
+                (scaling['default_instances'] < scaling['min_instances']) or
+                (scaling['default_instances'] > scaling['max_instances'])):
+            context = ConsumptionContext.get_thread_local()
+            context.validation.report('invalid scaling parameters for node template "{0}": '
+                                      'min={1}, max={2}, default={3}'.format(
+                                          self.name,
+                                          scaling['min_instances'],
+                                          scaling['max_instances'],
+                                          scaling['default_instances']),
+                                      level=validation.Issue.BETWEEN_TYPES)
+
+        return scaling
+
+    def is_target_node_template_valid(self, target_node_template):
+        """
+        Checks if ``target_node_template`` matches all our ``target_node_template_constraints``.
+        """
+
+        if self.target_node_template_constraints:
+            for node_template_constraint in self.target_node_template_constraints:
+                if not node_template_constraint.matches(self, target_node_template):
+                    return False
+        return True
+
+    @property
+    def _next_index(self):
+        """
+        Next available node index.
+
+        :returns: node index
+        :rtype: int
+        """
+
+        max_index = 0
+        if self.nodes:
+            max_index = max(int(n.name.rsplit('_', 1)[-1]) for n in self.nodes)
+        return max_index + 1
+
+    @property
+    def _next_name(self):
+        """
+        Next available node name.
+
+        :returns: node name
+        :rtype: basestring
+        """
+
+        return '{name}_{index}'.format(name=self.name, index=self._next_index)
 
 
 class GroupTemplateBase(TemplateModelMixin):
@@ -714,14 +775,6 @@ class GroupTemplateBase(TemplateModelMixin):
 
     __private_fields__ = ('type_fk',
                           'service_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -852,6 +905,12 @@ class GroupTemplateBase(TemplateModelMixin):
                 console.puts('Member node templates: {0}'.format(', '.join(
                     (str(context.style.node(v.name)) for v in self.node_templates))))
 
+    def contains_node_template(self, name):
+        for node_template in self.node_templates:
+            if node_template.name == name:
+                return True
+        return False
+
 
 class PolicyTemplateBase(TemplateModelMixin):
     """
@@ -863,14 +922,6 @@ class PolicyTemplateBase(TemplateModelMixin):
 
     __private_fields__ = ('type_fk',
                           'service_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1002,6 +1053,21 @@ class PolicyTemplateBase(TemplateModelMixin):
                 console.puts('Target group templates: {0}'.format(', '.join(
                     (str(context.style.node(v.name)) for v in self.group_templates))))
 
+    def is_for_node_template(self, name):
+        for node_template in self.node_templates:
+            if node_template.name == name:
+                return True
+        for group_template in self.group_templates:
+            if group_template.contains_node_template(name):
+                return True
+        return False
+
+    def is_for_group_template(self, name):
+        for group_template in self.group_templates:
+            if group_template.name == name:
+                return True
+        return False
+
 
 class SubstitutionTemplateBase(TemplateModelMixin):
     """
@@ -1012,14 +1078,6 @@ class SubstitutionTemplateBase(TemplateModelMixin):
     __tablename__ = 'substitution_template'
 
     __private_fields__ = ('node_type_fk',)
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1109,10 +1167,6 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
                           'capability_template_fk',
                           'requirement_template_fk')
 
-    # region association proxies
-
-    # endregion
-
     # region one_to_one relationships
 
     @declared_attr
@@ -1134,10 +1188,6 @@ class SubstitutionTemplateMappingBase(TemplateModelMixin):
         """
         return relationship.one_to_one(
             cls, 'requirement_template', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region one_to_many relationships
 
     # endregion
 
@@ -1254,10 +1304,6 @@ class RequirementTemplateBase(TemplateModelMixin):
                           'target_node_type_fk',
                           'relationship_template_fk',
                           'node_template_fk')
-
-    # region association proxies
-
-    # endregion
 
     # region one_to_one relationships
 
@@ -1399,7 +1445,7 @@ class RequirementTemplateBase(TemplateModelMixin):
         # Find first node that matches the type
         elif self.target_node_type is not None:
             for target_node_template in \
-                    self.node_template.service_template.node_templates.values():
+                    self.node_template.service_template.node_templates.itervalues():
                 if self.target_node_type.get_descendant(target_node_template.type.name) is None:
                     continue
 
@@ -1486,14 +1532,6 @@ class RelationshipTemplateBase(TemplateModelMixin):
     __tablename__ = 'relationship_template'
 
     __private_fields__ = ('type_fk',)
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1606,14 +1644,6 @@ class CapabilityTemplateBase(TemplateModelMixin):
 
     __private_fields__ = ('type_fk',
                           'node_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1791,14 +1821,6 @@ class InterfaceTemplateBase(TemplateModelMixin):
                           'group_template_fk',
                           'relationship_template_fk')
 
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -1952,10 +1974,6 @@ class OperationTemplateBase(TemplateModelMixin):
                           'interface_template_fk',
                           'plugin_fk')
 
-    # region association proxies
-
-    # endregion
-
     # region one_to_one relationships
 
     @declared_attr
@@ -2021,10 +2039,6 @@ class OperationTemplateBase(TemplateModelMixin):
         :type: :class:`InterfaceTemplate`
         """
         return relationship.many_to_one(cls, 'interface_template')
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion
 
@@ -2176,14 +2190,6 @@ class ArtifactTemplateBase(TemplateModelMixin):
     __private_fields__ = ('type_fk',
                           'node_template_fk')
 
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -2334,18 +2340,6 @@ class PluginSpecificationBase(TemplateModelMixin):
     __private_fields__ = ('service_template_fk',
                           'plugin_fk')
 
-    version = Column(Text, doc="""
-    Minimum plugin version.
-
-    :type: :obj:`basestring`
-    """)
-
-    enabled = Column(Boolean, nullable=False, default=True, doc="""
-    Whether the plugin is enabled.
-
-    :type: :obj:`bool`
-    """)
-
     # region many_to_one relationships
 
     @declared_attr
@@ -2381,6 +2375,18 @@ class PluginSpecificationBase(TemplateModelMixin):
         return relationship.foreign_key('plugin', nullable=True)
 
     # endregion
+
+    version = Column(Text, doc="""
+    Minimum plugin version.
+
+    :type: :obj:`basestring`
+    """)
+
+    enabled = Column(Boolean, nullable=False, default=True, doc="""
+    Whether the plugin is enabled.
+
+    :type: :obj:`bool`
+    """)
 
     @property
     def as_raw(self):

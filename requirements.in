@@ -22,7 +22,6 @@ ruamel.yaml>=0.11.12, <0.12.0  # version 0.12.0 dropped support of python 2.6
 Jinja2>=2.8, <2.9
 shortuuid>=0.5, <0.6
 CacheControl[filecache]>=0.11.0, <0.13
-clint>=0.5.0, <0.6
 SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
 wagon==0.6.0
 bottle>=0.12.0, <0.13

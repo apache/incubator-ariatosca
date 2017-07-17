@@ -171,9 +171,9 @@ class ProcessExecutor(base.BaseExecutor):
         return {
             'task_id': ctx.task.id,
             'function': ctx.task.function,
-            'operation_arguments': dict(arg.unwrapped for arg in ctx.task.arguments.values()),
+            'operation_arguments': dict(arg.unwrapped for arg in ctx.task.arguments.itervalues()),
             'port': self._server_port,
-            'context': ctx.serialization_dict,
+            'context': ctx.serialization_dict
         }
 
     def _construct_subprocess_env(self, task):

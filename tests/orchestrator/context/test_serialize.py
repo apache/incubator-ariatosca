@@ -87,8 +87,10 @@ def _operation_mapping():
 @pytest.fixture
 def executor():
     result = process.ProcessExecutor(python_path=[tests.ROOT_DIR])
-    yield result
-    result.close()
+    try:
+        yield result
+    finally:
+        result.close()
 
 
 @pytest.fixture

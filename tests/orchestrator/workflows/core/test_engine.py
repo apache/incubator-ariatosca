@@ -257,6 +257,7 @@ class TestCancel(BaseTest):
                            workflow_context=workflow_context,
                            executor=executor)
         t = threading.Thread(target=eng.execute, kwargs=dict(ctx=workflow_context))
+        t.daemon = True
         t.start()
         time.sleep(10)
         eng.cancel_execution(workflow_context)

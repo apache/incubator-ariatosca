@@ -33,8 +33,8 @@ from .presentation.field_validators import (constraint_clause_field_validator,
                                             constraint_clause_valid_values_validator,
                                             constraint_clause_pattern_validator,
                                             data_type_validator)
-from .presentation.types import (convert_shorthand_typequalified_to_full_type_name,
-                                 get_type_by_full_or_shorthand_or_typequalified_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
+
 
 @implements_specification('3.5.1', 'tosca-simple-1.0')
 class Description(AsIsPresentation):
@@ -52,6 +52,7 @@ class Description(AsIsPresentation):
     def _dump(self, context):
         value = as_raw(self.value)
         puts(context.style.meta(value))
+
 
 @allow_unknown_fields
 @has_fields
@@ -90,6 +91,7 @@ class MetaData(ExtensiblePresentation):
         """
         :type: dict
         """
+
 
 @short_form_field('url')
 @has_fields
@@ -131,6 +133,7 @@ class Repository(ExtensiblePresentation):
     @cachedmethod
     def _get_credential(self, context):
         return get_data_type_value(context, self, 'credential', 'tosca.datatypes.Credential')
+
 
 @short_form_field('file')
 @has_fields
@@ -181,6 +184,7 @@ class Import(ExtensiblePresentation):
 
         :type: :obj:`basestring`
         """
+
 
 @has_fields
 @implements_specification('3.5.2-1', 'tosca-simple-1.0')
@@ -294,6 +298,7 @@ class ConstraintClause(ExtensiblePresentation):
     def _apply_to_value(self, context, presentation, value):
         return apply_constraint_to_value(context, presentation, self, value)
 
+
 @short_form_field('type')
 @has_fields
 class EntrySchema(ExtensiblePresentation):
@@ -329,6 +334,7 @@ class EntrySchema(ExtensiblePresentation):
     def _get_constraints(self, context):
         return get_property_constraints(context, self)
 
+
 @short_form_field('primary')
 @has_fields
 class OperationImplementation(ExtensiblePresentation):
@@ -355,6 +361,7 @@ class OperationImplementation(ExtensiblePresentation):
         :type: [:obj:`basestring`]
         """
 
+
 class SubstitutionMappingsRequirement(AsIsPresentation):
     """
     Substitution mapping for requirement.
@@ -373,6 +380,7 @@ class SubstitutionMappingsRequirement(AsIsPresentation):
     def _validate(self, context):
         super(SubstitutionMappingsRequirement, self)._validate(context)
         validate_subtitution_mappings_requirement(context, self)
+
 
 class SubstitutionMappingsCapability(AsIsPresentation):
     """
@@ -393,6 +401,7 @@ class SubstitutionMappingsCapability(AsIsPresentation):
         super(SubstitutionMappingsCapability, self)._validate(context)
         validate_subtitution_mappings_capability(context, self)
 
+
 @has_fields
 @implements_specification('2.10', 'tosca-simple-1.0')
 class SubstitutionMappings(ExtensiblePresentation):
@@ -400,9 +409,7 @@ class SubstitutionMappings(ExtensiblePresentation):
     Substitution mappings.
     """
 
-    @field_validator(type_validator('node type',
-                                    convert_shorthand_typequalified_to_full_type_name,
-                                    'node_types'))
+    @field_validator(type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_field(str, required=True)
     def node_type(self):
         """
@@ -423,8 +430,7 @@ class SubstitutionMappings(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.node_type, 'node_types')
+        return get_type_by_name(context, self.node_type, 'node_types')
 
     def _validate(self, context):
         super(SubstitutionMappings, self)._validate(context)

@@ -50,7 +50,7 @@ def show(workflow_name, service_name, model_storage, logger):
     logger.info('Retrieving workflow {0} for service {1}'.format(
         workflow_name, service_name))
     service = model_storage.service.get_by_name(service_name)
-    workflow = next((wf for wf in service.workflows.values() if
+    workflow = next((wf for wf in service.workflows.itervalues() if
                      wf.name == workflow_name), None)
     if not workflow:
         raise AriaCliError(
@@ -102,7 +102,7 @@ def list(service_name, model_storage, logger):
     """
     logger.info('Listing workflows for service {0}...'.format(service_name))
     service = model_storage.service.get_by_name(service_name)
-    workflows_list = sorted(service.workflows.values(), key=lambda w: w.name)
+    workflows_list = sorted(service.workflows.itervalues(), key=lambda w: w.name)
 
     defaults = {
         'service_template_name': service.service_template_name,

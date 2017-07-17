@@ -58,14 +58,6 @@ class ServiceBase(InstanceModelMixin):
     __private_fields__ = ('substitution_fk',
                           'service_template_fk')
 
-    # region association proxies
-
-    @declared_attr
-    def service_template_name(cls):
-        return relationship.association_proxy('service_template', 'name', type=':obj:`basestring`')
-
-    # endregion
-
     # region one_to_one relationships
 
     @declared_attr
@@ -197,6 +189,14 @@ class ServiceBase(InstanceModelMixin):
         :type: {:obj:`basestring`, :class:`Plugin`}
         """
         return relationship.many_to_many(cls, 'plugin', dict_key='name')
+
+    # endregion
+
+    # region association proxies
+
+    @declared_attr
+    def service_template_name(cls):
+        return relationship.association_proxy('service_template', 'name', type=':obj:`basestring`')
 
     # endregion
 
@@ -383,7 +383,7 @@ class NodeBase(InstanceModelMixin):
     DELETED = 'deleted'
     ERROR = 'error'
 
-    # 'deleted' isn't actually part of the TOSCA spec, since according the description of the
+    # Note: 'deleted' isn't actually part of the TOSCA spec, since according the description of the
     # 'deleting' state: "Node is transitioning from its current state to one where it is deleted and
     # its state is no longer tracked by the instance model." However, we prefer to be able to
     # retrieve information about deleted nodes, so we chose to add this 'deleted' state to enable us
@@ -397,18 +397,6 @@ class NodeBase(InstanceModelMixin):
                     'start': {'transitional': STARTING, 'finished': STARTED},
                     'stop': {'transitional': STOPPING, 'finished': CONFIGURED},
                     'delete': {'transitional': DELETING, 'finished': DELETED}}
-
-    # region association proxies
-
-    @declared_attr
-    def service_name(cls):
-        return relationship.association_proxy('service', 'name', type=':obj:`basestring`')
-
-    @declared_attr
-    def node_template_name(cls):
-        return relationship.association_proxy('node_template', 'name', type=':obj:`basestring`')
-
-    # endregion
 
     # region one_to_one relationships
 
@@ -542,6 +530,18 @@ class NodeBase(InstanceModelMixin):
         :type: :class:`Type`
         """
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region association proxies
+
+    @declared_attr
+    def service_name(cls):
+        return relationship.association_proxy('service', 'name', type=':obj:`basestring`')
+
+    @declared_attr
+    def node_template_name(cls):
+        return relationship.association_proxy('node_template', 'name', type=':obj:`basestring`')
 
     # endregion
 
@@ -794,14 +794,6 @@ class GroupBase(InstanceModelMixin):
                           'service_fk',
                           'group_template_fk')
 
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -940,14 +932,6 @@ class PolicyBase(InstanceModelMixin):
                           'service_fk',
                           'policy_template_fk')
 
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -1082,14 +1066,6 @@ class SubstitutionBase(InstanceModelMixin):
     __private_fields__ = ('node_type_fk',
                           'substitution_template_fk')
 
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
-
     # region one_to_many relationships
 
     @declared_attr
@@ -1184,13 +1160,9 @@ class SubstitutionMappingBase(InstanceModelMixin):
     __tablename__ = 'substitution_mapping'
 
     __private_fields__ = ('substitution_fk',
+                          'node_fk',
                           'capability_fk',
-                          'requirement_template_fk',
-                          'node_fk')
-
-    # region association proxies
-
-    # endregion
+                          'requirement_template_fk')
 
     # region one_to_one relationships
 
@@ -1221,10 +1193,6 @@ class SubstitutionMappingBase(InstanceModelMixin):
         :type: :class:`Node`
         """
         return relationship.one_to_one(cls, 'node', back_populates=relationship.NO_BACK_POP)
-
-    # endregion
-
-    # region one_to_many relationships
 
     # endregion
 
@@ -1314,18 +1282,6 @@ class RelationshipBase(InstanceModelMixin):
                           'relationship_template_fk',
                           'target_position',
                           'source_position')
-
-    # region association proxies
-
-    @declared_attr
-    def source_node_name(cls):
-        return relationship.association_proxy('source_node', 'name')
-
-    @declared_attr
-    def target_node_name(cls):
-        return relationship.association_proxy('target_node', 'name')
-
-    # endregion
 
     # region one_to_one relationships
 
@@ -1419,6 +1375,18 @@ class RelationshipBase(InstanceModelMixin):
         :type: :class:`Type`
         """
         return relationship.many_to_one(cls, 'type', back_populates=relationship.NO_BACK_POP)
+
+    # endregion
+
+    # region association proxies
+
+    @declared_attr
+    def source_node_name(cls):
+        return relationship.association_proxy('source_node', 'name')
+
+    @declared_attr
+    def target_node_name(cls):
+        return relationship.association_proxy('target_node', 'name')
 
     # endregion
 
@@ -1525,14 +1493,6 @@ class CapabilityBase(InstanceModelMixin):
     __private_fields__ = ('capability_fk',
                           'node_fk',
                           'capability_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1671,14 +1631,6 @@ class InterfaceBase(InstanceModelMixin):
                           'group_fk',
                           'relationship_fk',
                           'interface_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 
@@ -1844,10 +1796,6 @@ class OperationBase(InstanceModelMixin):
                           'plugin_fk',
                           'operation_template_fk')
 
-    # region association proxies
-
-    # endregion
-
     # region one_to_one relationships
 
     @declared_attr
@@ -1920,10 +1868,6 @@ class OperationBase(InstanceModelMixin):
         :type: :class:`OperationTemplate`
         """
         return relationship.many_to_one(cls, 'operation_template')
-
-    # endregion
-
-    # region many_to_many relationships
 
     # endregion
 
@@ -2012,19 +1956,19 @@ class OperationBase(InstanceModelMixin):
             # In the future plugins may be able to add their own "configure_operation" hook that
             # can validate the configuration and otherwise create specially derived arguments. For
             # now, we just send all configuration parameters as arguments without validation.
-            configurations_as_arguments = {}
-            for configuration in self.configurations.itervalues():
-                configurations_as_arguments[configuration.name] = configuration.as_argument()
+            utils.instantiate_dict(self, self.arguments,
+                                   utils.dict_as_arguments(self.configurations))
 
-            utils.instantiate_dict(self, self.arguments, configurations_as_arguments)
+        if self.interface is not None:
+            # Send all interface inputs as extra arguments
+            # ("interface" is None for workflow operations)
+            # Note that they will override existing arguments of the same names
+            utils.instantiate_dict(self, self.arguments,
+                                   utils.dict_as_arguments(self.interface.inputs))
 
         # Send all inputs as extra arguments
         # Note that they will override existing arguments of the same names
-        inputs_as_arguments = {}
-        for input in self.inputs.itervalues():
-            inputs_as_arguments[input.name] = input.as_argument()
-
-        utils.instantiate_dict(self, self.arguments, inputs_as_arguments)
+        utils.instantiate_dict(self, self.arguments, utils.dict_as_arguments(self.inputs))
 
         # Check for reserved arguments
         from ..orchestrator.decorators import OPERATION_DECORATOR_RESERVED_ARGUMENTS
@@ -2032,7 +1976,7 @@ class OperationBase(InstanceModelMixin):
             OPERATION_DECORATOR_RESERVED_ARGUMENTS.intersection(self.arguments.keys())
         if used_reserved_names:
             context = ConsumptionContext.get_thread_local()
-            context.validation.report('using reserved arguments in node "{0}": {1}'
+            context.validation.report('using reserved arguments in operation "{0}": {1}'
                                       .format(
                                           self.name,
                                           formatting.string_list_as_string(used_reserved_names)),
@@ -2101,14 +2045,6 @@ class ArtifactBase(InstanceModelMixin):
     __private_fields__ = ('type_fk',
                           'node_fk',
                           'artifact_template_fk')
-
-    # region association proxies
-
-    # endregion
-
-    # region one_to_one relationships
-
-    # endregion
 
     # region one_to_many relationships
 

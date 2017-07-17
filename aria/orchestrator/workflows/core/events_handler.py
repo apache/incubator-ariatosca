@@ -123,6 +123,10 @@ def _workflow_resume(workflow_context, *args, **kwargs):
     with workflow_context.persist_changes:
         execution = workflow_context.execution
         execution.status = execution.PENDING
+        # Any non ended task would be put back to pending state
+        for task in execution.tasks:
+            if not task.has_ended():
+                task.status = task.PENDING
 
 
 @events.on_cancelling_workflow_signal.connect

@@ -269,6 +269,7 @@ class ExceptionThread(Thread):
     def __init__(self, *args, **kwargs):
         Thread.__init__(self, *args, **kwargs)
         self.exception = None
+        self.daemon = True
 
     def run(self):
         try:

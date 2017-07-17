@@ -28,11 +28,11 @@ from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_getters import data_type_class_getter
 from .presentation.field_validators import (data_type_validator, data_value_validator,
                                             entry_schema_validator)
-from .presentation.types import (convert_shorthand_typequalified_to_full_type_name,
-                                 get_type_by_full_or_shorthand_or_typequalified_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
 from .modeling.data_types import get_data_type, get_property_constraints
 from .modeling.interfaces import (get_and_override_input_definitions_from_type,
                                   get_and_override_operation_definitions_from_type)
+
 
 @has_fields
 @implements_specification('3.5.8', 'tosca-simple-1.0')
@@ -120,6 +120,7 @@ class PropertyDefinition(ExtensiblePresentation):
     def _get_constraints(self, context):
         return get_property_constraints(context, self)
 
+
 @has_fields
 @implements_specification('3.5.10', 'tosca-simple-1.0')
 class AttributeDefinition(ExtensiblePresentation):
@@ -189,6 +190,7 @@ class AttributeDefinition(ExtensiblePresentation):
     def _get_type(self, context):
         return get_data_type(context, self, 'type')
 
+
 @has_fields
 @implements_specification('3.5.12', 'tosca-simple-1.0')
 class ParameterDefinition(PropertyDefinition):
@@ -222,6 +224,7 @@ class ParameterDefinition(PropertyDefinition):
         The type-compatible value to assign to the named parameter. Parameter values may be provided
         as the result from the evaluation of an expression or a function.
         """
+
 
 @short_form_field('implementation')
 @has_fields
@@ -264,6 +267,7 @@ class OperationDefinition(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`PropertyDefinition`}
         """
 
+
 @allow_unknown_fields
 @has_fields
 @implements_specification('3.5.14-1', 'tosca-simple-1.0')
@@ -277,8 +281,7 @@ class InterfaceDefinition(ExtensiblePresentation):
     #DEFN_ELEMENT_INTERFACE_DEF>`__
     """
 
-    @field_validator(type_validator('interface type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('interface type', convert_name_to_full_type_name,
                                     'interface_types'))
     @primitive_field(str)
     def type(self):
@@ -307,8 +310,7 @@ class InterfaceDefinition(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.type, 'interface_types')
+        return get_type_by_name(context, self.type, 'interface_types')
 
     @cachedmethod
     def _get_inputs(self, context):
@@ -324,6 +326,7 @@ class InterfaceDefinition(ExtensiblePresentation):
             for operation in self.operations.itervalues(): # pylint: disable=no-member
                 operation._validate(context)
 
+
 @short_form_field('type')
 @has_fields
 class RelationshipDefinition(ExtensiblePresentation):
@@ -331,8 +334,7 @@ class RelationshipDefinition(ExtensiblePresentation):
     Relationship definition.
     """
 
-    @field_validator(type_validator('relationship type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('relationship type', convert_name_to_full_type_name,
                                     'relationship_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -355,8 +357,8 @@ class RelationshipDefinition(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.type, 'relationship_types')
+        return get_type_by_name(context, self.type, 'relationship_types')
+
 
 @short_form_field('capability')
 @has_fields
@@ -375,8 +377,7 @@ class RequirementDefinition(ExtensiblePresentation):
     #DEFN_ELEMENT_REQUIREMENT_DEF>`__
     """
 
-    @field_validator(type_validator('capability type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('capability type', convert_name_to_full_type_name,
                                     'capability_types'))
     @primitive_field(str, required=True)
     def capability(self):
@@ -387,8 +388,7 @@ class RequirementDefinition(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @field_validator(type_validator('node type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('node type', convert_name_to_full_type_name,
                                     'node_types'))
     @primitive_field(str)
     def node(self):
@@ -421,13 +421,12 @@ class RequirementDefinition(ExtensiblePresentation):
 
     @cachedmethod
     def _get_capability_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.capability,
-                                                                   'capability_types')
+        return get_type_by_name(context, self.capability, 'capability_types')
 
     @cachedmethod
     def _get_node_type(self, context):
         return context.presentation.get_from_dict('service_template', 'node_types', self.node)
+
 
 @short_form_field('type')
 @has_fields
@@ -443,8 +442,7 @@ class CapabilityDefinition(ExtensiblePresentation):
     #DEFN_ELEMENT_CAPABILITY_DEFN>`__
     """
 
-    @field_validator(type_validator('capability type',
-                                    convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(type_validator('capability type', convert_name_to_full_type_name,
                                     'capability_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -478,8 +476,7 @@ class CapabilityDefinition(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`AttributeDefinition`}
         """
 
-    @field_validator(list_type_validator('node type',
-                                         convert_shorthand_typequalified_to_full_type_name,
+    @field_validator(list_type_validator('node type', convert_name_to_full_type_name,
                                          'node_types'))
     @primitive_list_field(str)
     def valid_source_types(self):
@@ -509,8 +506,7 @@ class CapabilityDefinition(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_or_typequalified_name(context,
-                                                                   self.type, 'capability_types')
+        return get_type_by_name(context, self.type, 'capability_types')
 
     @cachedmethod
     def _get_parent(self, context):
