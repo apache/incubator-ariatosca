@@ -35,8 +35,7 @@ from .modeling.policies import get_policy_targets
 from .modeling.copy import get_default_raw_from_copy
 from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_validators import copy_validator, policy_targets_validator
-from .presentation.types import (convert_shorthand_to_full_type_name,
-                                 get_type_by_full_or_shorthand_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
 from .types import (ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType,
                     NodeType, GroupType, PolicyType)
 
@@ -55,7 +54,7 @@ class NodeTemplate(ExtensiblePresentation):
     #DEFN_ENTITY_NODE_TEMPLATE>`__
     """
 
-    @field_validator(type_validator('node type', convert_shorthand_to_full_type_name, 'node_types'))
+    @field_validator(type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_field(str, required=True)
     def type(self):
         """
@@ -154,7 +153,7 @@ class NodeTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.type, 'node_types')
+        return get_type_by_name(context, self.type, 'node_types')
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -218,7 +217,7 @@ class RelationshipTemplate(ExtensiblePresentation):
     #DEFN_ENTITY_RELATIONSHIP_TEMPLATE>`__
     """
 
-    @field_validator(type_validator('relationship type', convert_shorthand_to_full_type_name,
+    @field_validator(type_validator('relationship type', convert_name_to_full_type_name,
                                     'relationship_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -278,7 +277,7 @@ class RelationshipTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.type, 'relationship_types')
+        return get_type_by_name(context, self.type, 'relationship_types')
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -315,7 +314,7 @@ class GroupTemplate(ExtensiblePresentation):
     #DEFN_ELEMENT_GROUP_DEF>`__
     """
 
-    @field_validator(type_validator('group type', convert_shorthand_to_full_type_name,
+    @field_validator(type_validator('group type', convert_name_to_full_type_name,
                                     'group_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -361,7 +360,7 @@ class GroupTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.type, 'group_types')
+        return get_type_by_name(context, self.type, 'group_types')
 
     @cachedmethod
     def _get_property_values(self, context):
@@ -389,8 +388,7 @@ class PolicyTemplate(ExtensiblePresentation):
     #DEFN_ELEMENT_POLICY_DEF>`__
     """
 
-    @field_validator(type_validator('policy type', convert_shorthand_to_full_type_name,
-                                    'policy_types'))
+    @field_validator(type_validator('policy type', convert_name_to_full_type_name, 'policy_types'))
     @primitive_field(str, required=True)
     def type(self):
         """
@@ -426,7 +424,7 @@ class PolicyTemplate(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.type, 'policy_types')
+        return get_type_by_name(context, self.type, 'policy_types')
 
     @cachedmethod
     def _get_property_values(self, context):

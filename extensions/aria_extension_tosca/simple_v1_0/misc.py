@@ -33,8 +33,7 @@ from .presentation.field_validators import (constraint_clause_field_validator,
                                             constraint_clause_valid_values_validator,
                                             constraint_clause_pattern_validator,
                                             data_type_validator)
-from .presentation.types import (convert_shorthand_to_full_type_name,
-                                 get_type_by_full_or_shorthand_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
 
 
 @implements_specification('3.5.1', 'tosca-simple-1.0')
@@ -410,7 +409,7 @@ class SubstitutionMappings(ExtensiblePresentation):
     Substitution mappings.
     """
 
-    @field_validator(type_validator('node type', convert_shorthand_to_full_type_name, 'node_types'))
+    @field_validator(type_validator('node type', convert_name_to_full_type_name, 'node_types'))
     @primitive_field(str, required=True)
     def node_type(self):
         """
@@ -431,7 +430,7 @@ class SubstitutionMappings(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.node_type, 'node_types')
+        return get_type_by_name(context, self.node_type, 'node_types')
 
     def _validate(self, context):
         super(SubstitutionMappings, self)._validate(context)

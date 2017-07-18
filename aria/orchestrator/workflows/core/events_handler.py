@@ -155,7 +155,8 @@ def _update_node_state_if_necessary(ctx, is_transitional=False):
     # and also will *never* be the type name
     node = ctx.task.node if ctx.task is not None else None
     if (node is not None) and \
-        (ctx.task.interface_name in ('Standard', 'tosca.interfaces.node.lifecycle.Standard')):
+        (ctx.task.interface_name in ('Standard', 'tosca.interfaces.node.lifecycle.Standard',
+                                     'tosca:Standard')):
         state = node.determine_state(op_name=ctx.task.operation_name,
                                      is_transitional=is_transitional)
         if state:

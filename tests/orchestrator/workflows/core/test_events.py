@@ -44,7 +44,6 @@ def ctx(tmpdir):
 TYPE_URI_NAME = 'tosca.interfaces.node.lifecycle.Standard'
 SHORTHAND_NAME = 'Standard'
 
-
 def test_node_state_changes_as_a_result_of_standard_lifecycle_create(ctx, executor):
     node = run_operation_on_node(
         ctx, interface_name=TYPE_URI_NAME, op_name='create', executor=executor)

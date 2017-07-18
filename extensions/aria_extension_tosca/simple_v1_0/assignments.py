@@ -29,8 +29,7 @@ from .presentation.field_validators import (node_template_or_type_validator,
                                             relationship_template_or_type_validator,
                                             capability_definition_or_type_validator,
                                             node_filter_validator)
-from .presentation.types import (convert_shorthand_to_full_type_name,
-                                 get_type_by_full_or_shorthand_name)
+from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
 
 
 @implements_specification('3.5.9', 'tosca-simple-1.0')
@@ -201,7 +200,7 @@ class RelationshipAssignment(ExtensiblePresentation):
                                                           'relationship_templates', type_name)
             if the_type is not None:
                 return the_type, 'relationship_template'
-            the_type = get_type_by_full_or_shorthand_name(context, type_name, 'relationship_types')
+            the_type = get_type_by_name(context, type_name, 'relationship_types')
             if the_type is not None:
                 return the_type, 'relationship_type'
         return None, None
@@ -283,7 +282,7 @@ class RequirementAssignment(ExtensiblePresentation):
                                                                'node_templates', node)
             if node_template is not None:
                 return node_template, 'node_template'
-            node_type = get_type_by_full_or_shorthand_name(context, node, 'node_types')
+            node_type = get_type_by_name(context, node, 'node_types')
             if node_type is not None:
                 return node_type, 'node_type'
 
@@ -299,8 +298,7 @@ class RequirementAssignment(ExtensiblePresentation):
                 capabilities = node._get_capabilities(context)
                 if capability in capabilities:
                     return capabilities[capability], 'capability_assignment'
-            capability_type = get_type_by_full_or_shorthand_name(context, capability,
-                                                                 'capability_types')
+            capability_type = get_type_by_name(context, capability, 'capability_types')
             if capability_type is not None:
                 return capability_type, 'capability_type'
 
@@ -375,7 +373,7 @@ class ArtifactAssignment(ExtensiblePresentation):
     #DEFN_ENTITY_ARTIFACT_DEF>`__
     """
 
-    @field_validator(type_validator('artifact type', convert_shorthand_to_full_type_name,
+    @field_validator(type_validator('artifact type', convert_name_to_full_type_name,
                                     'artifact_types'))
     @primitive_field(str, required=True)
     def type(self):
@@ -431,7 +429,7 @@ class ArtifactAssignment(ExtensiblePresentation):
 
     @cachedmethod
     def _get_type(self, context):
-        return get_type_by_full_or_shorthand_name(context, self.type, 'artifact_types')
+        return get_type_by_name(context, self.type, 'artifact_types')
 
     @cachedmethod
     def _get_repository(self, context):
