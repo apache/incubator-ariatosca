@@ -3,7 +3,7 @@ tosca_definitions_version: tosca_simple_yaml_1_0
 node_types:
 
   WebServer:
-    derived_from: tosca.nodes.Root
+    derived_from: tosca:Root
     capabilities:
       host:
         type: tosca.capabilities.Container
