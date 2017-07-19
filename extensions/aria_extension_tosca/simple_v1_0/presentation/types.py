@@ -14,9 +14,9 @@
 # limitations under the License.
 
 
-def convert_shorthand_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
+def convert_name_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
     """
-    Converts a shorthand type name to its full type name, or else returns it unchanged.
+    Converts a type name to its full type name, or else returns it unchanged.
 
     Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
     :class:`aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
@@ -28,14 +28,15 @@ def convert_shorthand_to_full_type_name(context, name, types_dict): # pylint: di
     if (name is not None) and types_dict and (name not in types_dict):
         for full_name, the_type in types_dict.iteritems():
             if hasattr(the_type, '_extensions') and the_type._extensions \
-                and (the_type._extensions.get('shorthand_name') == name):
+                and ((the_type._extensions.get('shorthand_name') == name) \
+                     or (the_type._extensions.get('type_qualified_name') == name)):
                 return full_name
     return name
 
 
-def get_type_by_full_or_shorthand_name(context, name, *types_dict_names):
+def get_type_by_name(context, name, *types_dict_names):
     """
-    Gets a type either by its full name or its shorthand name.
+    Gets a type either by its full name or its shorthand name or typequalified name.
 
     Works by checking for ``shorthand_name`` in the types' ``_extensions`` field. See also
     :class:`~aria_extension_tosca.v1_0.presentation.extensible.ExtensiblePresentation`.
@@ -53,7 +54,8 @@ def get_type_by_full_or_shorthand_name(context, name, *types_dict_names):
                 return the_type
             for the_type in types_dict.itervalues():
                 if hasattr(the_type, '_extensions') and the_type._extensions \
-                    and (the_type._extensions.get('shorthand_name') == name):
+                    and ((the_type._extensions.get('shorthand_name') == name) \
+                         or (the_type._extensions.get('type_qualified_name') == name)):
                     # Shorthand name
                     return the_type
     return None
