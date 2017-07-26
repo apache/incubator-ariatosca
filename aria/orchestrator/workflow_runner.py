@@ -137,6 +137,10 @@ class WorkflowRunner(object):
         else:
             workflow_inputs = self.service.workflows[self._workflow_name].inputs
 
+        modeling_utils.validate_no_undeclared_inputs(declared_inputs=workflow_inputs,
+                                                     supplied_inputs=inputs or {})
+        modeling_utils.validate_required_inputs_are_supplied(declared_inputs=workflow_inputs,
+                                                             supplied_inputs=inputs or {})
         execution.inputs = modeling_utils.merge_parameter_values(inputs,
                                                                  workflow_inputs,
                                                                  model_cls=models.Input)

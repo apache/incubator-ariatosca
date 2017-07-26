@@ -29,10 +29,11 @@ class Value(object):
     Encapsulates a typed value assignment.
     """
 
-    def __init__(self, type_name, value, description):
+    def __init__(self, type_name, value, description, required):
         self.type = deepcopy_with_locators(type_name)
         self.value = deepcopy_with_locators(value)
         self.description = deepcopy_with_locators(description)
+        self.required = deepcopy_with_locators(required)
 
     def _dump(self, context):
         if self.type is not None:
@@ -41,6 +42,8 @@ class Value(object):
             puts(context.style.literal(self.value))
         if self.description is not None:
             puts(context.style.meta(self.description))
+        if self.required is not None:
+            puts(context.style.required(self.required))
 
 
 class PresentationBase(HasCachedMethods):

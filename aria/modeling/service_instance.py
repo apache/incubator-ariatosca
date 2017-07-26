@@ -1939,7 +1939,7 @@ class OperationBase(InstanceModelMixin):
     """)
 
     retry_interval = Column(Integer, doc="""
-    Interval between task retry attemps (in seconds).
+    Interval between task retry attempts (in seconds).
 
     :type: :obj:`float`
     """)

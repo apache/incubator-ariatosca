@@ -161,8 +161,6 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
     :func:`~aria.modeling.functions.evaluate`.
     """
 
-    __tablename__ = 'parameter'
-
     type_name = Column(Text, doc="""
     Type name.
     

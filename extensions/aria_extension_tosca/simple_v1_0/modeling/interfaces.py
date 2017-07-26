@@ -61,7 +61,7 @@ def get_and_override_input_definitions_from_type(context, presentation):
     inputs = OrderedDict()
 
     # Get inputs from type
-    the_type = presentation._get_type(context) # IntefaceType
+    the_type = presentation._get_type(context) # InterfaceType
     type_inputs = the_type._get_inputs(context) if the_type is not None else None
     if type_inputs:
         for input_name, type_input in type_inputs.iteritems():
@@ -213,9 +213,9 @@ def convert_interface_definition_from_type_to_raw_template(context, presentation
     raw = OrderedDict()
 
     # Copy default values for inputs
-    inputs = presentation._get_inputs(context)
-    if inputs is not None:
-        raw['inputs'] = convert_parameter_definitions_to_values(context, inputs)
+    interface_inputs = presentation._get_inputs(context)
+    if interface_inputs is not None:
+        raw['inputs'] = convert_parameter_definitions_to_values(context, interface_inputs)
 
     # Copy operations
     operations = presentation._get_operations(context)
@@ -481,6 +481,10 @@ def assign_raw_inputs(context, values, assignments, definitions, interface_name,
 
 def validate_required_inputs(context, presentation, assignment, definition, original_assignment,
                              interface_name, operation_name=None):
+    # The validation of the `required` field of inputs that belong to operations and interfaces
+    # (as opposed to topology template and workflow inputs) is done only in the parsing stage.
+    # This reasoning follows the TOSCA spirit, where anything that is declared as required in the
+    # type, must be assigned in the corresponding template.
     input_definitions = definition.inputs
     if input_definitions:
         for input_name, input_definition in input_definitions.iteritems():

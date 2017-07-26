@@ -203,7 +203,8 @@ def coerce_parameter_value(context, presentation, definition, value, aspect=None
         type_name = getattr(definition, 'type', None)
     description = getattr(definition, 'description', None)
     description = description.value if description is not None else None
-    return Value(type_name, value, description)
+    required = getattr(definition, 'required', None)
+    return Value(type_name, value, description, required)
 
 
 def convert_parameter_definitions_to_values(context, definitions):

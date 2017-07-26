@@ -438,10 +438,7 @@ def coerce_to_primitive(context, presentation, primitive_type, constraints, valu
 
         # Check constraints
         apply_constraints_to_value(context, presentation, constraints, value)
-    except ValueError as e:
-        report_issue_for_bad_format(context, presentation, primitive_type, value, aspect, e)
-        value = None
-    except TypeError as e:
+    except (ValueError, TypeError) as e:
         report_issue_for_bad_format(context, presentation, primitive_type, value, aspect, e)
         value = None
 

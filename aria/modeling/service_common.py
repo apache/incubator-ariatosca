@@ -22,6 +22,7 @@ ARIA modeling service common module
 from sqlalchemy import (
     Column,
     Text,
+    Boolean
 )
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -83,6 +84,18 @@ class InputBase(ParameterMixin):
     """
 
     __tablename__ = 'input'
+
+    required = Column(Boolean, doc="""
+    Is the input mandatory.
+
+    :type: :obj:`bool`
+    """)
+
+    @classmethod
+    def wrap(cls, name, value, description=None, required=True):  # pylint: disable=arguments-differ
+        input = super(InputBase, cls).wrap(name, value, description)
+        input.required = required
+        return input
 
     # region many_to_one relationships
 

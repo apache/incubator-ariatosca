@@ -45,7 +45,7 @@ class CannotEvaluateFunctionException(ModelingException):
     """
 
 
-class MissingRequiredParametersException(ParameterException):
+class MissingRequiredInputsException(ParameterException):
     """
     ARIA modeling exception: Required parameters have been omitted.
     """
@@ -57,7 +57,7 @@ class ParametersOfWrongTypeException(ParameterException):
     """
 
 
-class UndeclaredParametersException(ParameterException):
+class UndeclaredInputsException(ParameterException):
     """
     ARIA modeling exception: Undeclared parameters have been provided.
     """

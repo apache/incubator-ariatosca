@@ -343,6 +343,11 @@ class ServiceTemplateBase(TemplateModelMixin):
         context = ConsumptionContext.get_thread_local()
         context.modeling.instance = service
 
+        utils.validate_no_undeclared_inputs(declared_inputs=self.inputs,
+                                            supplied_inputs=inputs or {})
+        utils.validate_required_inputs_are_supplied(declared_inputs=self.inputs,
+                                                    supplied_inputs=inputs or {})
+
         service.inputs = utils.merge_parameter_values(inputs, self.inputs, model_cls=models.Input)
         # TODO: now that we have inputs, we should scan properties and inputs and evaluate functions
 

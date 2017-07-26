@@ -216,7 +216,7 @@ def test_execution_inputs_override_workflow_inputs(request):
 def test_execution_inputs_undeclared_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
-    with pytest.raises(modeling_exceptions.UndeclaredParametersException):
+    with pytest.raises(modeling_exceptions.UndeclaredInputsException):
         _create_workflow_runner(request, mock_workflow, inputs={'undeclared_input': 'value'})
 
 
@@ -224,7 +224,7 @@ def test_execution_inputs_missing_required_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(
         request, inputs={'required_input': models.Input.wrap('required_input', value=None)})
 
-    with pytest.raises(modeling_exceptions.MissingRequiredParametersException):
+    with pytest.raises(modeling_exceptions.MissingRequiredInputsException):
         _create_workflow_runner(request, mock_workflow, inputs={})
 
 
@@ -238,7 +238,7 @@ def test_execution_inputs_wrong_type_inputs(request):
 
 def test_execution_inputs_builtin_workflow_with_inputs(request):
     # built-in workflows don't have inputs
-    with pytest.raises(modeling_exceptions.UndeclaredParametersException):
+    with pytest.raises(modeling_exceptions.UndeclaredInputsException):
         _create_workflow_runner(request, 'install', inputs={'undeclared_input': 'value'})
 
 
@@ -276,8 +276,8 @@ def service(model):
 def _setup_mock_workflow_in_service(request, inputs=None):
     # sets up a mock workflow as part of the service, including uploading
     # the workflow code to the service's dir on the resource storage
-    service = request.getfuncargvalue('service')
-    resource = request.getfuncargvalue('resource')
+    service = request.getfixturevalue('service')
+    resource = request.getfixturevalue('resource')
 
     source = tests_mock.workflow.__file__
     resource.service_template.upload(str(service.service_template.id), source)
@@ -299,10 +299,10 @@ def _setup_mock_workflow_in_service(request, inputs=None):
 def _create_workflow_runner(request, workflow_name, inputs=None, executor=None,
                             task_max_attempts=None, task_retry_interval=None):
     # helper method for instantiating a workflow runner
-    service_id = request.getfuncargvalue('service').id
-    model = request.getfuncargvalue('model')
-    resource = request.getfuncargvalue('resource')
-    plugin_manager = request.getfuncargvalue('plugin_manager')
+    service_id = request.getfixturevalue('service').id
+    model = request.getfixturevalue('model')
+    resource = request.getfixturevalue('resource')
+    plugin_manager = request.getfixturevalue('plugin_manager')
 
     # task configuration parameters can't be set to None, therefore only
     # passing those if they've been set by the test

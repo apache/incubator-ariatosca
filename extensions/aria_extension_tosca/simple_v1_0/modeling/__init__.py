@@ -94,12 +94,10 @@ def create_service_template_model(context): # pylint: disable=too-many-locals,to
     # Topology template
     topology_template = context.presentation.get('service_template', 'topology_template')
     if topology_template is not None:
-        create_parameter_models_from_values(model.inputs,
-                                            topology_template._get_input_values(context),
-                                            model_cls=Input)
-        create_parameter_models_from_values(model.outputs,
-                                            topology_template._get_output_values(context),
-                                            model_cls=Output)
+        model.inputs.update(
+            create_input_models_from_values(topology_template._get_input_values(context)))
+        model.outputs.update(
+            create_output_models_from_values(topology_template._get_output_values(context)))
 
     # Plugin specifications
     policies = context.presentation.get('service_template', 'topology_template', 'policies')
@@ -171,12 +169,11 @@ def create_node_template_model(context, service_template, node_template):
     if node_template.description:
         model.description = node_template.description.value
 
-    create_parameter_models_from_values(model.properties,
-                                        node_template._get_property_values(context),
-                                        model_cls=Property)
-    create_parameter_models_from_values(model.attributes,
-                                        node_template._get_attribute_default_values(context),
-                                        model_cls=Attribute)
+    model.properties.update(create_property_models_from_values(
+        template_properties=node_template._get_property_values(context)))
+    model.attributes.update(create_attribute_models_from_values(
+        template_attributes=node_template._get_attribute_default_values(context)))
+
     create_interface_template_models(context, service_template, model.interface_templates,
                                      node_template._get_interfaces(context))
 
@@ -221,11 +218,10 @@ def create_group_template_model(context, service_template, group):
     if group.description:
         model.description = group.description.value
 
-    create_parameter_models_from_values(model.properties, group._get_property_values(context),
-                                        model_cls=Property)
+    model.properties.update(create_property_models_from_values(group._get_property_values(context)))
+
     create_interface_template_models(context, service_template, model.interface_templates,
                                      group._get_interfaces(context))
-
     members = group.members
     if members:
         for member in members:
@@ -245,8 +241,8 @@ def create_policy_template_model(context, service_template, policy):
     if policy.description:
         model.description = policy.description.value
 
-    create_parameter_models_from_values(model.properties, policy._get_property_values(context),
-                                        model_cls=Property)
+    model.properties.update(
+        create_property_models_from_values(policy._get_property_values(context)))
 
     node_templates, groups = policy._get_targets(context)
     if node_templates:
@@ -356,19 +352,12 @@ def create_capability_template_model(context, service_template, capability):
 def create_interface_template_model(context, service_template, interface):
     interface_type = interface._get_type(context)
     interface_type = service_template.interface_types.get_descendant(interface_type._name)
-    model = InterfaceTemplate(name=interface._name,
-                              type=interface_type)
+    model = InterfaceTemplate(name=interface._name, type=interface_type)
 
     if interface_type.description:
         model.description = interface_type.description
 
-    inputs = interface.inputs
-    if inputs:
-        for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Input(name=input_name, # pylint: disable=unexpected-keyword-arg
-                                             type_name=the_input.value.type,
-                                             value=the_input.value.value,
-                                             description=the_input.value.description)
+    create_parameter_models_from_assignments(model.inputs, interface.inputs, model_cls=Input)
 
     operations = interface.operations
     if operations:
@@ -430,14 +419,7 @@ def create_operation_template_model(context, service_template, operation):
             model.configurations[key] = Configuration.wrap(key, value,
                                                            description='Operation configuration.')
 
-    inputs = operation.inputs
-    if inputs:
-        for input_name, the_input in inputs.iteritems():
-            model.inputs[input_name] = Input(name=input_name, # pylint: disable=unexpected-keyword-arg
-                                             type_name=the_input.value.type,
-                                             value=the_input.value.value,
-                                             description=the_input.value.description)
-
+    create_parameter_models_from_assignments(model.inputs, operation.inputs, model_cls=Input)
     return model
 
 
@@ -462,8 +444,8 @@ def create_artifact_template_model(context, service_template, artifact):
             for k, v in credential.iteritems():
                 model.repository_credential[k] = v
 
-    create_parameter_models_from_values(model.properties, artifact._get_property_values(context),
-                                        model_cls=Property)
+    model.properties.update(
+        create_property_models_from_values(artifact._get_property_values(context)))
 
     return model
 
@@ -526,10 +508,9 @@ def create_workflow_operation_template_model(context, service_template, policy):
         if prop_name == 'implementation':
             model.function = prop.value
         else:
-            model.inputs[prop_name] = Input(name=prop_name, # pylint: disable=unexpected-keyword-arg
-                                            type_name=prop.type,
-                                            value=prop.value,
-                                            description=prop.description)
+            input_model = create_parameter_model_from_value(prop, prop_name, model_cls=Input)
+            input_model.required = prop.required
+            model.inputs[prop_name] = input_model
 
     used_reserved_names = WORKFLOW_DECORATOR_RESERVED_ARGUMENTS.intersection(model.inputs.keys())
     if used_reserved_names:
@@ -539,7 +520,6 @@ def create_workflow_operation_template_model(context, service_template, policy):
                                       string_list_as_string(used_reserved_names)),
                                   locator=policy._locator,
                                   level=Issue.EXTERNAL)
-
     return model
 
 
@@ -577,14 +557,50 @@ def create_types(context, root, types):
                         container.children.append(model)
 
 
-def create_parameter_models_from_values(properties, source_properties, model_cls):
+def create_input_models_from_values(template_inputs):
+    model_inputs = {}
+    if template_inputs:
+        for template_input_name, template_input in template_inputs.iteritems():
+            model_input = create_parameter_model_from_value(template_input, template_input_name,
+                                                            model_cls=Input)
+            model_input.required = template_input.required
+            model_inputs[model_input.name] = model_input
+    return model_inputs
 
-    if source_properties:
-        for property_name, prop in source_properties.iteritems():
-            properties[property_name] = model_cls(name=property_name,  # pylint: disable=unexpected-keyword-arg
-                                                  type_name=prop.type,
-                                                  value=prop.value,
-                                                  description=prop.description)
+def create_output_models_from_values(template_outputs):
+    model_outputs = {}
+    for template_output_name, template_output in template_outputs.iteritems():
+        model_outputs[template_output_name] = \
+            create_parameter_model_from_value(template_output,
+                                              template_output_name,
+                                              model_cls=Output)
+    return model_outputs
+
+
+def create_property_models_from_values(template_properties):
+    model_properties = {}
+    for template_property_name, template_property in template_properties.iteritems():
+        model_properties[template_property_name] = \
+            create_parameter_model_from_value(template_property,
+                                              template_property_name,
+                                              model_cls=Property)
+    return model_properties
+
+def create_attribute_models_from_values(template_attributes):
+    model_attributes = {}
+    for template_attribute_name, template_attribute in template_attributes.iteritems():
+        model_attributes[template_attribute_name] = \
+            create_parameter_model_from_value(template_attribute,
+                                              template_attribute_name,
+                                              model_cls=Attribute)
+    return model_attributes
+
+
+def create_parameter_model_from_value(template_parameter, template_parameter_name, model_cls):
+    return model_cls(name=template_parameter_name,
+                     type_name=template_parameter.type,
+                     value=template_parameter.value,
+                     description=template_parameter.description)
 
 
 def create_parameter_models_from_assignments(properties, source_properties, model_cls):

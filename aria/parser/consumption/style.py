@@ -48,3 +48,7 @@ class Style(object):
     @staticmethod
     def meta(value):
         return Colored.green(value)
+
+    @staticmethod
+    def required(value):
+        return Colored.white(value)

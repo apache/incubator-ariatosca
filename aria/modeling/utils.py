@@ -64,81 +64,84 @@ class NodeTemplateContainerHolder(object):
         return self.container.service_template
 
 
-def merge_parameter_values(parameter_values, declared_parameters, model_cls):
+def validate_no_undeclared_inputs(declared_inputs, supplied_inputs):
+
+    undeclared_inputs = [input for input in supplied_inputs if input not in declared_inputs]
+    if undeclared_inputs:
+        raise exceptions.UndeclaredInputsException(
+            'Undeclared inputs have been provided: {0}; Declared inputs: {1}'
+            .format(string_list_as_string(undeclared_inputs),
+                    string_list_as_string(declared_inputs.keys())))
+
+
+def validate_required_inputs_are_supplied(declared_inputs, supplied_inputs):
+    required_inputs = [input for input in declared_inputs.values() if input.required]
+    missing_required_inputs = [input for input in required_inputs
+                               if input.name not in supplied_inputs and not input.value]
+    if missing_required_inputs:
+        raise exceptions.MissingRequiredInputsException(
+            'Required inputs {0} have not been provided values'
+            .format(string_list_as_string(missing_required_inputs)))
+
+
+def merge_parameter_values(provided_values, declared_parameters, model_cls):
     """
     Merges parameter values according to those declared by a type.
 
     Exceptions will be raised for validation errors.
 
-    :param parameter_values: provided parameter values or None
-    :type parameter_values: {:obj:`basestring`: object}
+    :param provided_values: provided parameter values or None
+    :type provided_values: {:obj:`basestring`: object}
     :param declared_parameters: declared parameters
     :type declared_parameters: {:obj:`basestring`: :class:`~aria.modeling.models.Parameter`}
+    :param model_cls: the model class that should be created from a provided value
+    :type model_cls: :class:`~aria.modeling.models.Input` or :class:`~aria.modeling.models.Argument`
     :return: the merged parameters
     :rtype: {:obj:`basestring`: :class:`~aria.modeling.models.Parameter`}
-    :raises ~aria.modeling.exceptions.UndeclaredParametersException: if a key in
+    :raises ~aria.modeling.exceptions.UndeclaredInputsException: if a key in
      ``parameter_values`` does not exist in ``declared_parameters``
-    :raises ~aria.modeling.exceptions.MissingRequiredParametersException: if a key in
+    :raises ~aria.modeling.exceptions.MissingRequiredInputsException: if a key in
      ``declared_parameters`` does not exist in ``parameter_values`` and also has no default value
     :raises ~aria.modeling.exceptions.ParametersOfWrongTypeException: if a value in
       ``parameter_values`` does not match its type in ``declared_parameters``
     """
 
-    parameter_values = parameter_values or {}
+    provided_values = provided_values or {}
+    provided_values_of_wrong_type = OrderedDict()
+    model_parameters = OrderedDict()
 
-    undeclared_names = list(set(parameter_values.keys()).difference(declared_parameters.keys()))
-    if undeclared_names:
-        raise exceptions.UndeclaredParametersException(
-            'Undeclared parameters have been provided: {0}; Declared: {1}'
-            .format(string_list_as_string(undeclared_names),
-                    string_list_as_string(declared_parameters.keys())))
-
-    parameters = OrderedDict()
-
-    missing_names = []
-    wrong_type_values = OrderedDict()
     for declared_parameter_name, declared_parameter in declared_parameters.iteritems():
-        if declared_parameter_name in parameter_values:
-            # Value has been provided
-            value = parameter_values[declared_parameter_name]
+        if declared_parameter_name in provided_values:
+            # a value has been provided
+            value = provided_values[declared_parameter_name]
 
             # Validate type
             type_name = declared_parameter.type_name
             try:
                 validate_value_type(value, type_name)
             except ValueError:
-                wrong_type_values[declared_parameter_name] = type_name
+                provided_values_of_wrong_type[declared_parameter_name] = type_name
             except RuntimeError:
-                # TODO: This error shouldn't be raised (or caught), but right now we lack support
+                # TODO This error shouldn't be raised (or caught), but right now we lack support
                 # for custom data_types, which will raise this error. Skipping their validation.
                 pass
-
-            # Wrap in Parameter model
-            parameters[declared_parameter_name] = model_cls( # pylint: disable=unexpected-keyword-arg
+            model_parameters[declared_parameter_name] = model_cls( # pylint: disable=unexpected-keyword-arg
                 name=declared_parameter_name,
                 type_name=type_name,
                 description=declared_parameter.description,
                 value=value)
-        elif declared_parameter.value is not None:
-            # Copy default value from declaration
-            parameters[declared_parameter_name] = declared_parameter.instantiate(None)
         else:
-            # Required value has not been provided
-            missing_names.append(declared_parameter_name)
+            # Copy default value from declaration
+            model_parameters[declared_parameter_name] = declared_parameter.instantiate(None)
 
-    if missing_names:
-        raise exceptions.MissingRequiredParametersException(
-            'Declared parameters {0} have not been provided values'
-            .format(string_list_as_string(missing_names)))
-
-    if wrong_type_values:
+    if provided_values_of_wrong_type:
         error_message = StringIO()
-        for param_name, param_type in wrong_type_values.iteritems():
+        for param_name, param_type in provided_values_of_wrong_type.iteritems():
             error_message.write('Parameter "{0}" is not of declared type "{1}"{2}'
                                 .format(param_name, param_type, os.linesep))
         raise exceptions.ParametersOfWrongTypeException(error_message.getvalue())
 
-    return parameters
+    return model_parameters
 
 
 def coerce_dict_values(the_dict, report_issues=False):
