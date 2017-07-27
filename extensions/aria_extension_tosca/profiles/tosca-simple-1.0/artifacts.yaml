@@ -24,7 +24,7 @@ artifact_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_ARTIFACTS_ROOT'
     description: >-
       This is the default (root) TOSCA Artifact Type definition that all other TOSCA base Artifact Types derive from.
-  
+
   tosca.artifacts.File:
     _extensions:
       shorthand_name: File
@@ -34,11 +34,11 @@ artifact_types:
     description: >-
       This artifact type is used when an artifact definition needs to have its associated file simply treated as a file and no special handling/handlers are invoked (i.e., it is not treated as either an implementation or deployment artifact type).
     derived_from: tosca.artifacts.Root
-  
+
   #
   # Deployments
   #
-  
+
   tosca.artifacts.Deployment:
     _extensions:
       shorthand_name: Deployment # ARIA NOTE: omitted in the spec
@@ -51,7 +51,7 @@ artifact_types:
       represents a binary packaging of an application or service that is used to install/create or deploy it as part of a node's
       lifecycle.
     derived_from: tosca.artifacts.Root
-    
+
   tosca.artifacts.Deployment.Image:
     _extensions:
       shorthand_name: Deployment.Image
@@ -64,7 +64,7 @@ artifact_types:
       (whether real or virtual) whose contents are typically already installed and pre-configured (i.e., "stateful") and prepared
       to be run on a known target container.
     derived_from: tosca.artifacts.Deployment
-  
+
   tosca.artifacts.Deployment.Image.VM:
     _extensions:
       shorthand_name: Deployment.VM # ARIA NOTE: omitted in the spec
@@ -78,11 +78,11 @@ artifact_types:
       with any configurations and can be run on another machine using a hypervisor which virtualizes typical server (i.e.,
       hardware) resources.
     derived_from: tosca.artifacts.Deployment
-  
+
   #
   # Implementations
   #
-  
+
   tosca.artifacts.Implementation:
     _extensions:
       shorthand_name: Implementation # ARIA NOTE: omitted in the spec
@@ -94,7 +94,7 @@ artifact_types:
       This artifact type represents the parent type for all implementation artifacts in TOSCA. These artifacts are used to
       implement operations of TOSCA interfaces either directly (e.g., scripts) or indirectly (e.g., config. files).
     derived_from: tosca.artifacts.Root
-  
+
   tosca.artifacts.Implementation.Bash:
     _extensions:
       shorthand_name: Implementation.Bash # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?
@@ -106,7 +106,7 @@ artifact_types:
     derived_from: tosca.artifacts.Implementation
     mime_type: application/x-sh
     file_ext: [ sh ]
-  
+
   tosca.artifacts.Implementation.Python:
     _extensions:
       shorthand_name: Implementation.Python # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?

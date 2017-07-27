@@ -45,14 +45,14 @@ node_types:
         type: tosca.interfaces.node.lifecycle.Standard
     capabilities:
       feature:
-        type: tosca.capabilities.Node  
+        type: tosca.capabilities.Node
     requirements:
       - dependency:
           capability: tosca.capabilities.Node
           node: tosca.nodes.Root
           relationship: tosca.relationships.DependsOn
           occurrences: [ 0, UNBOUNDED ]
-  
+
   tosca.nodes.Compute:
     _extensions:
       shorthand_name: Compute
@@ -133,11 +133,11 @@ node_types:
           capability: tosca.capabilities.Endpoint
           relationship: tosca.relationships.RoutesTo
           occurrences: [ 0, UNBOUNDED ]
-  
+
   #
   # Software
   #
-  
+
   tosca.nodes.SoftwareComponent:
     _extensions:
       shorthand_name: SoftwareComponent
@@ -211,7 +211,7 @@ node_types:
           capability: tosca.capabilities.Container
           node: tosca.nodes.WebServer
           relationship: tosca.relationships.HostedOn
-  
+
   tosca.nodes.DBMS:
     _extensions:
       shorthand_name: DBMS # ARIA NOTE: omitted in the spec
@@ -276,7 +276,7 @@ node_types:
           capability: tosca.capabilities.Container
           node: tosca.nodes.DBMS
           relationship: tosca.relationships.HostedOn
-  
+
   #
   # Container
   #
@@ -351,7 +351,7 @@ node_types:
     capabilities:
       storage_endpoint:
         type: tosca.capabilities.Endpoint
-  
+
   tosca.nodes.BlockStorage:
     _extensions:
       shorthand_name: BlockStorage
@@ -463,7 +463,7 @@ node_types:
     capabilities:
       link:
         type: tosca.capabilities.network.Linkable
-  
+
   tosca.nodes.network.Port:
     _extensions:
       shorthand_name: Port
@@ -472,7 +472,7 @@ node_types:
       specification_section: 7.5.2
     description: >-
       The TOSCA Port node represents a logical entity that associates between Compute and Network normative types.
-      
+
       The Port node type effectively represents a single virtual NIC on the Compute node instance.
     derived_from: tosca.nodes.Root
     properties:

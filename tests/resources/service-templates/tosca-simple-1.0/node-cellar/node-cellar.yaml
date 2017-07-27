@@ -89,7 +89,7 @@ topology_template:
       value: *DEFAULT_OPENSTACK_CREDENTIAL
 
   node_templates:
-  
+
     # Application
 
     node_cellar:
@@ -135,7 +135,7 @@ topology_template:
           properties:
             protocol: udp
             url_path: /nodecellar
-    
+
     node_cellar_database:
       description: >-
         Node Cellar MongoDB database.
@@ -151,7 +151,7 @@ topology_template:
           repository: node_cellar
 
     # Server software
-    
+
     nodejs:
       description: >-
         Node.js instance.
@@ -202,7 +202,7 @@ topology_template:
     loadbalancer:
       type: nginx.LoadBalancer
       properties:
-        algorithm: round-robin   
+        algorithm: round-robin
 
     # Hosts
 
@@ -273,7 +273,7 @@ topology_template:
           create: create_data_volume.sh
 
   groups:
-  
+
     node_cellar_group:
       type: openstack.Secured
       members:
@@ -286,7 +286,7 @@ topology_template:
             openstack_credential: { get_input: openstack_credential }
 
   policies:
-  
+
     app_scaling:
       type: aria.Scaling
       properties:
@@ -295,7 +295,7 @@ topology_template:
       targets:
         - node_cellar
         - nodejs
-  
+
     host_scaling:
       type: openstack.Scaling
       properties:
@@ -304,7 +304,7 @@ topology_template:
         default_instances: 2
       targets: # node templates or groups
         - node_cellar_group
-    
+
     juju:
       description: >-
         Juju plugin executes charms.
@@ -345,7 +345,7 @@ policy_types:
     description: >-
       Workflow to put all nodes in/out of maintenance mode. For web servers, this will show a "this
       site is under maintenance and we'll be back soon" web page. Database nodes will then close all
-      client connections cleanly and shut down services. 
+      client connections cleanly and shut down services.
     derived_from: aria.Workflow
     properties:
       implementation:

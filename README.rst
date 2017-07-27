@@ -36,26 +36,28 @@ To install ARIA directly from PyPI (using a ``wheel``), use::
     pip install apache-ariatosca
 
 To install ARIA from source, download the source tarball from
-`PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__, extract and ``cd`` into the extract dir, and run::
+`PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__, extract and ``cd`` into the extract dir,
+and run::
 
     pip install --upgrade pip setuptools
     pip install .
 
-| The source package comes along with relevant examples, documentation, ``requirements.txt`` (for installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
-|
+| The source package comes along with relevant examples, documentation, ``requirements.txt`` (for
+| installing specifically the frozen dependencies' versions with which ARIA was tested) and more.
 |
 | ARIA has additional optional dependencies. These are required for running operations over SSH.
-| Below are instructions on how to install these dependencies, including required system dependencies per OS.
+| Below are instructions on how to install these dependencies, including required system
+| dependencies per OS.
 |
-| Note: These dependencies may have varying licenses which may not be compatible with Apache license 2.0.
-|
+| Note: These dependencies may have varying licenses which may not be compatible with Apache license
+| 2.0.
 
-**Ubuntu/Debian** (tested on Ubuntu14.04, Ubuntu16.04)::
+**Ubuntu/Debian** (tested on Ubuntu 14.04, Ubuntu 16.04)::
 
     apt-get install -y python-dev gcc libffi-dev libssl-dev
     pip install apache-ariatosca[ssh]
 
-**Centos** (tested on Centos6.6, Centos7)::
+**CentOS/Fedora** (tested on CentOS 6.6, CentOS 7)::
 
     yum install -y python-devel gcc libffi-devel openssl-devel
     pip install apache-ariatosca[ssh]
@@ -65,7 +67,7 @@ To install ARIA from source, download the source tarball from
     pacman -Syu --noconfirm python2 gcc libffi openssl
     pip2 install apache-ariatosca[ssh]
 
-**Windows** (tested on Win10)::
+**Windows** (tested on Windows 10)::
 
     # no additional system requirements are needed
     pip install apache-ariatosca[ssh]
@@ -76,7 +78,7 @@ To install ARIA from source, download the source tarball from
 
 
 
-To install ``pip``, either use your distro's package management system, or run::
+To install ``pip``, either use your operating system's package management system, or run::
 
     wget http://bootstrap.pypa.io/get-pip.py
     python get-pip.py
@@ -91,7 +93,7 @@ This section will describe how to run a simple "Hello World" example.
 First, provide ARIA with the ARIA "hello world" service-template and name it (e.g.
 ``my-service-template``)::
 
-    aria service-templates store examples/hello-world/helloworld.yaml my-service-template
+    aria service-templates store examples/hello-world/hello-world.yaml my-service-template
 
 Now create a service based on this service-template and name it (e.g. ``my-service``)::
 
@@ -117,7 +119,8 @@ Contribution
 You are welcome and encouraged to participate and contribute to the ARIA project.
 
 Please see our guide to
-`Contributing to ARIA <https://cwiki.apache.org/confluence/display/ARIATOSCA/Contributing+to+ARIA>`__.
+`Contributing to ARIA
+<https://cwiki.apache.org/confluence/display/ARIATOSCA/Contributing+to+ARIA>`__.
 
 Feel free to also provide feedback on the mailing lists (see `Resources <#user-content-resources>`__
 section).
@@ -126,12 +129,12 @@ section).
 Resources
 ---------
 
--  `ARIA homepage <http://ariatosca.incubator.apache.org/>`__
--  `ARIA wiki <https://cwiki.apache.org/confluence/display/AriaTosca>`__
+- `ARIA homepage <http://ariatosca.incubator.apache.org/>`__
+- `ARIA wiki <https://cwiki.apache.org/confluence/display/AriaTosca>`__
 -  `Issue tracker <https://issues.apache.org/jira/browse/ARIA>`__
 
--  Dev mailing list: dev@ariatosca.incubator.apache.org
--  User mailing list: user@ariatosca.incubator.apache.org
+- Dev mailing list: dev@ariatosca.incubator.apache.org
+- User mailing list: user@ariatosca.incubator.apache.org
 
 Subscribe by sending a mail to ``<group>-subscribe@ariatosca.incubator.apache.org`` (e.g.
 ``dev-subscribe@ariatosca.incubator.apache.org``). See information on how to subscribe to mailing

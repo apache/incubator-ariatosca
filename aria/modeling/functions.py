@@ -19,6 +19,7 @@ Mechanism for evaluating intrinsic functions.
 from ..parser.exceptions import InvalidValueError
 from ..parser.consumption import ConsumptionContext
 from ..utils.collections import OrderedDict
+from ..utils.type import full_type_name
 from . import exceptions
 
 
@@ -88,7 +89,8 @@ def evaluate(value, container_holder, report_issues=False): # pylint: disable=to
             if (evaluation is None) \
                 or (not hasattr(evaluation, 'value')) \
                 or (not hasattr(evaluation, 'final')):
-                raise InvalidValueError('bad __evaluate__ implementation')
+                raise InvalidValueError('bad __evaluate__ implementation: {0}'
+                                        .format(full_type_name(value)))
 
             evaluated = True
             value = evaluation.value

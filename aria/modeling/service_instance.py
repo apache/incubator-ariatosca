@@ -38,7 +38,7 @@ from .mixins import InstanceModelMixin
 
 from ..utils import (
     collections,
-    formatting,
+    formatting
 )
 
 
@@ -227,6 +227,36 @@ class ServiceBase(InstanceModelMixin):
 
     :type: :class:`~datetime.datetime`
     """)
+
+    def get_node_by_type(self, type_name):
+        """
+        Finds the first node of a type (or descendent type).
+        """
+        service_template = self.service_template
+
+        if service_template is not None:
+            node_types = service_template.node_types
+            if node_types is not None:
+                for node in self.nodes.itervalues():
+                    if node_types.is_descendant(type_name, node.type.name):
+                        return node
+
+        return None
+
+    def get_policy_by_type(self, type_name):
+        """
+        Finds the first policy of a type (or descendent type).
+        """
+        service_template = self.service_template
+
+        if service_template is not None:
+            policy_types = service_template.policy_types
+            if policy_types is not None:
+                for policy in self.policies.itervalues():
+                    if policy_types.is_descendant(type_name, policy.type.name):
+                        return policy
+
+        return None
 
     @property
     def as_raw(self):
@@ -479,14 +509,15 @@ class NodeBase(InstanceModelMixin):
 
     @classmethod
     def determine_state(cls, op_name, is_transitional):
-        """ :returns the state the node should be in as a result of running the
-            operation on this node.
+        """
+        :returns the state the node should be in as a result of running the operation on this node.
 
-            e.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
-            the resulting state should either 'creating' (if the task just started) or 'created'
-            (if the task ended).
+        E.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
+        the resulting state should either 'creating' (if the task just started) or 'created'
+        (if the task ended).
 
-            If the operation is not a standard tosca lifecycle operation, then we return None"""
+        If the operation is not a standard TOSCA lifecycle operation, then we return None.
+        """
 
         state_type = 'transitional' if is_transitional else 'finished'
         try:
@@ -497,11 +528,24 @@ class NodeBase(InstanceModelMixin):
     def is_available(self):
         return self.state not in (self.INITIAL, self.DELETED, self.ERROR)
 
+    def get_outbound_relationship_by_name(self, name):
+        for the_relationship in self.outbound_relationships:
+            if the_relationship.name == name:
+                return the_relationship
+        return None
+
+    def get_inbound_relationship_by_name(self, name):
+        for the_relationship in self.inbound_relationships:
+            if the_relationship.name == name:
+                return the_relationship
+        return None
+
     @property
     def host_address(self):
         if self.host and self.host.attributes:
             attribute = self.host.attributes.get('ip')
-            return attribute.value if attribute else None
+            if attribute is not None:
+                return attribute.value
         return None
 
     @property

@@ -68,12 +68,14 @@ def get_inherited_capability_definitions(context, presentation, for_presentation
                 capability_definition = capability_definitions[capability_name]
 
                 # Check if we changed the type
-                type1 = capability_definition.type
-                type2 = our_capability_definition.type
-                if type1 != type2:
+                type1 = capability_definition._get_type(context)
+                type2 = our_capability_definition._get_type(context)
+
+                if not type1._is_descendant(context, type2):
                     context.validation.report(
-                        'capability definition changes type from "{0}" to "{1}" in "{2}"'
-                        .format(type1, type2, presentation._fullname),
+                        'capability definition type "{0}" is not a descendant of overridden '
+                        'capability definition type "{1}"' \
+                        .format(type1._name, type2._name),
                         locator=our_capability_definition._locator, level=Issue.BETWEEN_TYPES)
 
                 merge_capability_definition(context, presentation, capability_definition,
@@ -167,6 +169,8 @@ def convert_capability_from_definition_to_assignment(context, presentation, cont
 def merge_capability_definition(context, presentation, capability_definition,
                                 from_capability_definition):
     raw_properties = OrderedDict()
+
+    capability_definition._raw['type'] = from_capability_definition.type
 
     # Merge properties from type
     from_property_defintions = from_capability_definition.properties

@@ -159,10 +159,6 @@ def get_data_type(context, presentation, field_name, allow_none=False):
         else:
             return str
 
-    # Make sure not derived from self
-    if type_name == presentation._name:
-        return None
-
     # Avoid circular definitions
     container_data_type = get_container_data_type(presentation)
     if (container_data_type is not None) and (container_data_type._name == type_name):

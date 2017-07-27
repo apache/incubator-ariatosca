@@ -1,0 +1,446 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+capability_types:
+
+  # https://en.wikipedia.org/wiki/IP_Multimedia_Subsystem#Core_network
+
+  ims.functions.Root:
+    derived_from: tosca.capabilities.Root
+
+  ims.functions.CTF: # not mentioned in Wikipedia
+    description: >-
+      Charging Trigger Function.
+    derived_from: ims.functions.Root
+
+  ims.functions.XDMS: # not mentioned in Wikipedia
+    description: >-
+      XML Document Management Server
+    derived_from: ims.functions.Root
+
+  ims.functions.HSS:
+    description: >-
+      The home subscriber server (HSS), or user profile server function (UPSF), is a master user
+      database that supports the IMS network entities that actually handle calls. It contains the
+      subscription-related information (subscriber profiles), performs authentication and
+      authorization of the user, and can provide information about the subscriber's location and IP
+      information. It is similar to the GSM home location register (HLR) and Authentication centre
+      (AuC).
+
+      A subscriber location function (SLF) is needed to map user addresses when multiple HSSs are
+      used.
+    derived_from: ims.functions.Root
+
+  ims.functions.CSCF:
+    description: >-
+      Several roles of SIP servers or proxies, collectively called Call Session Control Function
+      (CSCF), are used to process SIP signalling packets in the IMS.
+    derived_from: ims.functions.Root
+
+  ims.functions.P-CSCF:
+    description: >-
+      A Proxy-CSCF (P-CSCF) is a SIP proxy that is the first point of contact for the IMS terminal.
+      It can be located either in the visited network (in full IMS networks) or in the home network
+      (when the visited network is not IMS compliant yet). Some networks may use a Session Border
+      Controller (SBC) for this function. The P-CSCF is at its core a specialized SBC for the
+      User–network interface which not only protects the network, but also the IMS terminal. The use
+      of an additional SBC between the IMS terminal and the P-CSCF is unnecessary and infeasible due
+      to the signaling being encrypted on this leg. The terminal discovers its P-CSCF with either
+      DHCP, or it may be configured (e.g. during initial provisioning or via a 3GPP IMS Management
+      Object (MO)) or in the ISIM or assigned in the PDP Context (in General Packet Radio Service
+      (GPRS)).
+    derived_from: ims.functions.CSCF
+
+  ims.functions.I-CSCF:
+    description: >-
+      An Interrogating-CSCF (I-CSCF) is another SIP function located at the edge of an
+      administrative domain. Its IP address is published in the Domain Name System (DNS) of the
+      domain (using NAPTR and SRV type of DNS records), so that remote servers can find it, and use
+      it as a forwarding point (e.g., registering) for SIP packets to this domain.
+    derived_from: ims.functions.CSCF
+
+  ims.functions.S-CSCF:
+    description: >-
+      A Serving-CSCF (S-CSCF) is the central node of the signalling plane. It is a SIP server, but
+      performs session control too. It is always located in the home network. It uses Diameter Cx
+      and Dx interfaces to the HSS to download user profiles and upload user-to-S-CSCF associations
+      (the user profile is only cached locally for processing reasons only and is not changed). All
+      necessary subscriber profile information is loaded from the HSS.
+    derived_from: ims.functions.CSCF
+
+  ims.functions.AS:
+    description: >-
+      SIP Application servers (AS) host and execute services, and interface with the S-CSCF using
+      SIP. An example of an application server that is being developed in 3GPP is the Voice call
+      continuity Function (VCC Server). Depending on the actual service, the AS can operate in SIP
+      proxy mode, SIP UA (user agent) mode or SIP B2BUA mode. An AS can be located in the home
+      network or in an external third-party network. If located in the home network, it can query
+      the HSS with the Diameter Sh or Si interfaces (for a SIP-AS).
+    derived_from: ims.functions.Root
+
+  ims.functions.SIP-AS:
+    description: >-
+      Host and execute IMS specific services.
+    derived_from: ims.functions.AS
+
+  ims.functions.IM-SSF:
+    description: >-
+      IP Multimedia Service Switching Function. Interfaces SIP to CAP to communicate with CAMEL
+      Application Servers.
+    derived_from: ims.functions.AS
+
+  ims.functions.OSA-SCS:
+    description: >-
+      OSA service capability server. Interfaces SIP to the OSA framework.
+    derived_from: ims.functions.AS
+
+  ims.functions.AS-ILCM:
+    description: >-
+      The AS-ILCM (Application Server - Incoming Leg Control Model) stores transaction state, and
+      may optionally store session state depending on the specific service being executed. The
+      AS-ILCM interfaces to the S-CSCF (ILCM) for an incoming leg. Application Logic provides the
+      service(s) and interacts between the AS-ILCM and AS-OLCM.
+    derived_from: ims.functions.AS
+
+  ims.functions.AS-OLCM:
+    description: >-
+      The AS-OLCM (Application Server - Outgoing Leg Control Model) stores transaction state, and
+      may optionally store session state depending on the specific service being executed. The
+      AS-OLCM interfaces to the S-CSCF (OLCM) for an outgoing leg. Application Logic provides the
+      service(s) and interacts between the AS-ILCM and AS-OLCM.
+    derived_from: ims.functions.AS
+
+  ims.functions.MRF:
+    description: >-
+      The Media Resource Function (MRF) provides media related functions such as media manipulation
+      (e.g. voice stream mixing) and playing of tones and announcements.
+
+      Each MRF is further divided into a media resource function controller (MRFC) and a media
+      resource function processor (MRFP).
+    derived_from: ims.functions.Root
+
+  ims.functions.MRFC:
+    description: >-
+      The MRFC is a signalling plane node that interprets information coming from an AS and S-CSCF
+      to control the MRFP.
+    derived_from: ims.functions.Root
+
+  ims.functions.MRFP:
+    description: >-
+      The MRFP is a media plane node used to mix, source or process media streams. It can also
+      manage access right to shared resources.
+    derived_from: ims.functions.Root
+
+  ims.functions.MRB:
+    description: >-
+      The Media Resource Broker (MRB) is a functional entity that is responsible for both collection
+      of appropriate published MRF information and supplying of appropriate MRF information to
+      consuming entities such as the AS. MRB can be used in two modes:
+      * Query mode: AS queries the MRB for media and sets up the call using the response of MRB
+      * In-Line Mode: AS sends a SIP INVITE to the MRB. The MRB sets up the call
+    derived_from: ims.functions.Root
+
+  ims.functions.BGCF:
+    description: >-
+      A Breakout Gateway Control Function (BGCF) is a SIP proxy which processes requests for routing
+      from an S-CSCF when the S-CSCF has determined that the session cannot be routed using DNS or
+      ENUM/DNS. It includes routing functionality based on telephone numbers.
+    derived_from: ims.functions.Root
+
+  ims.functions.PTSNGateway:
+    description: >-
+      A PSTN/CS gateway interfaces with PSTN circuit switched (CS) networks. For signalling, CS
+      networks use ISDN User Part (ISUP) (or BICC) over Message Transfer Part (MTP), while IMS uses
+      SIP over IP. For media, CS networks use Pulse-code modulation (PCM), while IMS uses Real-time
+      Transport Protocol (RTP).
+    derived_from: ims.functions.Root
+
+  ims.functions.SGW:
+    description: >-
+      A signalling gateway (SGW) interfaces with the signalling plane of the CS. It transforms lower
+      layer protocols as Stream Control Transmission Protocol (SCTP, an IP protocol) into Message
+      Transfer Part (MTP, an Signalling System 7 (SS7) protocol), to pass ISDN User Part (ISUP) from
+      the MGCF to the CS network.
+    derived_from: ims.functions.PTSNGateway
+
+  ims.functions.MGCF:
+    description: >-
+      A media gateway controller function (MGCF) is a SIP endpoint that does call control protocol
+      conversion between SIP and ISUP/BICC and interfaces with the SGW over SCTP. It also controls
+      the resources in a Media Gateway (MGW) across an H.248 interface.
+    derived_from: ims.functions.PTSNGateway
+
+  ims.functions.MGW:
+    description: >-
+      A media gateway (MGW) interfaces with the media plane of the CS network, by converting between
+      RTP and PCM. It can also transcode when the codecs don't match (e.g., IMS might use AMR, PSTN
+      might use G.711).
+    derived_from: ims.functions.PTSNGateway
+
+  # https://en.wikipedia.org/wiki/IP_Multimedia_Subsystem#Interfaces_description
+
+  ims.interfaces.Diameter:
+    derived_from: tosca.capabilities.Endpoint
+
+  ims.interfaces.TCP:
+    derived_from: tosca.capabilities.Endpoint
+
+  ims.interfaces.SIP:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+
+  ims.interfaces.RTP:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: rtp
+
+  ims.interfaces.H248:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: h248
+
+  ims.interfaces.HTTP:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: http
+
+  ims.interfaces.MAP:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: map
+
+  ims.interfaces.Cr:
+    description: >-
+      Used by MRFC to fetch documents (e.g. scripts, announcement files, and other resources) from
+      an AS. Also used for media control related commands.
+    derived_from: ims.interfaces.TCP
+
+  ims.interfaces.Cx:
+    description: >-
+      Used to send subscriber data to the S-CSCF; including filter criteria and their priority. Also
+      used to furnish CDF and/or OCF addresses.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Dh:
+    description: >-
+      Used by AS to find the HSS holding the user profile information in a multi-HSS environment.
+      DH_SLF_QUERY indicates an IMPU and DX_SLF_RESP return the HSS name.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Dx:
+    description: >-
+      Used by I-CSCF or S-CSCF to find a correct HSS in a multi-HSS environment. DX_SLF_QUERY
+      indicates an IMPU and DX_SLF_RESP return the HSS name.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Gm:
+    description: >-
+      Used to exchange messages between SIP user equipment (UE) or Voip gateway and P-CSCF.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Go:
+    description: >-
+      Allows operators to control QoS in a user plane and exchange charging correlation
+      information between IMS and GPRS network.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Gq:
+    description: >-
+      Used to exchange policy decisions-related information between P-CSCF and PDF.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Gx:
+    description: >-
+      Used to exchange policy decisions-related information between PCEF and PCRF.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Gy:
+    description: >-
+      Used for online flow-based bearer charging. Functionally equivalent to Ro interface.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.ISC:
+    description: >-
+      Reference point between S-CSCF and AS. Main functions are to:
+      * Notify the AS of the registered IMPU, registration state and UE capabilities
+      * Supply the AS with information to allow it to execute multiple services
+      * Convey charging function addresses
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Ici:
+    description: >-
+      Used to exchange messages between an IBCF and another IBCF belonging to a different IMS
+      network.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Izi:
+    description: >-
+      Used to forward media streams from a TrGW to another TrGW belonging to a different IMS
+      network.
+    derived_from: ims.interfaces.RTP
+
+  ims.interfaces.Ma:
+    description: >-
+      Main functions are to:
+      * Forward SIP requests which are destined to a public service identity hosted by the AS
+      * Originate a session on behalf of a user or public service identity, if the AS has no
+        knowledge of a S-CSCF assigned to that user or public service identity
+      * Convey charging function addresses
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mg:
+    description: >-
+      ISUP signalling to SIP signalling and forwards SIP signalling to I-CSCF.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mi:
+    description: >-
+      Used to exchange messages between S-CSCF and BGCF.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mj:
+    description: >-
+      Used for the interworking with the PSTN/CS domain, when the BGCF has determined that a
+      breakout should occur in the same IMS network to send SIP message from BGCF to MGCF.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mk:
+    description: >-
+      Used for the interworking with the PSTN/CS domain, when the BGCF has determined that a
+      breakout should occur in another IMS network to send SIP message from BGCF to the BGCF in the
+      other network.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mm:
+    description: >-
+      Used for exchanging messages between IMS and external IP networks.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mn:
+    description: >-
+      Allows control of user-plane resources.
+    derived_from: ims.interfaces.H248
+
+  ims.interfaces.Mp:
+    description: >-
+      Allows an MRFC to control media stream resources provided by an MRFP.
+    derived_from: ims.interfaces.H248
+
+  ims.interfaces.Mr:
+    description: >-
+      Used to exchange information between S-CSCF and MRFC.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mr2:
+    description: >-
+      Used to exchange session controls between AS and MRFC.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mw:
+    description: >-
+      Used to exchange messages between CSCFs. AGCF appears as a P-CSCF to the other CSCFs.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Mx:
+    description: >-
+      Used for the interworking with another IMS network, when the BGCF has determined that a
+      breakout should occur in the other IMS network to send SIP message from BGCF to the IBCF in
+      the other network.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.P1:
+    description: >-
+      Used for call control services by AGCF to control H.248 A-MGW and residential gateways.
+    derived_from: ims.interfaces.H248
+
+  ims.interfaces.P2:
+    description: >-
+      Reference point between AGCF and CSCF.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Rc:
+    description: >-
+      Used by the AS to request that media resources be assigned to a call when using MRB in-line
+      mode or in query mode.
+    derived_from: ims.interfaces.SIP
+
+  ims.interfaces.Rf:
+    description: >-
+      Used to exchange offline charging information with CDF.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Ro:
+    description: >-
+        Used to exchange online charging information with OCF.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Rx:
+    description: >-
+      Used to exchange policy and charging related information between P-CSCF and PCRF. Replacement
+      for the Gq reference point.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Sh:
+    description: >-
+      Used to exchange User Profile information (e.g., user-related data, group lists,
+      user-service-related information or user location information or charging function addresses
+      (used when the AS has not received the third-party REGISTER for a user)) between an AS (SIP
+      AS or OSA SCS) and HSS. Also allow AS to activate/deactivate filter criteria stored in the HSS
+      on a per-subscriber basis.
+    derived_from: ims.interfaces.Diameter
+
+  ims.interfaces.Si:
+    description: >-
+      Transports CAMEL subscription information, including triggers for use by CAMEL-based
+      application services information.
+    derived_from: ims.interfaces.MAP
+
+  ims.interfaces.Sr:
+    description: >-
+      Used by MRFC to fetch documents (scripts and other resources) from an AS.
+    derived_from: ims.interfaces.HTTP
+
+  ims.interfaces.Ut:
+    description: >-
+      Facilitates the management of subscriber information related to services and settings.
+    derived_from: ims.interfaces.HTTP
+
+  ims.interfaces.Z:
+    description: >-
+      Conversion of POTS services to SIP messages.
+    derived_from: tosca.capabilities.Root
+
+node_types:
+
+  ims.nodes.IMS:
+    derived_from: tosca.nodes.Root
+    capabilities:
+      p-cscf: ims.functions.P-CSCF
+      i-cscf: ims.functions.I-CSCF
+      s-cscf: ims.functions.S-CSCF
+      hss: ims.functions.HSS
+      ctf: ims.functions.CTF
+      xdms: ims.functions.XDMS

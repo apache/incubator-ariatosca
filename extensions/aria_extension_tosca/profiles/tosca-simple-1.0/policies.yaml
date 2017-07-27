@@ -24,7 +24,7 @@ policy_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_POLICIES_ROOT'
     description: >-
       This is the default (root) TOSCA Policy Type definition that all other TOSCA base Policy Types derive from.
-  
+
   tosca.policies.Placement:
     _extensions:
       shorthand_name: Placement # ARIA NOTE: omitted in the spec
@@ -35,7 +35,7 @@ policy_types:
     description: >-
       This is the default (root) TOSCA Policy Type definition that is used to govern placement of TOSCA nodes or groups of nodes.
     derived_from: tosca.policies.Root
-  
+
   tosca.policies.Scaling:
     _extensions:
       shorthand_name: Scaling # ARIA NOTE: omitted in the spec
@@ -46,7 +46,7 @@ policy_types:
     description: >-
       This is the default (root) TOSCA Policy Type definition that is used to govern scaling of TOSCA nodes or groups of nodes.
     derived_from: tosca.policies.Root
-  
+
   tosca.policies.Update:
     _extensions:
       shorthand_name: Update # ARIA NOTE: omitted in the spec
@@ -57,7 +57,7 @@ policy_types:
     description: >-
       This is the default (root) TOSCA Policy Type definition that is used to govern update of TOSCA nodes or groups of nodes.
     derived_from: tosca.policies.Root
-  
+
   tosca.policies.Performance:
     _extensions:
       shorthand_name: Performance # ARIA NOTE: omitted in the spec

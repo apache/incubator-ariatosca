@@ -24,7 +24,7 @@ interface_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#_Ref384391055'
     description: >-
       This is the default (root) TOSCA Interface Type definition that all other TOSCA Interface Types derive from.
-  
+
   tosca.interfaces.node.lifecycle.Standard:
     _extensions:
       shorthand_name: Standard

@@ -24,7 +24,7 @@ topology_template:
     storage_snapshot_id:
       type: string
       description: >-
-        Optional identifier for an existing snapshot to use when creating storage.    
+        Optional identifier for an existing snapshot to use when creating storage.
     storage_location:
       type: string
       description: Block storage mount point (filesystem path).
@@ -42,8 +42,8 @@ topology_template:
         os:
           properties:
             architecture: x86_64
-            type: linux 
-            distribution: fedora 
+            type: linux
+            distribution: fedora
             version: 18.0
       requirements:
         - local_storage:

@@ -29,24 +29,31 @@ from aria.orchestrator import events
 from aria.orchestrator import workflow
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.executor import process
-from aria.orchestrator.workflows.core import engine, graph_compiler
+from aria.orchestrator.workflows.core import (engine, graph_compiler)
 from aria.orchestrator.workflows.exceptions import ExecutorException
-from aria.orchestrator.exceptions import TaskAbortException, TaskRetryException
+from aria.orchestrator.exceptions import (TaskAbortException, TaskRetryException)
 from aria.orchestrator.execution_plugin import operations
 from aria.orchestrator.execution_plugin import constants
-from aria.orchestrator.execution_plugin.exceptions import ProcessException, TaskException
+from aria.orchestrator.execution_plugin.exceptions import (ProcessException, TaskException)
 from aria.orchestrator.execution_plugin.ssh import operations as ssh_operations
 
 from tests import mock, storage, resources
 from tests.orchestrator.workflows.helpers import events_collector
+
 
 _CUSTOM_BASE_DIR = '/tmp/new-aria-ctx'
 
 _FABRIC_ENV = {
     'host_string': 'localhost',
     'user': 'travis',
-    'password': 'travis'
+    # 'password': 'travis',
+    'key_filename': '/home/travis/.ssh/id_rsa'
 }
+
+
+# To help debug in case of connection failures
+logging.getLogger('paramiko.transport').addHandler(logging.StreamHandler())
+logging.getLogger('paramiko.transport').setLevel(logging.DEBUG)
 
 
 @pytest.mark.skipif(not os.environ.get('TRAVIS'), reason='actual ssh server required')

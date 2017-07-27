@@ -38,8 +38,8 @@ topology_template:
         os:
           properties:
             architecture: x86_64
-            type: Linux 
-            distribution: Fedora 
+            type: Linux
+            distribution: Fedora
             version: 18.0
       requirements:
         - local_storage:

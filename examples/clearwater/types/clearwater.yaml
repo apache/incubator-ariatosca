@@ -1,0 +1,728 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+imports:
+  - ims.yaml
+  - smtp.yaml
+  - cassandra.yaml
+
+dsl_definitions:
+
+  clearwater_operation_dependencies: &CLEARWATER_OPERATION_DEPENDENCIES
+    - "ssh.user > { get_property: [ HOST, host, ssh.user ] }"
+    - "ssh.password > { get_property: [ HOST, host, ssh.password ] }"
+    - "ssh.address > { get_attribute: [ HOST, public_address ] }"
+    - "ssh.use_sudo > true"
+
+policy_types:
+
+  clearwater.Configuration:
+    derived_from: tosca.policies.Root
+    properties:
+      zone:
+        description: >-
+          The domain name for SIP addresses, for example if its "example.com" then a SIP address
+          could be "6505550243@example.com".
+        type: string
+      geographically_redundant:
+        description: >-
+          Enable a geographically redundant deployment.
+        
+          See: http://clearwater.readthedocs.io/en/stable/Geographic_redundancy.html
+        type: boolean
+        default: false
+      site_name:
+        description: >-
+          Used by geographically redundant deployments.
+        type: string
+        required: false
+      secret:
+        description: >-
+          Used for registration via Ellis.
+        type: string
+
+capability_types:
+
+  clearwater.Container:
+    description: >-
+      Clearwater container capability.
+    derived_from: tosca.capabilities.Container
+    properties:
+      hostname:
+        type: string
+      ssh.user:
+        type: string
+      ssh.password:
+        type: string
+      max_log_directory_size:
+        type: scalar-unit.size
+        default: 0 B # 0 means no max size
+      reduce_cassandra_mem_usage:
+        type: boolean
+        default: false
+
+  # http://clearwater.readthedocs.io/en/stable/Clearwater_IP_Port_Usage.html
+
+  # SIP endpoints
+
+  clearwater.Endpoint.SIP.Upstream:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 5052
+
+  clearwater.Endpoint.SIP.Upstream.Secure:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 5054
+      secure: # override
+        type: boolean
+        default: true
+
+  clearwater.Endpoint.SIP.Proxy:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 5058
+
+  clearwater.Endpoint.SIP.Public:
+    derived_from: tosca.capabilities.Endpoint.Public
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 5060
+
+  clearwater.Endpoint.SIP.Public.Secure:
+    derived_from: tosca.capabilities.Endpoint.Public
+    properties:
+      protocol: # override
+        type: string
+        default: sip
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 5062
+      secure: # override
+        type: boolean
+        default: true
+
+  # STUN endpoints
+
+  clearwater.Endpoint.STUN:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: stun
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 3478
+
+  # Diameter endpoints
+
+  clearwater.Endpoint.Diameter.HSS:
+    description: >-
+      In shared_config: hs_listen_port
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: diameter
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 3868
+
+  clearwater.Endpoint.Diameter.CTF:
+    description: >-
+      In shared_config: ralf_listen_port
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      protocol: # override
+        type: string
+        default: diameter
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 3869
+
+  # Management endpoints
+
+  clearwater.Endpoint.Management.Homer:
+    derived_from: ims.interfaces.HTTP
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 7888
+
+  clearwater.Endpoint.Management.Homestead:
+    derived_from: ims.interfaces.HTTP
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 8888
+
+  clearwater.Endpoint.Management.Homestead.Provisioning:
+    description: >-
+      In shared_config: homestead_provisioning_port
+    derived_from: ims.interfaces.HTTP
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 8889
+
+  clearwater.Endpoint.Management.Sprout:
+    derived_from: ims.interfaces.HTTP
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 9886
+
+  clearwater.Endpoint.Management.Ralf:
+    derived_from: ims.interfaces.HTTP
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 9888 # note: some documentation shows 10888
+
+  # Web endpoints
+
+  clearwater.Endpoint.Public.Web:
+    derived_from: tosca.capabilities.Endpoint.Public
+    properties:
+      protocol: # override
+        type: string
+        default: http
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 80
+      url_path: # override
+        type: string
+        default: /
+
+  clearwater.Endpoint.Public.Web.Secure:
+    derived_from: tosca.capabilities.Endpoint.Public
+    properties:
+      protocol: # override
+        type: string
+        default: https
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 443
+      secure: # override
+        type: boolean
+        default: true
+      url_path: # override
+        type: string
+        default: /        
+
+  # Other endpoints
+
+  clearwater.Endpoint.Chronos:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 7253
+
+  clearwater.Endpoint.Memcached:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 11211
+
+  clearwater.Endpoint.Astaire:
+    derived_from: tosca.capabilities.Endpoint
+    properties:
+      port: # override
+        type: tosca.datatypes.network.PortDef
+        default: 11311
+
+data_types:
+
+  clearwater.Number:
+    derived_from: string
+    constraints:
+      - pattern: '^\d{10}$'
+
+node_types:
+
+  # http://clearwater.readthedocs.io/en/stable/Clearwater_Architecture.html
+
+  clearwater.SoftwareComponent:
+    description: >-
+      Clearwater software components must be installed in a Clearwater-capable compute node.
+    derived_from: tosca.nodes.SoftwareComponent
+    requirements:
+      - host: # override
+          capability: clearwater.Container
+          relationship: tosca.relationships.HostedOn
+
+  clearwater.Bono:
+    description: >-
+      Clearwater edge proxy.
+
+      The Bono nodes form a horizontally scalable SIP edge proxy providing both a SIP IMS Gm
+      compliant interface and a WebRTC interface to clients. Client connections are load balanced
+      across the nodes. The Bono node provides the anchor point for the client's connection to the
+      Clearwater system, including support for various NAT traversal mechanisms. A client is
+      therefore anchored to a particular Bono node for the duration of its registration, but can
+      move to another Bono node if the connection or client fails.
+
+      Clients can connect to Bono using SIP/UDP or SIP/TCP. Bono supports any WebRTC client that
+      performs call setup signaling using SIP over WebSocket.
+
+      Alternatively, Clearwater can be deployed with a third party P-CSCF or Session Border
+      Controller implementing P-CSCF. In this case Bono nodes are not required.
+    derived_from: clearwater.SoftwareComponent
+    capabilities:
+      p-cscf: ims.functions.P-CSCF
+      gm: ims.interfaces.Gm
+      sip_endpoint: clearwater.Endpoint.SIP.Public
+      sip_secure_endpoint: clearwater.Endpoint.SIP.Public.Secure
+      sip_proxy: clearwater.Endpoint.SIP.Proxy # open to Sprout
+      stun_endoint: clearwater.Endpoint.STUN
+    requirements:
+      - sip_downstream:
+          capability: clearwater.Endpoint.SIP.Upstream
+          occurrences: [ 0, UNBOUNDED ]       
+      - sip_secure_downstream:
+          capability: clearwater.Endpoint.SIP.Upstream.Secure
+          occurrences: [ 0, UNBOUNDED ]       
+      - ralf: # for billable events
+          capability: clearwater.Endpoint.Management.Ralf
+          occurrences: [ 0, 1 ]       
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/bono/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/bono/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Sprout:
+    description: >-
+      Clearwater SIP router.
+
+      The Sprout nodes act as a horizontally scalable, combined SIP registrar and authoritative
+      routing proxy, and handle client authentication and the ISC interface to application servers.
+      The Sprout nodes also contain the in-built MMTEL application server. SIP transactions are load
+      balanced across the Sprout cluster, so there is no long-lived association between a client and
+      a particular Sprout node. Sprout does not store any long-lived data itself and instead uses
+      web service interfaces to Homestead and Homer to retrieve HSS configuration such as
+      authentication data/user profiles and MMTEL service settings APIs to Vellum for storing
+      subscriber registration data and for running timers.
+
+      Sprout is where the bulk of the I-CSCF and S-CSCF function resides, with the remainder
+      provided by Dime (and backed by the long-lived data stores on Vellum).            
+    derived_from: clearwater.SoftwareComponent
+    capabilities:
+      sip_endpoint: clearwater.Endpoint.SIP.Upstream # open to Bono
+      sip_secure_endpoint: clearwater.Endpoint.SIP.Upstream.Secure # open to Bono
+      management_endpoint: clearwater.Endpoint.Management.Sprout
+      memento:
+        type: tosca.capabilities.Container
+        valid_source_types: [ clearwater.Memento ]
+    requirements:
+# cyclical: see ARIA-327
+#      - sip_upstream:
+#          capability: clearwater.Endpoint.SIP.Proxy      
+#          occurrences: [ 0, UNBOUNDED ]       
+      - homer: # for subscriber profiles
+          capability: clearwater.Endpoint.Management.Homer
+      - ralf: # for billable events
+          capability: clearwater.Endpoint.Management.Ralf
+          occurrences: [ 0, 1 ]       
+      - chronos:
+          capability: clearwater.Endpoint.Chronos
+          node: clearwater.Vellum
+      - astaire:
+          capability: clearwater.Endpoint.Astaire
+          node: clearwater.Vellum
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/sprout/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/sprout/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Memento:
+    derived_from: tosca.nodes.Root
+    capabilities:
+      sip-as: ims.functions.SIP-AS
+      web_secure_endpoint: clearwater.Endpoint.Public.Web.Secure
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+          node: clearwater.Sprout
+      - cassandra_thrift:
+          capability: cassandra.Endpoint.Thrift
+          node: clearwater.Vellum
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/memento/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/memento/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Dime:
+    description: >-
+      Clearwater Diameter gateway.
+
+      Dime nodes run Clearwater's Homestead and Ralf components.
+    derived_from: clearwater.SoftwareComponent
+    capabilities:
+      host:
+         type: tosca.capabilities.Container
+         valid_source_types: [ clearwater.DimeSoftwareComponent ]
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/dime/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/dime/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.DimeSoftwareComponent:
+    description: >-
+      Base type for Dime software components.
+    derived_from: clearwater.SoftwareComponent
+    requirements:
+      - host: # override
+          capability: tosca.capabilities.Container
+          node: clearwater.Dime
+
+  clearwater.Homestead:
+    description: >-
+      Clearwater HSS cache.
+
+      Homestead provides a web services interface to Sprout for retrieving authentication
+      credentials and user profile information. It can either master the data (in which case it
+      exposes a web services provisioning interface) or can pull the data from an IMS compliant HSS
+      over the Cx interface. The Homestead nodes themselves are stateless - the mastered / cached
+      subscriber data is all stored on Vellum (via Cassandra's Thrift interface).
+
+      In the IMS architecture, the HSS mirror function is considered to be part of the I-CSCF and
+      S-CSCF components, so in Clearwater I-CSCF and S-CSCF function is implemented with a
+      combination of Sprout and Dime clusters.
+    derived_from: clearwater.DimeSoftwareComponent
+    capabilities:
+      hss: ims.functions.HSS
+      cx: ims.interfaces.Cx
+      diameter_endpoint: clearwater.Endpoint.Diameter.HSS
+      management_endpoint: clearwater.Endpoint.Management.Homestead # open to Ellis
+      provisioning_management_endpoint: clearwater.Endpoint.Management.Homestead.Provisioning # open to Ellis
+    requirements:
+      - cassandra_thrift:
+          capability: cassandra.Endpoint.Thrift
+          node: clearwater.Vellum
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/homestead/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/homestead/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Ralf:
+    description: >-
+      Clearwater CTF.
+
+      Ralf provides an HTTP API that both Bono and Sprout can use to report billable events that
+      should be passed to the CDF (Charging Data Function) over the Rf billing interface. Ralf is
+      stateless, using Vellum to maintain the long lived session state and run the timers necessary
+      to enable it to conform to the Rf protocol.
+    derived_from: clearwater.DimeSoftwareComponent
+    capabilities:
+      ctf: ims.functions.CTF
+      rf: ims.interfaces.Rf
+      diameter_endpoint: clearwater.Endpoint.Diameter.CTF
+      management_endpoint: clearwater.Endpoint.Management.Ralf # open to Sprout, Bono, Vellum
+    requirements:
+      - chronos:
+          capability: clearwater.Endpoint.Chronos
+          node: clearwater.Vellum
+      - astaire:
+          capability: clearwater.Endpoint.Astaire
+          node: clearwater.Vellum
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/ralf/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/ralf/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Vellum:
+    description: >-
+      Clearwater state store.
+
+      Vellum is used to maintain all long-lived state in the deployment. It does this by running a
+      number of cloud optimized, distributed storage clusters.
+
+      - Cassandra. Cassandra is used by Homestead to store authentication credentials and profile
+      information, and is used by Homer to store MMTEL service settings. Vellum exposes Cassandra's
+      Thrift API.
+
+      - etcd. etcd is used by Vellum itself to share clustering information between Vellum nodes and
+      by other nodes in the deployment for shared configuration.
+
+      - Chronos. Chronos is a distributed, redundant, reliable timer service developed by
+      Clearwater. It is used by Sprout and Ralf nodes to enable timers to be run (e.g. for SIP
+      Registration expiry) without pinning operations to a specific node (one node can set the timer
+      and another act on it when it pops). Chronos is accessed via an HTTP API.
+
+      - Memcached / Astaire. Vellum also runs a Memcached cluster fronted by Astaire. Astaire is a
+      service developed by Clearwater that enabled more rapid scale up and scale down of memcached
+      clusters. This cluster is used by Sprout and Ralf for storing registration and session state.
+    derived_from: clearwater.SoftwareComponent
+    capabilities:
+      cassandra_endpoint: cassandra.Endpoint # open to other Vellum
+      cassandra_thrift_endpoint: cassandra.Endpoint.Thrift # open to Homer, Dime (Homestead), Sprout (Memento)
+      chronos_endpoint: clearwater.Endpoint.Chronos # open to other Vellum, Sprout, Dime (Ralf)
+      memcached_endpoint: clearwater.Endpoint.Memcached # open to other Vellum
+      astaire_endpoint: clearwater.Endpoint.Astaire # open to Sprout, Dime (Ralf)
+# cyclical: see ARIA-327
+#    requirements:
+#      - ralf:
+#          capability: clearwater.Endpoint.Management.Ralf
+#          occurrences: [ 0, 1 ]       
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/vellum/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/vellum/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Homer:
+    description: >-
+      Clearwater XDMS.
+
+      Homer is a standard XDMS used to store MMTEL service settings documents for each user of the
+      system. Documents are created, read, updated and deleted using a standard XCAP interface. As
+      with Homestead, the Homer nodes use Vellum as the data store for all long lived data.
+    derived_from: clearwater.SoftwareComponent
+    capabilities:
+      xdms: ims.functions.XDMS
+      management_endpoint: clearwater.Endpoint.Management.Homer # open to Sprout, Ellis
+    requirements:
+      - cassandra_thrift:
+          capability: cassandra.Endpoint.Thrift
+          node: clearwater.Vellum
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/homer/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/homer/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.Ellis:
+    description: >-
+      Ellis is a sample provisioning portal providing self sign-up, password management, line
+      management and control of MMTEL service settings. It is not intended to be a part of
+      production Clearwater deployments (it is not easy to horizontally scale because of the MySQL
+      underpinnings for one thing) but to make the system easy to use out of the box.
+    derived_from: clearwater.SoftwareComponent
+    properties:
+      provision_numbers_start:
+        type: clearwater.Number
+        default: '6505550000'
+      provision_numbers_count:
+        type: integer
+        default: 0 # 0 means do not provision numbers
+        constraints:
+          - greater_or_equal: 0
+    capabilities:
+      web_endpoint: clearwater.Endpoint.Public.Web
+      web_secure_endpoint: clearwater.Endpoint.Public.Web.Secure
+    requirements:
+      - homer: # for subscriber profiles
+          capability: clearwater.Endpoint.Management.Homer
+      - homestead: # for subscriber authentication
+          capability: clearwater.Endpoint.Management.Homestead
+      - homestead_provisioning:
+          capability: clearwater.Endpoint.Management.Homestead.Provisioning
+      - ralf: # TODO: really?
+          capability: clearwater.Endpoint.Management.Ralf
+          occurrences: [ 0, 1 ]       
+      - smtp:
+          capability: smtp.SMTP
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/ellis/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        configure:
+          implementation:
+            primary: scripts/ellis/configure.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/ellis/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.I-CSCF:
+    description: >-
+      Clearwater I-CSCF.
+
+      Logical node encompassing Sprout and Homestead. Required only if you need to expose the I-CSCF
+      function.
+    derived_from: tosca.nodes.Root
+    capabilities:
+      i-cscf: ims.functions.I-CSCF
+    requirements:
+      - sprout:
+          capability: tosca.capabilities.Node
+          node: clearwater.Sprout
+      - homestead:
+          capability: tosca.capabilities.Node
+          node: clearwater.Homestead
+
+  clearwater.S-CSCF:
+    description: >-
+      Clearwater S-CSCF.
+
+      Logical node encompassing Sprout and Homestead. Required only if you need to expose the S-CSCF
+      function.
+    derived_from: tosca.nodes.Root
+    capabilities:
+      s-cscf: ims.functions.S-CSCF
+    requirements:
+      - sprout:
+          capability: tosca.capabilities.Node
+          node: clearwater.Sprout
+      - homestead:
+          capability: tosca.capabilities.Node
+          node: clearwater.Homestead
+
+  clearwater.LiveTest:
+    derived_from: tosca.nodes.SoftwareComponent
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation:
+            primary: scripts/live-test/create.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+        delete:
+          implementation:
+            primary: scripts/live-test/delete.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+
+  clearwater.HostBase:
+    derived_from: tosca.nodes.Compute
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        configure:
+          implementation:
+            primary: scripts/host-base/configure.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES
+    capabilities:
+      host: # override
+        type: clearwater.Container
+        valid_source_types: [ tosca.nodes.SoftwareComponent ]
+      os: # override
+        type: tosca.capabilities.OperatingSystem
+        properties:
+          architecture:
+            type: string
+            default: x86_64
+          type:
+            type: string
+            default: linux
+          distribution:
+            type: string
+            default: ubuntu
+          version:
+            type: version
+            default: 14.04
+
+  clearwater.Host:
+    description: >-
+      Default Clearwater host.
+
+      Note that any node can function as a Clearwater host as long as it has a clearwater.Container
+      capability.
+    derived_from: clearwater.HostBase
+    capabilities:
+      host: # override
+        type: clearwater.Container
+        valid_source_types: [ tosca.nodes.SoftwareComponent ]
+        properties:
+          mem_size:
+            type: scalar-unit.size
+            constraints:
+              - greater_or_equal: 0 MB
+            default: 4 GB # will run out of memory with less than this 
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        configure:
+          implementation:
+            primary: scripts/host/configure.sh
+            dependencies: *CLEARWATER_OPERATION_DEPENDENCIES

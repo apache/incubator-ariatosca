@@ -400,13 +400,15 @@ def merge_raw_operation_definitions(context, raw_operations, our_operations, int
 def merge_interface_definition(context, interface, our_source, presentation, type_name):
     if hasattr(our_source, 'type'):
         # Check if we changed the interface type
-        input_type1 = interface.type
-        input_type2 = our_source.type
-        if (input_type1 is not None) and (input_type2 is not None) and (input_type1 != input_type2):
+        type1 = interface._get_type(context)
+        type2 = our_source._get_type(context)
+
+        if (type2 is not None) and not type1._is_descendant(context, type2):
             context.validation.report(
-                'interface definition "%s" changes type from "%s" to "%s" in "%s"'
-                % (interface._name, input_type1, input_type2, presentation._fullname),
-                locator=input_type2._locator, level=Issue.BETWEEN_TYPES)
+                'interface definition type "{0}" is not a descendant of overridden '
+                'interface definition type "{1}"' \
+                .format(type1._name, type2._name),
+                locator=our_source._locator, level=Issue.BETWEEN_TYPES)
 
     # Add/merge inputs
     our_interface_inputs = our_source._get_inputs(context) \

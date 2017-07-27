@@ -363,7 +363,7 @@ class CapabilityAssignment(ExtensiblePresentation):
 
 @has_fields
 @implements_specification('3.5.6', 'tosca-simple-1.0')
-class ArtifactAssignment(ExtensiblePresentation):
+class ArtifactAssignmentForType(ExtensiblePresentation):
     """
     An artifact definition defines a named, typed file that can be associated with Node Type or Node
     Template and used by orchestration engine to facilitate deployment and implementation of
@@ -441,6 +441,12 @@ class ArtifactAssignment(ExtensiblePresentation):
     def _get_property_values(self, context):
         return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
+    @cachedmethod
+    def _validate(self, context):
+        super(ArtifactAssignmentForType, self)._validate(context)
+
+
+class ArtifactAssignment(ArtifactAssignmentForType):
     @cachedmethod
     def _validate(self, context):
         super(ArtifactAssignment, self)._validate(context)

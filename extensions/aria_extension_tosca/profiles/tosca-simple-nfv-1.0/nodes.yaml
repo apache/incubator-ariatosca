@@ -98,11 +98,11 @@ node_types:
         # ARIA NOTE: commented out in 5.9.2.5
         description: >-
           Monitoring parameter, which can be tracked for a VNFC based on this VDU. Examples include:
-          memory-consumption, CPU-utilisation, bandwidth-consumption, VNFC downtime, etc.        
+          memory-consumption, CPU-utilisation, bandwidth-consumption, VNFC downtime, etc.
         type: tosca.capabilities.nfv.Metric
     #requirements:
       # ARIA NOTE: virtual_storage is TBD
-      
+
       # ARIA NOTE: csd04 attempts to deprecate the inherited local_storage requirement, but this
       # is not possible in TOSCA
     artifacts:

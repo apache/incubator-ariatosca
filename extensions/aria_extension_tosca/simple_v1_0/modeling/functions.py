@@ -200,20 +200,24 @@ class GetProperty(Function):
         for modelable_entity in modelable_entities:
             properties = None
 
+            # First argument refers to a requirement template?
             if hasattr(modelable_entity, 'requirement_templates') \
                 and modelable_entity.requirement_templates \
                 and (req_or_cap_name in [v.name for v in modelable_entity.requirement_templates]):
-                for requirement_template in modelable_entity.requirement_templates:
-                    if requirement_template.name == req_or_cap_name:
-                        # First argument refers to a requirement
-                        # TODO: should follow to matched capability in other node...
+                for requirement in modelable_entity.requirement_templates:
+                    if requirement.name == req_or_cap_name:
+                        # TODO
                         raise CannotEvaluateFunctionException()
-                        # break
+            # First argument refers to a capability?
+            elif hasattr(modelable_entity, 'capabilities') \
+                and modelable_entity.capabilities \
+                and (req_or_cap_name in modelable_entity.capabilities):
+                properties = modelable_entity.capabilities[req_or_cap_name].properties
                 nested_property_name_or_index = self.nested_property_name_or_index[1:]
+            # First argument refers to a capability template?
             elif hasattr(modelable_entity, 'capability_templates') \
                 and modelable_entity.capability_templates \
                 and (req_or_cap_name in modelable_entity.capability_templates):
-                # First argument refers to a capability
                 properties = modelable_entity.capability_templates[req_or_cap_name].properties
                 nested_property_name_or_index = self.nested_property_name_or_index[1:]
             else:
@@ -640,7 +644,7 @@ def get_target(container_holder, name, locator):
 
 def get_modelable_entity_parameter(modelable_entity, parameters, nested_parameter_name_or_index):
     if not parameters:
-        return False, True, None
+        return Evaluation(None, True)
 
     found = True
     final = True

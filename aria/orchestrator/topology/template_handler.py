@@ -206,12 +206,15 @@ class CapabilityTemplate(common.TemplateHandlerBase):
         self._topology.coerce(self._model.properties, **kwargs)
 
     def instantiate(self, instance_cls, **_):
-        return instance_cls(name=self._model.name,
-                            type=self._model.type,
-                            min_occurrences=self._model.min_occurrences,
-                            max_occurrences=self._model.max_occurrences,
-                            occurrences=0,
-                            capability_template=self._model)
+        capability = instance_cls(
+            name=self._model.name,
+            type=self._model.type,
+            min_occurrences=self._model.min_occurrences,
+            max_occurrences=self._model.max_occurrences,
+            occurrences=0,
+            capability_template=self._model)
+        capability.properties = self._topology.instantiate(self._model.properties)
+        return capability
 
     def validate(self, **kwargs):
         self._topology.validate(self._model.properties, **kwargs)
@@ -446,7 +449,7 @@ class SubstitutionTemplate(common.TemplateHandlerBase):
 class SubstitutionTemplateMapping(common.TemplateHandlerBase):
 
     def dump(self, out_stream):
-        if self._topology.capability_template is not None:
+        if self._model.capability_template is not None:
             node_template = self._model.capability_template.node_template
         else:
             node_template = self._model.requirement_template.node_template

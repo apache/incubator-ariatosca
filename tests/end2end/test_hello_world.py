@@ -20,7 +20,7 @@ from .. import helpers
 
 
 def test_hello_world(testenv):
-    hello_world_template_uri = helpers.get_example_uri('hello-world', 'helloworld.yaml')
+    hello_world_template_uri = helpers.get_example_uri('hello-world', 'hello-world.yaml')
     service_name = testenv.install_service(hello_world_template_uri)
 
     try:

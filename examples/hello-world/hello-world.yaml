@@ -6,10 +6,10 @@ node_types:
     derived_from: tosca:Root
     capabilities:
       host:
-        type: tosca.capabilities.Container
+        type: tosca:Container
 
   WebApp:
-    derived_from: tosca.nodes.WebApplication
+    derived_from: tosca:WebApplication
     properties:
       port:
         type: integer

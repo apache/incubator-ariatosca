@@ -163,7 +163,7 @@ class Version(object):
     #TYPE_TOSCA_VERSION>`__
     """
 
-    REGULAR = \
+    REGEX = \
         r'^(?P<major>\d+)\.(?P<minor>\d+)(\.(?P<fix>\d+)' + \
         r'((\.(?P<qualifier>\d+))(\-(?P<build>\d+))?)?)?$'
 
@@ -176,7 +176,7 @@ class Version(object):
 
     def __init__(self, entry_schema, constraints, value, aspect): # pylint: disable=unused-argument
         str_value = str(value)
-        match = re.match(Version.REGULAR, str_value)
+        match = re.match(Version.REGEX, str_value)
         if match is None:
             raise ValueError(
                 'version must be formatted as <major_version>.<minor_version>'
@@ -376,11 +376,14 @@ class Scalar(object):
 
     def __init__(self, entry_schema, constraints, value, aspect): # pylint: disable=unused-argument
         str_value = str(value)
-        match = re.match(self.REGULAR, str_value) # pylint: disable=no-member
+        match = re.match(self.REGEX, str_value) # pylint: disable=no-member
         if match is None:
             raise ValueError('scalar must be formatted as <scalar> <unit>: %s' % safe_repr(value))
 
         self.factor = float(match.group('scalar'))
+        if self.factor < 0:
+            raise ValueError('scalar is negative: %s' % safe_repr(self.factor))
+
         self.unit = match.group('unit')
 
         unit_lower = self.unit.lower()
@@ -435,7 +438,7 @@ class ScalarSize(Scalar):
     """
 
     # See: http://www.regular-expressions.info/floatingpoint.html
-    REGULAR = \
+    REGEX = \
         r'^(?P<scalar>[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*(?P<unit>B|kB|KiB|MB|MiB|GB|GiB|TB|TiB)$'
 
     UNITS = {
@@ -464,7 +467,7 @@ class ScalarTime(Scalar):
     """
 
     # See: http://www.regular-expressions.info/floatingpoint.html
-    REGULAR = r'^(?P<scalar>[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*(?P<unit>ns|us|ms|s|m|h|d)$'
+    REGEX = r'^(?P<scalar>[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*(?P<unit>ns|us|ms|s|m|h|d)$'
 
     UNITS = {
         'ns':     0.000000001,
@@ -490,7 +493,7 @@ class ScalarFrequency(Scalar):
     """
 
     # See: http://www.regular-expressions.info/floatingpoint.html
-    REGULAR = r'^(?P<scalar>[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*(?P<unit>Hz|kHz|MHz|GHz)$'
+    REGEX = r'^(?P<scalar>[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*(?P<unit>Hz|kHz|MHz|GHz)$'
 
     UNITS = {
         'Hz':           1.0,

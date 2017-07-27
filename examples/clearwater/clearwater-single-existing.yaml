@@ -1,0 +1,147 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+description: >-
+  Project Clearwater is an open-source IMS core, developed by Metaswitch Networks and released under
+  the GNU GPLv3.
+
+metadata:
+  template_name: clearwater-single-existing
+  template_author: ARIA
+  template_version: '1.0'
+  aria_version: '0.2.0'
+
+imports:
+  - types/clearwater.yaml
+  - aria-1.0
+
+topology_template:
+
+  inputs:
+    hosts.ssh.user:
+      description: >-
+        Existing SSH user.
+      type: string
+    hosts.ssh.password:
+      description: >-
+        Existing SSH password.
+      type: string
+    existing_host.public_address:
+      description: >-
+        Existing IP address that can be accessed by ARIA.
+      type: string
+    existing_host.private_address:
+      description: >-
+        Existing IP address that can be accessed within the service.
+      type: string
+      default: { get_input: existing_host.public_address }
+    existing_host.hostname:
+      description: >-
+        The hostname will be changed to this.
+      type: string
+      default: aria-clearwater-single
+
+  node_templates:
+    bono:
+      type: clearwater.Bono
+      requirements:
+        - sip_downstream: clearwater.Sprout
+        - sip_secure_downstream: clearwater.Sprout
+        - ralf: clearwater.Ralf
+
+    sprout:
+      type: clearwater.Sprout
+      requirements:
+        - ralf: clearwater.Ralf
+# cyclical: see ARIA-327
+#        - sip_upstream: clearwater.Bono
+
+    dime:
+      type: clearwater.Dime
+
+    homestead:
+      type: clearwater.Homestead
+
+    ralf:
+      type: clearwater.Ralf
+      description: >-
+        Optional, only required if you are using a CCF (Charging Collection Function).
+
+    homer:
+      type: clearwater.Homer
+
+    vellum:
+      type: clearwater.Vellum
+#      requirements:
+# cyclical: see ARIA-327
+#        - ralf: clearwater.Ralf
+
+    i-cscf:
+      type: clearwater.I-CSCF
+
+    s-cscf:
+      type: clearwater.S-CSCF
+
+    ellis:
+      type: clearwater.Ellis
+      description: >-
+        Optional, only required if you want a web frontend.
+      properties:
+        provision_numbers_count: 1000
+      requirements:
+        - ralf: clearwater.Ralf
+
+    existing_host:
+      type: clearwater.Host
+      attributes:
+        public_address: { get_input: existing_host.public_address }
+        private_address: { get_input: existing_host.private_address }
+      capabilities:
+        host:
+          properties:
+            hostname: { get_input: existing_host.hostname }
+            ssh.user: { get_input: hosts.ssh.user }
+            ssh.password: { get_input: hosts.ssh.password }
+            max_log_directory_size: 50 MiB
+            reduce_cassandra_mem_usage: true
+
+    smtp:
+      type: smtp.SMTP
+      properties:
+        address: 127.0.0.1
+      capabilities:
+        smtp:
+          properties:
+            username: username
+            password: password
+
+  policies:
+    configuration:
+      type: clearwater.Configuration
+      properties:
+        zone: example.com
+        secret: secret
+
+  substitution_mappings:
+    node_type: ims.nodes.IMS
+    capabilities:
+       p-cscf: [ bono, p-cscf ]
+       i-cscf: [ i-cscf, i-cscf ]
+       s-cscf: [ s-cscf, s-cscf ]
+       hss: [ homestead, hss ]
+       ctf: [ ralf, ctf ]
+       xdms: [ homer, xdms ]

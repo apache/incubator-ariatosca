@@ -6,17 +6,17 @@ description: >-
 topology_template:
 
   node_templates:
-  
+
     my_server:
       type: Compute
       requirements:
         - local_storage:
-            node: my_block_storage           
+            node: my_block_storage
             relationship:
               type: AttachesTo
               properties:
                 location: /path1/path2
-  
+
     my_block_storage:
       type: BlockStorage
       properties:

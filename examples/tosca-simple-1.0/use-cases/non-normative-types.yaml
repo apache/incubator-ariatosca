@@ -50,7 +50,7 @@ capability_types:
         required: false
       publish_ports:
         description: >-
-          List of ports mappings from source (Docker container) to target (host) ports to publish. 
+          List of ports mappings from source (Docker container) to target (host) ports to publish.
         type: list
         entry_schema: PortSpec
         required: false
@@ -118,7 +118,7 @@ node_types:
       # Further constrain the 'host' capability to only allow MySQL databases
       host:
         type: tosca.capabilities.Container # ARIA NOTE: missing in spec
-        valid_source_types: [ tosca.nodes.Database.MySQL ] 
+        valid_source_types: [ tosca.nodes.Database.MySQL ]
 
   tosca.nodes.WebServer.Apache:
     _extensions:
@@ -143,7 +143,7 @@ node_types:
         required: false # ARIA NOTE: missing in spec
     requirements:
       - database_endpoint:
-          capability: tosca.capabilities.Endpoint.Database  
+          capability: tosca.capabilities.Endpoint.Database
           node: tosca.nodes.Database
           relationship: tosca.relationships.ConnectsTo
 

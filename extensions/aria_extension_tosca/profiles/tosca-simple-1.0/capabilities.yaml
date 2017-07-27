@@ -51,7 +51,7 @@ capability_types:
     derived_from: tosca.capabilities.Root
     properties:
       num_cpus:
-        description: >-    
+        description: >-
           Number of (actual or virtual) CPUs associated with the Compute node.
         type: integer
         constraints:
@@ -239,7 +239,7 @@ capability_types:
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#DEFN_TYPE_CAPABILITIES_ENDPOINT_PUBLIC'
     description: >-
       This capability represents a public endpoint which is accessible to the general internet (and its public IP address ranges).
-  
+
       This public endpoint capability also can be used to create a floating (IP) address that the underlying network assigns from a
       pool allocated from the application's underlying public network. This floating address is managed by the underlying network
       such that can be routed an application's private address and remains reliable to internet clients.
@@ -292,14 +292,14 @@ capability_types:
     description: >-
       This is the default TOSCA type that should be used or extended to define a specialized database endpoint capability.
     derived_from: tosca.capabilities.Endpoint
-  
+
   #
   # Network
   #
 
   tosca.capabilities.network.Bindable:
     _extensions:
-      shorthand_name: Bindable # ARIA NOTE: mistake in spec? has "network." as a prefix 
+      shorthand_name: Bindable # ARIA NOTE: mistake in spec? has "network." as a prefix
       type_qualified_name: tosca:Bindable
       specification: tosca-simple-1.0
       specification_section: 5.4.11

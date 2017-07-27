@@ -44,7 +44,7 @@ node_types:
   mongodb.Database:
     description: >-
       MongoDB database.
-      
+
       Supports importing database data if a mongodb.DatabaseDump is provided.
     derived_from: tosca.nodes.Database
     interfaces:

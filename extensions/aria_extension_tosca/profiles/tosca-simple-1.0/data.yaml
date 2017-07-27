@@ -18,7 +18,7 @@ data_types:
   #
   # Primitive
   #
-  
+
   timestamp:
     _extensions:
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_timestamp
@@ -60,7 +60,7 @@ data_types:
       specification: tosca-simple-1.0
       specification_section: 3.2.5
       specification_url: 'http://docs.oasis-open.org/tosca/TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html#TYPE_TOSCA_MAP'
-  
+
   #
   # Scalar
   #
@@ -142,7 +142,7 @@ data_types:
           The optional user (name or ID) used for non-token based credentials.
         type: string
         required: false
-  
+
   tosca.datatypes.network.NetworkInfo:
     _extensions:
       shorthand_name: NetworkInfo
@@ -171,7 +171,7 @@ data_types:
         entry_schema:
           type: string
         required: false
-  
+
   tosca.datatypes.network.PortInfo:
     _extensions:
       shorthand_name: PortInfo
@@ -210,7 +210,7 @@ data_types:
         entry_schema:
           type: string
         required: false
-  
+
   tosca.datatypes.network.PortDef:
     _extensions:
       shorthand_name: PortDef

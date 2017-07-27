@@ -31,7 +31,7 @@ node_types:
 
       You may assign an image_id or attach an openstack.Image artifact (the artifact
       will take precedence).
-    
+
       You may assign either flavor_id or flavor_name (flavor_id will take precedence).
       If neither are assigned, flavor_name has a default value.
     derived_from: tosca.nodes.Compute
@@ -87,7 +87,7 @@ node_types:
   openstack.Volume:
     description: >-
       OpenStack volume.
-      
+
       See: http://developer.openstack.org/api-ref-blockstorage-v2.html
     derived_from: tosca.nodes.BlockStorage
     properties:

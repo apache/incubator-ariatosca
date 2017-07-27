@@ -30,7 +30,7 @@ node_types:
         file: https://nodejs.org/dist/v4.4.7/node-v4.4.7-linux-x64.tar.xz
         deploy_path: /opt/nodejs
     capabilities:
-      data_endpoint: # @override 
+      data_endpoint: # @override
         type: tosca.capabilities.Endpoint
         properties:
           port:

@@ -33,7 +33,7 @@ topology_template:
     storage_snapshot_id:
       type: string
       description: >-
-        Optional identifier for an existing snapshot to use when creating storage.    
+        Optional identifier for an existing snapshot to use when creating storage.
 
   node_templates:
 

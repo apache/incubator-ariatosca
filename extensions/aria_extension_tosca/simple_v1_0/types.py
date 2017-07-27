@@ -23,7 +23,7 @@ from aria.parser.presentation import (has_fields, allow_unknown_fields, primitiv
                                       list_type_validator, derived_from_validator,
                                       get_parent_presentation)
 
-from .assignments import ArtifactAssignment
+from .assignments import ArtifactAssignmentForType
 from .data_types import Version
 from .definitions import (PropertyDefinition, AttributeDefinition, InterfaceDefinition,
                           RequirementDefinition, CapabilityDefinition, OperationDefinition)
@@ -191,6 +191,17 @@ class DataType(ExtensiblePresentation):
     @cachedmethod
     def _get_parent(self, context):
         return get_data_type(context, self, 'derived_from', allow_none=True)
+
+    @cachedmethod
+    def _is_descendant(self, context, the_type):
+        if the_type is None:
+            return False
+        if not hasattr(the_type, '_name'):
+            # Must be a primitive type
+            return self._get_primitive_ancestor(context) == the_type
+        if the_type._name == self._name:
+            return True
+        return self._is_descendant(context, the_type._get_parent(context))
 
     @cachedmethod
     def _get_primitive_ancestor(self, context):
@@ -386,6 +397,14 @@ class InterfaceType(ExtensiblePresentation):
     def _get_parent(self, context):
         return get_parent_presentation(context, self, convert_name_to_full_type_name,
                                        'interface_types')
+
+    @cachedmethod
+    def _is_descendant(self, context, the_type):
+        if the_type is None:
+            return False
+        elif the_type._name == self._name:
+            return True
+        return self._is_descendant(context, the_type._get_parent(context))
 
     @cachedmethod
     def _get_inputs(self, context):
@@ -606,12 +625,12 @@ class NodeType(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`InterfaceDefinition`}
         """
 
-    @object_dict_field(ArtifactAssignment)
+    @object_dict_field(ArtifactAssignmentForType)
     def artifacts(self):
         """
         An optional list of named artifact definitions for the Node Type.
 
-        :type: {:obj:`basestring`: :class:`ArtifactAssignment`}
+        :type: {:obj:`basestring`: :class:`ArtifactAssignmentForType`}
         """
 
     @cachedmethod

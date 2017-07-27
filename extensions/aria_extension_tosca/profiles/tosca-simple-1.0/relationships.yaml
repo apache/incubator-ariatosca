@@ -43,7 +43,7 @@ relationship_types:
     interfaces:
       Configure:
         type: tosca.interfaces.relationship.Configure
-  
+
   tosca.relationships.DependsOn:
     _extensions:
       shorthand_name: DependsOn
@@ -55,7 +55,7 @@ relationship_types:
       This type represents a general dependency relationship between two nodes.
     derived_from: tosca.relationships.Root
     valid_target_types: [ tosca.capabilities.Node ]
-  
+
   tosca.relationships.HostedOn:
     _extensions:
       shorthand_name: HostedOn
@@ -67,7 +67,7 @@ relationship_types:
       This type represents a hosting relationship between two nodes.
     derived_from: tosca.relationships.Root
     valid_target_types: [ tosca.capabilities.Container ]
-  
+
   tosca.relationships.ConnectsTo:
     _extensions:
       shorthand_name: ConnectsTo
@@ -83,7 +83,7 @@ relationship_types:
       credential:
         type: tosca.datatypes.Credential
         required: false
-  
+
   tosca.relationships.AttachesTo:
     _extensions:
       shorthand_name: AttachesTo
@@ -116,7 +116,7 @@ relationship_types:
           The logical name of the device as exposed to the instance.
           Note: A runtime property that gets set when the model gets instantiated by the orchestrator.
         type: string
-  
+
   tosca.relationships.RoutesTo:
     _extensions:
       shorthand_name: RoutesTo
@@ -128,11 +128,11 @@ relationship_types:
       This type represents an intentional network routing between two Endpoints in different networks.
     derived_from: tosca.relationships.ConnectsTo
     valid_target_types: [ tosca.capabilities.Endpoint ]
-  
+
   #
   # Network
   #
-  
+
   tosca.relationships.network.LinksTo:
     _extensions:
       shorthand_name: LinksTo
@@ -144,7 +144,7 @@ relationship_types:
       This relationship type represents an association relationship between Port and Network node types.
     derived_from: tosca.relationships.DependsOn
     valid_target_types: [ tosca.capabilities.network.Linkable ]
-  
+
   tosca.relationships.network.BindsTo:
     _extensions:
       shorthand_name: BindsTo # ARIA NOTE: the spec says "network.BindsTo" which seems wrong

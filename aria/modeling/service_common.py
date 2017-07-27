@@ -28,7 +28,7 @@ from sqlalchemy.ext.declarative import declared_attr
 
 from ..utils import (
     collections,
-    formatting,
+    formatting
 )
 from .mixins import InstanceModelMixin, TemplateModelMixin, ParameterMixin
 from . import relationship

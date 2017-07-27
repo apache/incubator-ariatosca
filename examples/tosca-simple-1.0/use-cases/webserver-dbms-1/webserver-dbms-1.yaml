@@ -51,11 +51,11 @@ topology_template:
         Standard:
           create: wordpress_install.sh
           configure:
-            implementation: wordpress_configure.sh           
+            implementation: wordpress_configure.sh
             inputs:
               wp_db_name: { get_property: [ mysql_database, name ] }
               wp_db_user: { get_property: [ mysql_database, user ] }
-              wp_db_password: { get_property: [ mysql_database, password ] }  
+              wp_db_password: { get_property: [ mysql_database, password ] }
               # In my own template, find requirement/capability, find port property
               wp_db_port: { get_property: [ SELF, database_endpoint, port ] }
 
@@ -85,7 +85,7 @@ topology_template:
         - host: server
       interfaces:
         Standard:
-          # ARIA NOTE: not declared in spec              
+          # ARIA NOTE: not declared in spec
           #inputs:
           #  db_root_password: { get_property: [ mysql_dbms, root_password ] }
           create: mysql_dbms_install.sh
@@ -112,8 +112,8 @@ topology_template:
         os:
           properties:
             architecture: x86_64
-            type: linux 
-            distribution: fedora 
+            type: linux
+            distribution: fedora
             version: 17.0
 
   outputs:

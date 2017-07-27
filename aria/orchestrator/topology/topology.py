@@ -57,11 +57,11 @@ class Topology(issue.ReporterMixin):
     @staticmethod
     def _init_handlers(module_):
         """
-        Register handlers from a handler module to the models
+        Register handlers from a handler module to the models.
 
-        :param module_: The module to look for handlers
-        :return: a dict where the key is the models class, and the value is the handler class
-        associated with it from the provided module
+        :param module_: the module to look for handlers
+        :returns: dict where the key is the models class, and the value is the handler class
+         associated with it from the provided module
         """
         handlers = {}
         for attribute_name in dir(module_):
@@ -74,11 +74,11 @@ class Topology(issue.ReporterMixin):
 
     def instantiate(self, model, **kwargs):
         """
-        instantiate the provided model
+        Instantiate the provided model.
 
         :param model:
         :param kwargs:
-        :return:
+        :returns:
         """
         if isinstance(model, dict):
             return dict((name, self.instantiate(value, **kwargs))
