@@ -130,7 +130,7 @@ class ModelStorage(Storage):
         """
         model_name = model_cls.__modelname__
         if model_name in self.registered:
-            self.logger.debug('{name} in already storage {self!r}'.format(name=model_name,
+            self.logger.debug('{name} already in storage {self!r}'.format(name=model_name,
                                                                           self=self))
             return
         self.registered[model_name] = self.api(name=model_name,
@@ -151,10 +151,10 @@ class ModelStorage(Storage):
         original_instrumentation = {}
 
         try:
-            for mapi in self.registered.values():
+            for mapi in self.registered.itervalues():
                 original_instrumentation[mapi] = copy.copy(mapi._instrumentation)
                 mapi._instrumentation.extend(instrumentation)
             yield self
         finally:
-            for mapi in self.registered.values():
+            for mapi in self.registered.itervalues():
                 mapi._instrumentation[:] = original_instrumentation[mapi]

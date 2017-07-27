@@ -38,10 +38,27 @@ class BaseContext(object):
     """
 
     INSTRUMENTATION_FIELDS = (
+        modeling.models.Service.inputs,
+        modeling.models.ServiceTemplate.inputs,
+        modeling.models.Policy.properties,
+        modeling.models.PolicyTemplate.properties,
         modeling.models.Node.attributes,
         modeling.models.Node.properties,
         modeling.models.NodeTemplate.attributes,
-        modeling.models.NodeTemplate.properties
+        modeling.models.NodeTemplate.properties,
+        modeling.models.Group.properties,
+        modeling.models.GroupTemplate.properties,
+        modeling.models.Capability.properties,
+        # TODO ARIA-279: modeling.models.Capability.attributes,
+        modeling.models.CapabilityTemplate.properties,
+        # TODO ARIA-279: modeling.models.CapabilityTemplate.attributes
+        modeling.models.Relationship.properties,
+        modeling.models.Artifact.properties,
+        modeling.models.ArtifactTemplate.properties,
+        modeling.models.Interface.inputs,
+        modeling.models.InterfaceTemplate.inputs,
+        modeling.models.Operation.inputs,
+        modeling.models.OperationTemplate.inputs
     )
 
     class PrefixedLogger(object):

@@ -146,14 +146,14 @@ class _InstrumentedDict(_InstrumentedCollection, dict):
     def _load(self, dict_=None, **kwargs):
         dict.__init__(
             self,
-            tuple((key, self._raw_value(value)) for key, value in (dict_ or {}).items()),
+            tuple((key, self._raw_value(value)) for key, value in (dict_ or {}).iteritems()),
             **kwargs)
 
     def update(self, dict_=None, **kwargs):
         dict_ = dict_ or {}
-        for key, value in dict_.items():
+        for key, value in dict_.iteritems():
             self[key] = value
-        for key, value in kwargs.items():
+        for key, value in kwargs.iteritems():
             self[key] = value
 
     def __getitem__(self, key):
@@ -202,9 +202,31 @@ class _InstrumentedList(_InstrumentedCollection, list):
 
 class _WrappedBase(object):
 
-    def __init__(self, wrapped, instrumentation):
+    def __init__(self, wrapped, instrumentation, instrumentation_kwargs=None):
+        """
+        :param wrapped: model to be instrumented
+        :param instrumentation: instrumentation dict
+        :param instrumentation_kwargs: arguments for instrumentation class
+        """
         self._wrapped = wrapped
         self._instrumentation = instrumentation
+        self._instrumentation_kwargs = instrumentation_kwargs or {}
+
+    def _wrap(self, value):
+        if value.__class__ in set(class_.class_ for class_ in self._instrumentation):
+            return _create_instrumented_model(
+                value, instrumentation=self._instrumentation, **self._instrumentation_kwargs)
+        # Check that the value is a SQLAlchemy model (it should have metadata) or a collection
+        elif hasattr(value, 'metadata') or isinstance(value, (dict, list)):
+            return _create_wrapped_model(
+                value, instrumentation=self._instrumentation, **self._instrumentation_kwargs)
+        return value
+
+    def __getattr__(self, item):
+        if hasattr(self, '_wrapped'):
+            return self._wrap(getattr(self._wrapped, item))
+        else:
+            super(_WrappedBase, self).__getattribute__(item)
 
 
 class _InstrumentedModel(_WrappedBase):
@@ -213,32 +235,32 @@ class _InstrumentedModel(_WrappedBase):
         """
         The original model.
 
-        :param wrapped: model to be instrumented
         :param mapi: MAPI for the wrapped model
+        :param wrapped: model to be instrumented
+        :param instrumentation: instrumentation dict
+        :param instrumentation_kwargs: arguments for instrumentation class
         """
-        super(_InstrumentedModel, self).__init__(*args, **kwargs)
+        super(_InstrumentedModel, self).__init__(instrumentation_kwargs=dict(mapi=mapi),
+                                                 *args, **kwargs)
         self._mapi = mapi
         self._apply_instrumentation()
 
-    def __getattr__(self, item):
-        return_value = getattr(self._wrapped, item)
-        if isinstance(return_value, self._wrapped.__class__):
-            return _create_instrumented_model(return_value, self._mapi, self._instrumentation)
-        if isinstance(return_value, (list, dict)):
-            return _create_wrapped_model(return_value, self._mapi, self._instrumentation)
-        return return_value
-
     def _apply_instrumentation(self):
         for field in self._instrumentation:
+            if not issubclass(type(self._wrapped), field.parent.class_):
+                # Do not apply if this field is not for our class
+                continue
+
             field_name = field.key
             field_cls = field.mapper.class_
+
             field = getattr(self._wrapped, field_name)
 
-            # Preserve the original value. e.g. original attributes would be located under
-            # _attributes
+            # Preserve the original field, e.g. original "attributes" would be located under
+            # "_attributes"
             setattr(self, '_{0}'.format(field_name), field)
 
-            # set instrumented value
+            # Set instrumented value
             if isinstance(field, dict):
                 instrumentation_cls = _InstrumentedDict
             elif isinstance(field, list):
@@ -247,7 +269,7 @@ class _InstrumentedModel(_WrappedBase):
                 # TODO: raise proper error
                 raise exceptions.StorageError(
                     "ARIA supports instrumentation for dict and list. Field {field} of the "
-                    "class {model} is of {type} type.".format(
+                    "class `{model}` is of type `{type}`.".format(
                         field=field,
                         model=self._wrapped,
                         type=type(field)))
@@ -262,34 +284,12 @@ class _InstrumentedModel(_WrappedBase):
 
 class _WrappedModel(_WrappedBase):
 
-    def __init__(self, instrumentation_kwargs, *args, **kwargs):
-        """
-        :param instrumented_cls: class to be instrumented
-        :param instrumentation_cls: instrumentation cls
-        :param wrapped: currently wrapped instance
-        :param kwargs: passed to the instrumented class
-        """
-        super(_WrappedModel, self).__init__(*args, **kwargs)
-        self._kwargs = instrumentation_kwargs
-
-    def _wrap(self, value):
-        if value.__class__ in (class_.class_ for class_ in self._instrumentation):
-            return _create_instrumented_model(
-                value, instrumentation=self._instrumentation, **self._kwargs)
-        elif hasattr(value, 'metadata') or isinstance(value, (dict, list)):
-            # Basically checks that the value is indeed an sqlmodel (it should have metadata)
-            return _create_wrapped_model(
-                value, instrumentation=self._instrumentation, **self._kwargs)
-        return value
-
-    def __getattr__(self, item):
-        if hasattr(self, '_wrapped'):
-            return self._wrap(getattr(self._wrapped, item))
-        else:
-            super(_WrappedModel, self).__getattribute__(item)
-
     def __getitem__(self, item):
         return self._wrap(self._wrapped[item])
+
+    def __iter__(self):
+        for item in self._wrapped.__iter__():
+            yield self._wrap(item)
 
 
 def _create_instrumented_model(original_model, mapi, instrumentation):

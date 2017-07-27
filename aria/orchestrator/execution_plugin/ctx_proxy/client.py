@@ -102,9 +102,12 @@ def main(args=None):
     if args.json_output:
         response = json.dumps(response)
     else:
-        if not response:
+        if response is None:
             response = ''
-        response = str(response)
+        try:
+            response = str(response)
+        except UnicodeEncodeError:
+            response = unicode(response).encode('utf8')
     sys.stdout.write(response)
 
 if __name__ == '__main__':

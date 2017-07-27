@@ -48,8 +48,7 @@ class BaseOperationContext(common.BaseContext):
     @property
     def task(self):
         """
-        The task in the model storage
-        :return: Task model
+        The task in the model storage.
         """
         # SQLAlchemy prevents from accessing an object which was created on a different thread.
         # So we retrieve the object from the storage if the current thread isn't the same as the
@@ -62,7 +61,7 @@ class BaseOperationContext(common.BaseContext):
     @property
     def plugin_workdir(self):
         """
-        A work directory that is unique to the plugin and the deployment id
+        A work directory that is unique to the plugin and the service ID.
         """
         if self.task.plugin is None:
             return None
@@ -120,20 +119,18 @@ class NodeOperationContext(BaseOperationContext):
     """
 
     @property
-    def node_template(self):
-        """
-        the node of the current operation
-        :return:
-        """
-        return self.node.node_template
-
-    @property
     def node(self):
         """
-        The node instance of the current operation
-        :return:
+        The node of the current operation.
         """
         return self.model.node.get(self._actor_id)
+
+    @property
+    def node_template(self):
+        """
+        The node template of the current operation.
+        """
+        return self.node.node_template
 
 
 class RelationshipOperationContext(BaseOperationContext):
@@ -142,41 +139,36 @@ class RelationshipOperationContext(BaseOperationContext):
     """
 
     @property
-    def source_node_template(self):
+    def relationship(self):
         """
-        The source node
-        :return:
+        The relationship instance of the current operation.
         """
-        return self.source_node.node_template
+        return self.model.relationship.get(self._actor_id)
 
     @property
     def source_node(self):
         """
-        The source node instance
-        :return:
+        The relationship source node.
         """
         return self.relationship.source_node
 
     @property
-    def target_node_template(self):
+    def source_node_template(self):
         """
-        The target node
-        :return:
+        The relationship source node template.
         """
-        return self.target_node.node_template
+        return self.source_node.node_template
 
     @property
     def target_node(self):
         """
-        The target node instance
-        :return:
+        The relationship target node.
         """
         return self.relationship.target_node
 
     @property
-    def relationship(self):
+    def target_node_template(self):
         """
-        The relationship instance of the current operation
-        :return:
+        The relationship target node template.
         """
-        return self.model.relationship.get(self._actor_id)
+        return self.target_node.node_template

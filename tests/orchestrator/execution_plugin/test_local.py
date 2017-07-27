@@ -43,10 +43,10 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes map.key value
+            ctx node attributes map key = value
             ''',
             windows_script='''
-            ctx node attributes map.key value
+            ctx node attributes map key = value
         ''')
         props = self._run(
             executor, workflow_context,
@@ -57,12 +57,12 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes map.key1 $key1
-            ctx node attributes map.key2 $key2
+            ctx node attributes map key1 = "$key1"
+            ctx node attributes map key2 = "$key2"
             ''',
             windows_script='''
-            ctx node attributes map.key1 %key1%
-            ctx node attributes map.key2 %key2%
+            ctx node attributes map key1 = %key1%
+            ctx node attributes map key2 = %key2%
         ''')
         props = self._run(
             executor, workflow_context,
@@ -81,10 +81,10 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes map.cwd $PWD
+            ctx node attributes map cwd = "$PWD"
             ''',
             windows_script='''
-            ctx node attributes map.cwd %CD%
+            ctx node attributes map cwd = %CD%
             ''')
         tmpdir = str(tmpdir)
         props = self._run(
@@ -97,7 +97,7 @@ class TestLocalRunScript(object):
         assert p_map['cwd'] == tmpdir
 
     def test_process_command_prefix(self, executor, workflow_context, tmpdir):
-        use_ctx = 'ctx node attributes map.key value'
+        use_ctx = 'ctx node attributes map key = value'
         python_script = ['import subprocess',
                          'subprocess.Popen("{0}".split(' ')).communicate()[0]'.format(use_ctx)]
         python_script = '\n'.join(python_script)
@@ -121,12 +121,12 @@ class TestLocalRunScript(object):
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes map.arg1 "$1"
-            ctx node attributes map.arg2 $2
+            ctx node attributes map arg1 = "$1"
+            ctx node attributes map arg2 = "$2"
             ''',
             windows_script='''
-            ctx node attributes map.arg1 %1
-            ctx node attributes map.arg2 %2
+            ctx node attributes map arg1 = %1
+            ctx node attributes map arg2 = %2
             ''')
         props = self._run(
             executor, workflow_context,
@@ -149,12 +149,12 @@ class TestLocalRunScript(object):
             tmpdir,
             linux_script='''#! /bin/bash -e
             echo 123123
-            command_that_does_not_exist
+            command_that_does_not_exist [ ]
             ''',
             windows_script='''
             @echo off
             echo 123123
-            command_that_does_not_exist
+            command_that_does_not_exist [ ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -209,10 +209,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes key "${input_as_env_var}"
+            ctx node attributes key = "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node attributes key "%input_as_env_var%"
+            ctx node attributes key = "%input_as_env_var%"
         ''')
         props = self._run(
             executor, workflow_context,
@@ -228,10 +228,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx node attributes key "${input_as_env_var}"
+            ctx node attributes key = "${input_as_env_var}"
             ''',
             windows_script='''
-            ctx node attributes key "%input_as_env_var%"
+            ctx node attributes key = "%input_as_env_var%"
         ''')
 
         props = self._run(
@@ -268,10 +268,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx -j instance attributes nonexistent
+            ctx -j node attributes nonexistent
             ''',
             windows_script='''
-            ctx -j instance attributes nonexistent
+            ctx -j node attributes nonexistent
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -285,10 +285,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx task abort abort-message
+            ctx task abort [ abort-message ]
             ''',
             windows_script='''
-            ctx task abort abort-message
+            ctx task abort [ abort-message ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -300,10 +300,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx task retry retry-message
+            ctx task retry [ retry-message ]
             ''',
             windows_script='''
-            ctx task retry retry-message
+            ctx task retry [ retry-message ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -315,10 +315,10 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx task retry retry-message @100
+            ctx task retry [ retry-message @100 ]
             ''',
             windows_script='''
-            ctx task retry retry-message @100
+            ctx task retry [ retry-message @100 ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -331,12 +331,12 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash
-            ctx task retry retry-message
-            ctx task abort should-raise-a-runtime-error
+            ctx task retry [ retry-message ]
+            ctx task abort [ should-raise-a-runtime-error ]
             ''',
             windows_script='''
-            ctx task retry retry-message
-            ctx task abort should-raise-a-runtime-error
+            ctx task retry [ retry-message ]
+            ctx task abort [ should-raise-a-runtime-error ]
         ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -348,12 +348,12 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash
-            ctx task abort abort-message
-            ctx task retry should-raise-a-runtime-error
+            ctx task abort [ abort-message ]
+            ctx task retry [ should-raise-a-runtime-error ]
             ''',
             windows_script='''
-            ctx task abort abort-message
-            ctx task retry should-raise-a-runtime-error
+            ctx task abort [ abort-message ]
+            ctx task retry [ should-raise-a-runtime-error ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -365,12 +365,12 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash
-            ctx task abort abort-message
-            ctx task abort should-raise-a-runtime-error
+            ctx task abort [ abort-message ]
+            ctx task abort [ should-raise-a-runtime-error ]
             ''',
             windows_script='''
-            ctx task abort abort-message
-            ctx task abort should-raise-a-runtime-error
+            ctx task abort [ abort-message ]
+            ctx task abort [ should-raise-a-runtime-error ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -382,12 +382,12 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash
-            ctx task retry retry-message
-            ctx task retry should-raise-a-runtime-error
+            ctx task retry [ retry-message ]
+            ctx task retry [ should-raise-a-runtime-error ]
             ''',
             windows_script='''
-            ctx task retry retry-message
-            ctx task retry should-raise-a-runtime-error
+            ctx task retry [ retry-message ]
+            ctx task retry [ should-raise-a-runtime-error ]
             ''')
         exception = self._run_and_get_task_exception(
             executor, workflow_context,
@@ -401,11 +401,11 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx task retry '{0}' 2> {1}
+            ctx task retry [ "{0}" ] 2> {1}
             echo should-not-run > {1}
             '''.format(message, log_path),
             windows_script='''
-            ctx task retry "{0}" 2> {1}
+            ctx task retry [ "{0}" ] 2> {1}
             if %errorlevel% neq 0 exit /b %errorlevel%
             echo should-not-run > {1}
             '''.format(message, log_path))
@@ -421,11 +421,11 @@ if __name__ == '__main__':
         script_path = self._create_script(
             tmpdir,
             linux_script='''#! /bin/bash -e
-            ctx task abort '{0}' 2> {1}
+            ctx task abort [ "{0}" ] 2> {1}
             echo should-not-run > {1}
             '''.format(message, log_path),
             windows_script='''
-            ctx task abort "{0}" 2> {1}
+            ctx task abort [ "{0}" ] 2> {1}
             if %errorlevel% neq 0 exit /b %errorlevel%
             echo should-not-run > {1}
             '''.format(message, log_path))

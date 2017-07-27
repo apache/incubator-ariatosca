@@ -17,14 +17,12 @@
 ``ctx`` proxy server implementation.
 """
 
-import collections
 import json
-import re
 import socket
-import threading
-import traceback
 import Queue
 import StringIO
+import threading
+import traceback
 import wsgiref.simple_server
 
 import bottle
@@ -123,9 +121,7 @@ class CtxProxy(object):
     def _process(self, request):
         try:
             with self.ctx.model.instrument(*self.ctx.INSTRUMENTATION_FIELDS):
-                typed_request = json.loads(request)
-                args = typed_request['args']
-                payload = _process_ctx_request(self.ctx, args)
+                payload = _process_request(self.ctx, request)
                 result_type = 'result'
                 if isinstance(payload, exceptions.ScriptException):
                     payload = dict(message=str(payload))
@@ -150,106 +146,94 @@ class CtxProxy(object):
         self.close()
 
 
-def _process_ctx_request(ctx, args):
-    current = ctx
-    num_args = len(args)
-    index = 0
-    while index < num_args:
-        arg = args[index]
-        attr = _desugar_attr(current, arg)
-        if attr:
-            current = getattr(current, attr)
-        elif isinstance(current, collections.MutableMapping):
-            key = arg
-            path_dict = _PathDictAccess(current)
-            if index + 1 == num_args:
-                # read dict prop by path
-                value = path_dict.get(key)
-                current = value
-            elif index + 2 == num_args:
-                # set dict prop by path
-                value = args[index + 1]
-                path_dict.set(key, value)
-                current = None
-            else:
-                raise RuntimeError('Illegal argument while accessing dict')
-            break
-        elif callable(current):
-            kwargs = {}
-            remaining_args = args[index:]
-            if isinstance(remaining_args[-1], collections.MutableMapping):
-                kwargs = remaining_args[-1]
-                remaining_args = remaining_args[:-1]
-            current = current(*remaining_args, **kwargs)
-            break
+class CtxError(RuntimeError):
+    pass
+
+
+class CtxParsingError(CtxError):
+    pass
+
+
+def _process_request(ctx, request):
+    request = json.loads(request)
+    args = request['args']
+    return _process_arguments(ctx, args)
+
+
+def _process_arguments(obj, args):
+    # Modifying?
+    try:
+        # TODO: should there be a way to escape "=" in case it is needed as real argument?
+        equals_index = args.index('=') # raises ValueError if not found
+    except ValueError:
+        equals_index = None
+    if equals_index is not None:
+        if equals_index == 0:
+            raise CtxParsingError('The "=" argument cannot be first')
+        elif equals_index != len(args) - 2:
+            raise CtxParsingError('The "=" argument must be penultimate')
+        modifying = True
+        modifying_key = args[-3]
+        modifying_value = args[-1]
+        args = args[:-3]
+    else:
+        modifying = False
+        modifying_key = None
+        modifying_value = None
+
+    # Parse all arguments
+    while len(args) > 0:
+        obj, args = _process_next_operation(obj, args, modifying)
+
+    if modifying:
+        if hasattr(obj, '__setitem__'):
+            # Modify item value (dict, list, and similar)
+            if isinstance(obj, (list, tuple)):
+                modifying_key = int(modifying_key)
+            obj[modifying_key] = modifying_value
+        elif hasattr(obj, modifying_key):
+            # Modify object attribute
+            setattr(obj, modifying_key, modifying_value)
         else:
-            raise RuntimeError('{0} cannot be processed in {1}'.format(arg, args))
-        index += 1
-    if callable(current):
-        current = current()
-    return current
+            raise CtxError('Cannot modify `{0}` of `{1!r}`'.format(modifying_key, obj))
+
+    return obj
 
 
-def _desugar_attr(obj, attr):
-    if not isinstance(attr, basestring):
-        return None
-    if hasattr(obj, attr):
-        return attr
-    attr = attr.replace('-', '_')
-    if hasattr(obj, attr):
-        return attr
-    return None
+def _process_next_operation(obj, args, modifying):
+    args = list(args)
+    arg = args.pop(0)
 
+    # Call?
+    if arg == '[':
+        # TODO: should there be a way to escape "[" and "]" in case they are needed as real
+        # arguments?
+        try:
+            closing_index = args.index(']') # raises ValueError if not found
+        except ValueError:
+            raise CtxParsingError('Opening "[" without a closing "]')
+        callable_args = args[:closing_index]
+        args = args[closing_index + 1:]
+        if not callable(obj):
+            raise CtxError('Used "[" and "] on an object that is not callable')
+        return obj(*callable_args), args
 
-class _PathDictAccess(object):
-    pattern = re.compile(r"(.+)\[(\d+)\]")
+    # Attribute?
+    if isinstance(arg, basestring):
+        if hasattr(obj, arg):
+            return getattr(obj, arg), args
+        token_sugared = arg.replace('-', '_')
+        if hasattr(obj, token_sugared):
+            return getattr(obj, token_sugared), args
 
-    def __init__(self, obj):
-        self.obj = obj
+    # Item? (dict, lists, and similar)
+    if hasattr(obj, '__getitem__'):
+        if modifying and (arg not in obj) and hasattr(obj, '__setitem__'):
+            # Create nested dict
+            obj[arg] = {}
+        return obj[arg], args
 
-    def set(self, prop_path, value):
-        obj, prop_name = self._get_parent_obj_prop_name_by_path(prop_path)
-        obj[prop_name] = value
-
-    def get(self, prop_path):
-        value = self._get_object_by_path(prop_path)
-        return value
-
-    def _get_object_by_path(self, prop_path, fail_on_missing=True):
-        # when setting a nested object, make sure to also set all the
-        # intermediate path objects
-        current = self.obj
-        for prop_segment in prop_path.split('.'):
-            match = self.pattern.match(prop_segment)
-            if match:
-                index = int(match.group(2))
-                property_name = match.group(1)
-                if property_name not in current:
-                    self._raise_illegal(prop_path)
-                if not isinstance(current[property_name], list):
-                    self._raise_illegal(prop_path)
-                current = current[property_name][index]
-            else:
-                if prop_segment not in current:
-                    if fail_on_missing:
-                        self._raise_illegal(prop_path)
-                    else:
-                        current[prop_segment] = {}
-                current = current[prop_segment]
-        return current
-
-    def _get_parent_obj_prop_name_by_path(self, prop_path):
-        split = prop_path.split('.')
-        if len(split) == 1:
-            return self.obj, prop_path
-        parent_path = '.'.join(split[:-1])
-        parent_obj = self._get_object_by_path(parent_path, fail_on_missing=False)
-        prop_name = split[-1]
-        return parent_obj, prop_name
-
-    @staticmethod
-    def _raise_illegal(prop_path):
-        raise RuntimeError('illegal path: {0}'.format(prop_path))
+    raise CtxParsingError('Cannot parse argument: `{0!r}`'.format(arg))
 
 
 def _get_unused_port():

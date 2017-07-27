@@ -24,7 +24,7 @@ def testenv(tmpdir, request, monkeypatch):
     test_name = request.node.name
     workdir = str(tmpdir)
 
-    # setting the workdir environment variable for the CLI to work with
+    # Setting the workdir environment variable for the CLI
     monkeypatch.setenv('ARIA_WORKDIR', workdir)
     return TestEnvironment(workdir, test_name)
 
@@ -70,27 +70,33 @@ class TestEnvironment(object):
         assert len(self.model_storage.log.list()) == 0
 
     def _get_cli(self):
-        cli = sh.aria.bake('-vvv', _out=sys.stdout.write, _err=sys.stderr.write)
+        cli = sh.aria.bake('-vvv', _out=sys.stdout, _err=sys.stderr)
 
-        # the `sh` library supports underscore-dash auto-replacement for commands and option flags
-        # yet not for subcommands (e.g. `aria service-templates`); The following class fixes this.
         class PatchedCli(object):
+            """
+            The ``sh`` library supports underscore-dash auto-replacement for commands and option
+            flags yet not for subcommands (e.g. ``aria service-templates``). This class fixes this.
+            """
             def __getattr__(self, attr):
                 if '_' in attr:
                     return cli.bake(attr.replace('_', '-'))
                 return getattr(cli, attr)
 
             def __call__(self, *args, **kwargs):
-                # this is to support the `aria` command itself (e.g. `aria --version` calls)
+                """
+                This is to support the ``aria`` command itself (e.g. ``aria --version`` calls).
+                """
                 return cli(*args, **kwargs)
 
         return PatchedCli()
 
     def _get_aria_env(self):
-        # a somewhat hackish but most simple way of acquiring environment context such as
-        # the model storage, resource storage etc.
-        # note that the `ARIA_WORKDIR` environment variable must be exported before the import
-        # below is used, as the import itself will initialize the `.aria` directory.
+        """
+        A somewhat hacky but most simple way of acquiring environment context such as the model
+        storage, resource storage, etc. Note that the ``ARIA_WORKDIR`` environment variable must be
+        exported before the import below is used, as the import itself will initialize the ``.aria``
+        directory.
+        """
         from aria.cli import env as cli_env
         reload(cli_env)  # reloading the module in-between tests
         return cli_env.env

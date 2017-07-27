@@ -140,13 +140,18 @@ class OperationTask(BaseTask):
         self.arguments = modeling_utils.merge_parameter_values(arguments,
                                                                operation.arguments,
                                                                model_cls=models.Argument)
-        if getattr(self.actor, 'outbound_relationships', None) is not None:
+
+        actor = self.actor
+        if hasattr(actor, '_wrapped'):
+            # Unwrap instrumented model
+            actor = actor._wrapped
+        if isinstance(actor, models.Node):
             self._context_cls = context.operation.NodeOperationContext
-        elif getattr(self.actor, 'source_node', None) is not None:
+        elif isinstance(actor, models.Relationship):
             self._context_cls = context.operation.RelationshipOperationContext
         else:
-            raise exceptions.TaskCreationException('Could not locate valid context for '
-                                                   '{actor.__class__}'.format(actor=self.actor))
+            raise exceptions.TaskCreationException('Could not create valid context for '
+                                                   '{actor.__class__}'.format(actor=actor))
 
     def __repr__(self):
         return self.name

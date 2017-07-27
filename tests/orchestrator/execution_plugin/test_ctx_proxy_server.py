@@ -39,53 +39,48 @@ class TestCtxProxy(object):
         assert response == 'value1'
 
     def test_dict_prop_access_get_key_nested(self, server):
-        response = self.request(server, 'node', 'properties', 'prop2.nested_prop1')
+        response = self.request(server, 'node', 'properties', 'prop2', 'nested_prop1')
         assert response == 'nested_value1'
 
     def test_dict_prop_access_get_with_list_index(self, server):
-        response = self.request(server, 'node', 'properties', 'prop3[2].value')
+        response = self.request(server, 'node', 'properties', 'prop3', 2, 'value')
         assert response == 'value_2'
 
     def test_dict_prop_access_set(self, server, ctx):
-        self.request(server, 'node', 'properties', 'prop4.key', 'new_value')
-        self.request(server, 'node', 'properties', 'prop3[2].value', 'new_value_2')
-        self.request(server, 'node', 'properties', 'prop4.some.new.path',
+        self.request(server, 'node', 'properties', 'prop4', 'key', '=', 'new_value')
+        self.request(server, 'node', 'properties', 'prop3', 2, 'value', '=', 'new_value_2')
+        self.request(server, 'node', 'properties', 'prop4', 'some', 'new', 'path', '=',
                      'some_new_value')
         assert ctx.node.properties['prop4']['key'] == 'new_value'
         assert ctx.node.properties['prop3'][2]['value'] == 'new_value_2'
         assert ctx.node.properties['prop4']['some']['new']['path'] == 'some_new_value'
 
+    def test_dict_prop_access_set_with_list_index(self, server, ctx):
+        self.request(server, 'node', 'properties', 'prop3', 2, '=', 'new_value')
+        assert ctx.node.properties['prop3'][2] == 'new_value'
+
     def test_illegal_dict_access(self, server):
-        self.request(server, 'node', 'properties', 'prop4.key', 'new_value')
+        self.request(server, 'node', 'properties', 'prop4', 'key', '=', 'new_value')
         with pytest.raises(RuntimeError):
-            self.request(server, 'node', 'properties', 'prop4.key', 'new_value', 'what')
+            self.request(server, 'node', 'properties', 'prop4', 'key', '=', 'new_value', 'what')
 
     def test_method_invocation(self, server):
-        args = ['arg1', 'arg2', 'arg3']
+        args = ['[', 'arg1', 'arg2', 'arg3', ']']
         response_args = self.request(server, 'stub-method', *args)
-        assert response_args == args
+        assert response_args == args[1:-1]
 
     def test_method_invocation_no_args(self, server):
-        response = self.request(server, 'stub-method')
+        response = self.request(server, 'stub-method', '[', ']')
         assert response == []
 
-    def test_method_invocation_kwargs(self, server):
-        arg1 = 'arg1'
-        arg2 = 'arg2'
-        arg4 = 'arg4_override'
-        arg5 = 'arg5'
-        kwargs = dict(
-            arg4=arg4,
-            arg5=arg5)
-        response = self.request(server, 'stub_args', arg1, arg2, kwargs)
-        assert response == dict(
-            arg1=arg1,
-            arg2=arg2,
-            arg3='arg3',
-            arg4=arg4,
-            args=[],
-            kwargs=dict(
-                arg5=arg5))
+    def test_method_return_value(self, server, ctx):
+        response_args = self.request(server, 'node', 'get_prop', '[', 'prop2', ']', 'nested_prop1')
+        assert response_args == 'nested_value1'
+
+    def test_method_return_value_set(self, server, ctx):
+        self.request(
+            server, 'node', 'get_prop', '[', 'prop2', ']', 'nested_prop1', '=', 'new_value')
+        assert ctx.node.properties['prop2']['nested_prop1'] == 'new_value'
 
     def test_empty_return_value(self, server):
         response = self.request(server, 'stub_none')
@@ -94,7 +89,7 @@ class TestCtxProxy(object):
     def test_client_request_timeout(self, server):
         with pytest.raises(IOError):
             ctx_proxy.client._client_request(server.socket_url,
-                                             args=['stub-sleep', '0.5'],
+                                             args=['stub-sleep', '[', '0.5', ']'],
                                              timeout=0.1)
 
     def test_processing_exception(self, server):
@@ -106,9 +101,9 @@ class TestCtxProxy(object):
             self.request(server, 'logger')
 
     def test_no_string_arg(self, server):
-        args = ['stub_method', 1, 2]
-        response = self.request(server, *args)
-        assert response == args[1:]
+        args = ['[', 1, 2, ']']
+        response = self.request(server, 'stub_method', *args)
+        assert response == args[1:-1]
 
     class StubAttribute(object):
         some_property = 'some_value'
@@ -116,6 +111,9 @@ class TestCtxProxy(object):
     class NodeAttribute(object):
         def __init__(self, properties):
             self.properties = properties
+
+        def get_prop(self, name):
+            return self.properties[name]
 
     @staticmethod
     def stub_method(*args):
@@ -155,11 +153,11 @@ class TestCtxProxy(object):
             }
         }
         ctx.stub_none = None
-        ctx.stub_method = self.stub_method
-        ctx.stub_sleep = self.stub_sleep
-        ctx.stub_args = self.stub_args
-        ctx.stub_attr = self.StubAttribute()
-        ctx.node = self.NodeAttribute(properties)
+        ctx.stub_method = TestCtxProxy.stub_method
+        ctx.stub_sleep = TestCtxProxy.stub_sleep
+        ctx.stub_args = TestCtxProxy.stub_args
+        ctx.stub_attr = TestCtxProxy.StubAttribute()
+        ctx.node = TestCtxProxy.NodeAttribute(properties)
         ctx.model = mocker.MagicMock()
         return ctx
 
@@ -236,10 +234,10 @@ class TestArgumentParsing(object):
         self.assert_valid_output({'key': 1},
                                  "{'key': 1}",
                                  '{"key": 1}')
-        self.assert_valid_output(False, '', 'false')
+        self.assert_valid_output(False, 'False', 'false')
         self.assert_valid_output(True, 'True', 'true')
-        self.assert_valid_output([], '', '[]')
-        self.assert_valid_output({}, '', '{}')
+        self.assert_valid_output([], '[]', '[]')
+        self.assert_valid_output({}, '{}', '{}')
 
     def assert_valid_output(self, response, ex_typed_output, ex_json_output):
         self.mock_response = response
@@ -285,77 +283,3 @@ class TestCtxEntryPoint(object):
                              stderr=subprocess.PIPE)
         p.communicate()
         assert not p.wait()
-
-
-class TestPathDictAccess(object):
-    def test_simple_set(self):
-        obj = {}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        path_dict.set('foo', 42)
-        assert obj == {'foo': 42}
-
-    def test_nested_set(self):
-        obj = {'foo': {}}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        path_dict.set('foo.bar', 42)
-        assert obj == {'foo': {'bar': 42}}
-
-    def test_set_index(self):
-        obj = {'foo': [None, {'bar': 0}]}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        path_dict.set('foo[1].bar', 42)
-        assert obj == {'foo': [None, {'bar': 42}]}
-
-    def test_set_nonexistent_parent(self):
-        obj = {}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        path_dict.set('foo.bar', 42)
-        assert obj == {'foo': {'bar': 42}}
-
-    def test_set_nonexistent_parent_nested(self):
-        obj = {}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        path_dict.set('foo.bar.baz', 42)
-        assert obj == {'foo': {'bar': {'baz': 42}}}
-
-    def test_simple_get(self):
-        obj = {'foo': 42}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        result = path_dict.get('foo')
-        assert result == 42
-
-    def test_nested_get(self):
-        obj = {'foo': {'bar': 42}}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        result = path_dict.get('foo.bar')
-        assert result == 42
-
-    def test_nested_get_shadows_dotted_name(self):
-        obj = {'foo': {'bar': 42}, 'foo.bar': 58}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        result = path_dict.get('foo.bar')
-        assert result == 42
-
-    def test_index_get(self):
-        obj = {'foo': [0, 1]}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        result = path_dict.get('foo[1]')
-        assert result == 1
-
-    def test_get_nonexistent(self):
-        obj = {}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        with pytest.raises(RuntimeError):
-            path_dict.get('foo')
-
-    def test_get_by_index_not_list(self):
-        obj = {'foo': {0: 'not-list'}}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        with pytest.raises(RuntimeError):
-            path_dict.get('foo[0]')
-
-    def test_get_by_index_nonexistent_parent(self):
-        obj = {}
-        path_dict = ctx_proxy.server._PathDictAccess(obj)
-        with pytest.raises(RuntimeError):
-            path_dict.get('foo[1]')
