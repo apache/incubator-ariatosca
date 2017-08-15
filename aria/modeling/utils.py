@@ -131,7 +131,11 @@ def merge_parameter_values(provided_values, declared_parameters, model_cls=None)
                 value=value)
         else:
             # Copy default value from declaration
-            model_parameters[declared_parameter_name] = model_cls(**declared_parameter.as_raw)
+            model_parameters[declared_parameter_name] = model_cls(
+                value=declared_parameter._value,
+                name=declared_parameter.name,
+                type_name=declared_parameter.type_name,
+                description=declared_parameter.description)
 
     if provided_values_of_wrong_type:
         error_message = StringIO()

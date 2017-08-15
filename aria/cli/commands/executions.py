@@ -185,7 +185,7 @@ def resume(execution_id,
         logger.info("Can't resume execution {execution.id} - "
                     "execution is in status {execution.status}. "
                     "Can only resume executions in status {valid_status}"
-                    .format(execution=execution, valid_status=execution.status.CANCELLED))
+                    .format(execution=execution, valid_status=execution.CANCELLED))
         return
 
     workflow_runner = \
