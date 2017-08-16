@@ -17,88 +17,113 @@ from aria.utils.formatting import safe_repr
 from aria.parser.validation import Issue
 
 
-def validate_subtitution_mappings_requirement(context, presentation):
-    if not validate_format(context, presentation, 'requirement'):
-        return
+def validate_substitution_mappings_requirement(context, presentation):
 
-    node_template = get_node_template(context, presentation, 'requirement')
-    if node_template is None:
+    # validate that the requirement in substitution_mapping is defined in the substitution node type
+    substitution_node_type = presentation._container._get_type(context)
+    if substitution_node_type is None:
         return
-
-    node_type = presentation._container._get_type(context)
-    if node_type is None:
-        return
-
-    requirements = node_type._get_requirements(context)
-    type_requirement = None
-    for name, the_requirement in requirements:
-        if name == presentation._name:
-            type_requirement = the_requirement
+    for req_name, req in substitution_node_type._get_requirements(context):
+        if req_name == presentation._name:
+            substitution_type_requirement = req
             break
-    if type_requirement is None:
+    else:
         context.validation.report(
-            'substitution mappings requirement "%s" is not declared in node type "%s"'
-            % (presentation._name, node_type._name),
+            'substitution mapping requirement "{0}" is not declared in node type "{1}"'.format(
+                presentation._name, substitution_node_type._name),
             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
         return
 
-    requirement_name = presentation._raw[1]
-    requirements = node_template._get_requirements(context)
-    requirement = None
-    for name, the_requirement in requirements:
-        if name == requirement_name:
-            requirement = the_requirement
-            break
-
-    if requirement is None:
-        context.validation.report(
-            'substitution mappings requirement "%s" refers to an unknown requirement of node '
-            'template "%s": %s'
-            % (presentation._name, node_template._name, safe_repr(requirement_name)),
-            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+    if not _validate_mapping_format(presentation):
+        _report_invalid_mapping_format(context, presentation, field='requirement')
         return
 
-
-def validate_subtitution_mappings_capability(context, presentation):
-    if not validate_format(context, presentation, 'capability'):
-        return
-
-    node_template = get_node_template(context, presentation, 'capability')
+    # validate that the mapped requirement is defined in the corresponding node template
+    node_template = _get_node_template(context, presentation)
     if node_template is None:
+        _report_missing_node_template(context, presentation, field='requirement')
         return
-
-    node_type = presentation._container._get_type(context)
-    if node_type is None:
-        return
-
-    capabilities = node_type._get_capabilities(context)
-    type_capability = capabilities.get(presentation._name)
-    if type_capability is None:
+    mapped_requirement_name = presentation._raw[1]
+    for req_name, req in node_template._get_requirements(context):
+        if req_name == mapped_requirement_name:
+            node_template_requirement = req
+            break
+    else:
         context.validation.report(
-            'substitution mappings capability "%s" is not declared in node type "%s"'
-            % (presentation._name, node_type._name), locator=presentation._locator,
-            level=Issue.BETWEEN_TYPES)
-        return
-
-    capability_name = presentation._raw[1]
-    capabilities = node_template._get_capabilities(context)
-    capability = capabilities.get(capability_name)
-
-    if capability is None:
-        context.validation.report(
-            'substitution mappings capability "%s" refers to an unknown capability of node template'
-            ' "%s": %s'
-            % (presentation._name, node_template._name, safe_repr(capability_name)),
+            'substitution mapping requirement "{0}" refers to an unknown requirement of node '
+            'template "{1}": {mapped_requirement_name}'.format(
+                presentation._name, node_template._name,
+                mapped_requirement_name=safe_repr(mapped_requirement_name)),
             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
         return
 
-    type_capability_type = type_capability._get_type(context)
-    capability_type = capability._get_type(context)
-
-    if not type_capability_type._is_descendant(context, capability_type):
+    # validate that the requirement's capability type in substitution_mapping is derived from the
+    # requirement's capability type in the corresponding node template
+    substitution_type_requirement_capability_type = \
+        substitution_type_requirement._get_capability_type(context)
+    node_template_requirement_capability_type = \
+        node_template_requirement._get_capability(context)[0]
+    if not node_template_requirement_capability_type._is_descendant(
+            context, substitution_type_requirement_capability_type):
         context.validation.report(
-            'type "%s" of substitution mappings capability "%s" is not a descendant of "%s"'
-            % (capability_type._name, presentation._name, type_capability_type._name),
+            'substitution mapping requirement "{0}" of capability type "{1}" is not a descendant '
+            'of the mapped node template capability type "{2}"'.format(
+                presentation._name,
+                substitution_type_requirement_capability_type._name,
+                node_template_requirement_capability_type._name),
+            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+
+
+def validate_substitution_mappings_capability(context, presentation):
+
+    # validate that the capability in substitution_mapping is defined in the substitution node type
+    substitution_node_type = presentation._container._get_type(context)
+    if substitution_node_type is None:
+        return
+    substitution_type_capabilities = substitution_node_type._get_capabilities(context)
+    substitution_type_capability = substitution_type_capabilities.get(presentation._name)
+    if substitution_type_capability is None:
+        context.validation.report(
+            'substitution mapping capability "{0}" '
+            'is not declared in node type "{substitution_type}"'.format(
+                presentation._name, substitution_type=substitution_node_type._name),
+            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+        return
+
+    if not _validate_mapping_format(presentation):
+        _report_invalid_mapping_format(context, presentation, field='capability')
+        return
+
+    # validate that the capability in substitution_mapping is declared in the corresponding
+    # node template
+    node_template = _get_node_template(context, presentation)
+    if node_template is None:
+        _report_missing_node_template(context, presentation, field='capability')
+        return
+    mapped_capability_name = presentation._raw[1]
+    node_template_capability = node_template._get_capabilities(context).get(mapped_capability_name)
+
+    if node_template_capability is None:
+        context.validation.report(
+            'substitution mapping capability "{0}" refers to an unknown '
+            'capability of node template "{1}": {mapped_capability_name}'.format(
+                presentation._name, node_template._name,
+                mapped_capability_name=safe_repr(mapped_capability_name)),
+            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+        return
+
+    # validate that the capability type in substitution_mapping is derived from the capability type
+    # in the corresponding node template
+    substitution_type_capability_type = substitution_type_capability._get_type(context)
+    node_template_capability_type = node_template_capability._get_type(context)
+
+    if not substitution_type_capability_type._is_descendant(context, node_template_capability_type):
+        context.validation.report(
+            'node template capability type "{0}" is not a descendant of substitution mapping '
+            'capability "{1}" of type "{2}"'.format(
+                node_template_capability_type._name,
+                presentation._name,
+                substitution_type_capability_type._name),
             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
 
@@ -106,25 +131,37 @@ def validate_subtitution_mappings_capability(context, presentation):
 # Utils
 #
 
-def validate_format(context, presentation, name):
-    if (not isinstance(presentation._raw, list)) or (len(presentation._raw) != 2) \
-        or (not isinstance(presentation._raw[0], basestring)) \
-        or (not isinstance(presentation._raw[1], basestring)):
-        context.validation.report(
-            'substitution mappings %s "%s" is not a list of 2 strings: %s'
-            % (name, presentation._name, safe_repr(presentation._raw)),
-            locator=presentation._locator, level=Issue.FIELD)
+def _validate_mapping_format(presentation):
+    """Validate that the mapping is a list of 2 strings"""
+    if not isinstance(presentation._raw, list) or \
+            len(presentation._raw) != 2 or \
+            not isinstance(presentation._raw[0], basestring) or \
+            not isinstance(presentation._raw[1], basestring):
         return False
     return True
 
 
-def get_node_template(context, presentation, name):
+def _get_node_template(context, presentation):
     node_template_name = presentation._raw[0]
     node_template = context.presentation.get_from_dict('service_template', 'topology_template',
                                                        'node_templates', node_template_name)
-    if node_template is None:
-        context.validation.report(
-            'substitution mappings %s "%s" refers to an unknown node template: %s'
-            % (name, presentation._name, safe_repr(node_template_name)),
-            locator=presentation._locator, level=Issue.FIELD)
     return node_template
+
+
+def _report_missing_node_template(context, presentation, field):
+    context.validation.report(
+        'substitution mappings {field} "{node_template_mapping}" '
+        'refers to an unknown node template: {node_template_name}'.format(
+            field=field,
+            node_template_mapping=presentation._name,
+            node_template_name=safe_repr(presentation._raw[0])),
+        locator=presentation._locator, level=Issue.FIELD)
+
+
+def _report_invalid_mapping_format(context, presentation, field):
+    context.validation.report(
+        'substitution mapping {field} "{field_name}" is not a list of 2 strings: {value}'.format(
+            field=field,
+            field_name=presentation._name,
+            value=safe_repr(presentation._raw)),
+        locator=presentation._locator, level=Issue.FIELD)

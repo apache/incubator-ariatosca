@@ -25,8 +25,8 @@ from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknow
 
 from .modeling.data_types import (get_data_type, get_data_type_value, get_property_constraints,
                                   apply_constraint_to_value)
-from .modeling.substitution_mappings import (validate_subtitution_mappings_requirement,
-                                             validate_subtitution_mappings_capability)
+from .modeling.substitution_mappings import (validate_substitution_mappings_requirement,
+                                             validate_substitution_mappings_capability)
 from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_validators import (constraint_clause_field_validator,
                                             constraint_clause_in_range_validator,
@@ -380,7 +380,7 @@ class SubstitutionMappingsRequirement(AsIsPresentation):
 
     def _validate(self, context):
         super(SubstitutionMappingsRequirement, self)._validate(context)
-        validate_subtitution_mappings_requirement(context, self)
+        validate_substitution_mappings_requirement(context, self)
 
 
 class SubstitutionMappingsCapability(AsIsPresentation):
@@ -400,7 +400,7 @@ class SubstitutionMappingsCapability(AsIsPresentation):
 
     def _validate(self, context):
         super(SubstitutionMappingsCapability, self)._validate(context)
-        validate_subtitution_mappings_capability(context, self)
+        validate_substitution_mappings_capability(context, self)
 
 
 @has_fields
