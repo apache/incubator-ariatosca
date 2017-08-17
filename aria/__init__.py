@@ -23,9 +23,8 @@ import pkg_resources
 aria_package_name = 'apache-ariatosca'
 __version__ = pkg_resources.get_distribution(aria_package_name).version
 
-
-from .orchestrator.decorators import workflow, operation  # pylint: disable=wrong-import-position
-from . import (  # pylint: disable=wrong-import-position
+from .orchestrator.decorators import (workflow, operation)                                          # pylint: disable=wrong-import-position
+from . import (                                                                                     # pylint: disable=wrong-import-position
     extension,
     utils,
     parser,
@@ -47,23 +46,19 @@ __all__ = (
 
 def install_aria_extensions(strict=True):
     """
-    Iterates all Python packages with names beginning with ``aria_extension_`` and all
-    ``aria_extension`` entry points and loads them.
+    Loads all Python packages with names beginning with ``aria_extension_`` and calls their
+    ``aria_extension`` initialization entry points if they have them.
 
-    It then invokes all registered extension functions.
-
-    :param strict: if set to ``True``, Tries to load extensions with
-     dependency versions under consideration. Otherwise tries to load the
-     required package without version consideration. Defaults to True.
+    :param strict: if ``True`` tries to load extensions while taking into account the versions
+     of their dependencies, otherwise ignores versions
     :type strict: bool
     """
     for loader, module_name, _ in iter_modules():
         if module_name.startswith('aria_extension_'):
             loader.find_module(module_name).load_module(module_name)
     for entry_point in pkg_resources.iter_entry_points(group='aria_extension'):
-        # It should be possible to enable non strict loading - use the package
-        # that is already installed inside the environment, and forgo the
-        # version demand
+        # It should be possible to enable non strict loading - use the package that is already
+        # installed inside the environment, and forgo the version demand
         if strict:
             entry_point.load()
         else:

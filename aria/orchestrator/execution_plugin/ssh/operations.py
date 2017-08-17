@@ -48,7 +48,7 @@ def run_commands(ctx, commands, fabric_env, use_sudo, hide_output, **_):
     with fabric.api.settings(_hide_output(ctx, groups=hide_output),
                              **_fabric_env(ctx, fabric_env, warn_only=True)):
         for command in commands:
-            ctx.logger.info('Running command: {0}'.format(command))
+            ctx.logger.info(u'Running command: {0}'.format(command))
             run = fabric.api.sudo if use_sudo else fabric.api.run
             result = run(command)
             if result.failed:
@@ -70,8 +70,8 @@ def run_script(ctx, script_path, fabric_env, process, use_sudo, hide_output, **k
             # there may be race conditions with other operations that
             # may be running in parallel, so we pass -p to make sure
             # we get 0 exit code if the directory already exists
-            fabric.api.run('mkdir -p {0} && mkdir -p {1}'.format(paths.remote_scripts_dir,
-                                                                 paths.remote_work_dir))
+            fabric.api.run(u'mkdir -p {0} && mkdir -p {1}'.format(paths.remote_scripts_dir,
+                                                                  paths.remote_work_dir))
             # this file has to be present before using ctx
             fabric.api.put(_PROXY_CLIENT_PATH, paths.remote_ctx_path)
         process = common.create_process_config(
@@ -82,7 +82,7 @@ def run_script(ctx, script_path, fabric_env, process, use_sudo, hide_output, **k
         fabric.api.put(paths.local_script_path, paths.remote_script_path)
         with ctx_proxy.server.CtxProxy(ctx, _patch_ctx) as proxy:
             local_port = proxy.port
-            with fabric.context_managers.cd(process.get('cwd', paths.remote_work_dir)):  # pylint: disable=not-context-manager
+            with fabric.context_managers.cd(process.get('cwd', paths.remote_work_dir)):             # pylint: disable=not-context-manager
                 with tunnel.remote(ctx, local_port=local_port) as remote_port:
                     local_socket_url = proxy.socket_url
                     remote_socket_url = local_socket_url.replace(str(local_port), str(remote_port))
@@ -93,8 +93,8 @@ def run_script(ctx, script_path, fabric_env, process, use_sudo, hide_output, **k
                         remote_socket_url=remote_socket_url)
                     fabric.api.put(env_script, paths.remote_env_script_path)
                     try:
-                        command = 'source {0} && {1}'.format(paths.remote_env_script_path,
-                                                             process['command'])
+                        command = u'source {0} && {1}'.format(paths.remote_env_script_path,
+                                                              process['command'])
                         run = fabric.api.sudo if use_sudo else fabric.api.run
                         run(command)
                     except exceptions.TaskException:
@@ -136,8 +136,8 @@ def _hide_output(ctx, groups):
     """ Hides Fabric's output for every 'entity' in `groups` """
     groups = set(groups or [])
     if not groups.issubset(constants.VALID_FABRIC_GROUPS):
-        ctx.task.abort('`hide_output` must be a subset of {0} (Provided: {1})'
-                       .format(', '.join(constants.VALID_FABRIC_GROUPS), ', '.join(groups)))
+        ctx.task.abort(u'`hide_output` must be a subset of {0} (Provided: {1})'
+                       .format(u', '.join(constants.VALID_FABRIC_GROUPS), u', '.join(groups)))
     return fabric.api.hide(*groups)
 
 
@@ -165,16 +165,16 @@ def _fabric_env(ctx, fabric_env, warn_only):
 def _write_environment_script_file(process, paths, local_socket_url, remote_socket_url):
     env_script = StringIO.StringIO()
     env = process['env']
-    env['PATH'] = '{0}:$PATH'.format(paths.remote_ctx_dir)
-    env['PYTHONPATH'] = '{0}:$PYTHONPATH'.format(paths.remote_ctx_dir)
-    env_script.write('chmod +x {0}\n'.format(paths.remote_script_path))
-    env_script.write('chmod +x {0}\n'.format(paths.remote_ctx_path))
+    env['PATH'] = u'{0}:$PATH'.format(paths.remote_ctx_dir)
+    env['PYTHONPATH'] = u'{0}:$PYTHONPATH'.format(paths.remote_ctx_dir)
+    env_script.write(u'chmod +x {0}\n'.format(paths.remote_script_path))
+    env_script.write(u'chmod +x {0}\n'.format(paths.remote_ctx_path))
     env.update({
         ctx_proxy.client.CTX_SOCKET_URL: remote_socket_url,
-        'LOCAL_{0}'.format(ctx_proxy.client.CTX_SOCKET_URL): local_socket_url
+        u'LOCAL_{0}'.format(ctx_proxy.client.CTX_SOCKET_URL): local_socket_url
     })
     for key, value in env.iteritems():
-        env_script.write('export {0}={1}\n'.format(key, value))
+        env_script.write(u'export {0}={1}\n'.format(key, value))
     return env_script
 
 
@@ -184,12 +184,12 @@ class _Paths(object):
         self.local_script_path = local_script_path
         self.remote_ctx_dir = base_dir
         self.base_script_path = os.path.basename(self.local_script_path)
-        self.remote_ctx_path = '{0}/ctx'.format(self.remote_ctx_dir)
-        self.remote_scripts_dir = '{0}/scripts'.format(self.remote_ctx_dir)
-        self.remote_work_dir = '{0}/work'.format(self.remote_ctx_dir)
-        random_suffix = ''.join(random.choice(string.ascii_lowercase + string.digits)
-                                for _ in range(8))
-        remote_path_suffix = '{0}-{1}'.format(self.base_script_path, random_suffix)
-        self.remote_env_script_path = '{0}/env-{1}'.format(self.remote_scripts_dir,
-                                                           remote_path_suffix)
-        self.remote_script_path = '{0}/{1}'.format(self.remote_scripts_dir, remote_path_suffix)
+        self.remote_ctx_path = u'{0}/ctx'.format(self.remote_ctx_dir)
+        self.remote_scripts_dir = u'{0}/scripts'.format(self.remote_ctx_dir)
+        self.remote_work_dir = u'{0}/work'.format(self.remote_ctx_dir)
+        random_suffix = u''.join(random.choice(string.ascii_lowercase + string.digits)
+                                 for _ in range(8))
+        remote_path_suffix = u'{0}-{1}'.format(self.base_script_path, random_suffix)
+        self.remote_env_script_path = u'{0}/env-{1}'.format(self.remote_scripts_dir,
+                                                            remote_path_suffix)
+        self.remote_script_path = u'{0}/{1}'.format(self.remote_scripts_dir, remote_path_suffix)

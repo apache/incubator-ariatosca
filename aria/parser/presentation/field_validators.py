@@ -14,10 +14,27 @@
 # limitations under the License.
 
 
+from ...utils.formatting import safe_repr
 from ..validation import Issue
 from .utils import (parse_types_dict_names, report_issue_for_unknown_type,
                     report_issue_for_parent_is_self, report_issue_for_unknown_parent_type,
                     report_issue_for_circular_type_hierarchy)
+
+
+def not_negative_validator(field, presentation, context):
+    """
+    Makes sure that the field is not negative.
+
+    Can be used with the :func:`field_validator` decorator.
+    """
+
+    field.default_validate(presentation, context)
+    value = getattr(presentation, field.name)
+    if (value is not None) and (value < 0):
+        context.validation.report(u'field "{0}" is negative: {1}'
+                                  .format(field.name, safe_repr(value)),
+                                  locator=presentation._get_child_locator(field.name),
+                                  level=Issue.FIELD)
 
 
 def type_validator(type_name, *types_dict_names):
@@ -101,8 +118,10 @@ def list_length_validator(length):
         values = getattr(presentation, field.name)
         if isinstance(values, list):
             if len(values) != length:
-                context.validation.report('field "%s" does not have exactly %d elements in "%s"'
-                                          % (field.name, length, presentation._fullname),
+                context.validation.report(u'field "{0}" does not have exactly {1:d} elements in '
+                                          u'"{2}": {3}'
+                                          .format(field.name, length, presentation._fullname,
+                                                  safe_repr(values)),
                                           locator=presentation._get_child_locator(field.name),
                                           level=Issue.FIELD)
 

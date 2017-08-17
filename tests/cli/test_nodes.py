@@ -18,7 +18,7 @@ import mock
 
 from aria.cli.env import _Environment
 
-from .base_test import (  # pylint: disable=unused-import
+from .base_test import (                                                                            # pylint: disable=unused-import
     TestCliBase,
     mock_storage
 )

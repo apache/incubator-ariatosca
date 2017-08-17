@@ -31,6 +31,7 @@ clean:
 	-find . -maxdepth 1 -type f -name '.coverage' -delete
 	-find . -type f -name '*.pyc' -delete
 	-find . -type d -name '__pycache__' -prune -exec rm -rf {} \; 2>/dev/null
+	-find . -type d -name '*.egg-info' -exec rm -rf {} \; 2>/dev/null
 
 install:
 	pip install .[ssh]
@@ -54,10 +55,12 @@ test:
 	tox -e pylint_core \
 	    -e pylint_tests \
 	    -e core \
+	    -e extensions \
 	    -e e2e \
 	    -e ssh \
 	    -e docs
 
 ./requirements.txt: ./requirements.in
 	pip install --upgrade "pip-tools>=1.9.0"
+	rm ./requirements.txt
 	pip-compile --output-file ./requirements.txt ./requirements.in

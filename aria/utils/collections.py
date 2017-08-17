@@ -19,6 +19,11 @@ Additional collection classes and collection utilities.
 
 from __future__ import absolute_import  # so we can import standard 'collections'
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from copy import deepcopy
 try:
     from collections import OrderedDict
@@ -29,7 +34,7 @@ except ImportError:
 def cls_name(cls):
     module = str(cls.__module__)
     name = str(cls.__name__)
-    return name if module == '__builtin__' else '%s.%s' % (module, name)
+    return name if module == '__builtin__' else '{0}.{1}'.format(module, name)
 
 
 class FrozenList(list):
@@ -140,7 +145,8 @@ class StrictList(list):
 
     def _wrap(self, value):
         if (self.value_class is not None) and (not isinstance(value, self.value_class)):
-            raise TypeError('value must be a "%s": %s' % (cls_name(self.value_class), repr(value)))
+            raise TypeError('value must be a "{0}": {1}'
+                            .format(cls_name(self.value_class), repr(value)))
         if self.wrapper_function is not None:
             value = self.wrapper_function(value)
         return value
@@ -204,7 +210,8 @@ class StrictDict(OrderedDict):
 
     def __getitem__(self, key):
         if (self.key_class is not None) and (not isinstance(key, self.key_class)):
-            raise TypeError('key must be a "%s": %s' % (cls_name(self.key_class), repr(key)))
+            raise TypeError('key must be a "{0}": {1}'
+                            .format(cls_name(self.key_class), repr(key)))
         value = super(StrictDict, self).__getitem__(key)
         if self.unwrapper_function is not None:
             value = self.unwrapper_function(value)
@@ -212,35 +219,49 @@ class StrictDict(OrderedDict):
 
     def __setitem__(self, key, value, **_):
         if (self.key_class is not None) and (not isinstance(key, self.key_class)):
-            raise TypeError('key must be a "%s": %s' % (cls_name(self.key_class), repr(key)))
+            raise TypeError('key must be a "{0}": {1}'
+                            .format(cls_name(self.key_class), repr(key)))
         if (self.value_class is not None) and (not isinstance(value, self.value_class)):
-            raise TypeError('value must be a "%s": %s' % (cls_name(self.value_class), repr(value)))
+            raise TypeError('value must be a "{0}": {1}'
+                            .format(cls_name(self.value_class), repr(value)))
         if self.wrapper_function is not None:
             value = self.wrapper_function(value)
         return super(StrictDict, self).__setitem__(key, value)
 
 
-def merge(dict_a, dict_b, path=None, strict=False):
+def merge(dict_a, dict_b, copy=True, strict=False, path=None):
     """
     Merges dicts, recursively.
+
+    :param dict_a: target dict (will be modified)
+    :param dict_b: source dict (will not be modified)
+    :param copy: if True, will use :func:`deepcopy_fast` on each merged element
+    :param strict: if True, will raise a ValueError if there are key conflicts, otherwise will
+     override exiting values
+    :param path: for internal use in strict mode
+    :return: dict_a, after the merge
     """
 
-    # TODO: a.add_yaml_merge(b), see https://bitbucket.org/ruamel/yaml/src/
-    # TODO: 86622a1408e0f171a12e140d53c4ffac4b6caaa3/comments.py?fileviewer=file-view-default
+    # TODO: a.add_yaml_merge(b),
+    # see https://bitbucket.org/ruamel/yaml/src/86622a1408e0f171a12e140d53c4ffac4b6caaa3/
+    #     comments.py?fileviewer=file-view-default
 
     path = path or []
     for key, value_b in dict_b.iteritems():
         if key in dict_a:
             value_a = dict_a[key]
             if isinstance(value_a, dict) and isinstance(value_b, dict):
-                merge(value_a, value_b, path + [str(key)], strict)
+                if strict:
+                    path = path + [str(key)]
+                merge(value_a, value_b, copy, strict, path)
             elif value_a != value_b:
                 if strict:
-                    raise ValueError('dict merge conflict at %s' % '.'.join(path + [str(key)]))
+                    raise ValueError('dict merge conflict at {0}'
+                                     .format('.'.join(path + [str(key)])))
                 else:
-                    dict_a[key] = value_b
+                    dict_a[key] = deepcopy_fast(value_b) if copy else value_b
         else:
-            dict_a[key] = value_b
+            dict_a[key] = deepcopy_fast(value_b) if copy else value_b
     return dict_a
 
 
@@ -269,6 +290,15 @@ def prune(value, is_removable_function=is_removable):
     return value
 
 
+def deepcopy_fast(obj):
+    """
+    The builtin ``deepcopy`` is very slow due to detection of loops and other errors.
+
+    This version is surprisingly much faster.
+    """
+    return pickle.loads(pickle.dumps(obj))
+
+
 # TODO: Move following two methods to some place parser specific
 
 def deepcopy_with_locators(value):
@@ -276,7 +306,7 @@ def deepcopy_with_locators(value):
     Like :func:`~copy.deepcopy`, but also copies over locators.
     """
 
-    res = deepcopy(value)
+    res = deepcopy_fast(value)
     copy_locators(res, value)
     return res
 

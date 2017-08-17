@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -34,8 +35,11 @@ def test_version_string():
     assert VersionString('20.0.1-beta1') < VersionString('20.0.1')
     assert VersionString('20.0.1-beta2') < VersionString('20.0.1-rc2')
     assert VersionString('20.0.1-alpha2') < VersionString('20.0.1-beta1')
-    assert VersionString('20.0.1-dev2') < VersionString('20.0.1-alpha1')
-    assert VersionString('20.0.1-DEV2') < VersionString('20.0.1-ALPHA1')
+    assert VersionString('20.0.1-dev2') < VersionString('20.0.1-ALPHA1')
+    assert VersionString('20.0.1-DEV2') < VersionString('20.0.1-alpha1')
+
+    # With Unicode qualifier
+    assert VersionString(u'20.0.1-詠嘆調1') == VersionString(u'20.0.1-詠嘆調2')
 
     # Coercive comparisons
     assert VersionString('20.0.0') == VersionString(10 * 2)
@@ -49,7 +53,7 @@ def test_version_string():
     assert VersionString() == VersionString()
     assert VersionString() == VersionString.NULL
     assert VersionString(None) == VersionString.NULL
-    assert VersionString.NULL == None # pylint: disable=singleton-comparison
+    assert VersionString.NULL == None                                                               # pylint: disable=singleton-comparison
     assert VersionString.NULL == 0
 
     # Invalid version strings

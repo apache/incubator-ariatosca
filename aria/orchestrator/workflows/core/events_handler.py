@@ -166,5 +166,5 @@ def _update_node_state_if_necessary(ctx, is_transitional=False):
 
 def _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, status):
     workflow_context.logger.info(
-        "'{workflow_name}' workflow execution {status} before the cancel request"
-        "was fully processed".format(workflow_name=workflow_context.workflow_name, status=status))
+        u"'{workflow_name}' workflow execution {status} before the cancel request"
+        u"was fully processed".format(workflow_name=workflow_context.workflow_name, status=status))

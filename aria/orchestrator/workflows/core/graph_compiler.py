@@ -90,11 +90,11 @@ class GraphCompiler(object):
 
     @staticmethod
     def _start_graph_suffix(api_id):
-        return '{0}-Start'.format(api_id)
+        return u'{0}-Start'.format(api_id)
 
     @staticmethod
     def _end_graph_suffix(api_id):
-        return '{0}-End'.format(api_id)
+        return u'{0}-End'.format(api_id)
 
     @staticmethod
     def _get_non_dependent_tasks(execution):

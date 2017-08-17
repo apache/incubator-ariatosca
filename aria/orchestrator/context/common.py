@@ -108,9 +108,9 @@ class BaseContext(object):
                                                    execution_id=self._execution_id)
 
     def __repr__(self):
-        return (
-            '{name}(name={self.name}, '
-            'deployment_id={self._service_id}, '
+        return (                                                                                    # pylint: disable=redundant-keyword-arg
+            u'{name}(name={self.name}, '
+            u'deployment_id={self._service_id}, '
             .format(name=self.__class__.__name__, self=self))
 
     @contextmanager

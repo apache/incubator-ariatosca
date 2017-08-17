@@ -36,7 +36,7 @@ class JinjaReader(Reader):
     def read(self):
         data = self.load()
         try:
-            data = str(data)
+            data = unicode(data)
             template = Template(data)
             literal = template.render(CONTEXT)
             # TODO: might be useful to write the literal result to a file for debugging
@@ -52,4 +52,4 @@ class JinjaReader(Reader):
                     self.context, LiteralLocation(literal), LiteralLoader(literal))
             return next_reader.read()
         except Exception as e:
-            raise ReaderSyntaxError('Jinja: %s' % e, cause=e)
+            raise ReaderSyntaxError(u'Jinja: {0}'.format(e), cause=e)

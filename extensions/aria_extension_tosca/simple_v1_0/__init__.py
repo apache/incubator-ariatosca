@@ -45,7 +45,8 @@ Definitions
 
    aria_extension_tosca.simple_v1_0.PropertyDefinition
    aria_extension_tosca.simple_v1_0.AttributeDefinition
-   aria_extension_tosca.simple_v1_0.ParameterDefinition
+   aria_extension_tosca.simple_v1_0.InputDefinition
+   aria_extension_tosca.simple_v1_0.OutputDefinition
    aria_extension_tosca.simple_v1_0.OperationDefinition
    aria_extension_tosca.simple_v1_0.InterfaceDefinition
    aria_extension_tosca.simple_v1_0.RelationshipDefinition
@@ -126,9 +127,9 @@ from .presenter import ToscaSimplePresenter1_0
 from .assignments import (PropertyAssignment, OperationAssignment, InterfaceAssignment,
                           RelationshipAssignment, RequirementAssignment, AttributeAssignment,
                           CapabilityAssignment, ArtifactAssignment)
-from .definitions import (PropertyDefinition, AttributeDefinition, ParameterDefinition,
-                          OperationDefinition, InterfaceDefinition, RelationshipDefinition,
-                          RequirementDefinition, CapabilityDefinition)
+from .definitions import (PropertyDefinition, AttributeDefinition, InputDefinition,
+                          OutputDefinition, OperationDefinition, InterfaceDefinition,
+                          RelationshipDefinition, RequirementDefinition, CapabilityDefinition)
 from .filters import CapabilityFilter, NodeFilter
 from .misc import (Description, MetaData, Repository, Import, ConstraintClause, EntrySchema,
                    OperationImplementation, SubstitutionMappingsRequirement,
@@ -157,7 +158,8 @@ __all__ = (
     'ArtifactAssignment',
     'PropertyDefinition',
     'AttributeDefinition',
-    'ParameterDefinition',
+    'InputDefinition',
+    'OutputDefinition',
     'OperationDefinition',
     'InterfaceDefinition',
     'RelationshipDefinition',

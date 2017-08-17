@@ -73,7 +73,7 @@ class WorkflowContext(BaseContext):
         """
         Iterates over nodes templates.
         """
-        key = 'service_{0}'.format(self.model.node_template.model_cls.name_column_name())
+        key = u'service_{0}'.format(self.model.node_template.model_cls.name_column_name())
 
         return self.model.node_template.iter(
             filters={
@@ -86,7 +86,7 @@ class WorkflowContext(BaseContext):
         """
         Iterates over nodes.
         """
-        key = 'service_{0}'.format(self.model.node.model_cls.name_column_name())
+        key = u'service_{0}'.format(self.model.node.model_cls.name_column_name())
         return self.model.node.iter(
             filters={
                 key: getattr(self.service, self.service.name_column_name())

@@ -436,7 +436,7 @@ class TaskBase(mixins.ModelMixin):
         return self.node or self.relationship
 
     @orm.validates('max_attempts')
-    def validate_max_attempts(self, _, value):                                  # pylint: disable=no-self-use
+    def validate_max_attempts(self, _, value):                                                      # pylint: disable=no-self-use
         """
         Validates that max attempts is either -1 or a positive number.
         """

@@ -139,9 +139,9 @@ topology_template:
   substitution_mappings:
     node_type: ims.nodes.IMS
     capabilities:
-       p-cscf: [ bono, p-cscf ]
-       i-cscf: [ i-cscf, i-cscf ]
-       s-cscf: [ s-cscf, s-cscf ]
-       hss: [ homestead, hss ]
-       ctf: [ ralf, ctf ]
-       xdms: [ homer, xdms ]
+      p-cscf: [ bono, p-cscf ]
+      i-cscf: [ i-cscf, i-cscf ]
+      s-cscf: [ s-cscf, s-cscf ]
+      hss: [ homestead, hss ]
+      ctf: [ ralf, ctf ]
+      xdms: [ homer, xdms ]

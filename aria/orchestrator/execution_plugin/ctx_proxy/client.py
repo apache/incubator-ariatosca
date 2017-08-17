@@ -32,7 +32,7 @@ CTX_SOCKET_URL = 'CTX_SOCKET_URL'
 class _RequestError(RuntimeError):
 
     def __init__(self, ex_message, ex_type, ex_traceback):
-        super(_RequestError, self).__init__(self, '{0}: {1}'.format(ex_type, ex_message))
+        super(_RequestError, self).__init__(self, u'{0}: {1}'.format(ex_type, ex_message))
         self.ex_type = ex_type
         self.ex_message = ex_message
         self.ex_traceback = ex_traceback
@@ -45,7 +45,7 @@ def _http_request(socket_url, request, method, timeout):
     response = opener.open(request, timeout=timeout)
 
     if response.code != 200:
-        raise RuntimeError('Request failed: {0}'.format(response))
+        raise RuntimeError(u'Request failed: {0}'.format(response))
     return json.loads(response.read())
 
 

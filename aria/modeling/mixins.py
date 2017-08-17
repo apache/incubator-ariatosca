@@ -201,7 +201,7 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
 
     @property
     @caching.cachedmethod
-    def container(self): # pylint: disable=too-many-return-statements,too-many-branches
+    def container(self):                                                                            # pylint: disable=too-many-return-statements,too-many-branches
         """
         The logical container for this parameter, which would be another model: service, node,
         group, or policy (or their templates).
@@ -319,7 +319,7 @@ class ParameterMixin(TemplateModelMixin, caching.HasCachedMethods):             
         type_name = canonical_type_name(value)
         if type_name is None:
             type_name = full_type_name(value)
-        return cls(name=name,  # pylint: disable=unexpected-keyword-arg
+        return cls(name=name,                                                                       # pylint: disable=unexpected-keyword-arg
                    type_name=type_name,
                    value=value,
                    description=description)

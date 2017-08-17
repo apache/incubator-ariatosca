@@ -20,6 +20,7 @@ environment:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: 2.7.8
       PYTHON_ARCH: 32
+      CONCURRENCY: 1
 
 build: false
 

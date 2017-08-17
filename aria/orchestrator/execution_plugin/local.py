@@ -78,7 +78,7 @@ def _execute_func(script_path, ctx, process, operation_kwargs):
     command = process['command']
     env = os.environ.copy()
     env.update(process['env'])
-    ctx.logger.info('Executing: {0}'.format(command))
+    ctx.logger.info(u'Executing: {0}'.format(command))
     with ctx_proxy.server.CtxProxy(ctx, common.patch_ctx) as proxy:
         env[ctx_proxy.client.CTX_SOCKET_URL] = proxy.socket_url
         running_process = subprocess.Popen(
@@ -95,7 +95,7 @@ def _execute_func(script_path, ctx, process, operation_kwargs):
         exit_code = running_process.wait()
     stdout_consumer.join()
     stderr_consumer.join()
-    ctx.logger.info('Execution done (exit_code={0}): {1}'.format(exit_code, command))
+    ctx.logger.info(u'Execution done (exit_code={0}): {1}'.format(exit_code, command))
 
     def error_check_func():
         if exit_code:

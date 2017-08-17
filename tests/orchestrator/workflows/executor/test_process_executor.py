@@ -34,7 +34,7 @@ from aria.orchestrator.workflows.executor import process
 import tests.storage
 import tests.resources
 from tests.helpers import FilesystemDataHolder
-from tests.fixtures import (  # pylint: disable=unused-import
+from tests.fixtures import (                                                                        # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
 )

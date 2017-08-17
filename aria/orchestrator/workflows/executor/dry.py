@@ -22,7 +22,7 @@ from datetime import datetime
 from . import base
 
 
-class DryExecutor(base.BaseExecutor):                                                                    # pylint: disable=abstract-method
+class DryExecutor(base.BaseExecutor):                                                               # pylint: disable=abstract-method
     """
     Dry task executor: prints task information without causing any side effects.
     """
@@ -33,11 +33,11 @@ class DryExecutor(base.BaseExecutor):                                           
             ctx.task.started_at = datetime.utcnow()
             ctx.task.status = ctx.task.STARTED
 
-            dry_msg = '<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
+            dry_msg = u'<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
             logger = ctx.logger.info if ctx.task.function else ctx.logger.debug
 
             if hasattr(ctx.task.actor, 'source_node'):
-                name = '{source_node.name}->{target_node.name}'.format(
+                name = u'{source_node.name}->{target_node.name}'.format(
                     source_node=ctx.task.actor.source_node, target_node=ctx.task.actor.target_node)
             else:
                 name = ctx.task.actor.name

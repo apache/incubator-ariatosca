@@ -55,10 +55,10 @@ class ProcessException(ExecutorException):
         Describes the error in detail
         """
         return (
-            'Command "{error.command}" executed with an error.{0}'
-            'code: {error.return_code}{0}'
-            'error: {error.stderr}{0}'
-            'output: {error.stdout}'.format(os.linesep, error=self))
+            u'Command "{error.command}" executed with an error.{0}'
+            u'code: {error.return_code}{0}'
+            u'error: {error.stderr}{0}'
+            u'output: {error.stdout}'.format(os.linesep, error=self))
 
 
 class AriaEngineError(exceptions.AriaError):

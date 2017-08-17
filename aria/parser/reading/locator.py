@@ -73,23 +73,23 @@ class Locator(object):
                 wrapped, raw_element = wrap(raw_element)
                 if wrapped:
                     raw[i] = raw_element
-                child_path = '%s.%d' % (path, i) if path else str(i)
+                child_path = u'{0}.{1:d}'.format(path, i) if path else unicode(i)
                 try:
                     self.children[i].link(raw_element, child_path)
                 except KeyError:
-                    raise ValueError('location map does not match agnostic raw data: %s' %
-                                     child_path)
+                    raise ValueError('location map does not match agnostic raw data: {0}'
+                                     .format(child_path))
         elif isinstance(raw, dict):
             for k, raw_element in raw.iteritems():
                 wrapped, raw_element = wrap(raw_element)
                 if wrapped:
                     raw[k] = raw_element
-                child_path = '%s.%s' % (path, k) if path else k
+                child_path = u'{0}.{1}'.format(path, k) if path else k
                 try:
                     self.children[k].link(raw_element, child_path)
                 except KeyError:
-                    raise ValueError('location map does not match agnostic raw data: %s' %
-                                     child_path)
+                    raise ValueError('location map does not match agnostic raw data: {0}'
+                                     .format(child_path))
 
     def merge(self, locator):
         if isinstance(self.children, dict) and isinstance(locator.children, dict):
@@ -101,10 +101,10 @@ class Locator(object):
 
     def dump(self, key=None):
         if key:
-            puts('%s "%s":%d:%d' %
-                 (Colored.red(key), Colored.blue(self.location), self.line, self.column))
+            puts(u'{0} "{1}":{2:d}:{3:d}'
+                 .format(Colored.red(key), Colored.blue(self.location), self.line, self.column))
         else:
-            puts('"%s":%d:%d' % (Colored.blue(self.location), self.line, self.column))
+            puts(u'"{0}":{1:d}:{2:d}'.format(Colored.blue(self.location), self.line, self.column))
         if isinstance(self.children, list):
             with indent(2):
                 for loc in self.children:
@@ -116,4 +116,4 @@ class Locator(object):
 
     def __str__(self):
         # Should be in same format as Issue.locator_as_str
-        return '"%s":%d:%d' % (self.location, self.line, self.column)
+        return u'"{0}":{1:d}:{2:d}'.format(self.location, self.line, self.column)

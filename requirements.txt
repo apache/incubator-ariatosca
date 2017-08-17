@@ -7,29 +7,26 @@
 backports.shutil-get-terminal-size==1.0.0
 blinker==1.4
 bottle==0.12.13
-cachecontrol[filecache]==0.12.1
+cachecontrol[filecache]==0.12.3
 click-didyoumean==0.0.3
 click==6.7
 colorama==0.3.9
 decorator==4.1.2          # via networkx
-jinja2==2.9.6
-jsonpickle==0.9.4
+jinja2==2.10
+jsonpickle==0.9.5
 lockfile==0.12.2          # via cachecontrol
-logutils==0.3.4.1
+logutils==0.3.5
 markupsafe==1.0           # via jinja2
 msgpack-python==0.4.8     # via cachecontrol
 networkx==2.0
 prettytable==0.7.2
-psutil==5.4.0
+psutil==5.4.1
 requests==2.13.0
 retrying==1.3.3
-ruamel.ordereddict==0.4.9  # via ruamel.yaml
-ruamel.yaml==0.15.34
+ruamel.ordereddict==0.4.13  # via ruamel.yaml
+ruamel.yaml==0.15.35
 shortuuid==0.5.0
-six==1.10.0               # via retrying
-sqlalchemy==1.1.6
-wagon==0.6.0
+six==1.11.0               # via retrying
+sqlalchemy==1.1.15
+wagon==0.6.1
 wheel==0.29.0             # via wagon
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools

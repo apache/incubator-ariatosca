@@ -115,7 +115,7 @@ class PresentationBase(HasCachedMethods):
         if names:
             obj = self._get(*names[:-1])
             if isinstance(obj, dict):
-                return obj.get(names[-1])  # pylint: disable=no-member
+                return obj.get(names[-1])                                                           # pylint: disable=no-member
         return None
 
     def _get_child_locator(self, *names):
@@ -159,7 +159,7 @@ class PresentationBase(HasCachedMethods):
             for field_name in field_names:
                 self._dump_field(context, field_name)
         elif hasattr(self, '_iter_field_names'):
-            for field_name in self._iter_field_names():  # pylint: disable=no-member
+            for field_name in self._iter_field_names():                                             # pylint: disable=no-member
                 self._dump_field(context, field_name)
         else:
             puts(context.style.literal_style(self._raw))
@@ -172,7 +172,7 @@ class PresentationBase(HasCachedMethods):
         delegate to their ``_dump`` methods.
         """
 
-        field = self.FIELDS[field_name]  # pylint: disable=no-member
+        field = self.FIELDS[field_name]                                                             # pylint: disable=no-member
         field.dump(self, context)
 
     def _clone(self, container=None):
@@ -199,6 +199,10 @@ class Presentation(PresentationBase):
     """
 
     def _validate(self, context):
+        # Allow the skipping of normative type validation (for improved performance)
+        if (not context.presentation.configuration.get('validate_normative', True)) \
+            and self._get_extension('normative'):
+            return
         validate_no_short_form(context, self)
         validate_no_unknown_fields(context, self)
         validate_known_fields(context, self)
@@ -233,8 +237,9 @@ class AsIsPresentation(PresentationBase):
         try:
             validate_primitive(self._raw, self.cls, context.validation.allow_primitive_coersion)
         except ValueError as e:
-            context.validation.report('"%s" is not a valid "%s": %s'
-                                      % (self._fullname, self._full_cls_name, safe_repr(self._raw)),
+            context.validation.report(u'"{0}" is not a valid "{1}": {2}'
+                                      .format(self._fullname, self._full_cls_name,
+                                              safe_repr(self._raw)),
                                       locator=self._locator,
                                       level=Issue.FIELD,
                                       exception=e)

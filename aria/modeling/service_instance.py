@@ -319,7 +319,7 @@ class NodeBase(InstanceModelMixin):
     # region one_to_one relationships
 
     @declared_attr
-    def host(cls): # pylint: disable=method-hidden
+    def host(cls):                                                                                  # pylint: disable=method-hidden
         """
         Node in which we are hosted (can be ``None``).
 
@@ -510,7 +510,7 @@ class NodeBase(InstanceModelMixin):
     @classmethod
     def determine_state(cls, op_name, is_transitional):
         """
-        :returns the state the node should be in as a result of running the operation on this node.
+        :return: the state the node should be in as a result of running the operation on this node.
 
         E.g. if we are running tosca.interfaces.node.lifecycle.Standard.create, then
         the resulting state should either 'creating' (if the task just started) or 'created'

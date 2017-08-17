@@ -499,7 +499,7 @@ if __name__ == '__main__':
                 operation_name='op',
                 arguments=arguments))
             return graph
-        tasks_graph = mock_workflow(ctx=workflow_context)  # pylint: disable=no-value-for-parameter
+        tasks_graph = mock_workflow(ctx=workflow_context)                                           # pylint: disable=no-value-for-parameter
         graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(tasks_graph)
         eng = engine.Engine(executor)
         eng.execute(workflow_context)

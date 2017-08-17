@@ -26,7 +26,7 @@ from aria.modeling import (
 )
 
 
-class MockModel(models.aria_declarative_base, mixins.ModelMixin): #pylint: disable=abstract-method
+class MockModel(models.aria_declarative_base, mixins.ModelMixin):                                   # pylint: disable=abstract-method
     __tablename__ = 'mock_model'
     model_dict = Column(modeling_types.Dict)
     model_list = Column(modeling_types.List)

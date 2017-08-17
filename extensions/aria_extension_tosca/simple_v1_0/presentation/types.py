@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-def convert_name_to_full_type_name(context, name, types_dict): # pylint: disable=unused-argument
+def convert_name_to_full_type_name(context, name, types_dict):                                      # pylint: disable=unused-argument
     """
     Converts a type name to its full type name, or else returns it unchanged.
 

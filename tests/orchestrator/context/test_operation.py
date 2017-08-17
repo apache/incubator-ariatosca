@@ -106,7 +106,7 @@ def test_node_operation_task_execution(ctx, thread_executor, dataholder):
     )
     operations = interface.operations
     assert len(operations) == 1
-    assert dataholder['function'] == operations.values()[0].function             # pylint: disable=no-member
+    assert dataholder['function'] == operations.values()[0].function                                # pylint: disable=no-member
     assert dataholder['arguments']['putput'] is True
 
     # Context based attributes (sugaring)
@@ -150,7 +150,7 @@ def test_relationship_operation_task_execution(ctx, thread_executor, dataholder)
     assert dataholder['actor_name'] == relationship.name
     assert interface_name in dataholder['task_name']
     operations = interface.operations
-    assert dataholder['function'] == operations.values()[0].function           # pylint: disable=no-member
+    assert dataholder['function'] == operations.values()[0].function                                # pylint: disable=no-member
     assert dataholder['arguments']['putput'] is True
 
     # Context based attributes (sugaring)

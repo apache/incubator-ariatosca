@@ -58,7 +58,7 @@ def check_overriding_storage_exceptions(e, model_class, name):
             'There already a exists a {model_class} with the same name' \
                 .format(model_class=model_class, name=name, linesep=os.linesep)
         trace = sys.exc_info()[2]
-        raise type(e), type(e)(new_message), trace  # pylint: disable=raising-non-exception
+        raise type(e), type(e)(new_message), trace                                                  # pylint: disable=raising-non-exception
 
 
 def download_file(url):
@@ -107,7 +107,7 @@ def generate_progress_handler(file_path, action='', max_bar_length=80):
 
         filled_length = min(bar_length, int(round(bar_length * read_bytes / float(total_bytes))))
         percents = min(100.00, round(100.00 * (read_bytes / float(total_bytes)), 2))
-        bar = '#' * filled_length + '-' * (bar_length - filled_length)  # pylint: disable=blacklisted-name
+        bar = '#' * filled_length + '-' * (bar_length - filled_length)                              # pylint: disable=blacklisted-name
 
         # The \r caret makes sure the cursor moves back to the beginning of the line
         sys.stdout.write('\r{0} {1} |{2}| {3}%'.format(action, file_name, bar, percents))

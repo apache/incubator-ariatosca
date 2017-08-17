@@ -2,30 +2,24 @@ tosca_definitions_version: tosca_simple_yaml_1_0
 
 node_types:
 
-  WebServer:
-    derived_from: tosca:Root
-    capabilities:
-      host:
-        type: tosca:Container
-
-  WebApp:
+  HelloWorld:
     derived_from: tosca:WebApplication
-    properties:
-      port:
-        type: integer
+    requirements:
+      - host:
+          # Override to allow for 0 occurrences
+          capability: tosca:Container
+          occurrences: [ 0, UNBOUNDED ]
 
 topology_template:
 
   node_templates:
-    web_server:
-      type: WebServer
-
-    web_app:
-      type: WebApp
-      properties:
-        port: 9090
-      requirements:
-        - host: web_server
+    hello_world:
+      type: HelloWorld
+      capabilities:
+        app_endpoint:
+          properties:
+            protocol: http
+            port: 9090
       interfaces:
         Standard:
           configure: scripts/configure.sh
@@ -35,4 +29,4 @@ topology_template:
   outputs:
     port:
       type: integer
-      value: { get_property: [ web_app, port ] }
+      value: { get_property: [ hello_world, app_endpoint, port ] }

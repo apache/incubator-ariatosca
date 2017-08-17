@@ -27,7 +27,7 @@ from datetime import datetime
 
 
 from aria.parser.validation import Issue
-from aria.utils.formatting import string_list_as_string
+from aria.utils.formatting import (string_list_as_string, safe_repr)
 from aria.utils.collections import (StrictDict, OrderedDict)
 from aria.utils.yaml import yaml
 from aria.orchestrator import WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
@@ -49,7 +49,7 @@ from ..data_types import coerce_value
 IMPLEMENTATION_PREFIX_REGEX = re.compile(r'(?<!\\)(?:\\\\)*>')
 
 
-def create_service_template_model(context): # pylint: disable=too-many-locals,too-many-branches
+def create_service_template_model(context):                                                         # pylint: disable=too-many-locals,too-many-branches
     model = ServiceTemplate(created_at=datetime.now(),
                             main_file_name=os.path.basename(str(context.presentation.location)))
 
@@ -315,6 +315,10 @@ def create_relationship_template_model(context, service_template, relationship):
     create_parameter_models_from_assignments(model.properties,
                                              relationship.properties,
                                              model_cls=Property)
+    # TODO: does not exist in models, but should
+    #create_parameter_models_from_assignments(model.attributes,
+    #                                         relationship.attributes,
+    #                                         model_cls=Attribute)
     create_interface_template_models(context, service_template, model.interface_templates,
                                      relationship.interfaces)
 
@@ -346,6 +350,10 @@ def create_capability_template_model(context, service_template, capability):
     create_parameter_models_from_assignments(model.properties,
                                              capability.properties,
                                              model_cls=Property)
+    # TODO: does not exist in models, but should
+    #create_parameter_models_from_assignments(model.attributes,
+    #                                         capability.attributes,
+    #                                         model_cls=Attribute)
 
     return model
 
@@ -399,7 +407,7 @@ def create_operation_template_model(context, service_template, operation):
                         value = yaml.load(value, Loader=yaml.SafeLoader)
                     except yaml.parser.MarkedYAMLError as e:
                         context.validation.report(
-                            'YAML parser {0} in operation configuration: {1}'
+                            u'YAML parser {0} in operation configuration: {1}'
                             .format(e.problem, value),
                             locator=implementation._locator,
                             level=Issue.FIELD)
@@ -518,7 +526,7 @@ def create_workflow_operation_template_model(context, service_template, policy):
 
     used_reserved_names = WORKFLOW_DECORATOR_RESERVED_ARGUMENTS.intersection(model.inputs.keys())
     if used_reserved_names:
-        context.validation.report('using reserved arguments in workflow policy "{0}": {1}'
+        context.validation.report(u'using reserved arguments in workflow policy "{0}": {1}'
                                   .format(
                                       policy._name,
                                       string_list_as_string(used_reserved_names)),
@@ -630,7 +638,8 @@ def create_node_filter_constraints(context, node_filter, target_node_template_co
         for property_name, constraint_clause in properties:
             constraint = create_constraint(context, node_filter, constraint_clause, property_name,
                                            None)
-            target_node_template_constraints.append(constraint)
+            if constraint is not None:
+                target_node_template_constraints.append(constraint)
 
     capabilities = node_filter.capabilities
     if capabilities is not None:
@@ -640,24 +649,33 @@ def create_node_filter_constraints(context, node_filter, target_node_template_co
                 for property_name, constraint_clause in properties:
                     constraint = create_constraint(context, node_filter, constraint_clause,
                                                    property_name, capability_name)
-                    target_node_template_constraints.append(constraint)
+                    if constraint is not None:
+                        target_node_template_constraints.append(constraint)
 
 
-def create_constraint(context, node_filter, constraint_clause, property_name, capability_name): # pylint: disable=too-many-return-statements
+def create_constraint(context, node_filter, constraint_clause, property_name, capability_name):     # pylint: disable=too-many-return-statements
+    if (not isinstance(constraint_clause._raw, dict)) or (len(constraint_clause._raw) != 1):
+        context.validation.report(
+            u'node_filter constraint is not a dict with one key: {0}'
+            .format(safe_repr(constraint_clause._raw)),
+            locator=node_filter._locator,
+            level=Issue.FIELD)
+        return None
+
     constraint_key = constraint_clause._raw.keys()[0]
 
-    the_type = constraint_clause._get_type(context)
+    value_type = constraint_clause._get_type(context)
 
-    def coerce_constraint(constraint):
-        if the_type is not None:
-            return coerce_value(context, node_filter, the_type, None, None, constraint,
+    def coerce_constraint(constraint, value_type=value_type):
+        if value_type is not None:
+            return coerce_value(context, node_filter, value_type, None, None, constraint,
                                 constraint_key)
         else:
             return constraint
 
-    def coerce_constraints(constraints):
-        if the_type is not None:
-            return tuple(coerce_constraint(constraint) for constraint in constraints)
+    def coerce_constraints(constraints, value_type=value_type):
+        if value_type is not None:
+            return tuple(coerce_constraint(constraint, value_type) for constraint in constraints)
         else:
             return constraints
 
@@ -684,18 +702,22 @@ def create_constraint(context, node_filter, constraint_clause, property_name, ca
                            coerce_constraints(constraint_clause.valid_values))
     elif constraint_key == 'length':
         return Length(property_name, capability_name,
-                      coerce_constraint(constraint_clause.length))
+                      coerce_constraint(constraint_clause.length, int))
     elif constraint_key == 'min_length':
         return MinLength(property_name, capability_name,
-                         coerce_constraint(constraint_clause.min_length))
+                         coerce_constraint(constraint_clause.min_length, int))
     elif constraint_key == 'max_length':
         return MaxLength(property_name, capability_name,
-                         coerce_constraint(constraint_clause.max_length))
+                         coerce_constraint(constraint_clause.max_length, int))
     elif constraint_key == 'pattern':
         return Pattern(property_name, capability_name,
-                       coerce_constraint(constraint_clause.pattern))
+                       coerce_constraint(constraint_clause.pattern, unicode))
     else:
-        raise ValueError('malformed node_filter: {0}'.format(constraint_key))
+        context.validation.report(
+            u'unsupported node_filter constraint: {0}'.format(constraint_key),
+            locator=node_filter._locator,
+            level=Issue.FIELD)
+        return None
 
 
 def split_prefix(string):
@@ -703,7 +725,7 @@ def split_prefix(string):
     Splits the prefix on the first non-escaped ">".
     """
 
-    split = IMPLEMENTATION_PREFIX_REGEX.split(string, 1)
+    split = IMPLEMENTATION_PREFIX_REGEX.split(string, 1) if string is not None else ()
     if len(split) < 2:
         return None, None
     return split[0].strip(), split[1].strip()
@@ -740,7 +762,7 @@ def extract_implementation_primary(context, service_template, presentation, mode
         model.function = postfix
         if model.plugin_specification is None:
             context.validation.report(
-                'no policy for plugin "{0}" specified in operation implementation: {1}'
+                u'no policy for plugin "{0}" specified in operation implementation: {1}'
                 .format(prefix, primary),
                 locator=presentation._get_child_locator('properties', 'implementation'),
                 level=Issue.BETWEEN_TYPES)

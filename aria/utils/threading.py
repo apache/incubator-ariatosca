@@ -59,10 +59,9 @@ class DaemonThread(Thread):
             pass
 
 
-# https://gist.github.com/tliron/81dd915166b0bfc64be08b4f8e22c835
-class FixedThreadPoolExecutor(object):
+class Executor(object):
     """
-    Executes tasks in a fixed thread pool.
+    Executes tasks.
 
     Makes sure to gather all returned results and thrown exceptions in one place, in order of task
     submission.
@@ -93,7 +92,104 @@ class FixedThreadPoolExecutor(object):
             print executor.returns
     """
 
-    _CYANIDE = object()  # Special task marker used to kill worker threads.
+    def __init__(self, print_exceptions=False):
+        self.print_exceptions = print_exceptions
+
+    def submit(self, func, *args, **kwargs):
+        """
+        Submit a task for execution.
+
+        The task will be called ASAP on the next available worker thread in the pool.
+
+        :raises ExecutorException: if cannot be submitted
+        """
+        raise NotImplementedError
+
+    def close(self):
+        """
+        Blocks until all current tasks finish execution and all worker threads are dead.
+
+        You cannot submit tasks anymore after calling this.
+
+        This is called automatically upon exit if you are using the ``with`` keyword.
+        """
+        pass
+
+    def drain(self):
+        """
+        Blocks until all current tasks finish execution, but leaves the worker threads alive.
+        """
+        pass
+
+    @property
+    def returns(self):
+        """
+        The returned values from all tasks, in order of submission.
+        """
+        return ()
+
+    @property
+    def exceptions(self):
+        """
+        The raised exceptions from all tasks, in order of submission.
+        """
+        return ()
+
+    def raise_first(self):
+        """
+        If exceptions were thrown by any task, then the first one will be raised.
+
+        This is rather arbitrary: proper handling would involve iterating all the exceptions.
+        However, if you want to use the "raise" mechanism, you are limited to raising only one of
+        them.
+        """
+
+        exceptions = self.exceptions
+        if exceptions:
+            raise exceptions[0]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, the_type, value, traceback):
+        pass
+
+
+class BlockingExecutor(Executor):
+    """
+    Executes tasks in the current thread.
+    """
+
+    def __init__(self, print_exceptions=False):
+        super(BlockingExecutor, self).__init__(print_exceptions=print_exceptions)
+        self._returns = []
+        self._exceptions = []
+
+    def submit(self, func, *args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+            self._returns.append(result)
+        except Exception as e:
+            self._exceptions.append(e)
+            if self.print_exceptions:
+                print_exception(e)
+
+    @property
+    def returns(self):
+        return self._returns
+
+    @property
+    def exceptions(self):
+        return self._exceptions
+
+
+# https://gist.github.com/tliron/81dd915166b0bfc64be08b4f8e22c835
+class FixedThreadPoolExecutor(Executor):
+    """
+    Executes tasks in a fixed thread pool.
+    """
+
+    _CYANIDE = object() # special task marker used to kill worker threads
 
     def __init__(self,
                  size=None,
@@ -105,6 +201,8 @@ class FixedThreadPoolExecutor(object):
         :param timeout: timeout in seconds for all blocking operations (``None`` means no timeout)
         :param print_exceptions: set to ``True`` in order to print exceptions from tasks
         """
+        super(FixedThreadPoolExecutor, self).__init__(print_exceptions=print_exceptions)
+
         if not size:
             try:
                 size = multiprocessing.cpu_count() * 2 + 1
@@ -113,7 +211,6 @@ class FixedThreadPoolExecutor(object):
 
         self.size = size
         self.timeout = timeout
-        self.print_exceptions = print_exceptions
 
         self._tasks = Queue()
         self._returns = {}
@@ -124,34 +221,18 @@ class FixedThreadPoolExecutor(object):
         self._workers = []
         for index in range(size):
             worker = DaemonThread(
-                name='%s%d' % (self.__class__.__name__, index),
+                name='{0}{1:d}'.format(self.__class__.__name__, index),
                 target=self._thread_worker)
             worker.start()
             self._workers.append(worker)
 
     def submit(self, func, *args, **kwargs):
-        """
-        Submit a task for execution.
-
-        The task will be called ASAP on the next available worker thread in the pool.
-
-        :raises ExecutorException: if cannot be submitted
-        """
-
         try:
             self._tasks.put((self._id_creator.next(), func, args, kwargs), timeout=self.timeout)
         except Full:
             raise ExecutorException('cannot submit task: queue is full')
 
     def close(self):
-        """
-        Blocks until all current tasks finish execution and all worker threads are dead.
-
-        You cannot submit tasks anymore after calling this.
-
-        This is called automatically upon exit if you are using the ``with`` keyword.
-        """
-
         self.drain()
         while self.is_alive:
             try:
@@ -161,11 +242,7 @@ class FixedThreadPoolExecutor(object):
         self._workers = None
 
     def drain(self):
-        """
-        Blocks until all current tasks finish execution, but leaves the worker threads alive.
-        """
-
-        self._tasks.join()  # oddly, the API does not support a timeout parameter
+        self._tasks.join() # oddly, the API does not support a timeout parameter
 
     @property
     def is_alive(self):
@@ -180,32 +257,11 @@ class FixedThreadPoolExecutor(object):
 
     @property
     def returns(self):
-        """
-        The returned values from all tasks, in order of submission.
-        """
-
         return [self._returns[k] for k in sorted(self._returns)]
 
     @property
     def exceptions(self):
-        """
-        The raised exceptions from all tasks, in order of submission.
-        """
-
         return [self._exceptions[k] for k in sorted(self._exceptions)]
-
-    def raise_first(self):
-        """
-        If exceptions were thrown by any task, then the first one will be raised.
-
-        This is rather arbitrary: proper handling would involve iterating all the exceptions.
-        However, if you want to use the "raise" mechanism, you are limited to raising only one of
-        them.
-        """
-
-        exceptions = self.exceptions
-        if exceptions:
-            raise exceptions[0]
 
     def _thread_worker(self):
         while True:
@@ -240,7 +296,6 @@ class FixedThreadPoolExecutor(object):
 
     def __exit__(self, the_type, value, traceback):
         self.close()
-        return False
 
 
 class LockedList(list):

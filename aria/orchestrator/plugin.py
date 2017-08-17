@@ -67,8 +67,8 @@ class PluginManager(object):
         if len(self._model.plugin.list(filters={'package_name': plugin.package_name,
                                                 'package_version': plugin.package_version})):
             raise exceptions.PluginAlreadyExistsError(
-                'Plugin {0}, version {1} already exists'.format(plugin.package_name,
-                                                                plugin.package_version))
+                u'Plugin {0}, version {1} already exists'.format(plugin.package_name,
+                                                                 plugin.package_version))
         self._install_wagon(source=source, prefix=self.get_plugin_dir(plugin))
         self._model.plugin.put(plugin)
         return plugin
@@ -120,8 +120,8 @@ class PluginManager(object):
         """
         if not zipfile.is_zipfile(source):
             raise exceptions.InvalidPluginError(
-                'Archive {0} is of an unsupported type. Only '
-                'zip/wgn is allowed'.format(source))
+                u'Archive {0} is of an unsupported type. Only '
+                u'zip/wgn is allowed'.format(source))
         with zipfile.ZipFile(source, 'r') as zip_file:
             infos = zip_file.infolist()
             try:
@@ -130,8 +130,8 @@ class PluginManager(object):
                 zip_file.getinfo(package_json_path)
             except (KeyError, ValueError, IndexError):
                 raise exceptions.InvalidPluginError(
-                    'Failed to validate plugin {0} '
-                    '(package.json was not found in archive)'.format(source))
+                    u'Failed to validate plugin {0} '
+                    u'(package.json was not found in archive)'.format(source))
 
     def _install_wagon(self, source, prefix):
         pip_freeze_output = self._pip_freeze()

@@ -56,7 +56,7 @@ def validate_primitive(value, cls, coerce=False):
     :raises ValueError: if not a primitive type or if coercion failed.
     """
 
-    if (cls is not None) and (value is not None) and (value is not NULL):
+    if (cls is not None) and (value is not None):
         if (cls is unicode) or (cls is str): # These two types are interchangeable
             valid = isinstance(value, basestring)
         elif cls is int:
@@ -66,9 +66,11 @@ def validate_primitive(value, cls, coerce=False):
             valid = isinstance(value, cls)
         if not valid:
             if coerce:
+                if value is NULL:
+                    value = None
                 value = cls(value)
             else:
-                raise ValueError('not a "%s": %s' % (full_type_name(cls), safe_repr(value)))
+                raise ValueError(u'not a "{0}": {1}'.format(full_type_name(cls), safe_repr(value)))
     return value
 
 
@@ -78,7 +80,8 @@ def validate_no_short_form(context, presentation):
     """
 
     if not hasattr(presentation, 'SHORT_FORM_FIELD') and not isinstance(presentation._raw, dict):
-        context.validation.report('short form not allowed for field "%s"' % presentation._fullname,
+        context.validation.report(u'short form not allowed for field "{0}"'
+                                  .format(presentation._fullname),
                                   locator=presentation._locator,
                                   level=Issue.BETWEEN_FIELDS)
 
@@ -94,8 +97,8 @@ def validate_no_unknown_fields(context, presentation):
             and hasattr(presentation, 'FIELDS'):
         for k in presentation._raw:
             if k not in presentation.FIELDS:
-                context.validation.report('field "%s" is not supported in "%s"'
-                                          % (k, presentation._fullname),
+                context.validation.report(u'field "{0}" is not supported in "{1}"'
+                                          .format(k, presentation._fullname),
                                           locator=presentation._get_child_locator(k),
                                           level=Issue.BETWEEN_FIELDS)
 
@@ -161,27 +164,28 @@ def get_parent_presentation(context, presentation, *types_dict_names):
 def report_issue_for_unknown_type(context, presentation, type_name, field_name, value=None):
     if value is None:
         value = getattr(presentation, field_name)
-    context.validation.report('"%s" refers to an unknown %s in "%s": %s'
-                              % (field_name, type_name, presentation._fullname, safe_repr(value)),
+    context.validation.report(u'"{0}" refers to an unknown {1} in "{2}": {3}'
+                              .format(field_name, type_name, presentation._fullname,
+                                      safe_repr(value)),
                               locator=presentation._get_child_locator(field_name),
                               level=Issue.BETWEEN_TYPES)
 
 
 def report_issue_for_parent_is_self(context, presentation, field_name):
-    context.validation.report('parent type of "%s" is self' % presentation._fullname,
+    context.validation.report(u'parent type of "{0}" is self'.format(presentation._fullname),
                               locator=presentation._get_child_locator(field_name),
                               level=Issue.BETWEEN_TYPES)
 
 
 def report_issue_for_unknown_parent_type(context, presentation, field_name):
-    context.validation.report('unknown parent type "%s" in "%s"'
-                              % (getattr(presentation, field_name), presentation._fullname),
+    context.validation.report(u'unknown parent type "{0}" in "{1}"'
+                              .format(getattr(presentation, field_name), presentation._fullname),
                               locator=presentation._get_child_locator(field_name),
                               level=Issue.BETWEEN_TYPES)
 
 
 def report_issue_for_circular_type_hierarchy(context, presentation, field_name):
-    context.validation.report('"%s" of "%s" creates a circular type hierarchy'
-                              % (getattr(presentation, field_name), presentation._fullname),
+    context.validation.report(u'"{0}" of "{1}" creates a circular type hierarchy'
+                              .format(getattr(presentation, field_name), presentation._fullname),
                               locator=presentation._get_child_locator(field_name),
                               level=Issue.BETWEEN_TYPES)

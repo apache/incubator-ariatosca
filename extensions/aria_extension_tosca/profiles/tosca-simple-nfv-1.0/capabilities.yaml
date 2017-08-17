@@ -17,6 +17,7 @@ capability_types:
 
   tosca.capabilities.nfv.VirtualBindable:
     _extensions:
+      normative: true
       shorthand_name: VirtualBindable
       type_qualified_name: tosca:VirtualBindable
       specification: tosca-simple-nfv-1.0
@@ -29,6 +30,7 @@ capability_types:
 
   tosca.capabilities.nfv.Metric:
     _extensions:
+      normative: true
       shorthand_name: Metric
       type_qualified_name: tosca:Metric
       specification: tosca-simple-nfv-1.0
@@ -41,6 +43,7 @@ capability_types:
 
   tosca.capabilities.nfv.VirtualCompute:
     _extensions:
+      normative: true
       shorthand_name: VirtualCompute
       type_qualified_name: tosca:VirtualCompute
       specification: tosca-simple-nfv-1.0

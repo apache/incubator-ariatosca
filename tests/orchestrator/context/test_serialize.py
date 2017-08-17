@@ -23,6 +23,7 @@ import tests
 from tests import mock
 from tests import storage
 
+
 TEST_FILE_CONTENT = 'CONTENT'
 TEST_FILE_ENTRY_ID = 'entry'
 TEST_FILE_NAME = 'test_file'
@@ -47,7 +48,7 @@ def test_serialize_operation_context(context, executor, tmpdir):
     node.interfaces[interface.name] = interface
     context.model.node.update(node)
 
-    graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
+    graph = _mock_workflow(ctx=context)                                                             # pylint: disable=no-value-for-parameter
     graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
     eng = engine.Engine(executor)
     eng.execute(context)

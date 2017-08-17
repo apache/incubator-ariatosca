@@ -10,15 +10,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...utils.yaml import yaml # @UnresolvedImport
-
+from ...utils.yaml import yaml
 from ...utils.collections import OrderedDict
 from .reader import Reader
 from .locator import Locator
 from .exceptions import ReaderSyntaxError
-from .locator import LocatableString, LocatableInt, LocatableFloat
+from .locator import (LocatableString, LocatableInt, LocatableFloat)
 
-# Add our types to ruamel.yaml
+
+# YAML mapping tag
+MAP_TAG = u'tag:yaml.org,2002:map'
+
+# This is an internal tag used by ruamel.yaml for merging nodes
+MERGE_TAG = u'tag:yaml.org,2002:merge'
+
+
+# Add our types to RoundTripRepresenter
 yaml.representer.RoundTripRepresenter.add_representer(
     LocatableString, yaml.representer.RoundTripRepresenter.represent_unicode)
 yaml.representer.RoundTripRepresenter.add_representer(
@@ -26,8 +33,18 @@ yaml.representer.RoundTripRepresenter.add_representer(
 yaml.representer.RoundTripRepresenter.add_representer(
     LocatableFloat, yaml.representer.RoundTripRepresenter.represent_float)
 
-MERGE_TAG = u'tag:yaml.org,2002:merge'
-MAP_TAG = u'tag:yaml.org,2002:map'
+
+def construct_yaml_map(self, node):
+    """
+    Replacement for ruamel.yaml's constructor that uses OrderedDict instead of dict.
+    """
+    data = OrderedDict()
+    yield data
+    value = self.construct_mapping(node)
+    data.update(value)
+
+
+yaml.constructor.SafeConstructor.add_constructor(MAP_TAG, construct_yaml_map)
 
 
 class YamlLocator(Locator):
@@ -60,16 +77,6 @@ class YamlLocator(Locator):
         locator.add_children(node)
 
 
-def construct_yaml_map(self, node):
-    data = OrderedDict()
-    yield data
-    value = self.construct_mapping(node)
-    data.update(value)
-
-
-yaml.constructor.SafeConstructor.add_constructor(MAP_TAG, construct_yaml_map)
-
-
 class YamlReader(Reader):
     """
     ARIA YAML reader.
@@ -82,7 +89,11 @@ class YamlReader(Reader):
             # see issue here:
             # https://bitbucket.org/ruamel/yaml/issues/61/roundtriploader-causes-exceptions-with
             #yaml_loader = yaml.RoundTripLoader(data)
-            yaml_loader = yaml.SafeLoader(data)
+            try:
+                # Faster C-based loader, might not be available on all platforms
+                yaml_loader = yaml.CSafeLoader(data)
+            except Exception:
+                yaml_loader = yaml.SafeLoader(data)
             try:
                 node = yaml_loader.get_single_node()
                 locator = YamlLocator(self.loader.location, 0, 0)
@@ -102,12 +113,12 @@ class YamlReader(Reader):
             line = e.problem_mark.line
             column = e.problem_mark.column
             snippet = e.problem_mark.get_snippet()
-            raise ReaderSyntaxError('YAML %s: %s %s' %
-                                    (e.__class__.__name__, problem, context),
+            raise ReaderSyntaxError(u'YAML {0}: {1} {2}'
+                                    .format(e.__class__.__name__, problem, context),
                                     location=self.loader.location,
                                     line=line,
                                     column=column,
                                     snippet=snippet,
                                     cause=e)
         except Exception as e:
-            raise ReaderSyntaxError('YAML: %s' % e, cause=e)
+            raise ReaderSyntaxError(u'YAML: {0}'.format(e), cause=e)

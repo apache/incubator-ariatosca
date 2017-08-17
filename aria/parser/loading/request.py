@@ -57,19 +57,22 @@ class RequestLoader(Loader):
         try:
             self._response = SESSION.get(self.uri, headers=self.headers)
         except InvalidSchema as e:
-            raise DocumentNotFoundException('document not found: "%s"' % self.uri, cause=e)
+            raise DocumentNotFoundException(u'document not found: "{0}"'.format(self.uri), cause=e)
         except ConnectionError as e:
-            raise LoaderException('request connection error: "%s"' % self.uri, cause=e)
+            raise LoaderException(u'request connection error: "{0}"'.format(self.uri), cause=e)
         except Exception as e:
-            raise LoaderException('request error: "%s"' % self.uri, cause=e)
+            raise LoaderException(u'request error: "{0}"'.format(self.uri), cause=e)
 
         status = self._response.status_code
         if status == 404:
             self._response = None
-            raise DocumentNotFoundException('document not found: "%s"' % self.uri)
+            raise DocumentNotFoundException(u'document not found: "{0}"'.format(self.uri))
         elif status != 200:
             self._response = None
-            raise LoaderException('request error %d: "%s"' % (status, self.uri))
+            raise LoaderException(u'request error {0:d}: "{1}"'.format(status, self.uri))
+
+    def get_canonical_location(self):
+        raise NotImplementedError
 
 
 class RequestTextLoader(RequestLoader):
@@ -81,8 +84,11 @@ class RequestTextLoader(RequestLoader):
         if self._response is not None:
             try:
                 if self._response.encoding is None:
-                    self._response.encoding = 'utf8'
+                    self._response.encoding = 'utf-8'
                 return self._response.text
             except Exception as e:
-                raise LoaderException('request error: %s' % self.uri, cause=e)
+                raise LoaderException(u'request error: {0}'.format(self.uri), cause=e)
         return None
+
+    def get_canonical_location(self):
+        raise NotImplementedError

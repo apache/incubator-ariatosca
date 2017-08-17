@@ -19,7 +19,7 @@ from aria.utils.caching import cachedmethod
 from ..simple_v1_0 import ToscaSimplePresenter1_0
 
 
-class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0): # pylint: disable=invalid-name,abstract-method
+class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0):                                          # pylint: disable=invalid-name,abstract-method
     """
     ARIA presenter for the `TOSCA Simple Profile for NFV v1.0 csd04 <http://docs.oasis-open.org
     /tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html>`__.
@@ -38,6 +38,6 @@ class ToscaSimpleNfvPresenter1_0(ToscaSimplePresenter1_0): # pylint: disable=inv
     @cachedmethod
     def _get_import_locations(self, context):
         import_locations = super(ToscaSimpleNfvPresenter1_0, self)._get_import_locations(context)
-        if context.presentation.import_profile:
+        if context.presentation.configuration.get('tosca.import_profile', True):
             return FrozenList([self.SIMPLE_PROFILE_FOR_NFV_LOCATION] + import_locations)
         return import_locations

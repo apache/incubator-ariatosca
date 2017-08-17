@@ -63,7 +63,7 @@ and run::
     yum install -y python-devel gcc libffi-devel openssl-devel
     pip install apache-ariatosca[ssh]
 
-**Archlinux**::
+**Arch Linux**::
 
     pacman -Syu --noconfirm python2 gcc libffi openssl
     pip2 install apache-ariatosca[ssh]
@@ -73,7 +73,7 @@ and run::
     # no additional system requirements are needed
     pip install apache-ariatosca[ssh]
 
-**MacOS**::
+**macOS**::
 
     # TODO
 
@@ -112,26 +112,14 @@ To uninstall and clean your environment, follow these steps::
     aria service-templates delete my-service-template
 
 
-Contribution
-------------
-
-You are welcome and encouraged to participate and contribute to the ARIA project.
-
-Please see our guide to
-`Contributing to ARIA
-<https://cwiki.apache.org/confluence/display/ARIATOSCA/Contributing+to+ARIA>`__.
-
-Feel free to also provide feedback on the mailing lists (see `Resources <#user-content-resources>`__
-section).
-
-
 Resources
 ---------
 
-- `ARIA homepage <http://ariatosca.incubator.apache.org/>`__
-- `ARIA wiki <https://cwiki.apache.org/confluence/display/AriaTosca>`__
--  `Issue tracker <https://issues.apache.org/jira/browse/ARIA>`__
-- `ARIA revisions released <https://dist.apache.org/repos/dist/dev/incubator/ariatosca//>`__
+- `Main site <http://ariatosca.incubator.apache.org/>`__
+- `API and CLI documentation <http://ariatosca.incubator.apache.org/docs/html/>`__ 
+- `Wiki <https://cwiki.apache.org/confluence/display/AriaTosca>`__
+- `Releases <https://dist.apache.org/repos/dist/dev/incubator/ariatosca//>`__
+- `Issue tracker <https://issues.apache.org/jira/browse/ARIA>`__
 
 - Dev mailing list: dev@ariatosca.incubator.apache.org
 - User mailing list: user@ariatosca.incubator.apache.org
@@ -150,6 +138,27 @@ License
 ARIA is licensed under the
 `Apache License 2.0 <https://github.com/apache/incubator-ariatosca/blob/master/LICENSE>`__.
 
+
+Contribution
+------------
+
+You are welcome and encouraged to participate and contribute to the ARIA project.
+
+Please see our guide to
+`Contributing to ARIA
+<https://cwiki.apache.org/confluence/display/ARIATOSCA/Contributing+to+ARIA>`__.
+
+Feel free to also provide feedback on the mailing lists (see `Resources <#user-content-resources>`__
+section).
+
+
+Code of Conduct
+---------------
+
+The ARIA TOSCA Project follows
+`the Apache Code of Conduct <https://www.apache.org/foundation/policies/conduct.html>`__.
+
+
 .. |Build Status| image:: https://img.shields.io/travis/apache/incubator-ariatosca/master.svg
    :target: https://travis-ci.org/apache/incubator-ariatosca
 .. |Appveyor Build Status| image:: https://img.shields.io/appveyor/ci/ApacheSoftwareFoundation/incubator-ariatosca/master.svg
@@ -165,9 +174,3 @@ ARIA is licensed under the
    :target: https://github.com/apache/incubator-ariatosca/pulls
 .. |Closed Pull Requests| image:: https://img.shields.io/github/issues-pr-closed-raw/apache/incubator-ariatosca.svg
    :target: https://github.com/apache/incubator-ariatosca/pulls?q=is%3Apr+is%3Aclosed
-
-
-Code of Conduct
----------------
-
-The ARIA TOSCA Project follows `The Apache Code of Conduct <https://www.apache.org/foundation/policies/conduct.html>`__.

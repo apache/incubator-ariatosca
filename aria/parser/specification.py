@@ -21,7 +21,7 @@ import re
 
 from ..extension import parser
 from ..utils.collections import OrderedDict
-from ..utils.specification import (DSL_SPECIFICATIONS, implements_specification) # pylint: disable=unused-import
+from ..utils.specification import (DSL_SPECIFICATIONS, implements_specification)                    # pylint: disable=unused-import
 
 
 def iter_specifications():

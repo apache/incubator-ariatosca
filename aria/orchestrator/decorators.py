@@ -80,6 +80,6 @@ def operation(func=None, toolbelt=False, suffix_template='', logging_handlers=No
 
 
 def _generate_name(func_name, ctx, suffix_template, **custom_kwargs):
-    return '{func_name}.{suffix}'.format(
+    return u'{func_name}.{suffix}'.format(
         func_name=func_name,
         suffix=suffix_template.format(ctx=ctx, **custom_kwargs) or generate_uuid(variant='uuid'))

@@ -31,7 +31,7 @@ class TestWorkflowContext(object):
 
     def test_execution_creation_on_workflow_context_creation(self, storage):
         ctx = self._create_ctx(storage)
-        execution = storage.execution.get(ctx.execution.id)             # pylint: disable=no-member
+        execution = storage.execution.get(ctx.execution.id)                                         # pylint: disable=no-member
         assert execution.service == storage.service.get_by_name(
             mock.models.SERVICE_NAME)
         assert execution.workflow_name == mock.models.WORKFLOW_NAME

@@ -78,7 +78,7 @@ class OperationTask(BaseTask):
     :vartype retry_interval: float
     """
 
-    NAME_FORMAT = '{interface}:{operation}@{type}:{name}'
+    NAME_FORMAT = u'{interface}:{operation}@{type}:{name}'
 
     def __init__(self,
                  actor,
@@ -112,8 +112,8 @@ class OperationTask(BaseTask):
         # interface/operation.
         if not has_operation(actor, interface_name, operation_name):
             raise exceptions.OperationNotFoundException(
-                'Could not find operation "{operation_name}" on interface '
-                '"{interface_name}" for {actor_type} "{actor.name}"'.format(
+                u'Could not find operation "{operation_name}" on interface '
+                u'"{interface_name}" for {actor_type} "{actor.name}"'.format(
                     operation_name=operation_name,
                     interface_name=interface_name,
                     actor_type=type(actor).__name__.lower(),
@@ -149,8 +149,8 @@ class OperationTask(BaseTask):
         elif isinstance(actor, models.Relationship):
             self._context_cls = context.operation.RelationshipOperationContext
         else:
-            raise exceptions.TaskCreationException('Could not create valid context for '
-                                                   '{actor.__class__}'.format(actor=actor))
+            raise exceptions.TaskCreationException(u'Could not create valid context for '
+                                                   u'{actor.__class__}'.format(actor=actor))
 
     def __repr__(self):
         return self.name

@@ -30,4 +30,4 @@ class ExtensiblePresentation(Presentation):
     @cachedmethod
     def _get_extension(self, name, default=None):
         extensions = self._extensions
-        return extensions.get(name, default) if extensions is not None else None # pylint: disable=no-member
+        return extensions.get(name, default) if extensions is not None else None                    # pylint: disable=no-member

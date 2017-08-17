@@ -104,7 +104,7 @@ class Topology(issue.ReporterMixin):
 
         # if model is empty, no need to print out the section name
         if model and title:
-            out_stream.write('{0}:'.format(title))
+            out_stream.write(u'{0}:'.format(title))
 
         if isinstance(model, dict):
             if str(out_stream):
@@ -133,18 +133,18 @@ class Topology(issue.ReporterMixin):
     def _dump_graph_node(self, out_stream, node, capability=None):
         out_stream.write(out_stream.node_style(node.name))
         if capability is not None:
-            out_stream.write('{0} ({1})'.format(out_stream.property_style(capability.name),
-                                                out_stream.type_style(capability.type.name)))
+            out_stream.write(u'{0} ({1})'.format(out_stream.property_style(capability.name),
+                                                 out_stream.type_style(capability.type.name)))
         if node.outbound_relationships:
             with out_stream.indent():
                 for relationship_model in node.outbound_relationships:
                     styled_relationship_name = out_stream.property_style(relationship_model.name)
                     if relationship_model.type is not None:
-                        out_stream.write('-> {0} ({1})'.format(
+                        out_stream.write(u'-> {0} ({1})'.format(
                             styled_relationship_name,
                             out_stream.type_style(relationship_model.type.name)))
                     else:
-                        out_stream.write('-> {0}'.format(styled_relationship_name))
+                        out_stream.write(u'-> {0}'.format(styled_relationship_name))
                     with out_stream.indent(3):
                         self._dump_graph_node(out_stream,
                                               relationship_model.target_node,

@@ -144,6 +144,15 @@ class InterfaceAssignment(ExtensiblePresentation):
             # In RelationshipAssignment
             the_type = the_type[0] # This could be a RelationshipTemplate
 
+            if isinstance(self._container._container, RequirementAssignment):
+                # In RequirementAssignment
+                relationship_definition = \
+                    self._container._container._get_relationship_definition(context)
+                interface_definitions = relationship_definition.interfaces \
+                    if relationship_definition is not None else None
+                if (interface_definitions is not None) and (self._name in interface_definitions):
+                    return interface_definitions[self._name]._get_type(context)
+
         interface_definitions = the_type._get_interfaces(context) \
             if the_type is not None else None
         interface_definition = interface_definitions.get(self._name) \
@@ -154,7 +163,7 @@ class InterfaceAssignment(ExtensiblePresentation):
     def _validate(self, context):
         super(InterfaceAssignment, self)._validate(context)
         if self.operations:
-            for operation in self.operations.itervalues(): # pylint: disable=no-member
+            for operation in self.operations.itervalues():                                          # pylint: disable=no-member
                 operation._validate(context)
 
 
@@ -171,6 +180,8 @@ class RelationshipAssignment(ExtensiblePresentation):
         """
         The optional reserved keyname used to provide the name of the Relationship Type for the
         requirement assignment's relationship keyname.
+
+        ARIA NOTE: this can also be a relationship template name.
 
         :type: :obj:`basestring`
         """
@@ -290,6 +301,20 @@ class RequirementAssignment(ExtensiblePresentation):
         return None, None
 
     @cachedmethod
+    def _get_definition(self, context):
+        node_type = self._container._get_type(context)
+        if (node_type is not None) and (node_type.requirements is not None):
+            for name, requirement in node_type.requirements:
+                if name == self._name:
+                    return requirement
+        return None
+
+    @cachedmethod
+    def _get_relationship_definition(self, context):
+        requirement_definition = self._get_definition(context)
+        return requirement_definition.relationship if requirement_definition is not None else None
+
+    @cachedmethod
     def _get_capability(self, context):
         capability = self.capability
 
@@ -368,6 +393,9 @@ class ArtifactAssignmentForType(ExtensiblePresentation):
     An artifact definition defines a named, typed file that can be associated with Node Type or Node
     Template and used by orchestration engine to facilitate deployment and implementation of
     interface operations.
+
+    ARIA NOTE: section 3.5.6.2.1 in the spec refers to a short notation for "file", but that
+    notation would be impossible because the "type" field is required.
 
     See the `TOSCA Simple Profile v1.0 cos01 specification <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html

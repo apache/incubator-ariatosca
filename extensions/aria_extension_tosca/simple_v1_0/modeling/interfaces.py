@@ -18,6 +18,7 @@ from aria.parser.presentation import get_locator
 from aria.parser.validation import Issue
 
 from .parameters import (coerce_parameter_value, convert_parameter_definitions_to_values)
+from .data_types import (get_type_by_name, get_primitive_data_type)
 
 
 #
@@ -156,7 +157,7 @@ def get_template_interfaces(context, presentation, type_name):
     interface_definitions = the_type._get_interfaces(context) if the_type is not None else None
 
     # Copy over interfaces from the type (will initialize inputs with default values)
-    if interface_definitions is not None:
+    if interface_definitions:
         for interface_name, interface_definition in interface_definitions.iteritems():
             # Note that in the case of a RelationshipTemplate, we will already have the values as
             # InterfaceAssignment. It will not be converted, just cloned.
@@ -177,8 +178,8 @@ def get_template_interfaces(context, presentation, type_name):
                                 our_interface_assignment, interface_definition, interface_name)
             else:
                 context.validation.report(
-                    'interface definition "%s" not declared at %s "%s" in "%s"'
-                    % (interface_name, type_name, presentation.type, presentation._fullname),
+                    u'interface definition "{0}" not declared at {1} "{2}" in "{3}"'
+                    .format(interface_name, type_name, presentation.type, presentation._fullname),
                     locator=our_interface_assignment._locator, level=Issue.BETWEEN_TYPES)
 
     # Check that there are no required inputs that we haven't assigned
@@ -209,7 +210,7 @@ def convert_interface_definition_from_type_to_template(context, presentation, co
     return InterfaceAssignment(name=presentation._name, raw=raw, container=container)
 
 
-def convert_interface_definition_from_type_to_raw_template(context, presentation): # pylint: disable=invalid-name
+def convert_interface_definition_from_type_to_raw_template(context, presentation):                  # pylint: disable=invalid-name
     raw = OrderedDict()
 
     # Copy default values for inputs
@@ -236,7 +237,7 @@ def convert_interface_definition_from_type_to_raw_template(context, presentation
     return raw
 
 
-def convert_requirement_interface_definitions_from_type_to_raw_template(context, raw_requirement, # pylint: disable=invalid-name
+def convert_requirement_interface_definitions_from_type_to_raw_template(context, raw_requirement,   # pylint: disable=invalid-name
                                                                         interface_definitions):
     if not interface_definitions:
         return
@@ -257,62 +258,71 @@ def merge_interface(context, presentation, interface_assignment, our_interface_a
     assign_raw_inputs(context, interface_assignment._raw, our_interface_assignment.inputs,
                       interface_definition._get_inputs(context), interface_name, None, presentation)
 
-    # Assign operation implementations and inputs
     our_operation_templates = our_interface_assignment.operations # OperationAssignment
+    if our_operation_templates is None:
+        our_operation_templates = {}
+
     # OperationDefinition or OperationAssignment:
     operation_definitions = interface_definition._get_operations(context) \
         if hasattr(interface_definition, '_get_operations') else interface_definition.operations
-    if our_operation_templates:
-        # OperationAssignment:
-        for operation_name, our_operation_template in our_operation_templates.iteritems():
-            operation_definition = operation_definitions.get(operation_name) # OperationDefinition
+    if operation_definitions is None:
+        operation_definitions = {}
 
-            our_input_assignments = our_operation_template.inputs
-            our_implementation = our_operation_template.implementation
+    # OperationAssignment:
+    for operation_name, our_operation_template in our_operation_templates.iteritems():
+        operation_definition = operation_definitions.get(operation_name) # OperationDefinition
 
-            if operation_definition is None:
-                context.validation.report(
-                    'interface definition "%s" refers to an unknown operation "%s" in "%s"'
-                    % (interface_name, operation_name, presentation._fullname),
-                    locator=our_operation_template._locator, level=Issue.BETWEEN_TYPES)
+        our_input_assignments = our_operation_template.inputs
+        our_implementation = our_operation_template.implementation
 
-            if (our_input_assignments is not None) or (our_implementation is not None):
-                # Make sure we have the dict
-                if (operation_name not in interface_assignment._raw) \
-                    or (interface_assignment._raw[operation_name] is None):
-                    interface_assignment._raw[operation_name] = OrderedDict()
+        if operation_definition is None:
+            context.validation.report(
+                u'interface definition "{0}" refers to an unknown operation "{1}" in "{2}"'
+                .format(interface_name, operation_name, presentation._fullname),
+                locator=our_operation_template._locator, level=Issue.BETWEEN_TYPES)
 
-            if our_implementation is not None:
-                interface_assignment._raw[operation_name]['implementation'] = \
-                    deepcopy_with_locators(our_implementation._raw)
+        # Make sure we have the dict
+        if (operation_name not in interface_assignment._raw) \
+            or (interface_assignment._raw[operation_name] is None):
+            interface_assignment._raw[operation_name] = OrderedDict()
 
-            # Assign/merge operation inputs
-            input_definitions = operation_definition.inputs \
-                if operation_definition is not None else None
-            assign_raw_inputs(context, interface_assignment._raw[operation_name],
-                              our_input_assignments, input_definitions, interface_name,
-                              operation_name, presentation)
+        if our_implementation is not None:
+            interface_assignment._raw[operation_name]['implementation'] = \
+                deepcopy_with_locators(our_implementation._raw)
+
+        # Assign/merge operation inputs
+        input_definitions = operation_definition.inputs \
+            if operation_definition is not None else None
+        assign_raw_inputs(context, interface_assignment._raw[operation_name],
+                          our_input_assignments, input_definitions, interface_name,
+                          operation_name, presentation)
 
 
 def merge_raw_input_definition(context, the_raw_input, our_input, interface_name, operation_name,
                                presentation, type_name):
     # Check if we changed the type
-    # TODO: allow a sub-type?
-    input_type1 = the_raw_input.get('type')
-    input_type2 = our_input.type
-    if input_type1 != input_type2:
+    input_type1_name = the_raw_input.get('type')
+    input_type1 = get_type_by_name(context, input_type1_name, 'data_types')
+    if input_type1 is None:
+        input_type1 = get_primitive_data_type(input_type1_name)
+    input_type2 = our_input._get_type(context)
+    if input_type1 is not input_type2 and \
+        (not hasattr(input_type1, '_is_descendant') or \
+         not input_type1._is_descendant(context, input_type2)):
         if operation_name is not None:
             context.validation.report(
-                'interface %s "%s" changes operation input "%s.%s" type from "%s" to "%s" in "%s"'
-                % (type_name, interface_name, operation_name, our_input._name, input_type1,
-                   input_type2, presentation._fullname),
-                locator=input_type2._locator, level=Issue.BETWEEN_TYPES)
+                u'type "{0}" is not a descendant of overridden type "{1}" for input "{2}" of '
+                u'operation {3} "{4}.{5}" in {6}'
+                .format(our_input.type, input_type1_name, our_input._name, type_name,
+                        interface_name, operation_name, presentation._fullname),
+                locator=our_input._locator, level=Issue.BETWEEN_TYPES)
         else:
             context.validation.report(
-                'interface %s "%s" changes input "%s" type from "%s" to "%s" in "%s"'
-                % (type_name, interface_name, our_input._name, input_type1, input_type2,
-                   presentation._fullname),
-                locator=input_type2._locator, level=Issue.BETWEEN_TYPES)
+                u'type "{0}" is not a descendant of overridden type "{1}" for input "{2}" of '
+                u'interface {3} "{4}" in {5}'
+                .format(our_input.type, input_type1_name, our_input._name, type_name,
+                        interface_name, presentation._fullname),
+                locator=our_input._locator, level=Issue.BETWEEN_TYPES)
 
     # Merge
     merge(the_raw_input, our_input._raw)
@@ -405,8 +415,8 @@ def merge_interface_definition(context, interface, our_source, presentation, typ
 
         if (type2 is not None) and not type1._is_descendant(context, type2):
             context.validation.report(
-                'interface definition type "{0}" is not a descendant of overridden '
-                'interface definition type "{1}"' \
+                u'interface definition type "{0}" is not a descendant of overridden '
+                u'interface definition type "{1}"' \
                 .format(type1._name, type2._name),
                 locator=our_source._locator, level=Issue.BETWEEN_TYPES)
 
@@ -448,37 +458,42 @@ def merge_interface_definitions_from_their_types(context, interfaces, presentati
             merge_interface_definition(context, interface, the_type, presentation, 'type')
 
 
-def assign_raw_inputs(context, values, assignments, definitions, interface_name, operation_name,
+def assign_raw_inputs(context, raw, assignments, definitions, interface_name, operation_name,
                       presentation):
-    if not assignments:
-        return
+    if assignments is None:
+        assignments = {}
+    if definitions is None:
+        definitions = {}
 
     # Make sure we have the dict
-    if ('inputs' not in values) or (values['inputs'] is None):
-        values['inputs'] = OrderedDict()
+    if ('inputs' not in raw) or (raw['inputs'] is None):
+        raw['inputs'] = OrderedDict()
+
+    # Defaults
+    for input_name, definition in definitions.iteritems():
+        if ('default' in definition._raw) and (input_name not in raw['inputs']):
+            raw['inputs'][input_name] = coerce_parameter_value(context, definition, definition,
+                                                               definition.default, 'default')
 
     # Assign inputs
     for input_name, assignment in assignments.iteritems():
-        if (definitions is not None) and (input_name not in definitions):
+        if (not context.presentation.configuration.get('tosca.adhoc_inputs', True)) and \
+            (input_name not in definitions):
             if operation_name is not None:
                 context.validation.report(
-                    'interface definition "%s" assigns a value to an unknown operation input'
-                    ' "%s.%s" in "%s"'
-                    % (interface_name, operation_name, input_name, presentation._fullname),
+                    u'interface definition "{0}" assigns a value to an unknown operation input'
+                    u' "{1}.{2}" in "{3}"'
+                    .format(interface_name, operation_name, input_name, presentation._fullname),
                     locator=assignment._locator, level=Issue.BETWEEN_TYPES)
             else:
                 context.validation.report(
-                    'interface definition "%s" assigns a value to an unknown input "%s" in "%s"'
-                    % (interface_name, input_name, presentation._fullname),
+                    u'interface definition "{0}" assigns a value to an unknown input "{1}" in "{2}"'
+                    .format(interface_name, input_name, presentation._fullname),
                     locator=assignment._locator, level=Issue.BETWEEN_TYPES)
 
-        definition = definitions.get(input_name) if definitions is not None else None
-
-        # Note: default value has already been assigned
-
-        # Coerce value
-        values['inputs'][input_name] = coerce_parameter_value(context, assignment, definition,
-                                                              assignment.value)
+        definition = definitions.get(input_name) # Could be None!
+        raw['inputs'][input_name] = coerce_parameter_value(context, assignment, definition,
+                                                           assignment.value)
 
 
 def validate_required_inputs(context, presentation, assignment, definition, original_assignment,
@@ -487,7 +502,11 @@ def validate_required_inputs(context, presentation, assignment, definition, orig
     # (as opposed to topology template and workflow inputs) is done only in the parsing stage.
     # This reasoning follows the TOSCA spirit, where anything that is declared as required in the
     # type, must be assigned in the corresponding template.
-    input_definitions = definition.inputs
+
+    # Note: InterfaceDefinition need _get_inputs, but OperationDefinition doesn't
+    input_definitions = definition._get_inputs(context) \
+        if hasattr(definition, '_get_inputs') \
+        else definition.inputs
     if input_definitions:
         for input_name, input_definition in input_definitions.iteritems():
             if input_definition.required:
@@ -498,16 +517,17 @@ def validate_required_inputs(context, presentation, assignment, definition, orig
                 if value is None:
                     if operation_name is not None:
                         context.validation.report(
-                            'interface definition "%s" does not assign a value to a required'
-                            ' operation input "%s.%s" in "%s"'
-                            % (interface_name, operation_name, input_name, presentation._fullname),
+                            u'interface definition "{0}" does not assign a value to a required'
+                            u' operation input "{1}.{2}" in "{3}"'
+                            .format(interface_name, operation_name, input_name,
+                                    presentation._fullname),
                             locator=get_locator(original_assignment, presentation._locator),
                             level=Issue.BETWEEN_TYPES)
                     else:
                         context.validation.report(
-                            'interface definition "%s" does not assign a value to a required input'
-                            ' "%s" in "%s"'
-                            % (interface_name, input_name, presentation._fullname),
+                            u'interface definition "{0}" does not assign a value to a required'
+                            u' input "{1}" in "{2}"'
+                            .format(interface_name, input_name, presentation._fullname),
                             locator=get_locator(original_assignment, presentation._locator),
                             level=Issue.BETWEEN_TYPES)
 

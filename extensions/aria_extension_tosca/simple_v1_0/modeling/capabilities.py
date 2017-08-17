@@ -73,8 +73,8 @@ def get_inherited_capability_definitions(context, presentation, for_presentation
 
                 if not type1._is_descendant(context, type2):
                     context.validation.report(
-                        'capability definition type "{0}" is not a descendant of overridden '
-                        'capability definition type "{1}"' \
+                        u'capability definition type "{0}" is not a descendant of overridden '
+                        u'capability definition type "{1}"' \
                         .format(type1._name, type2._name),
                         locator=our_capability_definition._locator, level=Issue.BETWEEN_TYPES)
 
@@ -139,9 +139,18 @@ def get_template_capabilities(context, presentation):
                 if values:
                     capability_assignment._raw['properties'] = values
                     capability_assignment._reset_method_cache()
+
+                # Assign attributes
+                values = get_assigned_and_defined_parameter_values(context,
+                                                                   our_capability_assignment,
+                                                                   'attribute')
+
+                if values:
+                    capability_assignment._raw['attributes'] = values
+                    capability_assignment._reset_method_cache()
             else:
                 context.validation.report(
-                    'capability "{0}" not declared at node type "{1}" in "{2}"'
+                    u'capability "{0}" not declared at node type "{1}" in "{2}"'
                     .format(capability_name, presentation.type, presentation._fullname),
                     locator=our_capability_assignment._locator, level=Issue.BETWEEN_TYPES)
 
@@ -161,28 +170,37 @@ def convert_capability_from_definition_to_assignment(context, presentation, cont
     if properties is not None:
         raw['properties'] = convert_parameter_definitions_to_values(context, properties)
 
-    # TODO attributes
+    attributes = presentation.attributes
+    if attributes is not None:
+        raw['attributes'] = convert_parameter_definitions_to_values(context, attributes)
 
     return CapabilityAssignment(name=presentation._name, raw=raw, container=container)
 
 
 def merge_capability_definition(context, presentation, capability_definition,
                                 from_capability_definition):
-    raw_properties = OrderedDict()
-
     capability_definition._raw['type'] = from_capability_definition.type
 
-    # Merge properties from type
-    from_property_defintions = from_capability_definition.properties
-    merge_raw_parameter_definitions(context, presentation, raw_properties, from_property_defintions,
-                                    'properties')
+    raw_properties = OrderedDict()
+    raw_attributes = OrderedDict()
 
-    # Merge our properties
+    # Merge parameters from type
     merge_raw_parameter_definitions(context, presentation, raw_properties,
                                     capability_definition.properties, 'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_attributes,
+                                    capability_definition.attributes, 'attributes')
+
+    # Merge our parameters
+    merge_raw_parameter_definitions(context, presentation, raw_properties,
+                                    from_capability_definition.properties, 'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_attributes,
+                                    from_capability_definition.attributes, 'attributes')
 
     if raw_properties:
         capability_definition._raw['properties'] = raw_properties
+        capability_definition._reset_method_cache()
+    if raw_attributes:
+        capability_definition._raw['attributes'] = raw_attributes
         capability_definition._reset_method_cache()
 
     # Merge occurrences
@@ -194,23 +212,31 @@ def merge_capability_definition(context, presentation, capability_definition,
 
 def merge_capability_definition_from_type(context, presentation, capability_definition):
     """
-    Merge ``properties`` and ``valid_source_types`` from the node type's capability definition
-    over those taken from the parent node type.
+    Merge ``properties``, ``attributes``, and ``valid_source_types`` from the node type's capability
+    definition over those taken from the parent node type.
     """
     raw_properties = OrderedDict()
+    raw_attributes = OrderedDict()
 
-    # Merge properties from parent
+    # Merge parameters from parent
     the_type = capability_definition._get_type(context)
     type_property_defintions = the_type._get_properties(context)
+    type_attribute_defintions = the_type._get_attributes(context)
     merge_raw_parameter_definitions(context, presentation, raw_properties, type_property_defintions,
                                     'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_attributes,
+                                    type_attribute_defintions, 'attributes')
 
-    # Merge our properties (might override definitions in parent)
+    # Merge our parameters (might override definitions in parent)
     merge_raw_parameter_definitions(context, presentation, raw_properties,
                                     capability_definition.properties, 'properties')
+    merge_raw_parameter_definitions(context, presentation, raw_attributes,
+                                    capability_definition.attributes, 'attributes')
 
     if raw_properties:
         capability_definition._raw['properties'] = raw_properties
+    if raw_attributes:
+        capability_definition._raw['attributes'] = raw_attributes
 
     # Override valid_source_types
     if capability_definition._raw.get('valid_source_types') is None:

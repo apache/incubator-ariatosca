@@ -61,7 +61,7 @@ class JsonAsRawEncoder(json.JSONEncoder):
         super(JsonAsRawEncoder, self).__init__(*args, **kwargs)
 
 
-class YamlAsRawDumper(yaml.dumper.RoundTripDumper):  # pylint: disable=too-many-ancestors
+class YamlAsRawDumper(yaml.dumper.RoundTripDumper):                                                 # pylint: disable=too-many-ancestors
     """
     A :class:`RoundTripDumper` that will use the ``as_raw`` property of objects if available.
     """

@@ -1415,7 +1415,7 @@ class InterfaceTemplateBase(TemplateModelMixin):
             ('name', self.name),
             ('description', self.description),
             ('type_name', self.type.name),
-            ('inputs', formatting.as_raw_dict(self.inputs)),  # pylint: disable=no-member
+            ('inputs', formatting.as_raw_dict(self.inputs)),                                        # pylint: disable=no-member
             # TODO fix self.properties reference
             ('operation_templates', formatting.as_raw_list(self.operation_templates))))
 
@@ -1714,7 +1714,7 @@ class PluginSpecificationBase(TemplateModelMixin):
         return relationship.many_to_one(cls, 'service_template')
 
     @declared_attr
-    def plugin(cls): # pylint: disable=method-hidden
+    def plugin(cls):                                                                                # pylint: disable=method-hidden
         """
         Matched plugin.
 

@@ -17,6 +17,7 @@ policy_types:
 
   tosca.policies.Root:
     _extensions:
+      normative: true
       shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
@@ -27,6 +28,7 @@ policy_types:
 
   tosca.policies.Placement:
     _extensions:
+      normative: true
       shorthand_name: Placement # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Placement
       specification: tosca-simple-1.0
@@ -38,6 +40,7 @@ policy_types:
 
   tosca.policies.Scaling:
     _extensions:
+      normative: true
       shorthand_name: Scaling # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Scaling
       specification: tosca-simple-1.0
@@ -49,6 +52,7 @@ policy_types:
 
   tosca.policies.Update:
     _extensions:
+      normative: true
       shorthand_name: Update # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Update
       specification: tosca-simple-1.0
@@ -60,6 +64,7 @@ policy_types:
 
   tosca.policies.Performance:
     _extensions:
+      normative: true
       shorthand_name: Performance # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Performance
       specification: tosca-simple-1.0

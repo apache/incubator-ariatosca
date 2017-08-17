@@ -19,7 +19,7 @@ from aria.orchestrator.decorators import workflow
 
 
 @workflow
-def mock_workflow(graph, ctx, output_path=None, **kwargs):  # pylint: disable=unused-argument
+def mock_workflow(graph, ctx, output_path=None, **kwargs):                                          # pylint: disable=unused-argument
     if output_path:
         # writes call arguments to the specified output file
         with open(output_path, 'w') as f:

@@ -24,7 +24,7 @@ _INF = float('inf')
 
 _NULL = (), _INF
 
-_DIGITS_RE = re.compile(r'^\d+$')
+_DIGITS_RE = re.compile(r'^\d+$', flags=re.UNICODE)
 
 _PREFIXES = {
     'dev':   0.0001,
@@ -81,7 +81,7 @@ class VersionString(unicode):
         return self.key.__hash__()
 
 
-def parse_version_string(version): # pylint: disable=too-many-branches
+def parse_version_string(version):                                                                  # pylint: disable=too-many-branches
     """
     Parses a version string.
 

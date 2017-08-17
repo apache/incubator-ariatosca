@@ -21,10 +21,12 @@ data_types:
 
   timestamp:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_timestamp
 
   version:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_version
       type_qualified_name: tosca:version
       specification: tosca-simple-1.0
@@ -33,6 +35,7 @@ data_types:
 
   range:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_range
       type_qualified_name: tosca:range
       specification: tosca-simple-1.0
@@ -45,6 +48,7 @@ data_types:
 
   list:
     _extensions:
+      normative: true
       use_entry_schema: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_list
       type_qualified_name: tosca:list
@@ -54,6 +58,7 @@ data_types:
 
   map:
     _extensions:
+      normative: true
       use_entry_schema: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_map_value
       type_qualified_name: tosca:map
@@ -67,6 +72,7 @@ data_types:
 
   scalar-unit.size:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_size
       type_qualified_name: tosca:scalar-unit.size
       specification: tosca-simple-1.0
@@ -75,6 +81,7 @@ data_types:
 
   scalar-unit.time:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_time
       type_qualified_name: tosca:scalar-unit.time
       specification: tosca-simple-1.0
@@ -83,6 +90,7 @@ data_types:
 
   scalar-unit.frequency:
     _extensions:
+      normative: true
       coerce_value: aria_extension_tosca.simple_v1_0.data_types.coerce_scalar_unit_frequency
       type_qualified_name: tosca:scalar-unit.frequency
       specification: tosca-simple-1.0
@@ -95,6 +103,7 @@ data_types:
 
   tosca.datatypes.Root:
     _extensions:
+      normative: true
       shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
@@ -105,6 +114,7 @@ data_types:
 
   tosca.datatypes.Credential:
     _extensions:
+      normative: true
       shorthand_name: Credential
       type_qualified_name: tosca:Credential
       specification: tosca-simple-1.0
@@ -145,6 +155,7 @@ data_types:
 
   tosca.datatypes.network.NetworkInfo:
     _extensions:
+      normative: true
       shorthand_name: NetworkInfo
       type_qualified_name: tosca:NetworkInfo
       specification: tosca-simple-1.0
@@ -174,6 +185,7 @@ data_types:
 
   tosca.datatypes.network.PortInfo:
     _extensions:
+      normative: true
       shorthand_name: PortInfo
       type_qualified_name: tosca:PortInfo
       specification: tosca-simple-1.0
@@ -213,6 +225,7 @@ data_types:
 
   tosca.datatypes.network.PortDef:
     _extensions:
+      normative: true
       shorthand_name: PortDef
       type_qualified_name: tosca:PortDef
       specification: tosca-simple-1.0
@@ -226,6 +239,7 @@ data_types:
 
   tosca.datatypes.network.PortSpec:
     _extensions:
+      normative: true
       shorthand_name: PortSpec
       type_qualified_name: tosca:PortSpec
       specification: tosca-simple-1.0

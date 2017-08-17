@@ -64,8 +64,8 @@ def _configure_local(operation):
     """
 
     from . import operations
-    operation.function = '{0}.{1}'.format(operations.__name__,
-                                          operations.run_script_locally.__name__)
+    operation.function = u'{0}.{1}'.format(operations.__name__,
+                                           operations.run_script_locally.__name__)
 
 
 def _configure_remote(operation, reporter):
@@ -105,7 +105,7 @@ def _configure_remote(operation, reporter):
 
     # Make sure we have a user
     if fabric_env.get('user') is None:
-        reporter.report('must configure "ssh.user" for "{0}"'.format(operation.implementation),
+        reporter.report(u'must configure "ssh.user" for "{0}"'.format(operation.implementation),
                         level=reporter.Issue.BETWEEN_TYPES)
 
     # Make sure we have an authentication value
@@ -120,8 +120,8 @@ def _configure_remote(operation, reporter):
     operation.arguments['fabric_env'] = Argument.wrap('fabric_env', fabric_env,
                                                       'Fabric configuration.')
 
-    operation.function = '{0}.{1}'.format(operations.__name__,
-                                          operations.run_script_with_ssh.__name__)
+    operation.function = u'{0}.{1}'.format(operations.__name__,
+                                           operations.run_script_with_ssh.__name__)
 
 
 def _get_process(operation, reporter):
@@ -144,7 +144,7 @@ def _get_process(operation, reporter):
         elif k == 'env':
             _validate_type(v, dict, 'process.env', reporter)
         else:
-            reporter.report('unsupported configuration parameter: "process.{0}"'.format(k),
+            reporter.report(u'unsupported configuration parameter: "process.{0}"'.format(k),
                             level=reporter.Issue.BETWEEN_TYPES)
     return value
 
@@ -175,7 +175,7 @@ def _get_ssh(operation, reporter):
         elif k == 'address':
             _validate_type(v, basestring, 'ssh.address', reporter)
         else:
-            reporter.report('unsupported configuration parameter: "ssh.{0}"'.format(k),
+            reporter.report(u'unsupported configuration parameter: "ssh.{0}"'.format(k),
                             level=reporter.Issue.BETWEEN_TYPES)
     return value
 
@@ -185,7 +185,7 @@ def _validate_type(value, the_type, name, reporter):
         return
     if not isinstance(value, the_type):
         reporter.report(
-            '"{0}" configuration is not a {1}: {2}'.format(
+            u'"{0}" configuration is not a {1}: {2}'.format(
                 name, utils.type.full_type_name(the_type), utils.formatting.safe_repr(value)),
             level=reporter.Issue.BETWEEN_TYPES)
 
@@ -202,7 +202,7 @@ def _coerce_bool(value, name, reporter):
         return False
     else:
         reporter.report(
-            '"{0}" configuration is not "true" or "false": {1}'.format(
+            u'"{0}" configuration is not "true" or "false": {1}'.format(
                 name, utils.formatting.safe_repr(value)),
             level=reporter.Issue.BETWEEN_TYPES)
 
@@ -212,6 +212,6 @@ def _dict_to_list_of_strings(the_dict, name, reporter):
     value = []
     for k in sorted(the_dict):
         v = the_dict[k]
-        _validate_type(v, basestring, '{0}.{1}'.format(name, k), reporter)
+        _validate_type(v, basestring, u'{0}.{1}'.format(name, k), reporter)
         value.append(v)
     return value

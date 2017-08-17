@@ -20,7 +20,7 @@ import pytest
 from aria.orchestrator import exceptions
 from aria.utils.plugin import create as create_plugin
 
-from ..fixtures import (  # pylint: disable=unused-import
+from ..fixtures import (                                                                            # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
     inmemory_model as model

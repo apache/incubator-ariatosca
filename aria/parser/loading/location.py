@@ -27,9 +27,6 @@ class Location(object):
     an appropriate :class:`~aria.parser.loading.Loader`.
     """
 
-    def is_equivalent(self, location):
-        raise NotImplementedError
-
     @property
     def prefix(self):
         return None
@@ -47,21 +44,24 @@ class UriLocation(Location):
     def __init__(self, uri):
         self.uri = uri
 
-    def is_equivalent(self, location):
-        return isinstance(location, UriLocation) and (location.uri == self.uri)
-
     @property
     def prefix(self):
         prefix = os.path.dirname(self.uri)
         if prefix and (as_file(prefix) is None):
-            # Yes, it's weird, but dirname handles URIs,
-            # too: http://stackoverflow.com/a/35616478/849021
+            # Yes, it's weird, but dirname handles URIs, too:
+            # http://stackoverflow.com/a/35616478/849021
             # We just need to massage it with a trailing slash
             prefix += '/'
         return prefix
 
     def __str__(self):
         return self.uri
+
+    def __eq__(self, other):
+        return isinstance(other, UriLocation) and (other.uri == self.uri)
+
+    def __hash__(self):
+        return hash(self.uri)
 
 
 class LiteralLocation(Location):
@@ -75,8 +75,11 @@ class LiteralLocation(Location):
         self.content = content
         self.name = name
 
-    def is_equivalent(self, location):
-        return isinstance(location, LiteralLocation) and (location.content == self.content)
-
     def __str__(self):
-        return '<%s>' % self.name
+        return u'<{0}>'.format(self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, LiteralLocation) and (other.content == self.content)
+
+    def __hash__(self):
+        return hash(self.content)
