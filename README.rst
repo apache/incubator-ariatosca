@@ -53,22 +53,22 @@ To install ARIA from source, download the source tarball from
 **Ubuntu/Debian** (tested on Ubuntu14.04, Ubuntu16.04)::
 
     apt-get install -y python-dev gcc libffi-dev libssl-dev
-    pip install aria[ssh]
+    pip install apache-ariatosca[ssh]
 
 **Centos** (tested on Centos6.6, Centos7)::
 
     yum install -y python-devel gcc libffi-devel openssl-devel
-    pip install aria[ssh]
+    pip install apache-ariatosca[ssh]
 
 **Archlinux**::
 
     pacman -Syu --noconfirm python2 gcc libffi openssl
-    pip2 install aria[ssh]
+    pip2 install apache-ariatosca[ssh]
 
 **Windows** (tested on Win10)::
 
     # no additional system requirements are needed
-    pip install aria[ssh]
+    pip install apache-ariatosca[ssh]
 
 **MacOS**::
 
