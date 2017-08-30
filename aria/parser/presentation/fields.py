@@ -437,7 +437,7 @@ class Field(object):
             raw = deepcopy_with_locators(default_raw)
             merge(raw, presentation._raw)
 
-        # Handle unknown fields
+        # Handle unknown fields (only dict can have unknown fields, lists can't have them)
 
         if self.field_variant == 'primitive_dict_unknown_fields':
             return self._get_primitive_dict_unknown_fields(presentation, raw, context)
@@ -473,7 +473,8 @@ class Field(object):
 
         # Handle get according to variant
 
-        getter = getattr(self, '_get_%s' % self.field_variant, None)
+        getter = getattr(self, '_get_{field_variant}'.format(field_variant=self.field_variant),
+                         None)
 
         if getter is None:
             locator = self.get_locator(raw)

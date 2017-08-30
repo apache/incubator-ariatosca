@@ -457,6 +457,12 @@ class NodeTemplateBase(TemplateModelMixin):
     :type: :obj:`basestring`
     """)
 
+    directives = Column(PickleType, doc="""
+    Directives that apply to this node template.
+
+    :type: [:obj:`basestring`]
+    """)
+
     default_instances = Column(Integer, default=1, doc="""
     Default number nodes that will appear in the service.
 

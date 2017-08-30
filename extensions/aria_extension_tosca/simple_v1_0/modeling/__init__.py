@@ -163,11 +163,13 @@ def create_metadata_models(context, service_template, metadata):
 def create_node_template_model(context, service_template, node_template):
     node_type = node_template._get_type(context)
     node_type = service_template.node_types.get_descendant(node_type._name)
-    model = NodeTemplate(name=node_template._name,
-                         type=node_type)
+    model = NodeTemplate(name=node_template._name, type=node_type)
 
     if node_template.description:
         model.description = node_template.description.value
+
+    if node_template.directives:
+        model.directives = node_template.directives
 
     model.properties.update(create_property_models_from_values(
         template_properties=node_template._get_property_values(context)))
