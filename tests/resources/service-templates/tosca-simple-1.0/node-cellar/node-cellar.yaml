@@ -81,6 +81,14 @@ node_types:
           capability: tosca.capabilities.Endpoint.Database
           node: mongodb.Database
 
+  Subsystem:
+    derived_from: tosca.nodes.Root
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+    capabilities:
+      app_endpoint: tosca.capabilities.Endpoint.Public
+
 topology_template:
 
   inputs:
@@ -324,8 +332,7 @@ topology_template:
         enabled: false
 
   substitution_mappings:
-
-    node_type: tosca.nodes.WebApplication
+    node_type: Subsystem
     requirements:
       host: [ node_cellar, host ] # doesn't really make sense; just for testing
     capabilities:

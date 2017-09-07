@@ -33,6 +33,7 @@ from .modeling.capabilities import get_template_capabilities
 from .modeling.artifacts import get_inherited_artifact_definitions
 from .modeling.policies import get_policy_targets
 from .modeling.copy import get_default_raw_from_copy
+from .modeling.node_templates import validate_type_in_regards_to_substitution_mapping
 from .presentation.extensible import ExtensiblePresentation
 from .presentation.field_validators import copy_validator, policy_targets_validator
 from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
@@ -179,6 +180,9 @@ class NodeTemplate(ExtensiblePresentation):
     def _get_artifacts(self, context):
         return FrozenDict(get_inherited_artifact_definitions(context, self))
 
+    def _validate_type_in_regards_to_substitution_mapping(self, context):
+        validate_type_in_regards_to_substitution_mapping(context, self)
+
     def _validate(self, context):
         super(NodeTemplate, self)._validate(context)
         self._get_property_values(context)
@@ -186,6 +190,7 @@ class NodeTemplate(ExtensiblePresentation):
         self._get_capabilities(context)
         self._get_interfaces(context)
         self._get_artifacts(context)
+        self._validate_type_in_regards_to_substitution_mapping(context)
 
     def _dump(self, context):
         self._dump_content(context, (
