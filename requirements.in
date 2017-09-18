@@ -36,3 +36,4 @@ psutil>=5.2.2, < 6.0.0
 importlib ; python_version < '2.7'
 ordereddict ; python_version < '2.7'
 total-ordering ; python_version < '2.7'  # only one version on pypi
+wheel<=0.29.0 ; python_version < '2.7'
