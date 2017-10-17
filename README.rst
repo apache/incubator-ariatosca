@@ -165,3 +165,9 @@ ARIA is licensed under the
    :target: https://github.com/apache/incubator-ariatosca/pulls
 .. |Closed Pull Requests| image:: https://img.shields.io/github/issues-pr-closed-raw/apache/incubator-ariatosca.svg
    :target: https://github.com/apache/incubator-ariatosca/pulls?q=is%3Apr+is%3Aclosed
+
+
+Code of Conduct
+---------------
+
+The ARIA TOSCA project follows `The Apache Code of Conduct <https://www.apache.org/foundation/policies/conduct.html>`__.
