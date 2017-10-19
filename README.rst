@@ -169,6 +169,6 @@ ARIA is licensed under the
 Code of Conduct
 ---------------
 
-The ARIA TOSCA Project follows `The Apache Code of COnduct <https://www.apache.org/foundation/policies/conduct.html>`__.
+The ARIA TOSCA Project follows `The Apache Code of Conduct <https://www.apache.org/foundation/policies/conduct.html>`__.
 
 
