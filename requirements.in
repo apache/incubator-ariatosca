@@ -23,9 +23,9 @@ Jinja2>=2.8, <2.9
 shortuuid>=0.5, <0.6
 CacheControl[filecache]>=0.11.0, <0.13
 SQLAlchemy>=1.1.0, <1.2  # version 1.2 dropped support of python 2.6
-wagon==0.6.0
+wagon==0.6.1
 bottle>=0.12.0, <0.13
-setuptools>=35.0.0, <36.0.0
+setuptools>=36.0.0, <37.0.0
 click>=6.0, < 7.0
 colorama>=0.3.7, <=0.3.9
 PrettyTable>=0.7,<0.8
