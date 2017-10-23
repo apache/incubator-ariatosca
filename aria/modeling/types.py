@@ -26,7 +26,7 @@ from sqlalchemy import (
     event
 )
 from sqlalchemy.ext import mutable
-from ruamel import yaml
+from ..utils.yaml import yaml
 
 from . import exceptions
 

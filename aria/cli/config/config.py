@@ -19,9 +19,10 @@ CLI configuration mechanism.
 
 import os
 import pkg_resources
-from ruamel import yaml
 
 from jinja2.environment import Template
+
+from ...utils.yaml import yaml
 
 
 CONFIG_FILE_NAME = 'config.yaml'

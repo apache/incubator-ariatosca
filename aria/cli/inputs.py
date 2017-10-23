@@ -19,7 +19,7 @@ Helpers for validating and coercing service template inputs.
 
 import os
 import glob
-from ruamel import yaml
+from ..utils.yaml import yaml
 
 from .env import logger
 from .exceptions import AriaCliError

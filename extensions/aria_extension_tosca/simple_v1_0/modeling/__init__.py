@@ -23,14 +23,13 @@ Relies on many helper methods in the presentation classes.
 
 import os
 import re
-from types import FunctionType
 from datetime import datetime
 
-from ruamel import yaml
 
 from aria.parser.validation import Issue
 from aria.utils.formatting import string_list_as_string
 from aria.utils.collections import (StrictDict, OrderedDict)
+from aria.utils.yaml import yaml
 from aria.orchestrator import WORKFLOW_DECORATOR_RESERVED_ARGUMENTS
 from aria.modeling.models import (Type, ServiceTemplate, NodeTemplate,
                                   RequirementTemplate, RelationshipTemplate, CapabilityTemplate,

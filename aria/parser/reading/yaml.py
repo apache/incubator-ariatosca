@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ruamel import yaml # @UnresolvedImport
+from ...utils.yaml import yaml # @UnresolvedImport
 
 from ...utils.collections import OrderedDict
 from .reader import Reader

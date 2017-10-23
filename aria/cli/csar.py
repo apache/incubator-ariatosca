@@ -27,7 +27,7 @@ import tempfile
 import zipfile
 
 import requests
-from ruamel import yaml
+from ..utils.yaml import yaml
 
 CSAR_FILE_EXTENSION = '.csar'
 META_FILE = 'TOSCA-Metadata/TOSCA.meta'

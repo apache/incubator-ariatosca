@@ -20,8 +20,7 @@ String formatting and string-based format utilities.
 import json
 from types import MethodType
 
-from ruamel import yaml  # @UnresolvedImport
-
+from .yaml import yaml  # @UnresolvedImport
 from .collections import FrozenList, FrozenDict, StrictList, StrictDict, OrderedDict
 
 

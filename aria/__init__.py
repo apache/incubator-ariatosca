@@ -17,13 +17,12 @@
 The ARIA root package provides entry points for extension and storage initialization.
 """
 
-import sys
 
 from pkgutil import iter_modules
 import pkg_resources
-
 aria_package_name = 'apache-ariatosca'
 __version__ = pkg_resources.get_distribution(aria_package_name).version
+
 
 from .orchestrator.decorators import workflow, operation  # pylint: disable=wrong-import-position
 from . import (  # pylint: disable=wrong-import-position
