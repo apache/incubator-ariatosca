@@ -14,7 +14,6 @@
 # limitations under the License.
 
 environment:
-
   TOX_ENV: pywin
 
   matrix:
@@ -26,16 +25,16 @@ build: false
 
 install:
   - SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-  - ps: (new-object System.Net.WebClient).Downloadfile('https://bootstrap.pypa.io/get-pip.py', 'C:\Users\appveyor\get-pip.py')
+  # Note: bootstrap.pypa.io seems to have an SSL configuration problem causing downloads to fail, so we will instead get the script from GitHub
+  # -ps: (new-object System.Net.WebClient).Downloadfile('https://bootstrap.pypa.io/get-pip.py', 'C:\Users\Emblem Parade\Desktop\get-pip.py')
+  - ps: (new-object System.Net.WebClient).Downloadfile('https://github.com/pypa/get-pip/blob/master/get-pip.py', 'C:\Users\appveyor\get-pip.py')
   - ps: Start-Process -FilePath "C:\Python27\python.exe" -ArgumentList "C:\Users\appveyor\get-pip.py" -Wait -Passthru
 
 before_test:
   - pip install virtualenv --upgrade
   - virtualenv env
-  - 'env\Scripts\activate.bat'
+  - env\Scripts\activate.bat
   - pip install tox
 
 test_script:
-  - pip --version
-  - tox --version
   - tox -e %TOX_ENV%
