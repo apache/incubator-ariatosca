@@ -46,18 +46,29 @@ __all__ = (
 )
 
 
-def install_aria_extensions():
+def install_aria_extensions(strict=True):
     """
     Iterates all Python packages with names beginning with ``aria_extension_`` and all
     ``aria_extension`` entry points and loads them.
 
     It then invokes all registered extension functions.
+
+    :param strict: if set to ``True``, Tries to load extensions with
+     dependency versions under consideration. Otherwise tries to load the
+     required package without version consideration. Defaults to True.
+    :type strict: bool
     """
     for loader, module_name, _ in iter_modules():
         if module_name.startswith('aria_extension_'):
             loader.find_module(module_name).load_module(module_name)
     for entry_point in pkg_resources.iter_entry_points(group='aria_extension'):
-        entry_point.load()
+        # It should be possible to enable non strict loading - use the package
+        # that is already installed inside the environment, and forgo the
+        # version demand
+        if strict:
+            entry_point.load()
+        else:
+            entry_point.resolve()
     extension.init()
 
 
