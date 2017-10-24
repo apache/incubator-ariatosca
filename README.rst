@@ -132,6 +132,7 @@ Resources
 - `ARIA homepage <http://ariatosca.incubator.apache.org/>`__
 - `ARIA wiki <https://cwiki.apache.org/confluence/display/AriaTosca>`__
 -  `Issue tracker <https://issues.apache.org/jira/browse/ARIA>`__
+- `ARIA revisions released <https://dist.apache.org/repos/dist/dev/incubator/ariatosca//>`__
 
 - Dev mailing list: dev@ariatosca.incubator.apache.org
 - User mailing list: user@ariatosca.incubator.apache.org
