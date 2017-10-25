@@ -84,6 +84,14 @@ To install ``pip``, either use your operating system's package management system
     wget http://bootstrap.pypa.io/get-pip.py
     python get-pip.py
 
+Releases
+--------
+
+The AriaTosca project is released occasionally based on community consensus.  To find out 
+when releases are scheduled, please attend the team's weekly backlog grooming meetings
+or the Jira backlog scheduling. More information can be found `here 
+<https://ariatosca.incubator.apache.org/community/>`__.  Official release artifacts
+can be located `here <https://dist.apache.org/repos/dist/dev/incubator/ariatosca/>`__.
 
 
 Getting Started
