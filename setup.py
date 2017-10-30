@@ -23,7 +23,7 @@ from setuptools.command.develop import develop
 
 
 _PACKAGE_NAME = 'apache-ariatosca'
-_PYTHON_SUPPORTED_VERSIONS = [(2, 6), (2, 7)]
+_PYTHON_SUPPORTED_VERSIONS = [(2, 7)]
 _EXTENSION_DIR = 'extensions'
 _EXTENSION_NAMES = [
     'aria_extension_tosca'
@@ -31,7 +31,7 @@ _EXTENSION_NAMES = [
 
 if (sys.version_info[0], sys.version_info[1]) not in _PYTHON_SUPPORTED_VERSIONS:
     raise NotImplementedError(
-        '{0} Package support Python version 2.6 & 2.7 Only'.format(
+        '{0} Package supports Python version 2.7 only'.format(
             _PACKAGE_NAME))
 
 root_dir = os.path.dirname(__file__)
@@ -46,11 +46,11 @@ with open(os.path.join(root_dir, 'README.rst')) as readme:
 install_requires = []
 
 ssh_requires = [
-    'Fabric>=1.13.0, <1.14',
+    'Fabric>=1.14, <1.15'
 ]
 win_ssh_requires = [
     # Fabric depends on the pypiwin32 on Windows, but doesn't install it
-    'pypiwin32==219'
+    'pypiwin32>=220'
 ]
 
 extras_require = {
@@ -60,11 +60,11 @@ extras_require = {
 
 with open(os.path.join(root_dir, 'requirements.in')) as requirements:
     for requirement in requirements.readlines():
-        requirement = requirement.split('#')[0].strip()  # get rid of comments or trailing comments
+        requirement = requirement.split('#')[0].strip() # Get rid of comments or trailing comments
         if not requirement:
-            continue  # skip empty and comment lines
+            continue # Skip empty and comment lines
 
-        # dependencies which use environment markers have to go in as conditional dependencies
+        # Dependencies which use environment markers have to go in as conditional dependencies
         # under "extra_require" rather than "install_requires", or otherwise the environment
         # markers get ignored when installing from wheel. See more here:
         # https://wheel.readthedocs.io/en/latest/index.html#defining-conditional-dependencies
@@ -140,7 +140,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',

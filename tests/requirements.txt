@@ -10,13 +10,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-testtools==2.3.0
 fasteners==0.14.1
-sh==1.12.14
-psutil==5.2.2
 mock==2.0.0
 pylint==1.6.5
-pytest==3.2.0
+pytest==3.2.3
 pytest-cov==2.5.1
-pytest-mock==1.6.2
-pytest-xdist==1.18.2
+pytest-mock==1.6.3
+pytest-xdist==1.20.1
+sh==1.12.14
+testtools==2.3.0

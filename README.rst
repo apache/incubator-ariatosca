@@ -28,7 +28,7 @@ Installation
 
 ARIA is `available on PyPI <https://pypi.python.org/pypi/apache-ariatosca>`__.
 
-ARIA requires Python 2.6/2.7. Python 3 is currently not supported.
+ARIA requires Python 2.7. Python 3 is currently not supported.
 
 To install ARIA directly from PyPI (using a ``wheel``), use::
 
@@ -78,12 +78,10 @@ and run::
     # TODO
 
 
-
 To install ``pip``, either use your operating system's package management system, or run::
 
     wget http://bootstrap.pypa.io/get-pip.py
     python get-pip.py
-
 
 
 Getting Started
@@ -168,9 +166,8 @@ ARIA is licensed under the
 .. |Closed Pull Requests| image:: https://img.shields.io/github/issues-pr-closed-raw/apache/incubator-ariatosca.svg
    :target: https://github.com/apache/incubator-ariatosca/pulls?q=is%3Apr+is%3Aclosed
 
+
 Code of Conduct
 ---------------
 
 The ARIA TOSCA Project follows `The Apache Code of Conduct <https://www.apache.org/foundation/policies/conduct.html>`__.
-
-

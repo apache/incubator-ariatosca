@@ -51,11 +51,11 @@ docs:
 
 test:
 	pip install --upgrade "tox>=2.7.0"
-	tox -e pylint_code \
+	tox -e pylint_core \
 	    -e pylint_tests \
-	    -e py$(PYTHON_VERSION) \
-	    -e py$(PYTHON_VERSION)e2e \
-	    -e py$(PYTHON_VERSION)ssh \
+	    -e core \
+	    -e e2e \
+	    -e ssh \
 	    -e docs
 
 ./requirements.txt: ./requirements.in

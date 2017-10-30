@@ -14,7 +14,7 @@
 # limitations under the License.
 
 environment:
-  TOX_ENV: pywin
+  TOX_ENV: windows
 
   matrix:
     - PYTHON: "C:\\Python27"

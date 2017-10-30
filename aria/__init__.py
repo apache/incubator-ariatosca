@@ -19,7 +19,9 @@ The ARIA root package provides entry points for extension and storage initializa
 
 import sys
 
+from pkgutil import iter_modules
 import pkg_resources
+
 aria_package_name = 'apache-ariatosca'
 __version__ = pkg_resources.get_distribution(aria_package_name).version
 
@@ -33,13 +35,6 @@ from . import (  # pylint: disable=wrong-import-position
     orchestrator,
     cli
 )
-
-if sys.version_info < (2, 7):
-    # pkgutil in python2.6 has a bug where it fails to import from protected modules, which causes
-    # the entire process to fail. In order to overcome this issue we use our custom iter_modules
-    from .utils.imports import iter_modules
-else:
-    from pkgutil import iter_modules
 
 __all__ = (
     '__version__',

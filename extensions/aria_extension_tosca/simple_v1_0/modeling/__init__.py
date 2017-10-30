@@ -397,7 +397,7 @@ def create_operation_template_model(context, service_template, operation):
 
                     # Parse as YAML
                     try:
-                        value = yaml.load(value)
+                        value = yaml.load(value, Loader=yaml.SafeLoader)
                     except yaml.parser.MarkedYAMLError as e:
                         context.validation.report(
                             'YAML parser {0} in operation configuration: {1}'

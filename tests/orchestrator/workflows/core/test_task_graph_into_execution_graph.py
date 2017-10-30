@@ -83,7 +83,7 @@ def test_task_graph_into_execution_graph(tmpdir):
     compiler = graph_compiler.GraphCompiler(workflow_context, base.StubTaskExecutor)
     compiler.compile(test_task_graph)
 
-    execution_tasks = topological_sort(_graph(workflow_context.execution.tasks))
+    execution_tasks = tuple(topological_sort(_graph(workflow_context.execution.tasks)))
 
     assert len(execution_tasks) == 9
 

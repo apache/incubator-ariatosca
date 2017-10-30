@@ -19,15 +19,7 @@ formatting.
 """
 
 import logging
-from logging import handlers as logging_handlers
-# NullHandler doesn't exist in < 27. this workaround is from
-# http://docs.python.org/release/2.6/library/logging.html#configuring-logging-for-a-library
-try:
-    from logging import NullHandler                                                                 # pylint: disable=unused-import
-except ImportError:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
+from logging import (handlers as logging_handlers, NullHandler)
 from datetime import datetime
 
 

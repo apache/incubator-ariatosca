@@ -69,7 +69,7 @@ class TaskGraph(object):
         """
         Iterator over tasks in the graph.
         """
-        for _, data in self._graph.nodes_iter(data=True):
+        for _, data in self._graph.nodes(data=True):
             yield data['task']
 
     def topological_order(self, reverse=False):
@@ -79,7 +79,10 @@ class TaskGraph(object):
         :param reverse: whether to reverse the sort
         :return: list which represents the topological sort
         """
-        for task_id in topological_sort(self._graph, reverse=reverse):
+        task_ids = topological_sort(self._graph)
+        if reverse:
+            task_ids = reversed(tuple(task_ids))
+        for task_id in task_ids:
             yield self.get_task(task_id)
 
     def get_dependencies(self, dependent_task):
@@ -92,7 +95,7 @@ class TaskGraph(object):
         """
         if not self.has_tasks(dependent_task):
             raise TaskNotInGraphError('Task id: {0}'.format(dependent_task.id))
-        for _, dependency_id in self._graph.out_edges_iter(dependent_task.id):
+        for _, dependency_id in self._graph.out_edges(dependent_task.id):
             yield self.get_task(dependency_id)
 
     def get_dependents(self, dependency_task):
@@ -105,7 +108,7 @@ class TaskGraph(object):
         """
         if not self.has_tasks(dependency_task):
             raise TaskNotInGraphError('Task id: {0}'.format(dependency_task.id))
-        for dependent_id, _ in self._graph.in_edges_iter(dependency_task.id):
+        for dependent_id, _ in self._graph.in_edges(dependency_task.id):
             yield self.get_task(dependent_id)
 
     # task methods
