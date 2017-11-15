@@ -124,7 +124,7 @@ class WorkflowRunner(object):
     def _create_execution_model(self, inputs):
         execution = models.Execution(
             created_at=datetime.utcnow(),
-            service=self.service,
+            service_fk=self.service.id,
             workflow_name=self._workflow_name,
             inputs={})
 

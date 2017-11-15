@@ -19,6 +19,7 @@ CLI ``executions`` sub-commands.
 
 import os
 
+from aria.rest_mapi.core import ARESTClient
 from .. import helptexts
 from .. import table
 from .. import utils
@@ -143,6 +144,14 @@ def start(workflow_name,
     service = model_storage.service.get_by_name(service_name)
     executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
 
+    import aria as aria_core
+    from aria.orchestrator.plugin import PluginManager
+
+    model_storage = aria_core.application_model_storage(
+        ARESTClient, initiator=False)
+    plugin_manager = PluginManager(model_storage, plugin_manager._plugins_dir)
+
+    import pydevd; pydevd.settrace('localhost', suspend=False)
     workflow_runner = \
         WorkflowRunner(
             model_storage, resource_storage, plugin_manager,

@@ -17,6 +17,8 @@
 import pytest
 import retrying
 
+from tests.rest_mapi.core import ARESTClient
+
 try:
     import celery as _celery
     app = _celery.Celery()

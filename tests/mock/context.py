@@ -26,6 +26,8 @@ from . import models
 from ..storage import init_inmemory_model_storage
 from .topology import create_simple_topology_two_nodes
 
+from tests.rest_mapi.core import ARESTClient
+
 
 def simple(tmpdir, inmemory=False, context_kwargs=None, topology=None):
     initiator = init_inmemory_model_storage if inmemory else None
