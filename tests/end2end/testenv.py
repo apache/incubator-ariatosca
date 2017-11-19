@@ -68,6 +68,7 @@ class TestEnvironment(object):
         assert len(self.model_storage.node_template.list()) == 0
         assert len(self.model_storage.node.list()) == 0
         assert len(self.model_storage.log.list()) == 0
+        assert len(self.model_storage.task.list()) == 0
 
     def _get_cli(self):
         cli = sh.aria.bake('-vvv', _out=sys.stdout, _err=sys.stderr)

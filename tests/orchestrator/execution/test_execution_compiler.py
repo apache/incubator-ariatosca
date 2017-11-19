@@ -18,15 +18,13 @@ import time
 from threading import Thread, Event
 from datetime import datetime
 
-import mock
 import pytest
 
 from aria.modeling import exceptions as modeling_exceptions
 from aria.modeling import models
 from aria.orchestrator import exceptions
 from aria.orchestrator import events
-from aria.orchestrator.workflow_runner import WorkflowRunner
-from aria.orchestrator.workflows.executor.process import ProcessExecutor
+from aria.orchestrator import execution_preparer
 from aria.orchestrator.workflows import api
 from aria.orchestrator.workflows.core import engine, graph_compiler
 from aria.orchestrator.workflows.executor import thread
@@ -40,7 +38,7 @@ from tests import (
     storage
 )
 
-from ..fixtures import (  # pylint: disable=unused-import
+from ...fixtures import (  # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
     fs_model as model,
@@ -66,7 +64,7 @@ class FailingTask(BaseException):
 def test_undeclared_workflow(request):
     # validating a proper error is raised when the workflow is not declared in the service
     with pytest.raises(exceptions.UndeclaredWorkflowError):
-        _create_workflow_runner(request, 'undeclared_workflow')
+        _get_preparer(request, 'undeclared_workflow').prepare()
 
 
 def test_missing_workflow_implementation(service, request):
@@ -78,24 +76,23 @@ def test_missing_workflow_implementation(service, request):
     service.workflows['test_workflow'] = workflow
 
     with pytest.raises(exceptions.WorkflowImplementationNotFoundError):
-        _create_workflow_runner(request, 'test_workflow')
+        _get_preparer(request, 'test_workflow').prepare()
 
 
 def test_builtin_workflow_instantiation(request):
     # validates the workflow runner instantiates properly when provided with a builtin workflow
     # (expecting no errors to be raised on undeclared workflow or missing workflow implementation)
-    workflow_runner = _create_workflow_runner(request, 'install')
-    tasks = list(workflow_runner.execution.tasks)
-    assert len(tasks) == 18  # expecting 18 tasks for 2 node topology
+    workflow_ctx = _get_preparer(request, 'install').prepare()
+    assert len(workflow_ctx.execution.tasks) == 18  # expecting 18 tasks for 2 node topology
 
 
 def test_custom_workflow_instantiation(request):
     # validates the workflow runner instantiates properly when provided with a custom workflow
     # (expecting no errors to be raised on undeclared workflow or missing workflow implementation)
     mock_workflow = _setup_mock_workflow_in_service(request)
-    workflow_runner = _create_workflow_runner(request, mock_workflow)
-    tasks = list(workflow_runner.execution.tasks)
-    assert len(tasks) == 2  # mock workflow creates only start workflow and end workflow task
+    workflow_ctx = _get_preparer(request, mock_workflow).prepare()
+    assert len(workflow_ctx.execution.tasks) == 2   # mock workflow creates only start workflow
+                                                    # and end workflow task
 
 
 def test_existing_active_executions(request, service, model):
@@ -105,7 +102,7 @@ def test_existing_active_executions(request, service, model):
         workflow_name='uninstall')
     model.execution.put(existing_active_execution)
     with pytest.raises(exceptions.ActiveExecutionsError):
-        _create_workflow_runner(request, 'install')
+        _get_preparer(request, 'install').prepare()
 
 
 def test_existing_executions_but_no_active_ones(request, service, model):
@@ -115,82 +112,18 @@ def test_existing_executions_but_no_active_ones(request, service, model):
         workflow_name='uninstall')
     model.execution.put(existing_terminated_execution)
     # no active executions exist, so no error should be raised
-    _create_workflow_runner(request, 'install')
+    _get_preparer(request, 'install').prepare()
 
 
-def test_default_executor(request):
-    # validates the ProcessExecutor is used by the workflow runner by default
+def test_execution_model_creation(request, service):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine') as mock_engine_cls:
-        _create_workflow_runner(request, mock_workflow)
-        _, engine_kwargs = mock_engine_cls.call_args
-        assert isinstance(engine_kwargs.get('executors').values()[0], ProcessExecutor)
+    workflow_ctx = _get_preparer(request, mock_workflow).prepare()
 
-
-def test_custom_executor(request):
-    mock_workflow = _setup_mock_workflow_in_service(request)
-
-    custom_executor = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine') as mock_engine_cls:
-        _create_workflow_runner(request, mock_workflow, executor=custom_executor)
-        _, engine_kwargs = mock_engine_cls.call_args
-        assert engine_kwargs.get('executors').values()[0] == custom_executor
-
-
-def test_task_configuration_parameters(request):
-    mock_workflow = _setup_mock_workflow_in_service(request)
-
-    task_max_attempts = 5
-    task_retry_interval = 7
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine.execute') as \
-            mock_engine_execute:
-        _create_workflow_runner(request, mock_workflow, task_max_attempts=task_max_attempts,
-                                task_retry_interval=task_retry_interval).execute()
-        _, engine_kwargs = mock_engine_execute.call_args
-        assert engine_kwargs['ctx']._task_max_attempts == task_max_attempts
-        assert engine_kwargs['ctx']._task_retry_interval == task_retry_interval
-
-
-def test_execute(request, service):
-    mock_workflow = _setup_mock_workflow_in_service(request)
-
-    mock_engine = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine.execute',
-                    return_value=mock_engine) as mock_engine_execute:
-        workflow_runner = _create_workflow_runner(request, mock_workflow)
-        workflow_runner.execute()
-
-        _, engine_kwargs = mock_engine_execute.call_args
-        assert engine_kwargs['ctx'].service.id == service.id
-        assert engine_kwargs['ctx'].execution.workflow_name == 'test_workflow'
-
-        mock_engine_execute.assert_called_once_with(ctx=workflow_runner._workflow_context,
-                                                    resuming=False,
-                                                    retry_failed=False)
-
-
-def test_cancel_execution(request):
-    mock_workflow = _setup_mock_workflow_in_service(request)
-
-    mock_engine = mock.MagicMock()
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine', return_value=mock_engine):
-        workflow_runner = _create_workflow_runner(request, mock_workflow)
-        workflow_runner.cancel()
-        mock_engine.cancel_execution.assert_called_once_with(ctx=workflow_runner._workflow_context)
-
-
-def test_execution_model_creation(request, service, model):
-    mock_workflow = _setup_mock_workflow_in_service(request)
-
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine'):
-        workflow_runner = _create_workflow_runner(request, mock_workflow)
-
-        assert model.execution.get(workflow_runner.execution.id) == workflow_runner.execution
-        assert workflow_runner.execution.service.id == service.id
-        assert workflow_runner.execution.workflow_name == mock_workflow
-        assert workflow_runner.execution.created_at <= datetime.utcnow()
-        assert workflow_runner.execution.inputs == dict()
+    assert workflow_ctx.execution.service.id == service.id
+    assert workflow_ctx.execution.workflow_name == mock_workflow
+    assert workflow_ctx.execution.created_at <= datetime.utcnow()
+    assert workflow_ctx.execution.inputs == dict()
 
 
 def test_execution_inputs_override_workflow_inputs(request):
@@ -200,24 +133,25 @@ def test_execution_inputs_override_workflow_inputs(request):
         inputs=dict((name, models.Input.wrap(name, val)) for name, val
                     in wf_inputs.iteritems()))
 
-    with mock.patch('aria.orchestrator.workflow_runner.engine.Engine'):
-        workflow_runner = _create_workflow_runner(
-            request, mock_workflow, inputs={'input2': 'overriding-value2', 'input3': 7})
+    workflow_ctx = _get_preparer(request, mock_workflow).prepare(
+        execution_inputs={'input2': 'overriding-value2', 'input3': 7}
+    )
 
-        assert len(workflow_runner.execution.inputs) == 3
-        # did not override input1 - expecting the default value from the workflow inputs
-        assert workflow_runner.execution.inputs['input1'].value == 'value1'
-        # overrode input2
-        assert workflow_runner.execution.inputs['input2'].value == 'overriding-value2'
-        # overrode input of integer type
-        assert workflow_runner.execution.inputs['input3'].value == 7
+    assert len(workflow_ctx.execution.inputs) == 3
+    # did not override input1 - expecting the default value from the workflow inputs
+    assert workflow_ctx.execution.inputs['input1'].value == 'value1'
+    # overrode input2
+    assert workflow_ctx.execution.inputs['input2'].value == 'overriding-value2'
+    # overrode input of integer type
+    assert workflow_ctx.execution.inputs['input3'].value == 7
 
 
 def test_execution_inputs_undeclared_inputs(request):
     mock_workflow = _setup_mock_workflow_in_service(request)
 
     with pytest.raises(modeling_exceptions.UndeclaredInputsException):
-        _create_workflow_runner(request, mock_workflow, inputs={'undeclared_input': 'value'})
+        _get_preparer(request, mock_workflow).prepare(
+            execution_inputs={'undeclared_input': 'value'})
 
 
 def test_execution_inputs_missing_required_inputs(request):
@@ -225,7 +159,7 @@ def test_execution_inputs_missing_required_inputs(request):
         request, inputs={'required_input': models.Input.wrap('required_input', value=None)})
 
     with pytest.raises(modeling_exceptions.MissingRequiredInputsException):
-        _create_workflow_runner(request, mock_workflow, inputs={})
+        _get_preparer(request, mock_workflow).prepare(execution_inputs={})
 
 
 def test_execution_inputs_wrong_type_inputs(request):
@@ -233,13 +167,13 @@ def test_execution_inputs_wrong_type_inputs(request):
         request, inputs={'input': models.Input.wrap('input', 'value')})
 
     with pytest.raises(modeling_exceptions.ParametersOfWrongTypeException):
-        _create_workflow_runner(request, mock_workflow, inputs={'input': 5})
+        _get_preparer(request, mock_workflow).prepare(execution_inputs={'input': 5})
 
 
 def test_execution_inputs_builtin_workflow_with_inputs(request):
     # built-in workflows don't have inputs
     with pytest.raises(modeling_exceptions.UndeclaredInputsException):
-        _create_workflow_runner(request, 'install', inputs={'undeclared_input': 'value'})
+        _get_preparer(request, 'install').prepare(execution_inputs={'undeclared_input': 'value'})
 
 
 def test_workflow_function_parameters(request, tmpdir):
@@ -254,8 +188,8 @@ def test_workflow_function_parameters(request, tmpdir):
         request, inputs=dict((name, models.Input.wrap(name, val)) for name, val
                              in wf_inputs.iteritems()))
 
-    _create_workflow_runner(request, mock_workflow,
-                            inputs={'input2': 'overriding-value2', 'input3': 7})
+    _get_preparer(request, mock_workflow).prepare(
+        execution_inputs={'input2': 'overriding-value2', 'input3': 7})
 
     with open(output_path) as f:
         wf_call_kwargs = json.load(f)
@@ -296,39 +230,33 @@ def _setup_mock_workflow_in_service(request, inputs=None):
     return mock_workflow_name
 
 
-def _create_workflow_runner(request, workflow_name, inputs=None, executor=None,
-                            task_max_attempts=None, task_retry_interval=None):
+def _get_preparer(request, workflow_name):
     # helper method for instantiating a workflow runner
-    service_id = request.getfixturevalue('service').id
+    service = request.getfixturevalue('service')
     model = request.getfixturevalue('model')
     resource = request.getfixturevalue('resource')
     plugin_manager = request.getfixturevalue('plugin_manager')
 
-    # task configuration parameters can't be set to None, therefore only
-    # passing those if they've been set by the test
-    task_configuration_kwargs = dict()
-    if task_max_attempts is not None:
-        task_configuration_kwargs['task_max_attempts'] = task_max_attempts
-    if task_retry_interval is not None:
-        task_configuration_kwargs['task_retry_interval'] = task_retry_interval
-
-    return WorkflowRunner(
-        workflow_name=workflow_name,
-        service_id=service_id,
-        inputs=inputs or {},
-        executor=executor,
-        model_storage=model,
-        resource_storage=resource,
-        plugin_manager=plugin_manager,
-        **task_configuration_kwargs)
+    return execution_preparer.ExecutionPreparer(
+        model,
+        resource,
+        plugin_manager,
+        service,
+        workflow_name
+    )
 
 
 class TestResumableWorkflows(object):
 
-    def _create_initial_workflow_runner(
-            self, workflow_context, workflow, executor, inputs=None):
+    def _prepare_execution_and_get_workflow_ctx(
+            self,
+            model,
+            resource,
+            service,
+            workflow,
+            executor,
+            inputs=None):
 
-        service = workflow_context.service
         service.workflows['custom_workflow'] = tests_mock.models.create_operation(
             'custom_workflow',
             operation_kwargs={
@@ -336,23 +264,20 @@ class TestResumableWorkflows(object):
                 'inputs': dict((k, models.Input.wrap(k, v)) for k, v in (inputs or {}).items())
             }
         )
-        workflow_context.model.service.update(service)
+        model.service.update(service)
+        compiler = execution_preparer.ExecutionPreparer(
+            model, resource, None, service, 'custom_workflow'
+        )
+        ctx = compiler.prepare(inputs, executor)
+        model.execution.update(ctx.execution)
 
-        wf_runner = WorkflowRunner(
-            service_id=workflow_context.service.id,
-            inputs=inputs or {},
-            model_storage=workflow_context.model,
-            resource_storage=workflow_context.resource,
-            plugin_manager=None,
-            workflow_name='custom_workflow',
-            executor=executor)
-        return wf_runner
+        return ctx
 
     @staticmethod
-    def _wait_for_active_and_cancel(workflow_runner):
+    def _cancel_active_execution(eng, ctx):
         if custom_events['is_active'].wait(60) is False:
             raise TimeoutError("is_active wasn't set to True")
-        workflow_runner.cancel()
+        eng.cancel_execution(ctx)
         if custom_events['execution_cancelled'].wait(60) is False:
             raise TimeoutError("Execution did not end")
 
@@ -360,78 +285,73 @@ class TestResumableWorkflows(object):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_pass_first_task_only)
+        ctx = self._prepare_execution_and_get_workflow_ctx(
+            workflow_context.model,
+            workflow_context.resource,
+            workflow_context.model.service.list()[0],
+            mock_parallel_tasks_workflow,
+            thread_executor,
+            inputs={'number_of_tasks': 2}
+        )
 
-        wf_runner = self._create_initial_workflow_runner(
-            workflow_context, mock_parallel_tasks_workflow, thread_executor,
-            inputs={'number_of_tasks': 2})
+        eng = engine.Engine(thread_executor)
 
-        wf_thread = Thread(target=wf_runner.execute)
+        wf_thread = Thread(target=eng.execute, kwargs=dict(ctx=ctx))
         wf_thread.daemon = True
         wf_thread.start()
 
         # Wait for the execution to start
-        self._wait_for_active_and_cancel(wf_runner)
-        node = workflow_context.model.node.refresh(node)
+        self._cancel_active_execution(eng, ctx)
+        node = ctx.model.node.refresh(node)
 
-        tasks = workflow_context.model.task.list(filters={'_stub_type': None})
+        tasks = ctx.model.task.list(filters={'_stub_type': None})
         assert any(task.status == task.SUCCESS for task in tasks)
         assert any(task.status == task.RETRYING for task in tasks)
         custom_events['is_resumed'].set()
         assert any(task.status == task.RETRYING for task in tasks)
 
-        # Create a new workflow runner, with an existing execution id. This would cause
+        # Create a new workflow engine, with an existing execution id. This would cause
         # the old execution to restart.
-        new_wf_runner = WorkflowRunner(
-            service_id=wf_runner.service.id,
-            inputs={},
-            model_storage=workflow_context.model,
-            resource_storage=workflow_context.resource,
-            plugin_manager=None,
-            execution_id=wf_runner.execution.id,
-            executor=thread_executor)
-
-        new_wf_runner.execute()
+        new_engine = engine.Engine(thread_executor)
+        new_engine.execute(ctx, resuming=True)
 
         # Wait for it to finish and assert changes.
         node = workflow_context.model.node.refresh(node)
         assert all(task.status == task.SUCCESS for task in tasks)
         assert node.attributes['invocations'].value == 3
-        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+        assert ctx.execution.status == ctx.execution.SUCCEEDED
 
     def test_resume_started_task(self, workflow_context, thread_executor):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_stuck_task)
 
-        wf_runner = self._create_initial_workflow_runner(
-            workflow_context, mock_parallel_tasks_workflow, thread_executor,
-            inputs={'number_of_tasks': 1})
+        ctx = self._prepare_execution_and_get_workflow_ctx(
+            workflow_context.model,
+            workflow_context.resource,
+            workflow_context.model.service.list()[0],
+            mock_parallel_tasks_workflow,
+            thread_executor,
+            inputs={'number_of_tasks': 1}
+        )
 
-        wf_thread = Thread(target=wf_runner.execute)
+        eng = engine.Engine(thread_executor)
+        wf_thread = Thread(target=eng.execute, kwargs=dict(ctx=ctx))
         wf_thread.daemon = True
         wf_thread.start()
 
-        self._wait_for_active_and_cancel(wf_runner)
+        self._cancel_active_execution(eng, ctx)
         node = workflow_context.model.node.refresh(node)
         task = workflow_context.model.task.list(filters={'_stub_type': None})[0]
         assert node.attributes['invocations'].value == 1
         assert task.status == task.STARTED
-        assert wf_runner.execution.status in (wf_runner.execution.CANCELLED,
-                                              wf_runner.execution.CANCELLING)
+        assert ctx.execution.status in (ctx.execution.CANCELLED, ctx.execution.CANCELLING)
         custom_events['is_resumed'].set()
 
         new_thread_executor = thread.ThreadExecutor()
         try:
-            new_wf_runner = WorkflowRunner(
-                service_id=wf_runner.service.id,
-                inputs={},
-                model_storage=workflow_context.model,
-                resource_storage=workflow_context.resource,
-                plugin_manager=None,
-                execution_id=wf_runner.execution.id,
-                executor=new_thread_executor)
-
-            new_wf_runner.execute()
+            new_engine = engine.Engine(new_thread_executor)
+            new_engine.execute(ctx, resuming=True)
         finally:
             new_thread_executor.close()
 
@@ -439,28 +359,32 @@ class TestResumableWorkflows(object):
         node = workflow_context.model.node.refresh(node)
         assert node.attributes['invocations'].value == 2
         assert task.status == task.SUCCESS
-        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+        assert ctx.execution.status == ctx.execution.SUCCEEDED
 
     def test_resume_failed_task(self, workflow_context, thread_executor):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_failed_before_resuming)
 
-        wf_runner = self._create_initial_workflow_runner(workflow_context,
-                                                         mock_parallel_tasks_workflow,
-                                                         thread_executor)
-        wf_thread = Thread(target=wf_runner.execute)
+        ctx = self._prepare_execution_and_get_workflow_ctx(
+            workflow_context.model,
+            workflow_context.resource,
+            workflow_context.model.service.list()[0],
+            mock_parallel_tasks_workflow,
+            thread_executor)
+
+        eng = engine.Engine(thread_executor)
+        wf_thread = Thread(target=eng.execute, kwargs=dict(ctx=ctx))
         wf_thread.setDaemon(True)
         wf_thread.start()
 
-        self._wait_for_active_and_cancel(wf_runner)
+        self._cancel_active_execution(eng, ctx)
         node = workflow_context.model.node.refresh(node)
 
         task = workflow_context.model.task.list(filters={'_stub_type': None})[0]
         assert node.attributes['invocations'].value == 2
         assert task.status == task.STARTED
-        assert wf_runner.execution.status in (wf_runner.execution.CANCELLED,
-                                              wf_runner.execution.CANCELLING)
+        assert ctx.execution.status in (ctx.execution.CANCELLED, ctx.execution.CANCELLING)
 
         custom_events['is_resumed'].set()
         assert node.attributes['invocations'].value == 2
@@ -469,16 +393,8 @@ class TestResumableWorkflows(object):
         # the old execution to restart.
         new_thread_executor = thread.ThreadExecutor()
         try:
-            new_wf_runner = WorkflowRunner(
-                service_id=wf_runner.service.id,
-                inputs={},
-                model_storage=workflow_context.model,
-                resource_storage=workflow_context.resource,
-                plugin_manager=None,
-                execution_id=wf_runner.execution.id,
-                executor=new_thread_executor)
-
-            new_wf_runner.execute()
+            new_engine = engine.Engine(new_thread_executor)
+            new_engine.execute(ctx, resuming=True)
         finally:
             new_thread_executor.close()
 
@@ -486,20 +402,23 @@ class TestResumableWorkflows(object):
         node = workflow_context.model.node.refresh(node)
         assert node.attributes['invocations'].value == task.max_attempts - 1
         assert task.status == task.SUCCESS
-        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+        assert ctx.execution.status == ctx.execution.SUCCEEDED
 
     def test_resume_failed_task_and_successful_task(self, workflow_context, thread_executor):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_pass_first_task_only)
 
-        wf_runner = self._create_initial_workflow_runner(
-            workflow_context,
+        ctx = self._prepare_execution_and_get_workflow_ctx(
+            workflow_context.model,
+            workflow_context.resource,
+            workflow_context.model.service.list()[0],
             mock_parallel_tasks_workflow,
             thread_executor,
             inputs={'retry_interval': 1, 'max_attempts': 2, 'number_of_tasks': 2}
         )
-        wf_thread = Thread(target=wf_runner.execute)
+        eng = engine.Engine(thread_executor)
+        wf_thread = Thread(target=eng.execute, kwargs=dict(ctx=ctx))
         wf_thread.setDaemon(True)
         wf_thread.start()
 
@@ -516,22 +435,13 @@ class TestResumableWorkflows(object):
         assert failed_task.attempts_count == 2
         # Second task fails
         assert any(task.status == task.SUCCESS for task in tasks)
-        assert wf_runner.execution.status in wf_runner.execution.FAILED
+        assert ctx.execution.status in ctx.execution.FAILED
 
         custom_events['is_resumed'].set()
         new_thread_executor = thread.ThreadExecutor()
         try:
-            new_wf_runner = WorkflowRunner(
-                service_id=wf_runner.service.id,
-                retry_failed_tasks=True,
-                inputs={},
-                model_storage=workflow_context.model,
-                resource_storage=workflow_context.resource,
-                plugin_manager=None,
-                execution_id=wf_runner.execution.id,
-                executor=new_thread_executor)
-
-            new_wf_runner.execute()
+            new_engine = engine.Engine(new_thread_executor)
+            new_engine.execute(ctx, resuming=True, retry_failed=True)
         finally:
             new_thread_executor.close()
 
@@ -540,20 +450,23 @@ class TestResumableWorkflows(object):
         assert failed_task.attempts_count == 1
         assert node.attributes['invocations'].value == 4
         assert all(task.status == task.SUCCESS for task in tasks)
-        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
+        assert ctx.execution.status == ctx.execution.SUCCEEDED
 
     def test_two_sequential_task_first_task_failed(self, workflow_context, thread_executor):
         node = workflow_context.model.node.get_by_name(tests_mock.models.DEPENDENCY_NODE_NAME)
         node.attributes['invocations'] = models.Attribute.wrap('invocations', 0)
         self._create_interface(workflow_context, node, mock_fail_first_task_only)
 
-        wf_runner = self._create_initial_workflow_runner(
-            workflow_context,
+        ctx = self._prepare_execution_and_get_workflow_ctx(
+            workflow_context.model,
+            workflow_context.resource,
+            workflow_context.model.service.list()[0],
             mock_sequential_tasks_workflow,
             thread_executor,
             inputs={'retry_interval': 1, 'max_attempts': 1, 'number_of_tasks': 2}
         )
-        wf_thread = Thread(target=wf_runner.execute)
+        eng = engine.Engine(thread_executor)
+        wf_thread = Thread(target=eng.execute, kwargs=dict(ctx=ctx))
         wf_thread.setDaemon(True)
         wf_thread.start()
 
@@ -569,16 +482,8 @@ class TestResumableWorkflows(object):
         custom_events['is_resumed'].set()
         new_thread_executor = thread.ThreadExecutor()
         try:
-            new_wf_runner = WorkflowRunner(
-                service_id=wf_runner.service.id,
-                inputs={},
-                model_storage=workflow_context.model,
-                resource_storage=workflow_context.resource,
-                plugin_manager=None,
-                execution_id=wf_runner.execution.id,
-                executor=new_thread_executor)
-
-            new_wf_runner.execute()
+            new_engine = engine.Engine(new_thread_executor)
+            new_engine.execute(ctx, resuming=True)
         finally:
             new_thread_executor.close()
 
@@ -587,9 +492,7 @@ class TestResumableWorkflows(object):
         assert node.attributes['invocations'].value == 2
         assert any(t.status == t.SUCCESS for t in tasks)
         assert any(t.status == t.FAILED for t in tasks)
-        assert wf_runner.execution.status == wf_runner.execution.SUCCEEDED
-
-
+        assert ctx.execution.status == ctx.execution.SUCCEEDED
 
     @staticmethod
     @pytest.fixture
@@ -630,7 +533,7 @@ class TestResumableWorkflows(object):
         graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
         workflow_context.execution = execution
 
-        return engine.Engine(executors={executor.__class__: executor})
+        return engine.Engine(executor)
 
     @pytest.fixture(autouse=True)
     def register_to_events(self):
@@ -672,7 +575,6 @@ def _create_tasks(node, retry_interval, max_attempts, number_of_tasks):
                                max_attempts=max_attempts)
         for _ in xrange(number_of_tasks)
     ]
-
 
 
 @operation

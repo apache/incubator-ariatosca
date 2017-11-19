@@ -132,7 +132,7 @@ def run_operation_on_node(ctx, op_name, interface_name, executor):
         single_operation_workflow(ctx, node=node, interface_name=interface_name, op_name=op_name)
     )
 
-    eng = engine.Engine(executors={executor.__class__: executor})
+    eng = engine.Engine(executor)
     eng.execute(ctx)
     return node
 

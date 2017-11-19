@@ -263,7 +263,7 @@ class TestWithActualSSHServer(object):
         tasks_graph = mock_workflow(ctx=self._workflow_context)  # pylint: disable=no-value-for-parameter
         graph_compiler.GraphCompiler(
             self._workflow_context, self._executor.__class__).compile(tasks_graph)
-        eng = engine.Engine({self._executor.__class__: self._executor})
+        eng = engine.Engine(self._executor)
         eng.execute(self._workflow_context)
         return self._workflow_context.model.node.get_by_name(
             mock.models.DEPENDENCY_NODE_NAME).attributes

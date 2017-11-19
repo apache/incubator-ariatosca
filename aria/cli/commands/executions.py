@@ -25,9 +25,11 @@ from .. import utils
 from .. import logger as cli_logger
 from .. import execution_logging
 from ..core import aria
+from ...orchestrator import execution_preparer
 from ...modeling.models import Execution
-from ...orchestrator.workflow_runner import WorkflowRunner
+from ...orchestrator.workflows.core.engine import Engine
 from ...orchestrator.workflows.executor.dry import DryExecutor
+from ...orchestrator.workflows.executor.process import ProcessExecutor
 from ...utils import formatting
 from ...utils import threading
 
@@ -141,17 +143,21 @@ def start(workflow_name,
     WORKFLOW_NAME is the unique name of the workflow within the service (e.g. "uninstall").
     """
     service = model_storage.service.get_by_name(service_name)
-    executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
+    executor = DryExecutor() if dry else ProcessExecutor(plugin_manager=plugin_manager)
 
-    workflow_runner = \
-        WorkflowRunner(
-            model_storage, resource_storage, plugin_manager,
-            service_id=service.id, workflow_name=workflow_name, inputs=inputs, executor=executor,
-            task_max_attempts=task_max_attempts, task_retry_interval=task_retry_interval
-        )
+    compiler = execution_preparer.ExecutionPreparer(
+        model_storage,
+        resource_storage,
+        plugin_manager,
+        service,
+        workflow_name
+    )
+    workflow_ctx = compiler.prepare(inputs, executor=executor)
+
+    engine = Engine(executor)
     logger.info('Starting {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
 
-    _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern)
+    _run_execution(engine, workflow_ctx, logger, model_storage, dry, mark_pattern)
 
 
 @executions.command(name='resume',
@@ -178,45 +184,61 @@ def resume(execution_id,
 
     EXECUTION_ID is the unique ID of the execution.
     """
-    executor = DryExecutor() if dry else None  # use WorkflowRunner's default executor
+    executor = DryExecutor() if dry else ProcessExecutor(plugin_manager=plugin_manager)
 
-    execution = model_storage.execution.get(execution_id)
-    if execution.status != execution.CANCELLED:
+    execution_to_resume = model_storage.execution.get(execution_id)
+    if execution_to_resume.status != execution_to_resume.CANCELLED:
         logger.info("Can't resume execution {execution.id} - "
                     "execution is in status {execution.status}. "
-                    "Can only resume executions in status {valid_status}"
-                    .format(execution=execution, valid_status=execution.CANCELLED))
+                    "Can only resume executions in status {execution.CANCELLED}"
+                    .format(execution=execution_to_resume))
         return
 
-    workflow_runner = \
-        WorkflowRunner(
-            model_storage, resource_storage, plugin_manager,
-            execution_id=execution_id, retry_failed_tasks=retry_failed_tasks, executor=executor,
-        )
+    workflow_ctx = execution_preparer.ExecutionPreparer(
+        model_storage,
+        resource_storage,
+        plugin_manager,
+        execution_to_resume.service,
+        execution_to_resume.workflow_name
+    ).prepare(execution_id=execution_to_resume.id)
+
+    engine = Engine(executor)
 
     logger.info('Resuming {0}execution. Press Ctrl+C cancel'.format('dry ' if dry else ''))
-    _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern)
+    _run_execution(engine, workflow_ctx, logger, model_storage, dry, mark_pattern,
+                   engine_kwargs=dict(resuming=True, retry_failed=retry_failed_tasks))
 
 
-def _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern):
-    execution_thread_name = '{0}_{1}'.format(workflow_runner.service.name,
-                                             workflow_runner.execution.workflow_name)
-    execution_thread = threading.ExceptionThread(target=workflow_runner.execute,
-                                                 name=execution_thread_name)
+def _run_execution(
+        engine,
+        ctx,
+        logger,
+        model_storage,
+        dry,
+        mark_pattern,
+        engine_kwargs=None
+):
+    engine_kwargs = engine_kwargs or {}
+    engine_kwargs['ctx'] = ctx
+    execution_thread_name = '{0}_{1}'.format(ctx.execution.service.name,
+                                             ctx.execution.workflow_name)
+    execution_thread = threading.ExceptionThread(target=engine.execute,
+                                                 name=execution_thread_name,
+                                                 kwargs=engine_kwargs)
 
     execution_thread.start()
 
-    last_task_id = workflow_runner.execution.logs[-1].id if workflow_runner.execution.logs else 0
-    log_iterator = cli_logger.ModelLogIterator(model_storage,
-                                               workflow_runner.execution_id,
-                                               offset=last_task_id)
+    last_task_id = ctx.execution.logs[-1].id if ctx.execution.logs else 0
+    log_iterator = cli_logger.ModelLogIterator(model_storage, ctx.execution.id, offset=last_task_id)
     try:
         while execution_thread.is_alive():
             execution_logging.log_list(log_iterator, mark_pattern=mark_pattern)
             execution_thread.join(1)
 
     except KeyboardInterrupt:
-        _cancel_execution(workflow_runner, execution_thread, logger, log_iterator)
+        _cancel_execution(engine, ctx, execution_thread, logger, log_iterator)
+
+    model_storage.execution.refresh(ctx.execution)
 
     # It might be the case where some logs were written and the execution was terminated, thus we
     # need to drain the remaining logs.
@@ -225,19 +247,18 @@ def _run_execution(workflow_runner, logger, model_storage, dry, mark_pattern):
     # raise any errors from the execution thread (note these are not workflow execution errors)
     execution_thread.raise_error_if_exists()
 
-    execution = workflow_runner.execution
-    logger.info('Execution has ended with "{0}" status'.format(execution.status))
-    if execution.status == Execution.FAILED and execution.error:
-        logger.info('Execution error:{0}{1}'.format(os.linesep, execution.error))
+    logger.info('Execution has ended with "{0}" status'.format(ctx.execution.status))
+    if ctx.execution.status == Execution.FAILED and ctx.execution.error:
+        logger.info('Execution error:{0}{1}'.format(os.linesep, ctx.execution.error))
 
     if dry:
         # remove traces of the dry execution (including tasks, logs, inputs..)
-        model_storage.execution.delete(execution)
+        model_storage.execution.delete(ctx.execution)
 
 
-def _cancel_execution(workflow_runner, execution_thread, logger, log_iterator):
+def _cancel_execution(engine, ctx, execution_thread, logger, log_iterator):
     logger.info('Cancelling execution. Press Ctrl+C again to force-cancel.')
-    workflow_runner.cancel()
+    engine.cancel_execution(ctx)
     while execution_thread.is_alive():
         try:
             execution_logging.log_list(log_iterator)

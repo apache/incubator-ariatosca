@@ -58,7 +58,7 @@ def test_decorate_extension(context, executor):
         return graph
     graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
-    eng = engine.Engine({executor.__class__: executor})
+    eng = engine.Engine(executor)
     eng.execute(context)
     out = get_node(context).attributes.get('out').value
     assert out['wrapper_arguments'] == arguments

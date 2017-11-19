@@ -52,7 +52,7 @@ class BaseTest(object):
         graph = workflow_func(ctx=workflow_context)
         graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
 
-        return engine.Engine(executors={executor.__class__: executor})
+        return engine.Engine(executor)
 
     @staticmethod
     def _create_interface(ctx, func, arguments=None):

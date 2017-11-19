@@ -12,21 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import sys
-
-from aria.orchestrator.workflows.core import engine, graph_compiler
-
-
-def op_path(func, module_path=None):
-    module_path = module_path or sys.modules[__name__].__name__
-    return '{0}.{1}'.format(module_path, func.__name__)
-
-
-def execute(workflow_func, workflow_context, executor):
-    graph = workflow_func(ctx=workflow_context)
-
-    graph_compiler.GraphCompiler(workflow_context, executor.__class__).compile(graph)
-    eng = engine.Engine(executor)
-
-    eng.execute(workflow_context)

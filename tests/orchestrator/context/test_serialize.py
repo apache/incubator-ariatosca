@@ -49,7 +49,7 @@ def test_serialize_operation_context(context, executor, tmpdir):
 
     graph = _mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
     graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
-    eng = engine.Engine({executor.__class__: executor})
+    eng = engine.Engine(executor)
     eng.execute(context)
 
 

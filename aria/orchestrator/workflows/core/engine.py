@@ -36,9 +36,9 @@ class Engine(logger.LoggerMixin):
     Executes workflows.
     """
 
-    def __init__(self, executors, **kwargs):
+    def __init__(self, *executors, **kwargs):
         super(Engine, self).__init__(**kwargs)
-        self._executors = executors.copy()
+        self._executors = dict((e.__class__, e) for e in executors)
         self._executors.setdefault(StubTaskExecutor, StubTaskExecutor())
 
     def execute(self, ctx, resuming=False, retry_failed=False):

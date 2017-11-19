@@ -40,7 +40,7 @@
 
 .. automodule:: aria.orchestrator.plugin
 
-:mod:`aria.orchestrator.workflow_runner`
-----------------------------------------
+:mod:`aria.orchestrator.execution_preparer`
+-------------------------------------------
 
-.. automodule:: aria.orchestrator.workflow_runner
+.. automodule:: aria.orchestrator.execution_preparer
