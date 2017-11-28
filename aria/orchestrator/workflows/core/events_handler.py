@@ -28,16 +28,20 @@ from ... import exceptions
 
 @events.sent_task_signal.connect
 def _task_sent(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.status = ctx.task.SENT
+    # with ctx.persist_changes:
+    task = ctx.task
+    task.status = ctx.task.SENT
+    ctx.model.task.update(task)
 
 
 @events.start_task_signal.connect
 def _task_started(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.started_at = datetime.utcnow()
-        ctx.task.status = ctx.task.STARTED
-        _update_node_state_if_necessary(ctx, is_transitional=True)
+    # with ctx.persist_changes:
+    task = ctx.task
+    ctx.task.started_at = datetime.utcnow()
+    ctx.task.status = ctx.task.STARTED
+    _update_node_state_if_necessary(ctx, is_transitional=True)
+    ctx.model.task.update(task)
 
 
 @events.on_failure_task_signal.connect
@@ -68,40 +72,46 @@ def _task_failed(ctx, exception, *args, **kwargs):
 
 @events.on_success_task_signal.connect
 def _task_succeeded(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.ended_at = datetime.utcnow()
-        ctx.task.status = ctx.task.SUCCESS
-        ctx.task.attempts_count += 1
+    # with ctx.persist_changes:
 
-        _update_node_state_if_necessary(ctx)
+    task = ctx.task
+    ctx.task.ended_at = datetime.utcnow()
+    ctx.task.status = ctx.task.SUCCESS
+    ctx.task.attempts_count += 1
+
+    _update_node_state_if_necessary(ctx)
+    ctx.model.task.update(task)
 
 
 @events.start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        # the execution may already be in the process of cancelling
-        if execution.status in (execution.CANCELLING, execution.CANCELLED):
-            return
-        execution.status = execution.STARTED
-        execution.started_at = datetime.utcnow()
+    # with workflow_context.persist_changes:
+    execution = workflow_context.execution
+    # the execution may already be in the process of cancelling
+    if execution.status in (execution.CANCELLING, execution.CANCELLED):
+        return
+    execution.status = execution.STARTED
+    execution.started_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_failure_workflow_signal.connect
 def _workflow_failed(workflow_context, exception, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        execution.error = str(exception)
-        execution.status = execution.FAILED
-        execution.ended_at = datetime.utcnow()
+    # with workflow_context.persist_changes:
+    execution = workflow_context.execution
+    execution.error = str(exception)
+    execution.status = execution.FAILED
+    execution.ended_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_success_workflow_signal.connect
 def _workflow_succeeded(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        execution.status = execution.SUCCEEDED
-        execution.ended_at = datetime.utcnow()
+    # with workflow_context.persist_changes:
+    execution = workflow_context.execution
+    execution.status = execution.SUCCEEDED
+    execution.ended_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_cancelled_workflow_signal.connect
