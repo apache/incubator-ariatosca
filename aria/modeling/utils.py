@@ -36,14 +36,13 @@ class ModelJSONEncoder(JSONEncoder):
         super(ModelJSONEncoder, self).__init__(*args, **kwargs)
 
     def default(self, o):  # pylint: disable=method-hidden
-        from .mixins import ModelMixin
-        if isinstance(o, ModelMixin):
+        try:
             if hasattr(o, 'value'):
                 dict_to_return = o.to_dict(fields=('value',))
                 return dict_to_return['value']
             else:
                 return o.to_dict()
-        else:
+        except:
             return JSONEncoder.default(self, o)
 
 
