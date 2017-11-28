@@ -25,10 +25,12 @@ class MockContext(object):
 
     INSTRUMENTATION_FIELDS = BaseContext.INSTRUMENTATION_FIELDS
 
-    def __init__(self, storage, task_kwargs=None):
+    def __init__(self, storage=None, task_kwargs=None):
         self.logger = logging.getLogger('mock_logger')
         self._task_kwargs = task_kwargs or {}
-        self._storage = storage
+        import mock
+        self._storage = storage or mock.MagicMock()
+        self._storage_kwargs = self._storage.serialization_dict if storage else None
         self.task = MockTask(storage, **task_kwargs)
         self.states = []
         self.exception = None
@@ -38,7 +40,7 @@ class MockContext(object):
         return {
             'context_cls': self.__class__,
             'context': {
-                'storage_kwargs': self._storage.serialization_dict,
+                'storage_kwargs': self._storage_kwargs,
                 'task_kwargs': self._task_kwargs
             }
         }
@@ -55,13 +57,11 @@ class MockContext(object):
 
     @classmethod
     def instantiate_from_dict(cls, storage_kwargs=None, task_kwargs=None):
-        return cls(storage=aria.application_model_storage(**(storage_kwargs or {})),
-                   task_kwargs=(task_kwargs or {}))
-
-    @property
-    @contextmanager
-    def persist_changes(self):
-        yield
+        if storage_kwargs:
+            return cls(storage=aria.application_model_storage(**(storage_kwargs or {})),
+                       task_kwargs=task_kwargs)
+        else:
+            return cls(task_kwargs=task_kwargs)
 
 
 class MockActor(object):

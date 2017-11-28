@@ -27,28 +27,29 @@ class DryExecutor(base.BaseExecutor):                                           
     Dry task executor: prints task information without causing any side effects.
     """
     def execute(self, ctx):
-        with ctx.persist_changes:
-            # updating the task manually instead of calling self._task_started(task),
-            # to avoid any side effects raising that event might cause
-            ctx.task.started_at = datetime.utcnow()
-            ctx.task.status = ctx.task.STARTED
+        task = ctx.task
+        # updating the task manually instead of calling self._task_started(task),
+        # to avoid any side effects raising that event might cause
+        task.started_at = datetime.utcnow()
+        task.status = task.STARTED
 
-            dry_msg = u'<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
-            logger = ctx.logger.info if ctx.task.function else ctx.logger.debug
+        dry_msg = '<dry> {name} {task.interface_name}.{task.operation_name} {suffix}'
+        logger = ctx.logger.info if task.function else ctx.logger.debug
 
-            if hasattr(ctx.task.actor, 'source_node'):
-                name = u'{source_node.name}->{target_node.name}'.format(
-                    source_node=ctx.task.actor.source_node, target_node=ctx.task.actor.target_node)
-            else:
-                name = ctx.task.actor.name
+        if hasattr(task.actor, 'source_node'):
+            name = '{source_node.name}->{target_node.name}'.format(
+                source_node=task.actor.source_node, target_node=task.actor.target_node)
+        else:
+            name = task.actor.name
 
-            if ctx.task.function:
-                logger(dry_msg.format(name=name, task=ctx.task, suffix='started...'))
-                logger(dry_msg.format(name=name, task=ctx.task, suffix='successful'))
-            else:
-                logger(dry_msg.format(name=name, task=ctx.task, suffix='has no implementation'))
+        if task.function:
+            logger(dry_msg.format(name=name, task=ctx.task, suffix='started...'))
+            logger(dry_msg.format(name=name, task=ctx.task, suffix='successful'))
+        else:
+            logger(dry_msg.format(name=name, task=ctx.task, suffix='has no implementation'))
 
-            # updating the task manually instead of calling self._task_succeeded(task),
-            # to avoid any side effects raising that event might cause
-            ctx.task.ended_at = datetime.utcnow()
-            ctx.task.status = ctx.task.SUCCESS
+        # updating the task manually instead of calling self._task_succeeded(task),
+        # to avoid any side effects raising that event might cause
+        task.ended_at = datetime.utcnow()
+        task.status = task.SUCCESS
+        ctx.model.task.update(task)

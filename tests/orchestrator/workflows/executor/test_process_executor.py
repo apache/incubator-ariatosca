@@ -33,11 +33,12 @@ from aria.orchestrator.workflows.executor import process
 
 import tests.storage
 import tests.resources
-from tests.helpers import FilesystemDataHolder
-from tests.fixtures import (                                                                        # pylint: disable=unused-import
+from tests.fixtures import (  # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
 )
+from tests.helpers import FilesystemDataHolder
+from ..helpers import disconnect_event_handlers
 from . import MockContext
 
 
@@ -48,7 +49,6 @@ class TestProcessExecutor(object):
             model,
             task_kwargs=dict(function='mock_plugin1.operation', plugin_fk=mock_plugin.id)
         )
-
         executor.execute(ctx)
         error = queue.get(timeout=60)
         # tests/resources/plugins/mock-plugin1 is the plugin installed
@@ -85,7 +85,6 @@ while True:
         model.argument.put(holder_path_argument)
         model.argument.put(script_path_argument)
         ctx = MockContext(
-            model,
             task_kwargs=dict(
                 function='{0}.{1}'.format(__name__, freezing_task.__name__),
                 arguments=dict(holder_path=holder_path_argument,
@@ -124,13 +123,15 @@ def queue():
     def handler(_, exception=None, **kwargs):
         _queue.put(exception)
 
-    events.on_success_task_signal.connect(handler)
-    events.on_failure_task_signal.connect(handler)
-    try:
-        yield _queue
-    finally:
-        events.on_success_task_signal.disconnect(handler)
-        events.on_failure_task_signal.disconnect(handler)
+    with disconnect_event_handlers():
+
+        events.on_success_task_signal.connect(handler)
+        events.on_failure_task_signal.connect(handler)
+        try:
+            yield _queue
+        finally:
+            events.on_success_task_signal.disconnect(handler)
+            events.on_failure_task_signal.disconnect(handler)
 
 
 @pytest.fixture

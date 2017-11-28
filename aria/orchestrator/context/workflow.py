@@ -93,12 +93,6 @@ class WorkflowContext(BaseContext):
             }
         )
 
-    @property
-    @contextmanager
-    def persist_changes(self):
-        yield
-        self._model.execution.update(self.execution)
-
 
 class _CurrentContext(threading.local):
     """
