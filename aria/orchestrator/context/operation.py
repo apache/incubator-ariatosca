@@ -18,7 +18,6 @@ Operation contexts.
 """
 
 import threading
-from contextlib import contextmanager
 
 import aria
 from aria.utils import file
@@ -105,12 +104,6 @@ class BaseOperationContext(common.BaseContext):
         if self._destroy_session:
             self.model.log._session.remove()
             self.model.log._engine.dispose()
-
-    @property
-    @contextmanager
-    def persist_changes(self):
-        yield
-        self.model.task.update(self.task)
 
 
 class NodeOperationContext(BaseOperationContext):

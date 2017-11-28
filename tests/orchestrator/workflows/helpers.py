@@ -15,6 +15,9 @@
 
 from contextlib import contextmanager
 
+from aria.orchestrator import events
+from aria.orchestrator.workflows.core import events_handler
+
 
 @contextmanager
 def events_collector(*signals):
@@ -35,3 +38,18 @@ def events_collector(*signals):
     finally:
         for signal in signals:
             signal.disconnect(handlers[signal])
+
+
+@contextmanager
+def disconnect_event_handlers():
+    # disconnect the system events handler
+    events.start_task_signal.disconnect(events_handler._task_started)
+    events.on_success_task_signal.disconnect(events_handler._task_succeeded)
+    events.on_failure_task_signal.disconnect(events_handler._task_failed)
+    try:
+        yield
+    finally:
+        # reconnect the system events handler
+        events.start_task_signal.connect(events_handler._task_started)
+        events.on_success_task_signal.connect(events_handler._task_succeeded)
+        events.on_failure_task_signal.connect(events_handler._task_failed)

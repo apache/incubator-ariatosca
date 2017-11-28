@@ -35,7 +35,9 @@ from aria.orchestrator.workflows.executor import (
 )
 
 import tests
+from .. import helpers
 from . import MockContext
+
 
 
 def _get_function(func):
@@ -44,29 +46,29 @@ def _get_function(func):
 
 def execute_and_assert(executor, storage=None):
     expected_value = 'value'
-    successful_task = MockContext(
+    successful_ctx = MockContext(
         storage, task_kwargs=dict(function=_get_function(mock_successful_task))
     )
-    failing_task = MockContext(
+    failing_ctx = MockContext(
         storage, task_kwargs=dict(function=_get_function(mock_failing_task))
     )
-    task_with_inputs = MockContext(
+    task_with_inputs_ctx = MockContext(
         storage,
         task_kwargs=dict(function=_get_function(mock_task_with_input),
                          arguments={'input': models.Argument.wrap('input', 'value')})
     )
 
-    for task in [successful_task, failing_task, task_with_inputs]:
-        executor.execute(task)
+    for ctx in [successful_ctx, failing_ctx, task_with_inputs_ctx]:
+        executor.execute(ctx)
 
     @retrying.retry(stop_max_delay=10000, wait_fixed=100)
     def assertion():
-        assert successful_task.states == ['start', 'success']
-        assert failing_task.states == ['start', 'failure']
-        assert task_with_inputs.states == ['start', 'failure']
-        assert isinstance(failing_task.exception, MockException)
-        assert isinstance(task_with_inputs.exception, MockException)
-        assert task_with_inputs.exception.message == expected_value
+        assert successful_ctx.states == ['start', 'success']
+        assert failing_ctx.states == ['start', 'failure']
+        assert task_with_inputs_ctx.states == ['start', 'failure']
+        assert isinstance(failing_ctx.exception, MockException)
+        assert isinstance(task_with_inputs_ctx.exception, MockException)
+        assert task_with_inputs_ctx.exception.message == expected_value
     assertion()
 
 
@@ -130,20 +132,20 @@ def process_executor():
 
 @pytest.fixture(autouse=True)
 def register_signals():
-    def start_handler(task, *args, **kwargs):
-        task.states.append('start')
+    def start_handler(ctx, *args, **kwargs):
+        ctx.states.append('start')
 
-    def success_handler(task, *args, **kwargs):
-        task.states.append('success')
+    def success_handler(ctx, *args, **kwargs):
+        ctx.states.append('success')
 
-    def failure_handler(task, exception, *args, **kwargs):
-        task.states.append('failure')
-        task.exception = exception
-
-    events.start_task_signal.connect(start_handler)
-    events.on_success_task_signal.connect(success_handler)
-    events.on_failure_task_signal.connect(failure_handler)
-    yield
-    events.start_task_signal.disconnect(start_handler)
-    events.on_success_task_signal.disconnect(success_handler)
-    events.on_failure_task_signal.disconnect(failure_handler)
+    def failure_handler(ctx, exception, *args, **kwargs):
+        ctx.states.append('failure')
+        ctx.exception = exception
+    with helpers.disconnect_event_handlers():
+        events.start_task_signal.connect(start_handler)
+        events.on_success_task_signal.connect(success_handler)
+        events.on_failure_task_signal.connect(failure_handler)
+        yield
+        events.start_task_signal.disconnect(start_handler)
+        events.on_success_task_signal.disconnect(success_handler)
+        events.on_failure_task_signal.disconnect(failure_handler)

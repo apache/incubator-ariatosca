@@ -28,126 +28,130 @@ from ... import exceptions
 
 @events.sent_task_signal.connect
 def _task_sent(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.status = ctx.task.SENT
+    task = ctx.task
+    task.status = ctx.task.SENT
+    ctx.model.task.update(task)
 
 
 @events.start_task_signal.connect
 def _task_started(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.started_at = datetime.utcnow()
-        ctx.task.status = ctx.task.STARTED
-        _update_node_state_if_necessary(ctx, is_transitional=True)
+    task = ctx.task
+    ctx.task.started_at = datetime.utcnow()
+    ctx.task.status = ctx.task.STARTED
+    _update_node_state_if_necessary(ctx, is_transitional=True)
+    ctx.model.task.update(task)
 
 
 @events.on_failure_task_signal.connect
 def _task_failed(ctx, exception, *args, **kwargs):
-    with ctx.persist_changes:
-        should_retry = all([
-            not isinstance(exception, exceptions.TaskAbortException),
-            ctx.task.attempts_count < ctx.task.max_attempts or
-            ctx.task.max_attempts == ctx.task.INFINITE_RETRIES,
-            # ignore_failure check here means the task will not be retried and it will be marked
-            # as failed. The engine will also look at ignore_failure so it won't fail the
-            # workflow.
-            not ctx.task.ignore_failure
-        ])
-        if should_retry:
-            retry_interval = None
-            if isinstance(exception, exceptions.TaskRetryException):
-                retry_interval = exception.retry_interval
-            if retry_interval is None:
-                retry_interval = ctx.task.retry_interval
-            ctx.task.status = ctx.task.RETRYING
-            ctx.task.attempts_count += 1
-            ctx.task.due_at = datetime.utcnow() + timedelta(seconds=retry_interval)
-        else:
-            ctx.task.ended_at = datetime.utcnow()
-            ctx.task.status = ctx.task.FAILED
+    task = ctx.task
+    should_retry = all([
+        not isinstance(exception, exceptions.TaskAbortException),
+        task.attempts_count < task.max_attempts or
+        task.max_attempts == task.INFINITE_RETRIES,
+        # ignore_failure check here means the task will not be retried and it will be marked
+        # as failed. The engine will also look at ignore_failure so it won't fail the
+        # workflow.
+        not task.ignore_failure
+    ])
+    if should_retry:
+        retry_interval = None
+        if isinstance(exception, exceptions.TaskRetryException):
+            retry_interval = exception.retry_interval
+        if retry_interval is None:
+            retry_interval = ctx.task.retry_interval
+        task.status = task.RETRYING
+        task.attempts_count += 1
+        task.due_at = datetime.utcnow() + timedelta(seconds=retry_interval)
+    else:
+        task.ended_at = datetime.utcnow()
+        task.status = task.FAILED
+    ctx.model.task.update(task)
 
 
 @events.on_success_task_signal.connect
 def _task_succeeded(ctx, *args, **kwargs):
-    with ctx.persist_changes:
-        ctx.task.ended_at = datetime.utcnow()
-        ctx.task.status = ctx.task.SUCCESS
-        ctx.task.attempts_count += 1
+    task = ctx.task
+    ctx.task.ended_at = datetime.utcnow()
+    ctx.task.status = ctx.task.SUCCESS
+    ctx.task.attempts_count += 1
 
-        _update_node_state_if_necessary(ctx)
+    _update_node_state_if_necessary(ctx)
+    ctx.model.task.update(task)
 
 
 @events.start_workflow_signal.connect
 def _workflow_started(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        # the execution may already be in the process of cancelling
-        if execution.status in (execution.CANCELLING, execution.CANCELLED):
-            return
-        execution.status = execution.STARTED
-        execution.started_at = datetime.utcnow()
+    execution = workflow_context.execution
+    # the execution may already be in the process of cancelling
+    if execution.status in (execution.CANCELLING, execution.CANCELLED):
+        return
+    execution.status = execution.STARTED
+    execution.started_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_failure_workflow_signal.connect
 def _workflow_failed(workflow_context, exception, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        execution.error = str(exception)
-        execution.status = execution.FAILED
-        execution.ended_at = datetime.utcnow()
+    execution = workflow_context.execution
+    execution.error = str(exception)
+    execution.status = execution.FAILED
+    execution.ended_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_success_workflow_signal.connect
 def _workflow_succeeded(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        execution.status = execution.SUCCEEDED
-        execution.ended_at = datetime.utcnow()
+    execution = workflow_context.execution
+    execution.status = execution.SUCCEEDED
+    execution.ended_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_cancelled_workflow_signal.connect
 def _workflow_cancelled(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        # _workflow_cancelling function may have called this function already
-        if execution.status == execution.CANCELLED:
-            return
-        # the execution may have already been finished
-        elif execution.status in (execution.SUCCEEDED, execution.FAILED):
-            _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
-        else:
-            execution.status = execution.CANCELLED
-            execution.ended_at = datetime.utcnow()
+    execution = workflow_context.execution
+    # _workflow_cancelling function may have called this function already
+    if execution.status == execution.CANCELLED:
+        return
+    # the execution may have already been finished
+    elif execution.status in (execution.SUCCEEDED, execution.FAILED):
+        _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
+    else:
+        execution.status = execution.CANCELLED
+        execution.ended_at = datetime.utcnow()
+    workflow_context.model.execution.update(execution)
 
 
 @events.on_resume_workflow_signal.connect
 def _workflow_resume(workflow_context, retry_failed=False, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        execution.status = execution.PENDING
-        # Any non ended task would be put back to pending state
-        for task in execution.tasks:
-            if not task.has_ended():
-                task.status = task.PENDING
+    execution = workflow_context.execution
+    execution.status = execution.PENDING
+    # Any non ended task would be put back to pending state
+    for task in execution.tasks:
+        if not task.has_ended():
+            task.status = task.PENDING
 
-        if retry_failed:
-            for task in execution.tasks:
-                if task.status == task.FAILED and not task.ignore_failure:
-                    task.attempts_count = 0
-                    task.status = task.PENDING
+    if retry_failed:
+        for task in execution.tasks:
+            if task.status == task.FAILED and not task.ignore_failure:
+                task.attempts_count = 0
+                task.status = task.PENDING
+    workflow_context.model.execution.update(execution)
 
 
 
 @events.on_cancelling_workflow_signal.connect
 def _workflow_cancelling(workflow_context, *args, **kwargs):
-    with workflow_context.persist_changes:
-        execution = workflow_context.execution
-        if execution.status == execution.PENDING:
-            return _workflow_cancelled(workflow_context=workflow_context)
-        # the execution may have already been finished
-        elif execution.status in (execution.SUCCEEDED, execution.FAILED):
-            _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
-        else:
-            execution.status = execution.CANCELLING
+    execution = workflow_context.execution
+    if execution.status == execution.PENDING:
+        return _workflow_cancelled(workflow_context=workflow_context)
+    # the execution may have already been finished
+    elif execution.status in (execution.SUCCEEDED, execution.FAILED):
+        _log_tried_to_cancel_execution_but_it_already_ended(workflow_context, execution.status)
+    else:
+        execution.status = execution.CANCELLING
+    workflow_context.model.execution.update(execution)
 
 
 def _update_node_state_if_necessary(ctx, is_transitional=False):

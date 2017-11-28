@@ -71,5 +71,6 @@ class BaseExecutor(logger.LoggerMixin):
 
 class StubTaskExecutor(BaseExecutor):                                                               # pylint: disable=abstract-method
     def execute(self, ctx, *args, **kwargs):
-        with ctx.persist_changes:
-            ctx.task.status = ctx.task.SUCCESS
+        task = ctx.task
+        task.status = ctx.task.SUCCESS
+        ctx.model.task.update(task)
