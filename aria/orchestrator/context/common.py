@@ -114,7 +114,7 @@ class BaseContext(object):
             .format(name=self.__class__.__name__, self=self))
 
     @contextmanager
-    def logging_handlers(self, handlers=None):
+    def logging_handlers(self, handlers):
         original_handlers = self.logger.handlers
         handlers = handlers or []
         try:
@@ -124,7 +124,7 @@ class BaseContext(object):
                 self.logger.removeHandler(handler)
             yield self.logger
         finally:
-            for handler in handlers:
+            for handler in self.logger.handlers[:]:
                 self.logger.removeHandler(handler)
             for handler in original_handlers:
                 self.logger.addHandler(handler)
