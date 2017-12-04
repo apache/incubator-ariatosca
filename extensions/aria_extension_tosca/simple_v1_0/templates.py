@@ -19,11 +19,11 @@ from aria.parser import implements_specification
 from aria.parser.presentation import (has_fields, primitive_field, primitive_list_field,
                                       object_field, object_list_field, object_dict_field,
                                       object_sequenced_list_field, field_validator,
-                                      type_validator, list_type_validator)
+                                      type_validator)
 
 from .assignments import (PropertyAssignment, AttributeAssignment, RequirementAssignment,
                           CapabilityAssignment, InterfaceAssignment, ArtifactAssignment)
-from .definitions import ParameterDefinition
+from .definitions import (InputDefinition, OutputDefinition)
 from .filters import NodeFilter
 from .misc import (Description, MetaData, Repository, Import, SubstitutionMappings)
 from .modeling.parameters import (get_assigned_and_defined_parameter_values, get_parameter_values)
@@ -34,7 +34,8 @@ from .modeling.artifacts import get_inherited_artifact_definitions
 from .modeling.policies import get_policy_targets
 from .modeling.copy import get_default_raw_from_copy
 from .presentation.extensible import ExtensiblePresentation
-from .presentation.field_validators import copy_validator, policy_targets_validator
+from .presentation.field_validators import (copy_validator, group_members_validator,
+                                            policy_targets_validator)
 from .presentation.types import (convert_name_to_full_type_name, get_type_by_name)
 from .types import (ArtifactType, DataType, CapabilityType, InterfaceType, RelationshipType,
                     NodeType, GroupType, PolicyType)
@@ -182,6 +183,7 @@ class NodeTemplate(ExtensiblePresentation):
     def _validate(self, context):
         super(NodeTemplate, self)._validate(context)
         self._get_property_values(context)
+        self._get_attribute_default_values(context)
         self._get_requirements(context)
         self._get_capabilities(context)
         self._get_interfaces(context)
@@ -284,12 +286,17 @@ class RelationshipTemplate(ExtensiblePresentation):
         return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'property'))
 
     @cachedmethod
+    def _get_attribute_default_values(self, context):
+        return FrozenDict(get_assigned_and_defined_parameter_values(context, self, 'attribute'))
+
+    @cachedmethod
     def _get_interfaces(self, context):
         return FrozenDict(get_template_interfaces(context, self, 'relationship template'))
 
     def _validate(self, context):
         super(RelationshipTemplate, self)._validate(context)
         self._get_property_values(context)
+        self._get_attribute_default_values(context)
         self._get_interfaces(context)
 
     def _dump(self, context):
@@ -340,7 +347,7 @@ class GroupTemplate(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`PropertyAssignment`}
         """
 
-    @field_validator(list_type_validator('node template', 'topology_template', 'node_templates'))
+    @field_validator(group_members_validator)
     @primitive_list_field(str)
     def members(self):
         """
@@ -464,13 +471,13 @@ class TopologyTemplate(ExtensiblePresentation):
         :type: :class:`Description`
         """
 
-    @object_dict_field(ParameterDefinition)
+    @object_dict_field(InputDefinition)
     def inputs(self):
         """
         An optional list of input parameters (i.e., as parameter definitions) for the Topology
         Template.
 
-        :type: {:obj:`basestring`: :class:`ParameterDefinition`}
+        :type: {:obj:`basestring`: :class:`InputDefinition`}
         """
 
     @object_dict_field(NodeTemplate)
@@ -506,13 +513,13 @@ class TopologyTemplate(ExtensiblePresentation):
         :type: {:obj:`basestring`: :class:`PolicyTemplate`}
         """
 
-    @object_dict_field(ParameterDefinition)
+    @object_dict_field(OutputDefinition)
     def outputs(self):
         """
         An optional list of output parameters (i.e., as parameter definitions) for the Topology
         Template.
 
-        :type: {:obj:`basestring`: :class:`ParameterDefinition`}
+        :type: {:obj:`basestring`: :class:`OutputDefinition`}
         """
 
     @object_field(SubstitutionMappings)

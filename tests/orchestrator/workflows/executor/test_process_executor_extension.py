@@ -56,7 +56,7 @@ def test_decorate_extension(context, executor):
             arguments=arguments)
         graph.add_tasks(task)
         return graph
-    graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
+    graph = mock_workflow(ctx=context)                                                              # pylint: disable=no-value-for-parameter
     graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
     eng = engine.Engine(executor)
     eng.execute(context)

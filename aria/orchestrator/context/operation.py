@@ -40,10 +40,10 @@ class BaseOperationContext(common.BaseContext):
         self._register_logger(task_id=self.task.id, level=logger_level)
 
     def __repr__(self):
-        details = 'function={task.function}; ' \
-                  'operation_arguments={task.arguments}'\
+        details = u'function={task.function}; ' \
+                  u'operation_arguments={task.arguments}'\
             .format(task=self.task)
-        return '{name}({0})'.format(details, name=self.name)
+        return u'{name}({0})'.format(details, name=self.name)
 
     @property
     def task(self):
@@ -65,9 +65,9 @@ class BaseOperationContext(common.BaseContext):
         """
         if self.task.plugin is None:
             return None
-        plugin_workdir = '{0}/plugins/{1}/{2}'.format(self._workdir,
-                                                      self.service.id,
-                                                      self.task.plugin.name)
+        plugin_workdir = u'{0}/plugins/{1}/{2}'.format(self._workdir,
+                                                       self.service.id,
+                                                       self.task.plugin.name)
         file.makedirs(plugin_workdir)
         return plugin_workdir
 

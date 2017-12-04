@@ -17,6 +17,7 @@ group_types:
 
   tosca.groups.Root:
     _extensions:
+      normative: true
       shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0

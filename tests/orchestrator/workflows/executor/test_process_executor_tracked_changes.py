@@ -72,9 +72,9 @@ def test_apply_tracked_changes_during_an_operation(context, executor):
         context=context, executor=executor, op_func=_mock_updating_operation, arguments=arguments)
 
     expected_after_update = expected_initial.copy()
-    expected_after_update.update(arguments['committed']) # pylint: disable=no-member
+    expected_after_update.update(arguments['committed'])                                            # pylint: disable=no-member
     expected_after_change = expected_after_update.copy()
-    expected_after_change.update(arguments['changed_but_refreshed']) # pylint: disable=no-member
+    expected_after_change.update(arguments['changed_but_refreshed'])                                # pylint: disable=no-member
 
     assert out['initial'] == expected_initial
     assert out['after_update'] == expected_after_update
@@ -106,7 +106,7 @@ def _run_workflow(context, executor, op_func, arguments=None):
             arguments=wf_arguments)
         graph.add_tasks(task)
         return graph
-    graph = mock_workflow(ctx=context)  # pylint: disable=no-value-for-parameter
+    graph = mock_workflow(ctx=context)                                                              # pylint: disable=no-value-for-parameter
     graph_compiler.GraphCompiler(context, executor.__class__).compile(graph)
     eng = engine.Engine(executor)
     eng.execute(context)

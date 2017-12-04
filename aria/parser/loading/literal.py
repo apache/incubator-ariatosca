@@ -29,3 +29,6 @@ class LiteralLoader(Loader):
 
     def load(self):
         return self.location.content
+
+    def get_canonical_location(self):
+        return self.location

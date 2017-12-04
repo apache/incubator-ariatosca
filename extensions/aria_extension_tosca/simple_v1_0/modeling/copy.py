@@ -23,7 +23,7 @@ def get_default_raw_from_copy(presentation, field_name):
     """
 
     copy = presentation._raw.get('copy')
-    if copy is not None:
+    if isinstance(copy, basestring):
         templates = getattr(presentation._container, field_name)
         if templates is not None:
             template = templates.get(copy)

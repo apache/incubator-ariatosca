@@ -20,14 +20,16 @@ from aria.parser import implements_specification
 from aria.parser.presentation import (AsIsPresentation, has_fields, allow_unknown_fields,
                                       short_form_field, primitive_field, primitive_list_field,
                                       primitive_dict_unknown_fields, object_field,
-                                      object_list_field, object_dict_field, field_validator,
-                                      type_validator)
+                                      object_list_field, object_dict_field, field_getter,
+                                      field_validator, type_validator, not_negative_validator)
 
+from .data_types import Version
 from .modeling.data_types import (get_data_type, get_data_type_value, get_property_constraints,
                                   apply_constraint_to_value)
 from .modeling.substitution_mappings import (validate_substitution_mappings_requirement,
                                              validate_substitution_mappings_capability)
 from .presentation.extensible import ExtensiblePresentation
+from .presentation.field_getters import data_type_class_getter
 from .presentation.field_validators import (constraint_clause_field_validator,
                                             constraint_clause_in_range_validator,
                                             constraint_clause_valid_values_validator,
@@ -47,7 +49,7 @@ class Description(AsIsPresentation):
     #DEFN_ELEMENT_DESCRIPTION>`__
     """
 
-    def __init__(self, name=None, raw=None, container=None, cls=None): # pylint: disable=unused-argument
+    def __init__(self, name=None, raw=None, container=None, cls=None):                              # pylint: disable=unused-argument
         super(Description, self).__init__(name, raw, container, cls=unicode)
 
     def _dump(self, context):
@@ -79,6 +81,7 @@ class MetaData(ExtensiblePresentation):
         as a single-line string value.
         """
 
+    @field_getter(data_type_class_getter(Version, allow_null=True))
     @primitive_field(str)
     @implements_specification('3.9.3.5', 'tosca-simple-1.0')
     def template_version(self):
@@ -87,7 +90,7 @@ class MetaData(ExtensiblePresentation):
         service template as a single-line string value.
         """
 
-    @primitive_dict_unknown_fields()
+    @primitive_dict_unknown_fields(str)
     def custom(self):
         """
         :type: dict
@@ -134,6 +137,10 @@ class Repository(ExtensiblePresentation):
     @cachedmethod
     def _get_credential(self, context):
         return get_data_type_value(context, self, 'credential', 'tosca.datatypes.Credential')
+
+    def _validate(self, context):
+        super(Repository, self)._validate(context)
+        self._get_credential(context)
 
 
 @short_form_field('file')
@@ -255,18 +262,21 @@ class ConstraintClause(ExtensiblePresentation):
         Constrains a property or parameter to a value that is in the list of declared values.
         """
 
+    @field_validator(not_negative_validator)
     @primitive_field(int)
     def length(self):
         """
         Constrains the property or parameter to a value of a given length.
         """
 
+    @field_validator(not_negative_validator)
     @primitive_field(int)
     def min_length(self):
         """
         Constrains the property or parameter to a value to a minimum length.
         """
 
+    @field_validator(not_negative_validator)
     @primitive_field(int)
     def max_length(self):
         """

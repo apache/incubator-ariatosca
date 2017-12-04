@@ -88,7 +88,7 @@ def get_assigned_and_defined_parameter_values(context, presentation, field_name)
                 definition = definitions[name]
                 values[name] = coerce_parameter_value(context, value, definition, value.value)
             else:
-                context.validation.report('assignment to undefined {0} "{1}" in "{2}"'
+                context.validation.report(u'assignment to undefined {0} "{1}" in "{2}"'
                                           .format(field_name, name, presentation._fullname),
                                           locator=value._locator, level=Issue.BETWEEN_TYPES)
 
@@ -99,7 +99,7 @@ def get_assigned_and_defined_parameter_values(context, presentation, field_name)
             if (name not in values) and \
                 (('default' in definition._raw) or (field_name == 'attribute')):
                 values[name] = coerce_parameter_value(context, presentation, definition,
-                                                      definition.default)
+                                                      definition.default, 'default')
 
     validate_required_values(context, presentation, values, definitions)
 
@@ -131,7 +131,8 @@ def get_parameter_values(context, presentation, field_name):
                                                           parameter.value)
                 else:
                     default = parameter.default if hasattr(parameter, 'default') else None
-                    values[name] = coerce_parameter_value(context, presentation, parameter, default)
+                    values[name] = coerce_parameter_value(context, presentation, parameter, default,
+                                                          'default')
 
     return values
 
@@ -147,11 +148,21 @@ def validate_required_values(context, presentation, values, definitions):
 
     if not definitions:
         return
+
+    def has_value(name):
+        if values is None:
+            return False
+        value = values.get(name)
+        if value is None:
+            return False
+        if isinstance(value, Value) and (value.value is None):
+            return False
+        return True
+
     for name, definition in definitions.iteritems():
-        if getattr(definition, 'required', False) and \
-            ((values is None) or (values.get(name) is None)):
-            context.validation.report('required property "%s" is not assigned a value in "%s"'
-                                      % (name, presentation._fullname),
+        if getattr(definition, 'required', False) and not has_value(name):
+            context.validation.report(u'required property "{0}" is not assigned a value in "{1}"'
+                                      .format(name, presentation._fullname),
                                       locator=presentation._get_child_locator('properties'),
                                       level=Issue.BETWEEN_TYPES)
 
@@ -166,14 +177,14 @@ def merge_raw_parameter_definition(context, presentation, raw_property_definitio
     our_property_definition._reset_method_cache()
     type2 = our_property_definition._get_type(context)
 
-    if type1 != type2:
-        if not hasattr(type1, '_is_descendant') or not type1._is_descendant(context, type2):
-            context.validation.report(
-                'property definition type "{0}" is not a descendant of overridden '
-                'property definition type "{1}"' \
-                .format(type1_name, type2._name),
-                locator=presentation._get_child_locator(field_name, property_name),
-                level=Issue.BETWEEN_TYPES)
+    if (type1 is not type2) and \
+        (not hasattr(type1, '_is_descendant') or not type1._is_descendant(context, type2)):
+        context.validation.report(
+            u'property definition type "{0}" is not a descendant of overridden '
+            u'property definition type "{1}"' \
+            .format(our_property_definition.type, type1_name),
+            locator=presentation._get_child_locator(field_name, property_name),
+            level=Issue.BETWEEN_TYPES)
 
     merge(raw_property_definition, our_property_definition._raw)
 
@@ -225,6 +236,6 @@ def coerce_parameter_value(context, presentation, definition, value, aspect=None
 def convert_parameter_definitions_to_values(context, definitions):
     values = OrderedDict()
     for name, definition in definitions.iteritems():
-        default = definition.default
-        values[name] = coerce_parameter_value(context, definition, definition, default)
+        values[name] = coerce_parameter_value(context, definition, definition, definition.default,
+                                              'default')
     return values

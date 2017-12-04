@@ -13,7 +13,6 @@
 # We need to set "sudo: true" in order to use a virtual machine instead of a container, because
 # SSH tests fail in the container. See:
 # https://docs.travis-ci.com/user/reference/overview/#Virtualization-environments
-
 dist: trusty
 sudo: true
 
@@ -23,16 +22,17 @@ python:
   - '2.7'
 
 env:
-  # The PYTEST_PROCESSES environment var is used in tox.ini to override the --numprocesses argument
-  # for PyTest's xdist plugin. The reason this is necessary is that conventional Travis environments
-  # may report a large amount of available CPUs, but they they are greatly restricted. Through trial
-  # and error we found that more than 1 process may result in failures.
-  - PYTEST_PROCESSES=1 TOX_ENV=pylint_core
-  - PYTEST_PROCESSES=1 TOX_ENV=pylint_tests
-  - PYTEST_PROCESSES=1 TOX_ENV=core
-  - PYTEST_PROCESSES=1 TOX_ENV=e2e
-  - PYTEST_PROCESSES=1 TOX_ENV=ssh
-  - PYTEST_PROCESSES=1 TOX_ENV=docs
+  # The CONCURRENCY environment var is used in tox.ini to override the --numprocesses argument
+  # for PyTest's xdist plugin and the --jobs argument for PyLint. The reason this is necessary is
+  # that in automatic concurrency mode the Travis environments may report a large amount of
+  # available cores, but concurrent tests may fail.
+  - CONCURRENCY=1 TOX_ENV=pylint_core
+  - CONCURRENCY=1 TOX_ENV=pylint_tests
+  - CONCURRENCY=1 TOX_ENV=core
+  - CONCURRENCY=1 TOX_ENV=extensions
+  - CONCURRENCY=1 TOX_ENV=e2e
+  - CONCURRENCY=1 TOX_ENV=ssh
+  - CONCURRENCY=1 TOX_ENV=docs
 
 before_install:
   # Create SSH keys for SSH tests

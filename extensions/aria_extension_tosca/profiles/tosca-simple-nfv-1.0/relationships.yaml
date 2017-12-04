@@ -17,6 +17,7 @@ relationship_types:
 
   tosca.relationships.nfv.VirtualBindsTo:
     _extensions:
+      normative: true
       shorthand_name: VirtualBindsTo
       type_qualified_name: tosca:VirtualBindsTo
       specification: tosca-simple-nfv-1.0
@@ -31,6 +32,7 @@ relationship_types:
   # valid_target_types), so we are using the definition in csd03 section 8.4.2.
   tosca.relationships.nfv.Monitor:
     _extensions:
+      normative: true
       shorthand_name: Monitor
       type_qualified_name: tosca:Monitor
       specification: tosca-simple-nfv-1.0

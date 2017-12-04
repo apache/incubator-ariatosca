@@ -82,7 +82,6 @@ def get_template_requirements(context, presentation):
         for requirement_name, requirement_definition in requirement_definitions:
             # Allowed occurrences
             allowed_occurrences = requirement_definition.occurrences
-            allowed_occurrences = allowed_occurrences if allowed_occurrences is not None else None
 
             # Count actual occurrences
             actual_occurrences = 0
@@ -103,28 +102,30 @@ def get_template_requirements(context, presentation):
                                                                           None, presentation)
                     validate_requirement_assignment(context, presentation, requirement_assignment,
                                                     relationship_property_definitions,
-                                                    relationship_interface_definitions)
+                                                    relationship_interface_definitions,
+                                                    requirement_definition)
                     requirement_assignments.append((requirement_name, requirement_assignment))
                 elif actual_occurrences > 1:
                     context.validation.report(
-                        'requirement "%s" is allowed only one occurrence in "%s": %d'
-                        % (requirement_name, presentation._fullname, actual_occurrences),
+                        u'requirement "{0}" is allowed only one occurrence in "{1}": {2:d}'
+                        .format(requirement_name, presentation._fullname, actual_occurrences),
                         locator=presentation._locator, level=Issue.BETWEEN_TYPES)
             else:
                 if not allowed_occurrences.is_in(actual_occurrences):
                     if allowed_occurrences.value[1] == 'UNBOUNDED':
                         context.validation.report(
-                            'requirement "%s" does not have at least %d occurrences in "%s": has %d'
-                            % (requirement_name, allowed_occurrences.value[0],
-                               presentation._fullname, actual_occurrences),
+                            u'requirement "{0}" does not have at least {1:d} occurrences in "{3}":'
+                            u' has {4:d}'
+                            .format(requirement_name, allowed_occurrences.value[0],
+                                    presentation._fullname, actual_occurrences),
                             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
                     else:
                         context.validation.report(
-                            'requirement "%s" is allowed between %d and %d occurrences in "%s":'
-                            ' has %d'
-                            % (requirement_name, allowed_occurrences.value[0],
-                               allowed_occurrences.value[1], presentation._fullname,
-                               actual_occurrences),
+                            u'requirement "{0}" is allowed between {1:d} and {2:d} occurrences in'
+                            u' "{3}": has {4:d}'
+                            .format(requirement_name, allowed_occurrences.value[0],
+                                    allowed_occurrences.value[1], presentation._fullname,
+                                    actual_occurrences),
                             locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
     return requirement_assignments
@@ -134,7 +135,7 @@ def get_template_requirements(context, presentation):
 # Utils
 #
 
-def convert_requirement_from_definition_to_assignment(context, requirement_definition, # pylint: disable=too-many-branches
+def convert_requirement_from_definition_to_assignment(context, requirement_definition,              # pylint: disable=too-many-branches
                                                       our_requirement_assignment, container):
     from ..assignments import RequirementAssignment
 
@@ -174,9 +175,9 @@ def convert_requirement_from_definition_to_assignment(context, requirement_defin
         # Make sure the type is derived
         if not definition_relationship_type._is_descendant(context, relationship_type):
             context.validation.report(
-                'assigned relationship type "%s" is not a descendant of declared relationship type'
-                ' "%s"' \
-                % (relationship_type._name, definition_relationship_type._name),
+                u'assigned relationship type "{0}" is not a descendant of declared relationship '
+                u' type "{1}"'
+                .format(relationship_type._name, definition_relationship_type._name),
                 locator=container._locator, level=Issue.BETWEEN_TYPES)
 
     if relationship_type is not None:
@@ -253,12 +254,13 @@ def add_requirement_assignments(context, presentation, requirement_assignments,
                                             or our_requirement_assignment,
                                             requirement_assignment,
                                             relationship_property_definitions,
-                                            relationship_interface_definitions)
+                                            relationship_interface_definitions,
+                                            requirement_definition)
             requirement_assignments.append((requirement_name, requirement_assignment))
         else:
-            context.validation.report('requirement "%s" not declared at node type "%s" in "%s"'
-                                      % (requirement_name, presentation.type,
-                                         presentation._fullname),
+            context.validation.report(u'requirement "{0}" not declared at node type "{1}" in "{2}"'
+                                      .format(requirement_name, presentation.type,
+                                              presentation._fullname),
                                       locator=our_requirement_assignment._locator,
                                       level=Issue.BETWEEN_TYPES)
 
@@ -278,7 +280,7 @@ def merge_requirement_assignment(context, relationship_property_definitions,
         requirement._raw['node_filter'] = deepcopy_with_locators(our_node_filter._raw)
 
     our_relationship = our_requirement.relationship # RelationshipAssignment
-    if (our_relationship is not None) and (our_relationship.type is None):
+    if our_relationship is not None:
         # Make sure we have a dict
         if 'relationship' not in requirement._raw:
             requirement._raw['relationship'] = OrderedDict()
@@ -291,7 +293,8 @@ def merge_requirement_assignment(context, relationship_property_definitions,
 
 def merge_requirement_assignment_relationship(context, presentation, property_definitions,
                                               interface_definitions, requirement, our_relationship):
-    our_relationship_properties = our_relationship._raw.get('properties')
+    our_relationship_properties = our_relationship._raw.get('properties') \
+        if isinstance(our_relationship._raw, dict) else None
     if our_relationship_properties:
         # Make sure we have a dict
         if 'properties' not in requirement._raw['relationship']:
@@ -305,10 +308,10 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
                     coerce_parameter_value(context, presentation, definition, prop)
             else:
                 context.validation.report(
-                    'relationship property "%s" not declared at definition of requirement "%s"'
-                    ' in "%s"'
-                    % (property_name, requirement._fullname,
-                       presentation._container._container._fullname),
+                    u'relationship property "{0}" not declared at definition of requirement "{1}"'
+                    u' in "{2}"'
+                    .format(property_name, requirement._fullname,
+                            presentation._container._container._fullname),
                     locator=our_relationship._get_child_locator('properties', property_name),
                     level=Issue.BETWEEN_TYPES)
 
@@ -330,28 +333,58 @@ def merge_requirement_assignment_relationship(context, presentation, property_de
                                 interface_definition, interface_name)
             else:
                 context.validation.report(
-                    'relationship interface "%s" not declared at definition of requirement "%s"'
-                    ' in "%s"'
-                    % (interface_name, requirement._fullname,
-                       presentation._container._container._fullname),
+                    u'relationship interface "{0}" not declared at definition of requirement "{1}"'
+                    u' in "{2}"'
+                    .format(interface_name, requirement._fullname,
+                            presentation._container._container._fullname),
                     locator=our_relationship._locator, level=Issue.BETWEEN_TYPES)
 
 
 def validate_requirement_assignment(context, presentation, requirement_assignment,
                                     relationship_property_definitions,
-                                    relationship_interface_definitions):
-    relationship = requirement_assignment.relationship
-    if relationship is None:
-        return
+                                    relationship_interface_definitions, requirement_definition):
+    # Validate node
+    definition_node_type = requirement_definition._get_node_type(context)
+    assignment_node_type, node_variant = requirement_assignment._get_node(context)
+    if node_variant == 'node_template':
+        assignment_node_type = assignment_node_type._get_type(context)
+    if (assignment_node_type is not None) and (definition_node_type is not None) and \
+        (assignment_node_type is not definition_node_type) and \
+        (not definition_node_type._is_descendant(context, assignment_node_type)):
+        context.validation.report(
+            u'requirement assignment node "{0}" is not derived from node type "{1}" of requirement '
+            u'definition in {2}'
+            .format(requirement_assignment.node, requirement_definition.node,
+                    presentation._container._fullname),
+            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
-    validate_required_values(context, presentation, relationship.properties,
-                             relationship_property_definitions)
+    # Validate capability
+    definition_capability_type = requirement_definition._get_capability_type(context)
+    assignment_capability_type, capability_variant = requirement_assignment._get_capability(context)
+    if capability_variant == 'capability_assignment':
+        assignment_capability_type = assignment_capability_type._get_type(context)
+    if (assignment_capability_type is not None) and (definition_capability_type is not None) and \
+        (assignment_capability_type is not definition_capability_type) and \
+        (not definition_capability_type._is_descendant(context, assignment_capability_type)):
+        context.validation.report(
+            u'requirement assignment capability "{0}" is not derived from capability type "{1}" of '
+            u'requirement definition in {2}'
+            .format(requirement_assignment.capability, requirement_definition.capability,
+                    presentation._container._fullname),
+            locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+
+    relationship = requirement_assignment.relationship
+
+    values = OrderedDict((name, prop.value)
+                         for name, prop in relationship.properties.iteritems()) \
+                         if (relationship and relationship.properties) else {}
+    validate_required_values(context, presentation, values, relationship_property_definitions)
 
     if relationship_interface_definitions:
         for interface_name, relationship_interface_definition \
             in relationship_interface_definitions.iteritems():
             interface_assignment = relationship.interfaces.get(interface_name) \
-                if relationship.interfaces is not None else None
+                if (relationship and relationship.interfaces) else None
             validate_required_inputs(context, presentation, interface_assignment,
                                      relationship_interface_definition, None, interface_name)
 

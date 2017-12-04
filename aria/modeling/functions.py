@@ -66,7 +66,7 @@ class Evaluation(object):
         self.final = final
 
 
-def evaluate(value, container_holder, report_issues=False): # pylint: disable=too-many-branches
+def evaluate(value, container_holder, report_issues=False):                                         # pylint: disable=too-many-branches
     """
     Recursively attempts to call ``__evaluate__``. If an evaluation occurred will return an
     :class:`Evaluation`, otherwise it will be ``None``. If any evaluation is non-final, then the

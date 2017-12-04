@@ -25,7 +25,7 @@ from functools import partial
 from .collections import OrderedDict
 
 
-class cachedmethod(object):  # pylint: disable=invalid-name
+class cachedmethod(object):                                                                         # pylint: disable=invalid-name
     """
     Decorator for caching method return values.
 

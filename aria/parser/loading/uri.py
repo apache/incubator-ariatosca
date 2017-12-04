@@ -20,6 +20,7 @@ from ...extension import parser
 from ...utils.collections import StrictList
 from ...utils.uris import as_file
 from .loader import Loader
+from .location import UriLocation
 from .file import FileTextLoader
 from .request import RequestTextLoader
 from .exceptions import DocumentNotFoundException
@@ -44,6 +45,7 @@ class UriTextLoader(Loader):
         self.location = location
         self._prefixes = StrictList(value_class=basestring)
         self._loader = None
+        self._canonical_location = None
 
         def add_prefix(prefix):
             if prefix and (prefix not in self._prefixes):
@@ -60,23 +62,27 @@ class UriTextLoader(Loader):
         add_prefixes(parser.uri_loader_prefix())
 
     def open(self):
-        try:
-            self._open(self.location.uri)
-            return
-        except DocumentNotFoundException:
-            # Try prefixes in order
-            for prefix in self._prefixes:
-                prefix_as_file = as_file(prefix)
-                if prefix_as_file is not None:
-                    uri = os.path.join(prefix_as_file, self.location.uri)
-                else:
-                    uri = urljoin(prefix, self.location.uri)
-                try:
-                    self._open(uri)
-                    return
-                except DocumentNotFoundException:
-                    pass
-        raise DocumentNotFoundException('document not found at URI: "%s"' % self.location)
+        if self._loader is not None:
+            self._loader.open()
+        else:
+            try:
+                self._open(self.location.uri)
+                return
+            except DocumentNotFoundException:
+                # Try prefixes in order
+                for prefix in self._prefixes:
+                    prefix_as_file = as_file(prefix)
+                    if prefix_as_file is not None:
+                        uri = os.path.join(prefix_as_file, self.location.uri)
+                    else:
+                        uri = urljoin(prefix, self.location.uri)
+                    try:
+                        self._open(uri)
+                        return
+                    except DocumentNotFoundException:
+                        pass
+            raise DocumentNotFoundException(u'document not found at URI: "{0}"'
+                                            .format(self.location))
 
     def close(self):
         if self._loader is not None:
@@ -84,6 +90,11 @@ class UriTextLoader(Loader):
 
     def load(self):
         return self._loader.load() if self._loader is not None else None
+
+    def get_canonical_location(self):
+        self.open()
+        self.close()
+        return self._canonical_location
 
     def _open(self, uri):
         the_file = as_file(uri)
@@ -94,4 +105,4 @@ class UriTextLoader(Loader):
             loader = RequestTextLoader(self.context, uri)
         loader.open() # might raise an exception
         self._loader = loader
-        self.location.uri = uri
+        self._canonical_location = UriLocation(uri)

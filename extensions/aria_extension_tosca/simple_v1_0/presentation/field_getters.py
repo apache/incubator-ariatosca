@@ -14,10 +14,12 @@
 # limitations under the License.
 
 from aria.utils.formatting import safe_repr
+from aria.utils.type import full_type_name
 from aria.parser.exceptions import InvalidValueError
+from aria.parser.presentation import NULL
 
 
-def data_type_class_getter(cls):
+def data_type_class_getter(cls, allow_null=False):
     """
     Wraps the field value in a specialized data type class.
 
@@ -26,12 +28,14 @@ def data_type_class_getter(cls):
 
     def getter(field, presentation, context=None):
         raw = field.default_get(presentation, context)
-        if raw is not None:
-            try:
-                return cls(None, None, raw, None)
-            except ValueError as e:
-                raise InvalidValueError(
-                    '%s is not a valid "%s" in "%s": %s'
-                    % (field.full_name, field.full_cls_name, presentation._name, safe_repr(raw)),
-                    cause=e, locator=field.get_locator(raw))
+        if (raw is None) or (allow_null and (raw is NULL)):
+            return raw
+        try:
+            return cls(None, None, raw, None)
+        except ValueError as e:
+            raise InvalidValueError(
+                u'{0} is not a valid "{1}" in "{2}": {3}'
+                .format(field.full_name, full_type_name(cls), presentation._name,
+                        safe_repr(raw)),
+                cause=e, locator=field.get_locator(raw))
     return getter

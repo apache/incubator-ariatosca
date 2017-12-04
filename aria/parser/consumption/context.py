@@ -83,14 +83,14 @@ class ConsumptionContext(object):
         try:
             self.out.write(string)
         except UnicodeEncodeError:
-            self.out.write(string.encode('utf8'))
+            self.out.write(string.encode('utf-8'))
 
     def has_arg_switch(self, name):
-        name = '--%s' % name
+        name = '--{0}'.format(name)
         return name in self.args
 
     def get_arg_value(self, name, default=None):
-        name = '--%s=' % name
+        name = '--{0}='.format(name)
         for arg in self.args:
             if arg.startswith(name):
                 return arg[len(name):]

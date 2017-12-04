@@ -17,6 +17,7 @@ node_types:
 
   tosca.nodes.nfv.VDU.Compute:
     _extensions:
+      normative: true
       shorthand_name: VDU.Compute
       type_qualified_name: tosca:VDU.Compute
       specification: tosca-simple-nfv-1.0
@@ -115,6 +116,7 @@ node_types:
 
   tosca.nodes.nfv.VDU.VirtualStorage:
     _extensions:
+      normative: true
       shorthand_name: VirtualStorage # ARIA NOTE: seems wrong in spec
       type_qualified_name: tosca:VirtualStorage # ARIA NOTE: seems wrong in spec
       specification: tosca-simple-nfv-1.0
@@ -151,6 +153,7 @@ node_types:
 
   tosca.nodes.nfv.Cpd:
     _extensions:
+      normative: true
       shorthand_name: Cpd
       type_qualified_name: tosca:Cpd
       specification: tosca-simple-nfv-1.0
@@ -194,11 +197,12 @@ node_types:
 
   tosca.nodes.nfv.VduCpd:
     _extensions:
-       shorthand_name: VduCpd
-       type_qualified_name: tosca:VduCpd
-       specification: tosca-simple-nfv-1.0
-       specification_section: 5.9.5
-       specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html#_Toc482896082'
+      normative: true
+      shorthand_name: VduCpd
+      type_qualified_name: tosca:VduCpd
+      specification: tosca-simple-nfv-1.0
+      specification_section: 5.9.5
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html#_Toc482896082'
     description: >-
       The TOSCA nfv.VduCpd node type represents a type of TOSCA Cpd node and describes network
       connectivity between a VNFC instance (based on this VDU) and an internal VL as defined by
@@ -232,11 +236,12 @@ node_types:
 
   tosca.nodes.nfv.VnfVirtualLinkDesc:
     _extensions:
-       shorthand_name: VnfVirtualLinkDesc
-       type_qualified_name: tosca:VnfVirtualLinkDesc
-       specification: tosca-simple-nfv-1.0
-       specification_section: 5.9.6
-       specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html#_Toc482896083'
+      normative: true
+      shorthand_name: VnfVirtualLinkDesc
+      type_qualified_name: tosca:VnfVirtualLinkDesc
+      specification: tosca-simple-nfv-1.0
+      specification_section: 5.9.6
+      specification_url: 'http://docs.oasis-open.org/tosca/tosca-nfv/v1.0/csd04/tosca-nfv-v1.0-csd04.html#_Toc482896083'
     description: >-
       The TOSCA nfv.VnfVirtualLinkDesc node type represents a logical internal virtual link as
       defined by [ETSI GS NFV-IFA 011].

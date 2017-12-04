@@ -24,7 +24,7 @@ from ... import modeling
 
 def _get_task_name(task):
     if isinstance(task.actor, modeling.model_bases.service_instance.RelationshipBase):
-        return '{source_node.name}->{target_node.name}'.format(
+        return u'{source_node.name}->{target_node.name}'.format(
             source_node=task.actor.source_node, target_node=task.actor.target_node)
     else:
         return task.actor.name
@@ -40,7 +40,7 @@ def _start_task_handler(ctx, **kwargs):
         suffix = 'has no implementation'
         logger = ctx.logger.debug
 
-    logger('{name} {task.interface_name}.{task.operation_name} {suffix}'.format(
+    logger(u'{name} {task.interface_name}.{task.operation_name} {suffix}'.format(
         name=_get_task_name(ctx.task), task=ctx.task, suffix=suffix))
 
 
@@ -48,38 +48,38 @@ def _start_task_handler(ctx, **kwargs):
 def _success_task_handler(ctx, **kwargs):
     if not ctx.task.function:
         return
-    ctx.logger.info('{name} {task.interface_name}.{task.operation_name} successful'
+    ctx.logger.info(u'{name} {task.interface_name}.{task.operation_name} successful'
                     .format(name=_get_task_name(ctx.task), task=ctx.task))
 
 
 @events.on_failure_task_signal.connect
 def _failure_operation_handler(ctx, traceback, **kwargs):
     ctx.logger.error(
-        '{name} {task.interface_name}.{task.operation_name} failed'
+        u'{name} {task.interface_name}.{task.operation_name} failed'
         .format(name=_get_task_name(ctx.task), task=ctx.task), extra=dict(traceback=traceback)
     )
 
 
 @events.start_workflow_signal.connect
 def _start_workflow_handler(context, **kwargs):
-    context.logger.info("Starting '{ctx.workflow_name}' workflow execution".format(ctx=context))
+    context.logger.info(u"Starting '{ctx.workflow_name}' workflow execution".format(ctx=context))
 
 
 @events.on_failure_workflow_signal.connect
 def _failure_workflow_handler(context, **kwargs):
-    context.logger.info("'{ctx.workflow_name}' workflow execution failed".format(ctx=context))
+    context.logger.info(u"'{ctx.workflow_name}' workflow execution failed".format(ctx=context))
 
 
 @events.on_success_workflow_signal.connect
 def _success_workflow_handler(context, **kwargs):
-    context.logger.info("'{ctx.workflow_name}' workflow execution succeeded".format(ctx=context))
+    context.logger.info(u"'{ctx.workflow_name}' workflow execution succeeded".format(ctx=context))
 
 
 @events.on_cancelled_workflow_signal.connect
 def _cancel_workflow_handler(context, **kwargs):
-    context.logger.info("'{ctx.workflow_name}' workflow execution canceled".format(ctx=context))
+    context.logger.info(u"'{ctx.workflow_name}' workflow execution canceled".format(ctx=context))
 
 
 @events.on_cancelling_workflow_signal.connect
 def _cancelling_workflow_handler(context, **kwargs):
-    context.logger.info("Cancelling '{ctx.workflow_name}' workflow execution".format(ctx=context))
+    context.logger.info(u"Cancelling '{ctx.workflow_name}' workflow execution".format(ctx=context))

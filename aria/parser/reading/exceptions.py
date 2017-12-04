@@ -36,9 +36,3 @@ class ReaderSyntaxError(ReaderException):
         super(ReaderSyntaxError, self).__init__(message, cause, cause_tb)
         self.issue = Issue(message, location=location, line=line, column=column,
                            locator=locator, snippet=snippet, level=level)
-
-
-class AlreadyReadException(ReaderException):
-    """
-    ARIA reader exception: already read.
-    """

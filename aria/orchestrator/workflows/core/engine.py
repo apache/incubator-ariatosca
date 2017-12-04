@@ -28,7 +28,7 @@ from aria.orchestrator.context import operation
 from .. import exceptions
 from ..executor.base import StubTaskExecutor
 # Import required so all signals are registered
-from . import events_handler  # pylint: disable=unused-import
+from . import events_handler                                                                        # pylint: disable=unused-import
 
 
 class Engine(logger.LoggerMixin):

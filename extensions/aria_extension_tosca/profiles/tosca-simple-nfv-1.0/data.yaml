@@ -18,6 +18,7 @@ data_types:
   tosca.datatypes.nfv.L2AddressData:
     # TBD
     _extensions:
+      normative: true
       shorthand_name: L2AddressData
       type_qualified_name: tosca:L2AddressData
       specification: tosca-simple-nfv-1.0
@@ -26,6 +27,7 @@ data_types:
 
   tosca.datatypes.nfv.L3AddressData:
     _extensions:
+      normative: true
       shorthand_name: L3AddressData
       type_qualified_name: tosca:L3AddressData
       specification: tosca-simple-nfv-1.0
@@ -65,6 +67,7 @@ data_types:
 
   tosca.datatypes.nfv.AddressData:
     _extensions:
+      normative: true
       shorthand_name: AddressData
       type_qualified_name: tosca:AddressData
       specification: tosca-simple-nfv-1.0
@@ -102,6 +105,7 @@ data_types:
 
   tosca.datatypes.nfv.VirtualNetworkInterfaceRequirements:
     _extensions:
+      normative: true
       shorthand_name: VirtualNetworkInterfaceRequirements
       type_qualified_name: tosca:VirtualNetworkInterfaceRequirements
       specification: tosca-simple-nfv-1.0
@@ -139,6 +143,7 @@ data_types:
 
   tosca.datatypes.nfv.ConnectivityType:
     _extensions:
+      normative: true
       shorthand_name: ConnectivityType
       type_qualified_name: tosca:ConnectivityType
       specification: tosca-simple-nfv-1.0
@@ -165,6 +170,7 @@ data_types:
 
   tosca.datatypes.nfv.RequestedAdditionalCapability:
     _extensions:
+      normative: true
       shorthand_name: RequestedAdditionalCapability
       type_qualified_name: tosca:RequestedAdditionalCapability
       specification: tosca-simple-nfv-1.0
@@ -205,6 +211,7 @@ data_types:
 
   tosca.datatypes.nfv.VirtualMemory:
     _extensions:
+      normative: true
       shorthand_name: VirtualMemory
       type_qualified_name: tosca:VirtualMemory
       specification: tosca-simple-nfv-1.0
@@ -235,6 +242,7 @@ data_types:
 
   tosca.datatypes.nfv.VirtualCpu:
     _extensions:
+      normative: true
       shorthand_name: VirtualCpu
       type_qualified_name: tosca:VirtualCpu
       specification: tosca-simple-nfv-1.0
@@ -272,6 +280,7 @@ data_types:
 
   tosca.datatypes.nfv.VirtualCpuPinning:
     _extensions:
+      normative: true
       shorthand_name: VirtualCpuPinning
       type_qualified_name: tosca:VirtualCpuPinning
       specification: tosca-simple-nfv-1.0
@@ -299,6 +308,7 @@ data_types:
 
   tosca.datatypes.nfv.VnfcConfigurableProperties:
     _extensions:
+      normative: true
       shorthand_name: VnfcconfigurableProperties
       type_qualified_name: tosca:VnfcconfigurableProperties
       specification: tosca-simple-nfv-1.0

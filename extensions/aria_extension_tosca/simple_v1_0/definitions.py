@@ -15,7 +15,9 @@
 
 from aria.utils.collections import FrozenDict
 from aria.utils.caching import cachedmethod
+from aria.utils.formatting import safe_repr
 from aria.parser import implements_specification
+from aria.parser.validation import Issue
 from aria.parser.presentation import (has_fields, short_form_field, allow_unknown_fields,
                                       primitive_field, primitive_list_field, object_field,
                                       object_list_field, object_dict_field,
@@ -192,8 +194,8 @@ class AttributeDefinition(ExtensiblePresentation):
 
 
 @has_fields
-@implements_specification('3.5.12', 'tosca-simple-1.0')
-class ParameterDefinition(PropertyDefinition):
+@implements_specification('3.5.12-1', 'tosca-simple-1.0')
+class InputDefinition(PropertyDefinition):
     """
     A parameter definition is essentially a TOSCA property definition; however, it also allows a
     value to be assigned to it (as for a TOSCA property assignment). In addition, in the case of
@@ -205,6 +207,18 @@ class ParameterDefinition(PropertyDefinition):
     #DEFN_ELEMENT_PARAMETER_DEF>`__
     """
 
+    @field_validator(data_value_validator)
+    @primitive_field()
+    def value(self):
+        """
+        The type-compatible value to assign to the named parameter. Parameter values may be provided
+        as the result from the evaluation of an expression or a function.
+        """
+
+
+@has_fields
+@implements_specification('3.5.12-2', 'tosca-simple-1.0')
+class OutputDefinition(InputDefinition):
     @field_validator(data_type_validator())
     @primitive_field(str)
     def type(self):
@@ -214,15 +228,10 @@ class ParameterDefinition(PropertyDefinition):
         Note: This keyname is required for a TOSCA Property definition, but is not for a TOSCA
         Parameter definition.
 
-        :type: :obj:`basestring`
-        """
+        ARIA NOTE: the spec must be mistaken: inputs should have this field requires, only outputs
+        have it as optional.
 
-    @field_validator(data_value_validator)
-    @primitive_field()
-    def value(self):
-        """
-        The type-compatible value to assign to the named parameter. Parameter values may be provided
-        as the result from the evaluation of an expression or a function.
+        :type: :obj:`basestring`
         """
 
 
@@ -283,7 +292,7 @@ class InterfaceDefinition(ExtensiblePresentation):
 
     @field_validator(type_validator('interface type', convert_name_to_full_type_name,
                                     'interface_types'))
-    @primitive_field(str)
+    @primitive_field(str, required=True)
     def type(self):
         """
         ARIA NOTE: This field is not mentioned in the spec, but is implied.
@@ -322,9 +331,8 @@ class InterfaceDefinition(ExtensiblePresentation):
 
     def _validate(self, context):
         super(InterfaceDefinition, self)._validate(context)
-        if self.operations:
-            for operation in self.operations.itervalues(): # pylint: disable=no-member
-                operation._validate(context)
+        self._get_inputs(context)
+        self._get_operations(context)
 
 
 @short_form_field('type')
@@ -341,6 +349,8 @@ class RelationshipDefinition(ExtensiblePresentation):
         """
         The optional reserved keyname used to provide the name of the Relationship Type for the
         requirement definition's relationship keyname.
+
+        ARIA NOTE: the spec shows this as a required field.
 
         :type: :obj:`basestring`
         """
@@ -427,6 +437,16 @@ class RequirementDefinition(ExtensiblePresentation):
     @cachedmethod
     def _get_node_type(self, context):
         return context.presentation.get_from_dict('service_template', 'node_types', self.node)
+
+    def _validate(self, context):
+        super(RequirementDefinition, self)._validate(context)
+        occurrences = self.occurrences
+        if (occurrences is not None) and ((occurrences.value[0] < 0) or \
+            ((occurrences.value[1] != 'UNBOUNDED') and (occurrences.value[1] < 0))):
+            context.validation.report(
+                'requirements definition "{0}" occurrences range includes negative integers: {1}'
+                .format(self._name, safe_repr(occurrences)),
+                locator=self._locator, level=Issue.BETWEEN_TYPES)
 
 
 @short_form_field('type')
@@ -516,3 +536,13 @@ class CapabilityDefinition(ExtensiblePresentation):
             if container_parent is not None else None
         return container_parent_capabilities.get(self._name) \
             if container_parent_capabilities is not None else None
+
+    def _validate(self, context):
+        super(CapabilityDefinition, self)._validate(context)
+        occurrences = self.occurrences
+        if (occurrences is not None) and ((occurrences.value[0] < 0) or \
+            ((occurrences.value[1] != 'UNBOUNDED') and (occurrences.value[1] < 0))):
+            context.validation.report(
+                'capability definition "{0}" occurrences range includes negative integers: {1}'
+                .format(self._name, safe_repr(occurrences)),
+                locator=self._locator, level=Issue.BETWEEN_TYPES)

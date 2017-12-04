@@ -19,7 +19,7 @@ set -e
 TEMP_DIR=/tmp
 PYTHON_FILE_SERVER_ROOT="$TEMP_DIR/python-simple-http-webserver"
 PID_FILE=server.pid
-PORT=$(ctx node properties port)
+PORT=$(ctx node capabilities app_endpoint properties port)
 URL="http://localhost:$PORT"
 
 ctx logger info [ "Starting web server at: $PYTHON_FILE_SERVER_ROOT." ]

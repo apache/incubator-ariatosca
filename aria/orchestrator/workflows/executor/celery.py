@@ -89,7 +89,7 @@ class CeleryExecutor(BaseExecutor):
             exception = async_result.result
         except BaseException as e:
             exception = RuntimeError(
-                'Could not de-serialize exception of task {0} --> {1}: {2}'
+                u'Could not de-serialize exception of task {0} --> {1}: {2}'
                 .format(task.name, type(e).__name__, str(e)))
         self._task_failed(task, exception=exception)
 

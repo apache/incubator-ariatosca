@@ -17,6 +17,7 @@ artifact_types:
 
   tosca.artifacts.Root:
     _extensions:
+      normative: true
       shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
@@ -27,6 +28,7 @@ artifact_types:
 
   tosca.artifacts.File:
     _extensions:
+      normative: true
       shorthand_name: File
       type_qualified_name: tosca:File
       specification: tosca-simple-1.0
@@ -41,6 +43,7 @@ artifact_types:
 
   tosca.artifacts.Deployment:
     _extensions:
+      normative: true
       shorthand_name: Deployment # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Deployment
       specification: tosca-simple-1.0
@@ -54,6 +57,7 @@ artifact_types:
 
   tosca.artifacts.Deployment.Image:
     _extensions:
+      normative: true
       shorthand_name: Deployment.Image
       type_qualified_name: tosca:Deployment.Image
       specification: tosca-simple-1.0
@@ -67,6 +71,7 @@ artifact_types:
 
   tosca.artifacts.Deployment.Image.VM:
     _extensions:
+      normative: true
       shorthand_name: Deployment.VM # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Deployment.VM
       specification: tosca-simple-1.0
@@ -85,6 +90,7 @@ artifact_types:
 
   tosca.artifacts.Implementation:
     _extensions:
+      normative: true
       shorthand_name: Implementation # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Implementation
       specification: tosca-simple-1.0
@@ -97,6 +103,7 @@ artifact_types:
 
   tosca.artifacts.Implementation.Bash:
     _extensions:
+      normative: true
       shorthand_name: Implementation.Bash # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?
       type_qualified_name: tosca:Implementation.Bash
       specification: tosca-simple-1.0
@@ -109,6 +116,7 @@ artifact_types:
 
   tosca.artifacts.Implementation.Python:
     _extensions:
+      normative: true
       shorthand_name: Implementation.Python # ARIA NOTE: mistake in spec? shouldn't we have "Implementation." as prefix?
       type_qualified_name: tosca:Implementation.Python
       specification: tosca-simple-1.0

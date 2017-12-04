@@ -22,7 +22,7 @@ from aria.exceptions import DependentActiveExecutionsError, DependentAvailableNo
 from aria.modeling.exceptions import ParameterException
 from aria.storage import exceptions as storage_exceptions
 
-from .base_test import (  # pylint: disable=unused-import
+from .base_test import (                                                                            # pylint: disable=unused-import
     TestCliBase,
     raise_exception,
     assert_exception_raised,

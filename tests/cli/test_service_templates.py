@@ -24,7 +24,7 @@ from aria.core import Core
 from aria.exceptions import AriaException
 from aria.storage import exceptions as storage_exceptions
 
-from .base_test import (  # pylint: disable=unused-import
+from .base_test import (                                                                            # pylint: disable=unused-import
     TestCliBase,
     assert_exception_raised,
     raise_exception,

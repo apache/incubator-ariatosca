@@ -37,7 +37,7 @@ class CtxProxy(object):
         self.ctx = ctx
         self._ctx_patcher = ctx_patcher
         self.port = _get_unused_port()
-        self.socket_url = 'http://localhost:{0}'.format(self.port)
+        self.socket_url = 'http://localhost:{0:d}'.format(self.port)
         self.server = None
         self._started = Queue.Queue(1)
         self.thread = self._start_server()
@@ -73,7 +73,7 @@ class CtxProxy(object):
                     def address_string(self):
                         return self.client_address[0]
 
-                    def log_request(*args, **kwargs):  # pylint: disable=no-method-argument
+                    def log_request(*args, **kwargs):                                               # pylint: disable=no-method-argument
                         if not self.quiet:
                             return wsgiref.simple_server.WSGIRequestHandler.log_request(*args,
                                                                                         **kwargs)
@@ -110,7 +110,7 @@ class CtxProxy(object):
             self.server.server_close()
 
     def _request_handler(self):
-        request = bottle.request.body.read()  # pylint: disable=no-member
+        request = bottle.request.body.read()                                                        # pylint: disable=no-member
         response = self._process(request)
         return bottle.LocalResponse(
             body=json.dumps(response, cls=modeling.utils.ModelJSONEncoder),
@@ -195,7 +195,7 @@ def _process_arguments(obj, args):
             # Modify object attribute
             setattr(obj, modifying_key, modifying_value)
         else:
-            raise CtxError('Cannot modify `{0}` of `{1!r}`'.format(modifying_key, obj))
+            raise CtxError(u'Cannot modify `{0}` of `{1!r}`'.format(modifying_key, obj))
 
     return obj
 
@@ -233,7 +233,7 @@ def _process_next_operation(obj, args, modifying):
             obj[arg] = {}
         return obj[arg], args
 
-    raise CtxParsingError('Cannot parse argument: `{0!r}`'.format(arg))
+    raise CtxParsingError(u'Cannot parse argument: `{0!r}`'.format(arg))
 
 
 def _get_unused_port():

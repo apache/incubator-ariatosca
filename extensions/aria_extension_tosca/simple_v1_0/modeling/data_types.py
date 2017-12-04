@@ -52,7 +52,7 @@ def get_inherited_constraints(context, presentation):
     return constraints
 
 
-def coerce_data_type_value(context, presentation, data_type, entry_schema, constraints, value, # pylint: disable=unused-argument
+def coerce_data_type_value(context, presentation, data_type, entry_schema, constraints, value,      # pylint: disable=unused-argument
                            aspect):
     """
     Handles the ``_coerce_data()`` hook for complex data types.
@@ -90,8 +90,8 @@ def coerce_data_type_value(context, presentation, data_type, entry_schema, const
                                               aspect)
                 else:
                     context.validation.report(
-                        'assignment to undefined property "%s" in type "%s" in "%s"'
-                        % (name, data_type._fullname, presentation._fullname),
+                        u'assignment to undefined property "{0}" in type "{1}" in "{2}"'
+                        .format(name, data_type._fullname, presentation._fullname),
                         locator=get_locator(v, value, presentation), level=Issue.BETWEEN_TYPES)
 
             # Fill in defaults from the definitions, and check if required definitions have not been
@@ -108,15 +108,15 @@ def coerce_data_type_value(context, presentation, data_type, entry_schema, const
 
                 if getattr(definition, 'required', False) and (temp.get(name) is None):
                     context.validation.report(
-                        'required property "%s" in type "%s" is not assigned a value in "%s"'
-                        % (name, data_type._fullname, presentation._fullname),
+                        u'required property "{0}" in type "{1}" is not assigned a value in "{2}"'
+                        .format(name, data_type._fullname, presentation._fullname),
                         locator=presentation._get_child_locator('definitions'),
                         level=Issue.BETWEEN_TYPES)
 
             value = temp
         elif value is not None:
-            context.validation.report('value of type "%s" is not a dict in "%s"'
-                                      % (data_type._fullname, presentation._fullname),
+            context.validation.report(u'value of type "{0}" is not a dict in "{1}"'
+                                      .format(data_type._fullname, presentation._fullname),
                                       locator=get_locator(value, presentation),
                                       level=Issue.BETWEEN_TYPES)
             value = None
@@ -131,8 +131,8 @@ def validate_data_type_name(context, presentation):
 
     name = presentation._name
     if get_primitive_data_type(name) is not None:
-        context.validation.report('data type name is that of a built-in type: %s'
-                                  % safe_repr(name),
+        context.validation.report(u'data type name is that of a built-in type: {0}'
+                                  .format(safe_repr(name)),
                                   locator=presentation._locator, level=Issue.BETWEEN_TYPES)
 
 
@@ -201,7 +201,7 @@ def get_property_constraints(context, presentation):
 # ConstraintClause
 #
 
-def apply_constraint_to_value(context, presentation, constraint_clause, value): # pylint: disable=too-many-statements,too-many-return-statements,too-many-branches
+def apply_constraint_to_value(context, presentation, constraint_clause, value):                     # pylint: disable=too-many-statements,too-many-return-statements,too-many-branches
     """
     Returns false if the value does not conform to the constraint.
     """
@@ -216,10 +216,10 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value): 
                             constraint_key)
 
     def report(message, constraint):
-        context.validation.report('value %s %s per constraint in "%s": %s'
-                                  % (message, safe_repr(constraint),
-                                     presentation._name or presentation._container._name,
-                                     safe_repr(value)),
+        context.validation.report(u'value {0} {1} per constraint in "{2}": {3}'
+                                  .format(message, safe_repr(constraint),
+                                          presentation._name or presentation._container._name,
+                                          safe_repr(value)),
                                   locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
 
     if constraint_key == 'equal':
@@ -318,15 +318,15 @@ def apply_constraint_to_value(context, presentation, constraint_clause, value): 
 #
 
 def get_data_type_value(context, presentation, field_name, type_name):
-    the_type = get_type_by_name(context, type_name, 'data_types')
-    if the_type is not None:
-        value = getattr(presentation, field_name)
-        if value is not None:
-            return coerce_data_type_value(context, presentation, the_type, None, None, value, None)
-    else:
-        context.validation.report('field "%s" in "%s" refers to unknown data type "%s"'
-                                  % (field_name, presentation._fullname, type_name),
-                                  locator=presentation._locator, level=Issue.BETWEEN_TYPES)
+    value = getattr(presentation, field_name)
+    if value is not None:
+        data_type = get_type_by_name(context, type_name, 'data_types')
+        if data_type is not None:
+            return coerce_data_type_value(context, presentation, data_type, None, None, value, None)
+        else:
+            context.validation.report(u'field "{0}" in "{1}" refers to unknown data type "{2}"'
+                                      .format(field_name, presentation._fullname, type_name),
+                                      locator=presentation._locator, level=Issue.BETWEEN_TYPES)
     return None
 
 
@@ -372,7 +372,7 @@ def get_data_type_name(the_type):
     return the_type._name if hasattr(the_type, '_name') else full_type_name(the_type)
 
 
-def coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect=None): # pylint: disable=too-many-return-statements
+def coerce_value(context, presentation, the_type, entry_schema, constraints, value, aspect=None):   # pylint: disable=too-many-return-statements
     """
     Returns the value after it's coerced to its type, reporting validation errors if it cannot be
     coerced.
@@ -394,8 +394,8 @@ def coerce_value(context, presentation, the_type, entry_schema, constraints, val
 
     if the_type == None.__class__:
         if value is not None:
-            context.validation.report('field "%s" is of type "null" but has a non-null value: %s'
-                                      % (presentation._name, safe_repr(value)),
+            context.validation.report(u'field "{0}" is of type "null" but has a non-null value: {1}'
+                                      .format(presentation._name, safe_repr(value)),
                                       locator=presentation._locator, level=Issue.BETWEEN_FIELDS)
             return None
 
@@ -498,17 +498,18 @@ def report_issue_for_bad_format(context, presentation, the_type, value, aspect, 
     if aspect == 'default':
         aspect = '"default" value'
     elif aspect is not None:
-        aspect = '"%s" aspect' % aspect
+        aspect = u'"{0}" aspect'.format(aspect)
 
     if aspect is not None:
-        context.validation.report('%s for field "%s" is not a valid "%s": %s'
-                                  % (aspect, presentation._name or presentation._container._name,
-                                     get_data_type_name(the_type), safe_repr(value)),
+        context.validation.report(u'{0} for field "{1}" is not a valid "{2}": {3}'
+                                  .format(aspect,
+                                          presentation._name or presentation._container._name,
+                                          get_data_type_name(the_type), safe_repr(value)),
                                   locator=presentation._locator, level=Issue.BETWEEN_FIELDS,
                                   exception=e)
     else:
-        context.validation.report('field "%s" is not a valid "%s": %s'
-                                  % (presentation._name or presentation._container._name,
-                                     get_data_type_name(the_type), safe_repr(value)),
+        context.validation.report(u'field "{0}" is not a valid "{1}": {2}'
+                                  .format(presentation._name or presentation._container._name,
+                                          get_data_type_name(the_type), safe_repr(value)),
                                   locator=presentation._locator, level=Issue.BETWEEN_FIELDS,
                                   exception=e)

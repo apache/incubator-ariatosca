@@ -23,7 +23,7 @@ from .modeling.functions import (Concat, Token, GetInput, GetProperty, GetAttrib
 from .templates import ServiceTemplate
 
 
-class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstract-method
+class ToscaSimplePresenter1_0(Presenter):                                                           # pylint: disable=invalid-name,abstract-method
     """
     ARIA presenter for the `TOSCA Simple Profile v1.0 cos01 <http://docs.oasis-open.org/tosca
     /TOSCA-Simple-Profile-YAML/v1.0/cos01/TOSCA-Simple-Profile-YAML-v1.0-cos01.html>`__.
@@ -70,7 +70,7 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstrac
     @cachedmethod
     def _get_import_locations(self, context):
         import_locations = []
-        if context.presentation.import_profile:
+        if context.presentation.configuration.get('tosca.import_profile', True):
             import_locations.append(self.SIMPLE_PROFILE_LOCATION)
         imports = self._get('service_template', 'imports')
         if imports:
@@ -78,5 +78,5 @@ class ToscaSimplePresenter1_0(Presenter): # pylint: disable=invalid-name,abstrac
         return FrozenList(import_locations) if import_locations else EMPTY_READ_ONLY_LIST
 
     @cachedmethod
-    def _get_model(self, context): # pylint: disable=no-self-use
+    def _get_model(self, context):                                                                  # pylint: disable=no-self-use
         return create_service_template_model(context)

@@ -35,13 +35,13 @@ def download_script(ctx, script_path):
     split = script_path.split('://')
     schema = split[0]
     suffix = script_path.split('/')[-1]
-    file_descriptor, dest_script_path = tempfile.mkstemp(suffix='-{0}'.format(suffix))
+    file_descriptor, dest_script_path = tempfile.mkstemp(suffix=u'-{0}'.format(suffix))
     os.close(file_descriptor)
     try:
         if schema in ('http', 'https'):
             response = requests.get(script_path)
             if response.status_code == 404:
-                ctx.task.abort('Failed to download script: {0} (status code: {1})'
+                ctx.task.abort(u'Failed to download script: {0} (status code: {1})'
                                .format(script_path, response.status_code))
             content = response.text
             with open(dest_script_path, 'wb') as f:
@@ -84,7 +84,7 @@ def create_process_config(script_path, process, operation_kwargs, quote_json_env
         if isinstance(v, (dict, list, tuple, bool, int, float)):
             v = json.dumps(v)
             if quote_json_env_vars:
-                v = "'{0}'".format(v)
+                v = u"'{0}'".format(v)
         if is_windows():
             # These <k,v> environment variables will subsequently
             # be used in a subprocess.Popen() call, as the `env` parameter.
@@ -102,9 +102,9 @@ def create_process_config(script_path, process, operation_kwargs, quote_json_env
     command = script_path
     command_prefix = process.get('command_prefix')
     if command_prefix:
-        command = '{0} {1}'.format(command_prefix, command)
+        command = u'{0} {1}'.format(command_prefix, command)
     if args:
-        command = ' '.join([command] + [str(a) for a in args])
+        command = u' '.join([command] + [str(a) for a in args])
     process['command'] = command
     return process
 
@@ -150,5 +150,5 @@ def check_error(ctx, error_check_func=None, reraise=False):
         error_check_func()
     # if this function is called from within an ``except`` clause, a re-raise maybe required
     if reraise:
-        raise  # pylint: disable=misplaced-bare-raise
+        raise                                                                                       # pylint: disable=misplaced-bare-raise
     return _error

@@ -10,7 +10,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...utils.threading import LockedList
 from .source import DefaultReaderSource
 
 
@@ -27,5 +26,3 @@ class ReadingContext(object):
     def __init__(self):
         self.reader_source = DefaultReaderSource()
         self.reader = None
-
-        self._locations = LockedList()  # for keeping track of locations already read

@@ -30,4 +30,4 @@ class JsonReader(Reader):
             data = unicode(data)
             return json.loads(data, object_pairs_hook=OrderedDict)
         except Exception as e:
-            raise ReaderSyntaxError('JSON: %s' % e, cause=e)
+            raise ReaderSyntaxError(u'JSON: {0}'.format(e), cause=e)

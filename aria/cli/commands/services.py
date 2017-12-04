@@ -137,7 +137,7 @@ def list(service_template_name,
 @aria.pass_logger
 def create(service_template_name,
            service_name,
-           inputs,  # pylint: disable=redefined-outer-name
+           inputs,                                                                                  # pylint: disable=redefined-outer-name
            model_storage,
            resource_storage,
            plugin_manager,

@@ -17,6 +17,7 @@ artifact_types:
 
   tosca.artifacts.nfv.SwImage:
     _extensions:
+      normative: true
       shorthand_name: SwImage
       type_qualified_name: tosca:SwImage
       specification: tosca-simple-nfv-1.0

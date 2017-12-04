@@ -43,7 +43,7 @@ class ThreadExecutor(BaseExecutor):
         self._queue = Queue.Queue()
         self._pool = []
         for i in range(pool_size):
-            name = 'ThreadExecutor-{index}'.format(index=i+1)
+            name = 'ThreadExecutor-{0:d}'.format(i+1)
             thread = threading.Thread(target=self._processor, name=name)
             thread.daemon = True
             thread.start()

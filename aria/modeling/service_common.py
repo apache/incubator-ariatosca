@@ -22,7 +22,8 @@ ARIA modeling service common module
 from sqlalchemy import (
     Column,
     Text,
-    Boolean
+    Boolean,
+    PickleType
 )
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -90,7 +91,7 @@ class InputBase(ParameterMixin):
     """)
 
     @classmethod
-    def wrap(cls, name, value, description=None, required=True):  # pylint: disable=arguments-differ
+    def wrap(cls, name, value, description=None, required=True):                                    # pylint: disable=arguments-differ
         input = super(InputBase, cls).wrap(name, value, description)
         input.required = required
         return input
@@ -587,12 +588,11 @@ class MetadataBase(TemplateModelMixin):
     :ivar name: name
     :vartype name: basestring
     :ivar value: value
-    :vartype value: basestring
     """
 
     __tablename__ = 'metadata'
 
-    value = Column(Text)
+    value = Column(PickleType)
 
     @property
     def as_raw(self):

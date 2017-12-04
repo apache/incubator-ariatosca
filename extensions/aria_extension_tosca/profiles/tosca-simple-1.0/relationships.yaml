@@ -17,6 +17,7 @@ relationship_types:
 
   tosca.relationships.Root:
     _extensions:
+      normative: true
       shorthand_name: Root # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
@@ -46,6 +47,7 @@ relationship_types:
 
   tosca.relationships.DependsOn:
     _extensions:
+      normative: true
       shorthand_name: DependsOn
       type_qualified_name: tosca:DependsOn
       specification: tosca-simple-1.0
@@ -58,6 +60,7 @@ relationship_types:
 
   tosca.relationships.HostedOn:
     _extensions:
+      normative: true
       shorthand_name: HostedOn
       type_qualified_name: tosca:HostedOn
       specification: tosca-simple-1.0
@@ -70,6 +73,7 @@ relationship_types:
 
   tosca.relationships.ConnectsTo:
     _extensions:
+      normative: true
       shorthand_name: ConnectsTo
       type_qualified_name: tosca:ConnectsTo
       specification: tosca-simple-1.0
@@ -86,6 +90,7 @@ relationship_types:
 
   tosca.relationships.AttachesTo:
     _extensions:
+      normative: true
       shorthand_name: AttachesTo
       type_qualified_name: tosca:AttachesTo
       specification: tosca-simple-1.0
@@ -119,6 +124,7 @@ relationship_types:
 
   tosca.relationships.RoutesTo:
     _extensions:
+      normative: true
       shorthand_name: RoutesTo
       type_qualified_name: tosca:RoutesTo
       specification: tosca-simple-1.0
@@ -135,6 +141,7 @@ relationship_types:
 
   tosca.relationships.network.LinksTo:
     _extensions:
+      normative: true
       shorthand_name: LinksTo
       type_qualified_name: tosca:LinksTo
       specification: tosca-simple-1.0
@@ -147,6 +154,7 @@ relationship_types:
 
   tosca.relationships.network.BindsTo:
     _extensions:
+      normative: true
       shorthand_name: BindsTo # ARIA NOTE: the spec says "network.BindsTo" which seems wrong
       type_qualified_name: tosca:BindsTo
       specification: tosca-simple-1.0

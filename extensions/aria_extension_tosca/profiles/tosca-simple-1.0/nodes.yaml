@@ -17,6 +17,7 @@ node_types:
 
   tosca.nodes.Root:
     _extensions:
+      normative: true
       shorthand_name: Root
       type_qualified_name: tosca:Root
       specification: tosca-simple-1.0
@@ -55,6 +56,7 @@ node_types:
 
   tosca.nodes.Compute:
     _extensions:
+      normative: true
       shorthand_name: Compute
       type_qualified_name: tosca:Compute
       specification: tosca-simple-1.0
@@ -106,6 +108,7 @@ node_types:
 
   tosca.nodes.LoadBalancer:
     _extensions:
+      normative: true
       shorthand_name: LoadBalancer
       type_qualified_name: tosca:LoadBalancer
       specification: tosca-simple-1.0
@@ -140,6 +143,7 @@ node_types:
 
   tosca.nodes.SoftwareComponent:
     _extensions:
+      normative: true
       shorthand_name: SoftwareComponent
       type_qualified_name: tosca:SoftwareComponent
       specification: tosca-simple-1.0
@@ -168,6 +172,7 @@ node_types:
 
   tosca.nodes.WebServer:
     _extensions:
+      normative: true
       shorthand_name: WebServer
       type_qualified_name: tosca:WebServer
       specification: tosca-simple-1.0
@@ -188,6 +193,7 @@ node_types:
 
   tosca.nodes.WebApplication:
     _extensions:
+      normative: true
       shorthand_name: WebApplication
       type_qualified_name: tosca:WebApplication
       specification: tosca-simple-1.0
@@ -214,6 +220,7 @@ node_types:
 
   tosca.nodes.DBMS:
     _extensions:
+      normative: true
       shorthand_name: DBMS # ARIA NOTE: omitted in the spec
       type_qualified_name: tosca:DBMS
       specification: tosca-simple-1.0
@@ -240,6 +247,7 @@ node_types:
 
   tosca.nodes.Database:
     _extensions:
+      normative: true
       shorthand_name: Database
       type_qualified_name: tosca:Database
       specification: tosca-simple-1.0
@@ -283,6 +291,7 @@ node_types:
 
   tosca.nodes.Container.Runtime:
     _extensions:
+      normative: true
       shorthand_name: Container.Runtime
       type_qualified_name: tosca:Container.Runtime
       specification: tosca-simple-1.0
@@ -300,6 +309,7 @@ node_types:
 
   tosca.nodes.Container.Application:
     _extensions:
+      normative: true
       shorthand_name: Container.Application
       type_qualified_name: tosca:Container.Application
       specification: tosca-simple-1.0
@@ -321,6 +331,7 @@ node_types:
 
   tosca.nodes.ObjectStorage:
     _extensions:
+      normative: true
       shorthand_name: ObjectStorage
       type_qualified_name: tosca:ObjectStorage
       specification: tosca-simple-1.0
@@ -354,6 +365,7 @@ node_types:
 
   tosca.nodes.BlockStorage:
     _extensions:
+      normative: true
       shorthand_name: BlockStorage
       type_qualified_name: tosca:BlockStorage
       specification: tosca-simple-1.0
@@ -388,6 +400,7 @@ node_types:
 
   tosca.nodes.network.Network:
     _extensions:
+      normative: true
       shorthand_name: Network
       type_qualified_name: tosca:Network
       specification: tosca-simple-1.0
@@ -466,6 +479,7 @@ node_types:
 
   tosca.nodes.network.Port:
     _extensions:
+      normative: true
       shorthand_name: Port
       type_qualified_name: tosca:Port
       specification: tosca-simple-1.0

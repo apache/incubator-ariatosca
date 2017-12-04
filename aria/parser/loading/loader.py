@@ -20,8 +20,14 @@ class Loader(object):
 
     Loaders extract a document by consuming a document source.
 
-    Though the extracted document is often textual (a string or string-like
-    data), loaders may provide any format.
+    Though the extracted document is often textual (a string or string-like data), loaders may
+    provide any format.
+
+    Loaders can also calculate the "canonical location" of what they are loading, which is a
+    globally unique reference that can be used as a cache key. Examples include absolute file paths
+    and de-relativized URIs. Note that calculating the canonical location can be very costly
+    (for example, hitting various URLs until finding an existing one), and thus it's a good idea
+    to cache the canonical location per loader context.
     """
 
     def open(self):
@@ -31,4 +37,7 @@ class Loader(object):
         pass
 
     def load(self):
+        raise NotImplementedError
+
+    def get_canonical_location(self):
         raise NotImplementedError

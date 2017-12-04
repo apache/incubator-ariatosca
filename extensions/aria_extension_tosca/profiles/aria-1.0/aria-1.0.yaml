@@ -17,6 +17,7 @@ policy_types:
 
   aria.Plugin:
     _extensions:
+      normative: true
       shorthand_name: Plugin
       type_qualified_name: aria:Plugin
       role: plugin
@@ -40,6 +41,7 @@ policy_types:
 
   aria.Workflow:
     _extensions:
+      normative: true
       shorthand_name: Workflow
       type_qualified_name: aria:Workflow
       role: workflow
@@ -61,6 +63,7 @@ policy_types:
 
   aria.Scaling:
     _extensions:
+      normative: true
       type_qualified_name: aria:Scaling
       role: scaling
     description: >-

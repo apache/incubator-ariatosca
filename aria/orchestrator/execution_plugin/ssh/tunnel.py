@@ -64,10 +64,10 @@ def remote(ctx, local_port, remote_port=0, local_host='localhost', remote_bind_a
             try:
                 channel.close()
             except Exception as ex2:
-                close_error = ' (While trying to close channel: {0})'.format(ex2)
+                close_error = u' (While trying to close channel: {0})'.format(ex2)
             else:
                 close_error = ''
-            ctx.task.abort('[{0}] rtunnel: cannot connect to {1}:{2} ({3}){4}'
+            ctx.task.abort(u'[{0}] rtunnel: cannot connect to {1}:{2} ({3}){4}'
                            .format(fabric.api.env.host_string, local_host, local_port, e,
                                    close_error))
 

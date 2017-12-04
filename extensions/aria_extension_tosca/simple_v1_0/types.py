@@ -34,6 +34,7 @@ from .modeling.capabilities import (get_inherited_valid_source_types,
 from .modeling.data_types import (get_data_type, get_inherited_constraints, coerce_data_type_value,
                                   validate_data_type_name)
 from .modeling.interfaces import (get_inherited_interface_definitions, get_inherited_operations)
+from .modeling.groups import get_inherited_members
 from .modeling.policies import get_inherited_targets
 from .modeling.parameters import get_inherited_parameter_definitions
 from .modeling.requirements import get_inherited_requirement_definitions
@@ -70,7 +71,7 @@ class ArtifactType(ExtensiblePresentation):
         """
 
     @field_getter(data_type_class_getter(Version))
-    @primitive_field()
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Artifact Type definition.
@@ -153,7 +154,8 @@ class DataType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Data Type definition.
@@ -210,7 +212,7 @@ class DataType(ExtensiblePresentation):
             if not isinstance(parent, DataType):
                 return parent
             else:
-                return parent._get_primitive_ancestor(context) # pylint: disable=no-member
+                return parent._get_primitive_ancestor(context)                                      # pylint: disable=no-member
         return None
 
     @cachedmethod
@@ -261,7 +263,8 @@ class CapabilityType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Capability Type definition.
@@ -312,7 +315,9 @@ class CapabilityType(ExtensiblePresentation):
 
     @cachedmethod
     def _is_descendant(self, context, other_type):
-        """returns True iff `other_type` is a descendant of the represented capability type"""
+        """
+        Checks if ``other_type`` is our descendant (or equal to us).
+        """
         if other_type is None:
             return False
         elif other_type._name == self._name:
@@ -324,12 +329,17 @@ class CapabilityType(ExtensiblePresentation):
         return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
 
     @cachedmethod
+    def _get_attributes(self, context):
+        return FrozenDict(get_inherited_parameter_definitions(context, self, 'attributes'))
+
+    @cachedmethod
     def _get_valid_source_types(self, context):
         return get_inherited_valid_source_types(context, self)
 
     def _validate(self, context):
         super(CapabilityType, self)._validate(context)
         self._get_properties(context)
+        self._get_attributes(context)
 
     def _dump(self, context):
         self._dump_content(context, (
@@ -363,7 +373,8 @@ class InterfaceType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Interface Type definition.
@@ -417,8 +428,7 @@ class InterfaceType(ExtensiblePresentation):
     def _validate(self, context):
         super(InterfaceType, self)._validate(context)
         self._get_inputs(context)
-        for operation in self.operations.itervalues(): # pylint: disable=no-member
-            operation._validate(context)
+        self._get_operations(context)
 
     def _dump(self, context):
         self._dump_content(context, (
@@ -450,7 +460,8 @@ class RelationshipType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Relationship Type definition.
@@ -508,6 +519,9 @@ class RelationshipType(ExtensiblePresentation):
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
+        """
+        Checks if ``other_type`` is our descendant (or equal to us).
+        """
         if the_type is None:
             return False
         elif the_type._name == self._name:
@@ -565,7 +579,8 @@ class NodeType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Node Type definition.
@@ -639,6 +654,9 @@ class NodeType(ExtensiblePresentation):
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
+        """
+        Checks if ``other_type`` is our descendant (or equal to us).
+        """
         if the_type is None:
             return False
         elif the_type._name == self._name:
@@ -721,7 +739,8 @@ class GroupType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Group Type definition.
@@ -775,6 +794,9 @@ class GroupType(ExtensiblePresentation):
 
     @cachedmethod
     def _is_descendant(self, context, the_type):
+        """
+        Checks if ``other_type`` is our descendant (or equal to us).
+        """
         if the_type is None:
             return False
         elif the_type._name == self._name:
@@ -784,6 +806,11 @@ class GroupType(ExtensiblePresentation):
     @cachedmethod
     def _get_properties(self, context):
         return FrozenDict(get_inherited_parameter_definitions(context, self, 'properties'))
+
+    @cachedmethod
+    def _get_members(self, context):
+        node_types = get_inherited_members(context, self)
+        return FrozenList(node_types)
 
     @cachedmethod
     def _get_interfaces(self, context):
@@ -827,7 +854,8 @@ class PolicyType(ExtensiblePresentation):
         :type: :obj:`basestring`
         """
 
-    @object_field(Version)
+    @field_getter(data_type_class_getter(Version))
+    @primitive_field(str)
     def version(self):
         """
         An optional version for the Policy Type definition.

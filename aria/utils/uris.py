@@ -43,6 +43,6 @@ def as_file(uri):
         path = url.path
         if _IS_WINDOWS:
             path = path.replace('/', '\\')
-        return os.path.normpath(path)
+        return os.path.realpath(path)
 
     return None

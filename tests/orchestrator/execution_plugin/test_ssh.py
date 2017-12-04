@@ -260,7 +260,7 @@ class TestWithActualSSHServer(object):
 
             graph.sequence(*ops)
             return graph
-        tasks_graph = mock_workflow(ctx=self._workflow_context)  # pylint: disable=no-value-for-parameter
+        tasks_graph = mock_workflow(ctx=self._workflow_context)                                     # pylint: disable=no-value-for-parameter
         graph_compiler.GraphCompiler(
             self._workflow_context, self._executor.__class__).compile(tasks_graph)
         eng = engine.Engine(self._executor)

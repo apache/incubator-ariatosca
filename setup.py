@@ -60,7 +60,7 @@ extras_require = {
 
 with open(os.path.join(root_dir, 'requirements.in')) as requirements:
     for requirement in requirements.readlines():
-        requirement = requirement.split('#')[0].strip() # Get rid of comments or trailing comments
+        requirement = requirement.split('#', 1)[0].strip() # Remove comments
         if not requirement:
             continue # Skip empty and comment lines
 
@@ -70,7 +70,7 @@ with open(os.path.join(root_dir, 'requirements.in')) as requirements:
         # https://wheel.readthedocs.io/en/latest/index.html#defining-conditional-dependencies
         # https://hynek.me/articles/conditional-python-dependencies/
         if ';' in requirement:
-            package, condition = requirement.split(';')
+            package, condition = requirement.split(';', 1)
             cond_name = ':{0}'.format(condition.strip())
             extras_require.setdefault(cond_name, [])
             extras_require[cond_name].append(package.strip())

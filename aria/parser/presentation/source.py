@@ -26,7 +26,7 @@ class PresenterSource(object):
     Presenter sources provide appropriate :class:`Presenter` classes for agnostic raw data.
     """
 
-    def get_presenter(self, raw):  # pylint: disable=unused-argument,no-self-use
+    def get_presenter(self, raw):                                                                   # pylint: disable=unused-argument,no-self-use
         raise PresenterNotFoundError('presenter not found')
 
 

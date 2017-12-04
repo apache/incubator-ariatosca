@@ -38,27 +38,31 @@ class FileTextLoader(Loader):
             self._file = codecs.open(self.path, mode='r', encoding=self.encoding, buffering=1)
         except IOError as e:
             if e.errno == 2:
-                raise DocumentNotFoundException('file not found: "%s"' % self.path, cause=e)
+                raise DocumentNotFoundException(u'file not found: "{0}"'.format(self.path), cause=e)
             else:
-                raise LoaderException('file I/O error: "%s"' % self.path, cause=e)
+                raise LoaderException(u'file I/O error: "{0}"'.format(self.path), cause=e)
         except Exception as e:
-            raise LoaderException('file error: "%s"' % self.path, cause=e)
+            raise LoaderException(u'file error: "{0}"'.format(self.path), cause=e)
 
     def close(self):
         if self._file is not None:
             try:
                 self._file.close()
             except IOError as e:
-                raise LoaderException('file I/O error: "%s"' % self.path, cause=e)
+                raise LoaderException(u'file I/O error: "{0}"'.format(self.path), cause=e)
             except Exception as e:
-                raise LoaderException('file error: "%s"' % self.path, cause=e)
+                raise LoaderException(u'file error: "{0}"'.format(self.path), cause=e)
+            self._file = None
 
     def load(self):
         if self._file is not None:
             try:
                 return self._file.read()
             except IOError as e:
-                raise LoaderException('file I/O error: "%s"' % self.path, cause=e)
+                raise LoaderException(u'file I/O error: "{0}"'.format(self.path), cause=e)
             except Exception as e:
-                raise LoaderException('file error %s' % self.path, cause=e)
+                raise LoaderException(u'file error {0}'.format(self.path), cause=e)
         return None
+
+    def get_canonical_location(self):
+        raise NotImplementedError

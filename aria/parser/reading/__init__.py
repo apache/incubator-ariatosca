@@ -20,7 +20,6 @@ Reading package.
    ReaderException
    ReaderNotFoundError
    ReaderSyntaxError
-   AlreadyReadException
    JinjaReader
    JsonReader
    Locator
@@ -41,14 +40,12 @@ from .context import ReadingContext
 from .source import ReaderSource, DefaultReaderSource
 from .exceptions import (ReaderException,
                          ReaderNotFoundError,
-                         ReaderSyntaxError,
-                         AlreadyReadException)
+                         ReaderSyntaxError)
 
 __all__ = (
     'ReaderException',
     'ReaderNotFoundError',
     'ReaderSyntaxError',
-    'AlreadyReadException',
     'Reader',
     'ReaderSource',
     'DefaultReaderSource',

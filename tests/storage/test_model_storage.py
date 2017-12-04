@@ -49,7 +49,7 @@ def storage():
 
 @pytest.fixture(scope='module', autouse=True)
 def module_cleanup():
-    modeling.models.aria_declarative_base.metadata.remove(tests_modeling.MockModel.__table__)  #pylint: disable=no-member
+    modeling.models.aria_declarative_base.metadata.remove(tests_modeling.MockModel.__table__)       # pylint: disable=no-member
 
 
 def test_storage_base(storage):
@@ -162,7 +162,7 @@ def test_mapi_include(context):
     assert_include(service2)
 
 
-class MockModel(modeling.models.aria_declarative_base, modeling.mixins.ModelMixin): #pylint: disable=abstract-method
+class MockModel(modeling.models.aria_declarative_base, modeling.mixins.ModelMixin):                 # pylint: disable=abstract-method
     __tablename__ = 'op_mock_model'
 
     name = Column(Text)

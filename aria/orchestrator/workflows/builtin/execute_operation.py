@@ -60,7 +60,7 @@ def execute_operation(
         for node in ctx.nodes:
             if node.id not in filtered_node_ids:
                 subgraphs[node.id] = ctx.task_graph(
-                    name='execute_operation_stub_{0}'.format(node.id))
+                    name=u'execute_operation_stub_{0}'.format(node.id))
 
     # registering actual tasks to sequences
     for node in filtered_nodes:

@@ -46,7 +46,7 @@ class Inputs(Consumer):
 
         if not isinstance(inputs, dict):
             self.context.validation.report(
-                'Inputs consumer: inputs are not a dict: %s' % safe_repr(inputs))
+                u'Inputs consumer: inputs are not a dict: {0}'.format(safe_repr(inputs)))
             return
 
         for name, value in inputs.iteritems():

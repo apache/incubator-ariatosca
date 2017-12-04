@@ -38,12 +38,13 @@ from tests import (
     storage
 )
 
-from ...fixtures import (  # pylint: disable=unused-import
+from ...fixtures import (                                                                           # pylint: disable=unused-import
     plugins_dir,
     plugin_manager,
     fs_model as model,
     resource_storage as resource
 )
+
 
 custom_events = {
     'is_resumed': Event(),
