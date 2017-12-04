@@ -1,0 +1,28 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+
+topology_template:
+
+  policies:
+    import-plugin:
+      description: >-
+        plugin to test import of plugin.yaml.
+      type: aria.Plugin
+      properties:
+        version: 1.0.0
+
+node_types:
+
+  myapp.nodes.Network:
+    derived_from: tosca.nodes.Root
+    properties:
+      resource_id:
+        default: ''
+        type: string
+    interfaces:
+      Standard:
+        create:
+          implementation: create-network.sh 
+
+        delete:
+          implementation: delete-network.sh
