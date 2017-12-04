@@ -1,0 +1,11 @@
+version: "3"
+services:
+  aria:
+    #Make sure to provide the right value for image field below and uncomment the below line
+    #image: vishwanathj/aria_011:16.04
+    hostname: aria
+    ports:
+      - "29090:9090"
+    stdin_open: true
+    tty: true
+    command: sh -c "aria service-templates store examples/hello-world/helloworld.yaml my-service-template && sleep 2 && aria services create my-service -t my-service-template && sleep 2 && aria executions start install -s my-service && bash"
