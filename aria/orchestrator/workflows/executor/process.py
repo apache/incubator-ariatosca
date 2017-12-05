@@ -69,9 +69,17 @@ class ProcessExecutor(base.BaseExecutor):
     Sub-process task executor.
     """
 
-    def __init__(self, plugin_manager=None, python_path=None, *args, **kwargs):
+    def __init__(
+            self,
+            plugin_manager=None,
+            python_path=None,
+            strict_loading=True,
+            *args,
+            **kwargs
+    ):
         super(ProcessExecutor, self).__init__(*args, **kwargs)
         self._plugin_manager = plugin_manager
+        self._strict_loading = strict_loading
 
         # Optional list of additional directories that should be added to
         # subprocesses python path
@@ -173,7 +181,8 @@ class ProcessExecutor(base.BaseExecutor):
             'function': ctx.task.function,
             'operation_arguments': dict(arg.unwrapped for arg in ctx.task.arguments.itervalues()),
             'port': self._server_port,
-            'context': ctx.serialization_dict
+            'context': ctx.serialization_dict,
+            'strict_loading': self._strict_loading
         }
 
     def _construct_subprocess_env(self, task):
@@ -326,6 +335,7 @@ def _main():
     function = arguments['function']
     operation_arguments = arguments['operation_arguments']
     context_dict = arguments['context']
+    strict_loading = arguments['strict_loading']
 
     try:
         ctx = context_dict['context_cls'].instantiate_from_dict(**context_dict['context'])
@@ -336,7 +346,7 @@ def _main():
     try:
         messenger.started()
         task_func = imports.load_attribute(function)
-        aria.install_aria_extensions()
+        aria.install_aria_extensions(strict_loading)
         for decorate in process_executor.decorate():
             task_func = decorate(task_func)
         task_func(ctx=ctx, **operation_arguments)
