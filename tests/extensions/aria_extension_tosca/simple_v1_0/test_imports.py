@@ -16,6 +16,7 @@
 
 import pytest
 
+from tests.helpers import get_resource_uri
 from . import data
 from ....mechanisms.web_server import WebServer
 
@@ -146,6 +147,21 @@ topology_template:
       type: MyNode
 """, dict(repository=repository)).assert_success()
 
+#Plugin
+
+def test_import_plugin(parser):
+    plugin_dir = get_resource_uri('plugins')
+    parser.parse_literal("""
+tosca_definitions_version: tosca_simple_yaml_1_0
+imports:
+  - aria-1.0
+  - file: import-plugin-1.0.0
+    repository: plugins
+topology_template:
+  node_templates:
+    Network:
+      type: myapp.nodes.Network
+""", plugin_dir=plugin_dir).assert_success()
 
 # Namespace
 
