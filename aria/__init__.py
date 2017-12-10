@@ -66,10 +66,18 @@ def install_aria_extensions(strict=True):
     extension.init()
 
 
-def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kwargs=None):
+def application_model_storage(api, api_kwargs=None, initiator=None, initiator_kwargs=None,
+                              models_prefix=None):
     """
     Initiate model storage.
     """
+    if models_prefix:
+        # The metadata is the same for all models,
+        # so we're just extracting the metadata from the first model
+        metadata = modeling.models.models_to_register[0].metadata
+        for table in metadata.sorted_tables:
+            if not table.name.startswith(models_prefix):
+                table.name = models_prefix + table.name
     return storage.ModelStorage(api_cls=api,
                                 api_kwargs=api_kwargs,
                                 items=modeling.models.models_to_register,
