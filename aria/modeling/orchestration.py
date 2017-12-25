@@ -426,7 +426,7 @@ class TaskBase(mixins.ModelMixin):
     _api_id = Column(String)
     _executor = Column(PickleType)
     _context_cls = Column(PickleType)
-    _stub_type = Column(Enum(*STUB_TYPES))
+    _stub_type = Column(Enum(*STUB_TYPES, name='stub_type'))
 
     @property
     def actor(self):

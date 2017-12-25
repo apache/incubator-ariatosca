@@ -23,7 +23,7 @@ colorama>=0.3, <=0.4
 Jinja2>=2.9, <3.0
 jsonpickle>=0.9, <=1.0
 logutils>=0.3, <0.4
-networkx>=2.0, <2.1
+networkx>=1.9, <2.0
 PrettyTable>=0.7, <0.8
 psutil>=5.4, <5.5
 requests>=2.3, <2.14
