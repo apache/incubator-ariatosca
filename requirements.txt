@@ -18,7 +18,7 @@ lockfile==0.12.2          # via cachecontrol
 logutils==0.3.5
 markupsafe==1.0           # via jinja2
 msgpack-python==0.4.8     # via cachecontrol
-networkx==2.0
+networkx==1.11
 prettytable==0.7.2
 psutil==5.4.1
 requests==2.13.0
