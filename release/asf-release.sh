@@ -227,22 +227,8 @@ function _publish_to_apache_release {
 
     echo "Publishing to Apache dist..."
 
-    local TMP_DIR=$(mktemp -d)
-    echo "Checking out ARIA dist dev to ${TMP_DIR}"
-    pushd ${TMP_DIR}
-
-    svn co https://dist.apache.org/repos/dist/dev/incubator/ariatosca/ ariatosca-dev
-    svn co https://dist.apache.org/repos/dist/release/incubator/ariatosca/ ariatosca-release
-    cp -r ariatosca-dev/${RELEASE_DIR} ariatosca-release
-
-    pushd ariatosca-release
-    svn add ${RELEASE_DIR}
-    # TODO: remove older releases?
-    svn commit -m "ARIA ${VERSION} release"
-    popd
-    popd
+    svn mv https://dist.apache.org/repos/dist/dev/incubator/ariatosca/${RELEASE_DIR} https://dist.apache.org/repos/dist/release/incubator/ariatosca/${RELEASE_DIR} -m "ARIATOSCA ${VERSION} publish"
 }
-
 
 function _create_git_tag {
     local VERSION=$1
