@@ -135,7 +135,7 @@ function _sign_package {
     echo "Signing archive ${ARCHIVE_NAME}..."
     gpg --armor --output ${ARCHIVE_NAME}.asc --detach-sig ${ARCHIVE_NAME}
     gpg --print-md MD5 ${ARCHIVE_NAME} > ${ARCHIVE_NAME}.md5
-    gpg --print-md SHA512 ${ARCHIVE_NAME} > ${ARCHIVE_NAME}.sha
+    gpg --print-md SHA512 ${ARCHIVE_NAME} > ${ARCHIVE_NAME}.sha512
 }
 
 
