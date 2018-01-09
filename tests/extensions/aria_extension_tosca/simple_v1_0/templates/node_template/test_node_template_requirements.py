@@ -200,7 +200,9 @@ topology_template:
     my_node:
       type: MyType
       requirements:
-        - my_requirement: MyType
+        - my_requirement: my_node1
+    my_node1:
+      type: MyType
 """).assert_success()
 
 

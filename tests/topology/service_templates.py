@@ -33,7 +33,7 @@ def consume_literal(literal, consumer_class_name='instance', cache=True, no_issu
     return context, dumper
 
 
-def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
+def consume_use_case(use_case_name, consumer_class_name='instance', cache=True, no_issues=True):
     cachedmethod.ENABLED = cache
     uri = get_example_uri('tosca-simple-1.0', 'use-cases', use_case_name,
                           '{0}.yaml'.format(use_case_name))
@@ -44,7 +44,12 @@ def consume_use_case(use_case_name, consumer_class_name='instance', cache=True):
     consumer, dumper = create_consumer(context, consumer_class_name)
     consumer.consume()
     context.validation.dump_issues()
-    assert not context.validation.has_issues
+
+    if no_issues:
+        assert not context.validation.has_issues
+    else:
+        assert context.validation.has_issues
+
     return context, dumper
 
 

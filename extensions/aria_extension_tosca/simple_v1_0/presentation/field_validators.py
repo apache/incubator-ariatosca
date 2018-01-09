@@ -347,21 +347,107 @@ def node_template_or_type_validator(field, presentation, context):
 
     value = getattr(presentation, field.name)
     if value is not None:
-        node_templates = \
-            context.presentation.get('service_template', 'topology_template', 'node_templates') \
-            or {}
-        if (value not in node_templates) and \
-            (get_type_by_name(context, value, 'node_types') is None):
-            report_issue_for_unknown_type(context, presentation, 'node template or node type',
-                                          field.name)
+        node, node_variant = presentation._get_node(context)
+        if node_variant == 'node_template':
+            node_template_validator(field, presentation, context, value, node)
+        elif node_variant == 'node_type':
+            node_type_validator(field, presentation, context, value, node)
+        else:
+            context.validation.report(
+                '"%s" refers to a node type or node template that does not match the capability '
+                'requirement in "%s"'
+                % (presentation._name, presentation._container._fullname),
+                locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
 
+def node_template_validator(field, presentation, context, node_value, node_obj):
+    """
+    Makes sure that the field refers to a node template.
+    """
+    the_node_templates = context.presentation.get('service_template', 'topology_template',\
+                                                          'node_templates') or {}
+    the_parent_capability_type_name = _get_requirement_in_type(context, presentation).\
+                                      capability
+    the_parent_node_type_name = _get_requirement_in_type(context, presentation).node
+    the_nodetype_obj = node_obj._get_type(context)
+
+    if node_value not in the_node_templates:
+        context.validation.report(
+            '"%s" refers to an unknown node template in "%s"'
+            % (presentation._name, presentation._container._fullname),
+            locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
+        return
+
+    if the_parent_node_type_name:
+        if not _is_parent(context, the_nodetype_obj, the_parent_node_type_name, 'node_types'):
+            context.validation.report(
+                '"%s" refers to an unknown/inappropriate node type in "%s"'
+                % (presentation._name, presentation._container._fullname),
+                locator=presentation._get_child_locator(field.name),\
+                        level=Issue.BETWEEN_FIELDS)
+            return
+
+    if the_nodetype_obj._get_capabilities(context):
+        the_capabilities = the_nodetype_obj._get_capabilities(context)
+        for the_capability in the_capabilities.iteritems():
+            if _is_parent(context, the_capability[1]._get_type(context),\
+                          the_parent_capability_type_name, 'capability_types'):
+                return
+        context.validation.report(
+            '"%s" refers to a node template that does not match the capability requirement in "%s"'
+            % (presentation._name, presentation._container._fullname),
+            locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
+        return
+
+def node_type_validator(field, presentation, context, node_value, node_obj):
+    """
+    Makes sure that the field refers to a node type.
+    """
+    the_child_nodetypes = []
+    the_parent_capability_type_name = _get_requirement_in_type(context, presentation).\
+                                      capability
+    the_parent_node_type_name = _get_requirement_in_type(context, presentation).node
+
+    node_type = get_type_by_name(context, node_value, 'node_types')
+    if node_type is None:
+        context.validation.report(
+            '"%s" refers to an unknown node type in "%s"'
+            % (presentation._name, presentation._container._fullname),
+            locator=presentation._get_child_locator(field.name),\
+            level=Issue.BETWEEN_FIELDS)
+        return
+
+    if the_parent_node_type_name:
+        if not _is_parent(context, node_obj, the_parent_node_type_name, 'node_types'):
+            context.validation.report(
+                '"%s" refers to an unknown/inappropriate node type in "%s"'
+                % (presentation._name, presentation._container._fullname),
+                locator=presentation._get_child_locator(field.name),\
+                level=Issue.BETWEEN_FIELDS)
+            return
+
+    for the_node_type in context.presentation.presenter.service_template.node_types.\
+                         iteritems():
+        if the_node_type[1]._get_capabilities(context):
+            the_capabilities = the_node_type[1]._get_capabilities(context)
+            for the_capability in the_capabilities.iteritems():
+                if _is_parent(context, the_capability[1]._get_type(context),\
+                              the_parent_capability_type_name, 'capability_types'):
+                    the_child_nodetypes.append(the_node_type)
+
+    for the_child_node_type in the_child_nodetypes:
+        if _is_parent(context, the_child_node_type[1], node_obj._name, 'node_types'):
+            return
+
+    context.validation.report(
+        '"%s" refers to a node type that does not match the capability requirement in "%s"'
+        % (presentation._name, presentation._container._fullname),
+        locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
+    return
 
 def capability_definition_or_type_validator(field, presentation, context):
     """
     Makes sure refers to either a capability assignment name in the node template referred to by the
     ``node`` field or a general capability type.
-
-    If the value refers to a capability type, make sure the ``node`` field was not assigned.
 
     Used with the :func:`field_validator` decorator for the ``capability`` field in
     :class:`RequirementAssignment`.
@@ -372,31 +458,140 @@ def capability_definition_or_type_validator(field, presentation, context):
     value = getattr(presentation, field.name)
     if value is not None:
         node, node_variant = presentation._get_node(context)
-        if node_variant == 'node_template':
-            capabilities = node._get_capabilities(context)
-            if value in capabilities:
-                return
+        capability_variant = presentation._get_capability(context)[1]
 
-        if get_type_by_name(context, value, 'capability_types') is not None:
-            if node is not None:
-                context.validation.report(
-                    u'"{0}" refers to a capability type even though "node" has a value in "{1}"'
-                    .format(presentation._name, presentation._container._fullname),
-                    locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
-            return
-
-        if node_variant == 'node_template':
-            context.validation.report(
-                u'requirement "{0}" refers to an unknown capability definition name or capability'
-                u' type in "{1}": {2}'
-                .format(presentation._name, presentation._container._fullname, safe_repr(value)),
-                locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_TYPES)
+        if capability_variant == 'capability_assignment':
+            capability_definition_validator(field, presentation, context, value, node, node_variant)
+        elif capability_variant == 'capability_type':
+            capability_type_validator(field, presentation, context, value, node, node_variant)
         else:
             context.validation.report(
-                u'requirement "{0}" refers to an unknown capability type in "{1}": {2}'
-                .format(presentation._name, presentation._container._fullname, safe_repr(value)),
+                'requirement "%s" refers to an unknown capability definition name or '\
+                'type in "%s": %s'
+                % (presentation._name, presentation._container._fullname, safe_repr(value)),
                 locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_TYPES)
 
+def capability_definition_validator(field, presentation, context, capability_value, node_obj,
+                                    node_variant):
+    """
+    Makes sure if the capability name in the node template refers to a general capability definition
+    """
+    the_parent_capability_type_name = _get_requirement_in_type(context, presentation).\
+                                              capability
+    the_parent_node_type_name = _get_requirement_in_type(context, presentation).node
+
+    if node_obj:
+        _is_capability_in_node(context, node_variant, node_obj, presentation, field,
+                               capability_value)
+
+    if the_parent_node_type_name:
+        the_nodetype_obj = get_type_by_name(context, the_parent_node_type_name,\
+                                            'node_types')
+        _is_capability_in_node(context, 'node_type', the_nodetype_obj, presentation,\
+                               field, capability_value)
+
+    for the_node_type in context.presentation.presenter.service_template.node_types.\
+                         iteritems():
+        if the_node_type[1]._get_capabilities(context):
+            the_capabilities = the_node_type[1]._get_capabilities(context)
+            for the_capability in the_capabilities.iteritems():
+                if the_capability[1]._name == capability_value:
+                    the_capability_type_name = the_capability[1].type
+
+    the_capability_type_obj = get_type_by_name(context, the_capability_type_name,\
+                                               'capability_types')
+    if _is_parent(context, the_capability_type_obj, the_parent_capability_type_name,
+                  'capability_types'):
+        return
+
+def capability_type_validator(field, presentation, context, capability_value, node_obj,
+                              node_variant):
+    """
+    Makes sure if the capability type in the node template refers to a general capability type
+    """
+    the_parent_capability_type_name = _get_requirement_in_type(context, presentation).\
+                                      capability
+    the_parent_node_type_name = _get_requirement_in_type(context, presentation).node
+    the_capability_type_obj = get_type_by_name(context, capability_value, 'capability_types')
+
+    if node_obj:
+        _is_capability_in_node(context, node_variant, node_obj, presentation, field,
+                               capability_value)
+
+    if the_parent_node_type_name:
+        the_nodetype_obj = get_type_by_name(context, the_parent_node_type_name,\
+                                            'node_types')
+        _is_capability_in_node(context, 'node_type', the_nodetype_obj, presentation,\
+                               field, capability_value)
+
+    if the_capability_type_obj is not None and \
+       _is_parent(context, the_capability_type_obj, the_parent_capability_type_name,
+                  'capability_types'):
+
+        return
+
+def _get_requirement_in_type(context, presentation):
+    the_nodetype_obj = presentation._container._get_type(context)
+    the_requirements_obj = the_nodetype_obj._get_requirements(context)
+    the_requirement_obj = None
+    for the_requirement in the_requirements_obj:
+        if the_requirement[0] == presentation._name:
+            the_requirement_obj = the_requirement[1]
+    return the_requirement_obj
+
+def _is_capability_in_node(context, node_variant, node, presentation, field, value):
+    if node_variant == 'node_template':
+        the_nodetype_obj = node._get_type(context)
+        if the_nodetype_obj._get_capabilities(context):
+            the_capabilities = the_nodetype_obj._get_capabilities(context)
+            for the_capability in the_capabilities.iteritems():
+                if the_capability[1]._name == value or \
+                   _is_parent(context, the_capability[1]._get_type(context), value,
+                              'capability_types'):
+                    return
+
+            context.validation.report(
+                '"%s" refers to a node template that does not match the capability requirement '\
+                'in "%s"'
+                % (presentation._name, presentation._container._fullname),
+                locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
+            return
+
+
+    if node_variant == 'node_type':
+        the_child_nodetypes = []
+        if get_type_by_name(context, node._name, 'node_types') is None:
+            context.validation.report(
+                '"%s" refers to an unknown/inappropriate node type in "%s"'
+                % (presentation._name, presentation._container._fullname),
+                locator=presentation._get_child_locator(field.name), level=Issue.BETWEEN_FIELDS)
+            return
+
+        for the_node_type in context.presentation.presenter.service_template.node_types.iteritems():
+            if the_node_type[1]._get_capabilities(context):
+                the_capabilities = the_node_type[1]._get_capabilities(context)
+                for the_capability in the_capabilities.iteritems():
+                    if the_capability[1].type == value or the_capability[1]._name == value:
+                        the_child_nodetypes.append(the_node_type)
+
+        for the_node_type in the_child_nodetypes:
+            if _is_parent(context, the_node_type[1], node._name, 'node_types'):
+                return
+
+def _is_parent(context, type_obj, parent_type_name, parent_type):
+    parent_type_name = convert_name_to_full_type_name(context, parent_type_name,
+                                                      context.presentation.get('service_template',
+                                                                               parent_type))
+    if type_obj._name == parent_type_name:
+        return True
+    the_parent = type_obj._get_parent(context)
+    if the_parent is not None:
+        if the_parent._name == parent_type_name:
+            return True
+        found = _is_parent(context, the_parent, parent_type_name, parent_type)
+        return found
+    else:
+        return False
 
 def node_filter_validator(field, presentation, context):
     """
