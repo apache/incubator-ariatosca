@@ -1,0 +1,85 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+topology_template:
+  policies:
+    aria-service-proxy-plugin:
+      type: aria.Plugin
+      properties:
+        version: 0.1
+        
+data_types:
+  serviceproxy.waitconfig:
+    properties:
+      wait_for_service:
+        type: boolean
+        description: >-
+          If True, wait for 'wait_time' for service to exist and other conditions
+          to be True.  Otherwise don't retry in case of failure.
+        required: false
+        default: false
+      wait_time:
+        description: time to wait for service outputs to be available in seconds
+        type: integer
+        required: false
+        default: 30
+      wait_expression:
+        description: >-
+          boolean expression to wait for truth value.  Python syntax. 
+          Example: output1 > output2
+        type: string
+        required: false
+        
+node_types:
+
+  aria.serviceproxy.ServiceProxy:
+    derived_from: tosca.nodes.Root
+    properties:
+      service_name:
+        description: the name of the service to proxy
+        required: true
+        type: string
+      outputs:
+        description: >-
+          list of outputs that will be mapped to proxy attributes
+          under the \"proxied\" key
+        required: false
+        default: []
+        type: list
+        entry_schema:
+          type: string
+      wait_config:
+        type: serviceproxy.waitconfig
+        required: false
+        default:
+          wait_for_service:
+            false
+    attributes:
+      last_update:
+        description: time of last update
+        type: timestamp
+      service_outputs:
+        description: outputs copied from proxied service
+        type: map
+        entry_schema:
+          type: string
+    interfaces:
+      Standard:
+        type: tosca.interfaces.node.lifecycle.Standard
+        create:
+          implementation: aria-service-proxy-plugin > aria_service_proxy.tasks.proxy_connect
+            
