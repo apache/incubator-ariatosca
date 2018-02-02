@@ -3,6 +3,7 @@ conf/nohup.out
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+.travis.yml
 
 # C extensions
 *.so

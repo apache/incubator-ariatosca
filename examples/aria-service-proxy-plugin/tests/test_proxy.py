@@ -22,21 +22,27 @@ from aria_service_proxy import tasks
 from cloudify.exceptions import NonRecoverableError
 from cloudify.state import current_ctx
 
+
+# Tests that a retry is performed when wait_for_service is true and
+# the service doesn't exist
 def test_noservice_with_wait(monkeypatch):
-    node = Mock(properties = {'service_name': 'testwait',
-                              'wait_config':{'wait_for_service': True, 'wait_time':5},
-                              'outputs': ['someoutput']})
-    attrs = {'retry.return_value' : 'retry' }
-    operation = Mock( retry_number = 0, **attrs)
-    ctxmock = MagicMock( node = node , operation = operation)
+    node = Mock(properties={'service_name': 'testwait',
+                            'wait_config':
+                            {'wait_for_service': True, 'wait_time': 5},
+                            'outputs': ['someoutput']})
+    attrs = {'retry.return_value': 'retry'}
+    operation = Mock(retry_number=0, **attrs)
+    ctxmock = MagicMock(node = node, operation = operation)
     current_ctx.set(ctxmock)
     monkeypatch.setattr(tasks,"get_service_names",lambda: {})
     ret = tasks.proxy_connect()
     assert(ret == 'retry')
 
+
+# Make sure error raised when no service exists and no wait is configured
 def test_noservice_no_wait(monkeypatch):
-    node = Mock(properties = {'service_name': 'testfail',
-                              'wait_config':{'wait_for_service': False, 'wait_time':5 },
+    node = Mock(properties={'service_name': 'testfail',
+                              'wait_config': {'wait_for_service': False, 'wait_time': 5 },
                               'outputs': ['someoutput']})
     ctxmock = MagicMock(node = node)
     current_ctx.set(ctxmock)
@@ -44,6 +50,10 @@ def test_noservice_no_wait(monkeypatch):
     with pytest.raises(NonRecoverableError):
         tasks.proxy_connect()
 
+
+# Test that a service for which wait is specified, is retried
+# properly, and the retry results in success after the service
+# appears
 def test_service_eventual_complete(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs = { 'someoutput': output })
@@ -75,11 +85,15 @@ def test_service_eventual_complete(monkeypatch):
     assert(ctxmock.instance.runtime_properties['service_outputs'][0]['name'] == 'someoutput')
     assert(ctxmock.instance.runtime_properties['service_outputs'][0]['value'] == 'someval')
 
+
+# Test that a proxy generates a retry when the service exists, but the
+# outputs don't, and wait is configured
 def test_output_retry(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs= {'test':output})
     node = Mock(properties = {'service_name': 'test',
-                              'wait_config':{'wait_for_service': True, 'wait_time':5},
+                              'wait_config':
+                              {'wait_for_service': True, 'wait_time':5},
                               'outputs': ['someoutput']})
     attrs = {'retry.return_value' : 'retry' }
     operation = Mock( retry_number = 0, **attrs)
@@ -91,6 +105,8 @@ def test_output_retry(monkeypatch):
     ret = tasks.proxy_connect()
     assert(ret == 'retry')
 
+
+# Test that nominal path works: service complete, outputs available
 def test_output_complete(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs= {'someoutput':output})
@@ -107,6 +123,8 @@ def test_output_complete(monkeypatch):
     ret = tasks.proxy_connect()
     assert(ret == None)
 
+# Test that retry occurs propertly when outputs unavailable (and wait
+# configured), and that they are propertly detected when they appear.
 def test_output_eventual_complete(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs= {'test':output})
@@ -132,6 +150,8 @@ def test_output_eventual_complete(monkeypatch):
     assert(ctxmock.instance.runtime_properties['service_outputs'][0]['name'] == 'someoutput')
     assert(ctxmock.instance.runtime_properties['service_outputs'][0]['value'] == 'someval')
 
+# Test wait expression fuctionality for failure case.  Pass in an output
+# with and test for incorrect length.  Should raise error.
 def test_expr_fail(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs= {'someoutput':output})
@@ -151,6 +171,8 @@ def test_expr_fail(monkeypatch):
     with pytest.raises(NonRecoverableError):
         tasks.proxy_connect()
 
+# Test wait expression fuctionality for success case.  Pass in an output
+# with and test for correct length.  Should raise no error.
 def test_expr_succeed(monkeypatch):
     output = Mock( value = 'someval')
     service = Mock(outputs= {'someoutput':output})
@@ -170,6 +192,9 @@ def test_expr_succeed(monkeypatch):
     ret = tasks.proxy_connect()
     assert(ret == None)
 
+# Test wait expression fuctionality for success case using two outputs.
+# Expression is boolean expression involving two outputs, and it true.
+# Should raise no error.
 def test_expr_succeed_mult(monkeypatch):
     output1 = Mock( value = 4)
     output2 = Mock( value = 7)

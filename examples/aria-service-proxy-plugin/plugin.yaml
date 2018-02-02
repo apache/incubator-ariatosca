@@ -39,7 +39,8 @@ data_types:
         default: 30
       wait_expression:
         description: >-
-          boolean expression to wait for truth value.  Python syntax. 
+          boolean expression to wait for truth value.  Python syntax.  Outputs from target
+          service are provided as variable names in the expression environment.
           Example: output1 > output2
         type: string
         required: false
@@ -56,7 +57,7 @@ node_types:
       outputs:
         description: >-
           list of outputs that will be mapped to proxy attributes
-          under the \"proxied\" key
+          under the \"service_outputs" key
         required: false
         default: []
         type: list
@@ -64,6 +65,8 @@ node_types:
           type: string
       wait_config:
         type: serviceproxy.waitconfig
+        description: >-
+          configuration of wait for service existence, outputs, and/or output values
         required: false
         default:
           wait_for_service:
