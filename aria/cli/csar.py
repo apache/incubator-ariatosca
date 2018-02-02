@@ -56,7 +56,7 @@ def write(service_template_path, destination, logger):
         raise ValueError('{0} is not a directory. Please specify the service template '
                          'directory.'.format(source))
     if not os.path.isfile(service_template_path):
-        raise ValueError('{0} does not exists. Please specify a valid entry point.'
+        raise ValueError('{0} does not exist. Please specify a valid entry point.'
                          .format(service_template_path))
     if os.path.exists(destination):
         raise ValueError('{0} already exists. Please provide a path to where the CSAR should be '
@@ -97,7 +97,7 @@ class _CSARReader(object):
         self.metadata = {}
         try:
             if not os.path.exists(self.source):
-                raise ValueError('{0} does not exists. Please specify a valid CSAR path.'
+                raise ValueError('{0} does not exist. Please specify a valid CSAR path.'
                                  .format(self.source))
             if not zipfile.is_zipfile(self.source):
                 raise ValueError('{0} is not a valid CSAR.'.format(self.source))
