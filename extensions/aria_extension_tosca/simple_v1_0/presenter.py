@@ -38,6 +38,8 @@ class ToscaSimplePresenter1_0(Presenter):                                       
     SIMPLE_PROFILE_LOCATION = 'tosca-simple-1.0/tosca-simple-1.0.yaml'
     SPECIAL_IMPORTS = {
         'aria-1.0': 'aria-1.0/aria-1.0.yaml'}
+    PLUGIN_IMPORT_FILE = '/plugin.yaml'
+    PLUGIN_REPOSITORY = 'plugins'
 
     @property
     @cachedmethod
@@ -74,7 +76,11 @@ class ToscaSimplePresenter1_0(Presenter):                                       
             import_locations.append(self.SIMPLE_PROFILE_LOCATION)
         imports = self._get('service_template', 'imports')
         if imports:
-            import_locations += [self.SPECIAL_IMPORTS.get(i.file, i.file) for i in imports]
+            for i in imports:
+                if i.repository == self.PLUGIN_REPOSITORY:
+                    import_locations += [i.file + self.PLUGIN_IMPORT_FILE]
+                else:
+                    import_locations += [self.SPECIAL_IMPORTS.get(i.file, i.file)]
         return FrozenList(import_locations) if import_locations else EMPTY_READ_ONLY_LIST
 
     @cachedmethod
