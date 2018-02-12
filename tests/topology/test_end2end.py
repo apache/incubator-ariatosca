@@ -83,7 +83,7 @@ def test_use_case_multi_tier_1():
 
 
 def test_use_case_container_1():
-    consume_use_case('container-1', 'template')
+    consume_use_case('container-1', 'template', no_issues=False)
 
 
 # NodeCellar
