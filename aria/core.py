@@ -21,6 +21,7 @@ from . import exceptions
 from .parser import consumption
 from .parser.loading.location import UriLocation
 from .orchestrator import topology
+from .utils import collections
 
 
 class Core(object):
@@ -46,16 +47,17 @@ class Core(object):
         return self._plugin_manager
 
     def validate_service_template(self, service_template_path):
-        self._parse_service_template(service_template_path)
+        self.parse_service_template(service_template_path)
 
     def create_service_template(self, service_template_path, service_template_dir,
                                 service_template_name):
-        context = self._parse_service_template(service_template_path)
+        context = self.parse_service_template(service_template_path)
         service_template = context.modeling.template
         service_template.name = service_template_name
         self.model_storage.service_template.put(service_template)
         self.resource_storage.service_template.upload(
             entry_id=str(service_template.id), source=service_template_dir)
+        return service_template
 
     def delete_service_template(self, service_template_id):
         service_template = self.model_storage.service_template.get(service_template_id)
@@ -114,10 +116,12 @@ class Core(object):
 
         self.model_storage.service.delete(service)
 
-    @staticmethod
-    def _parse_service_template(service_template_path):
+    def parse_service_template(self, service_template_path):
+        plugin_dir = self.plugin_manager._plugins_dir
         context = consumption.ConsumptionContext()
         context.presentation.location = UriLocation(service_template_path)
+        #Add plugin resource storage to import location prefixes
+        context.loading.prefixes = collections.StrictList([plugin_dir])
         # Most of the parser uses the topology package in order to manipulate the models.
         # However, here we use the Consumer mechanism, but this should change in the future.
         consumption.ConsumerChain(
