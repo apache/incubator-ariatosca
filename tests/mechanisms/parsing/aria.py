@@ -24,6 +24,7 @@ from aria.parser.consumption import (
     ServiceTemplate
 )
 from aria.utils.imports import import_fullname
+from aria.utils import collections
 
 from . import (Parser, Parsed)
 
@@ -32,6 +33,7 @@ class AriaParser(Parser):
     def _parse_literal(self, text, **kwargs):
         context = AriaParser.create_context(import_profile=kwargs.get('import_profile', False),
                                             adhoc_inputs=kwargs.get('adhoc_inputs', True),
+                                            plugin_dir=kwargs.get('plugin_dir', None),
                                             validate_normative=kwargs.get('validate_normative',
                                                                           False))
         context.presentation.location = LiteralLocation(text)
@@ -52,6 +54,7 @@ class AriaParser(Parser):
                        cache=True,
                        import_profile=None,
                        adhoc_inputs=None,
+                       plugin_dir=None,
                        validate_normative=None):
         context = ConsumptionContext()
         context.loading.loader_source = import_fullname(loader_source)()
@@ -66,6 +69,8 @@ class AriaParser(Parser):
             context.presentation.configuration['tosca.adhoc_inputs'] = adhoc_inputs
         if validate_normative is not None:
             context.presentation.configuration['validate_normative'] = validate_normative
+        if plugin_dir:
+            context.loading.prefixes = collections.StrictList([plugin_dir])
         context.presentation.print_exceptions = debug
         return context
 
