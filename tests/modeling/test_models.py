@@ -65,6 +65,13 @@ def _empty_storage():
                                      initiator=init_inmemory_model_storage)
 
 
+def _type_definition_storage():
+    storage = _empty_storage()
+    type_definition = mock.models.load_type_definition()
+    storage.type_definition.put(type_definition)
+    return storage
+
+
 def _service_template_storage():
     storage = _empty_storage()
     service_template = mock.models.create_service_template()
@@ -128,6 +135,12 @@ def _execution_storage():
 @pytest.fixture
 def empty_storage():
     with sql_storage(_empty_storage) as storage:
+        yield storage
+
+
+@pytest.fixture
+def type_definition_storage():
+    with sql_storage(_type_definition_storage) as storage:
         yield storage
 
 

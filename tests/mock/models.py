@@ -37,6 +37,9 @@ from aria.orchestrator.workflows.builtin.workflows import (
     NORMATIVE_REMOVE_SOURCE
 )
 
+TYPE_DEFINITION_NAME = 'test_type_definition'
+TYPE_DEFINITION_VERSION = '1.0'
+TYPE_DEFINITION_MAIN_FILE_NAME = 'main_file_name'
 SERVICE_TEMPLATE_NAME = 'test_service_template'
 SERVICE_NAME = 'test_service1'
 NODE_TEMPLATE_NAME = 'test_node_template'
@@ -49,6 +52,17 @@ DEPENDENCY_NODE_TEMPLATE_NAME = 'dependency_node_template'
 DEPENDENCY_NODE_NAME = 'dependency_node'
 DEPENDENT_NODE_TEMPLATE_NAME = 'dependent_node_template'
 DEPENDENT_NODE_NAME = 'dependent_node'
+
+
+def load_type_definition(name=TYPE_DEFINITION_NAME, version=TYPE_DEFINITION_VERSION,\
+                         main_file_name=TYPE_DEFINITION_MAIN_FILE_NAME):
+    now = datetime.now()
+    return models.TypeDefinition(
+        name=name,
+        version=version,
+        main_file_name=main_file_name,
+        uploaded_at=now
+    )
 
 
 def create_service_template(name=SERVICE_TEMPLATE_NAME, description=None, inputs=None):

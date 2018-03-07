@@ -16,6 +16,14 @@
 """
 Data models.
 
+Type definition models
+-----------------------
+
+.. autosummary::
+   :nosignatures:
+
+   aria.modeling.models.TypeDefinition
+
 Service template models
 -----------------------
 
@@ -90,6 +98,7 @@ from sqlalchemy import (
 )
 
 from . import (
+    type_definition,
     service_template,
     service_instance,
     service_changes,
@@ -106,6 +115,9 @@ aria_declarative_base = declarative_base(cls=mixins.ModelIDMixin)
 # See also models_to_register at the bottom of this file
 __all__ = (
     'models_to_register',
+
+    # Type definition models
+    'TypeDefinition',
 
     # Service template models
     'ServiceTemplate',
@@ -157,6 +169,11 @@ __all__ = (
     'Argument'
 )
 
+# region type definition models
+
+@utils.fix_doc
+class TypeDefinition(aria_declarative_base, type_definition.TypeDefinitionBase):
+    pass
 
 # region service template models
 
@@ -376,6 +393,9 @@ class Argument(aria_declarative_base, orchestration.ArgumentBase):
 
 # See also __all__ at the top of this file
 models_to_register = (
+    # Type definition models
+    TypeDefinition,
+
     # Service template models
     ServiceTemplate,
     NodeTemplate,
