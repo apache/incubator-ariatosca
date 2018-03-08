@@ -294,8 +294,9 @@ class Node(common.ActorHandlerBase):
 
                 return target_node_template, target_node_capability
 
-        # Find the first node which has a capability of the required type
-        elif requirement_template.target_capability_type is not None:
+        # Find the first node which has a capability of the required type or name
+        elif requirement_template.target_capability_type is not None or \
+             requirement_template.target_capability_name is not None:
             for target_node_template in \
                     self._model.node_template.service_template.node_templates.itervalues():
                 target_node_capability = \
@@ -322,6 +323,10 @@ class Node(common.ActorHandlerBase):
                 requirement_template.target_capability_type.get_descendant(
                     capability_template.type.name) is None):
             return False
+
+        if requirement_template.target_capability_name is not None:
+            if not requirement_template.target_capability_name == capability_template.name:
+                return False
 
         # Are we in valid_source_node_types?
         if capability_template.valid_source_node_types:

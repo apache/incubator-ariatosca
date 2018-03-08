@@ -62,11 +62,20 @@ def setup_logger(logger_name,
 class MockStorage(object):
 
     def __init__(self):
+        self.type_definition = MockTypeDefinitionStorage()
         self.service_template = MockServiceTemplateStorage()
         self.service = MockServiceStorage()
         self.node_template = MockNodeTemplateStorage()
         self.node = MockNodeStorage()
 
+class MockTypeDefinitionStorage(object):
+
+    def __init__(self):
+        self.td = mock_models.load_type_definition()
+        self.list = MagicMock(return_value=[self.td])
+        self.get = MagicMock(return_value=self.td)
+        self._get_query = MagicMock()
+        self.delete = MagicMock()
 
 class MockServiceTemplateStorage(object):
 

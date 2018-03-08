@@ -44,6 +44,7 @@ def _register_commands():
     Register the CLI's commands.
     """
 
+    _aria.add_command(commands.type_definitions.type_definitions)
     _aria.add_command(commands.service_templates.service_templates)
     _aria.add_command(commands.node_templates.node_templates)
     _aria.add_command(commands.services.services)

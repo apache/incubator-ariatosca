@@ -32,6 +32,10 @@ def get_service_template_uri(*args):
     return os.path.join(RESOURCES_DIR, 'service-templates', *args)
 
 
+def get_type_definition_uri(*args):
+    return os.path.join(RESOURCES_DIR, 'type-definitions', *args)
+
+
 class FilesystemDataHolder(object):
 
     def __init__(self, path, reset=False):

@@ -324,9 +324,19 @@ class RequirementAssignment(ExtensiblePresentation):
                 capabilities = node._get_capabilities(context)
                 if capability in capabilities:
                     return capabilities[capability], 'capability_assignment'
-            capability_type = get_type_by_name(context, capability, 'capability_types')
-            if capability_type is not None:
-                return capability_type, 'capability_type'
+                capability_type = get_type_by_name(context, capability, 'capability_types')
+                if capability_type is not None:
+                    return capability_type, 'capability_type'
+            else:
+                capability_type = get_type_by_name(context, capability, 'capability_types')
+                if capability_type is not None:
+                    return capability_type, 'capability_type'
+
+                for the_node_template in context.presentation.presenter.service_template.\
+                                         topology_template.node_templates.iteritems():
+                    the_capabilities = the_node_template[1]._get_capabilities(context)
+                    if capability in the_capabilities:
+                        return the_capabilities[capability], 'capability_assignment'
 
         return None, None
 
