@@ -18,6 +18,7 @@ CLI commands package.
 """
 
 from . import (
+    type_definitions,
     executions,
     logs,
     node_templates,

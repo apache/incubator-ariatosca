@@ -21,6 +21,7 @@ from aria import (
     application_model_storage,
     application_resource_storage
 )
+from aria import type_definition_manager as type_definition
 from aria.orchestrator import plugin
 from aria.storage import (
     sql_mapi,
@@ -68,3 +69,16 @@ def plugins_dir(tmpdir):
 @pytest.fixture
 def plugin_manager(model, plugins_dir):
     return plugin.PluginManager(model=model, plugins_dir=plugins_dir)
+
+
+@pytest.fixture
+def type_definitions_dir(tmpdir):
+    result = tmpdir.join('type_definitions')
+    result.mkdir()
+    return str(result)
+
+
+@pytest.fixture
+def type_definition_manager(model, type_definitions_dir):
+    return type_definition.\
+        TypeDefinitionManager(model_storage=model, type_definitions_dir=type_definitions_dir)

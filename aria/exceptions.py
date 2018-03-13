@@ -71,3 +71,27 @@ class ParsingError(AriaError):
 
 class InstantiationError(AriaError):
     pass
+
+
+class TypeDefinitionException(AriaError):
+    """The base exception class of the type definition"""
+    pass
+
+
+class TypeDefinitionNotFoundException(TypeDefinitionException):
+    """The exception class of the type definition thrown
+       if type definition does not exists"""
+    pass
+
+
+class TypeDefinitionAlreadyExistsException(TypeDefinitionException):
+    """The exception class of the type definition thrown
+       if type definition already exists"""
+    pass
+
+
+class InvalidTypeDefinitionException(TypeDefinitionException):
+    """The exception class of the type definition thrown
+       if type definition is not a valid archive or validation error
+       exists during the type definition load"""
+    pass
