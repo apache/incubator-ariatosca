@@ -19,7 +19,7 @@ Environment (private)
 
 import os
 import shutil
-
+from aria.type_definition_manager import TypeDefinitionManager
 from .config import config
 from .logger import Logging
 from .. import (application_model_storage, application_resource_storage)
@@ -44,11 +44,13 @@ class _Environment(object):
         self._model_storage_dir = os.path.join(workdir, 'models')
         self._resource_storage_dir = os.path.join(workdir, 'resources')
         self._plugins_dir = os.path.join(workdir, 'plugins')
+        self._type_definitions_dir = os.path.join(workdir, 'type_definitions')
 
         # initialized lazily
         self._model_storage = None
         self._resource_storage = None
         self._plugin_manager = None
+        self._type_definition_manager = None
 
     @property
     def workdir(self):
@@ -79,6 +81,12 @@ class _Environment(object):
         if not self._plugin_manager:
             self._plugin_manager = self._init_plugin_manager()
         return self._plugin_manager
+
+    @property
+    def type_definition_manager(self):
+        if not self._type_definition_manager:
+            self._type_definition_manager = self._init_type_definition_manager()
+        return self._type_definition_manager
 
     def reset(self, reset_config):
         if reset_config:
@@ -120,6 +128,11 @@ class _Environment(object):
 
         return PluginManager(self.model_storage, self._plugins_dir)
 
+    def _init_type_definition_manager(self):
+        if not os.path.exists(self._type_definitions_dir):
+            os.makedirs(self._type_definitions_dir)
+
+        return TypeDefinitionManager(self.model_storage, self._type_definitions_dir)
 
 env = _Environment(os.path.join(
     os.environ.get('ARIA_WORKDIR', os.path.expanduser('~')), ARIA_DEFAULT_WORKDIR_NAME))

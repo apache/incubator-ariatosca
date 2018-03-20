@@ -1,0 +1,24 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+metadata:
+  template_name: ball
+  template_author: ekowsalya
+  template_version: "1.0"
+  
+imports:
+  - custom_types/type1.yaml
+  - custom_types/type2.yaml
+  - custom_types/type3.yaml
+  - custom_types/type4.yaml
+  - custom_types/type4.yaml  
+
+node_types:
+    non_normative_type_definition_compute:
+        derived_from: tosca.nodes.Compute
+        properties:
+            name:
+              type: string
+              required: true
+            password:
+              type: string
+              required: true

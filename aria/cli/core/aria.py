@@ -176,6 +176,17 @@ def pass_plugin_manager(func):
 
     return wrapper
 
+def pass_type_definition_manager(func):
+    """
+    Simply passes the type definition manager to a command.
+    """
+    # Wraps here makes sure the original docstring propagates to click
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(type_definition_manager=env.type_definition_manager, *args, **kwargs)
+
+    return wrapper
+
 
 def pass_model_storage(func):
     """

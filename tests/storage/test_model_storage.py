@@ -74,7 +74,7 @@ def test_model_storage(storage):
 def test_application_storage_factory():
     storage = application_model_storage(sql_mapi.SQLAlchemyModelAPI,
                                         initiator=tests_storage.init_inmemory_model_storage)
-
+    assert storage.type_definition
     assert storage.service_template
     assert storage.node_template
     assert storage.group_template
