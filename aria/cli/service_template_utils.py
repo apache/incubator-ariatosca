@@ -120,6 +120,6 @@ def _is_archive(source):
 
 def _extract_csar_archive(archive):
     reader = csar.read(source=archive)
-    main_service_template_file_name = os.path.basename(reader.entry_definitions)
+    main_service_template_file_name = reader.entry_definitions
     return os.path.join(reader.destination,
                         main_service_template_file_name)
